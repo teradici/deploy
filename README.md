@@ -1,4 +1,5 @@
 # Deploy
 
-Copyright Teradici Corporation
+Copyright Teradici Corporation.
+
 All rights reserved
