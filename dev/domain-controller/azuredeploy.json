@@ -329,11 +329,6 @@
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
-                    "DNSServerAddress": {
-                        "value": [
-                            "[variables('adNicIPAddress')]"
-                        ]
-                    },
                     "existingVNETName": {
                         "value": "[variables('virtualNetworkName')]"
                     },
@@ -350,19 +345,19 @@
                         "value": "[parameters('domainName')]"
                     },
                     "domainUsername": {
-                        "value": "[parameters('domainUsername')]"
+                        "value": "[parameters('adminUsername')]"
                     },
                     "domainPassword": {
-                        "value": "[parameters('domainPassword')]"
+                        "value": "[parameters('adminPassword')]"
                     },
                     "domainJoinOptions": {
                         "value": 3
                     },
                     "vmAdminUsername": {
-                        "value": "[parameters('domainUsername')]"
+                        "value": "[parameters('adminUsername')]"
                     },
                     "vmAdminPassword": {
-                        "value": "[parameters('domainPassword')]"
+                        "value": "[parameters('adminPassword')]"
                     }
                 }
             }
