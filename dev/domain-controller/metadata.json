@@ -1,7 +1,7 @@
 {
-  "itemDisplayName": "Create an Azure VM with a new AD Forest",
-  "description": "This template creates a new Azure VM, it configures the VM to be an AD DC for a new Forest",
-  "summary": "This template creates an Azure VM with AD",
-  "githubUsername": "simongdavies",
-  "dateUpdated": "2016-09-28"
+  "itemDisplayName": "Create an Azure VM with a new AD Forest and another Azure VM and join to domain",
+  "description": "Create an Azure VM with a new AD Forest and another Azure VM and join to domain",
+  "summary": "Create an Azure VM with a new AD Forest and another Azure VM and join to domain",
+  "githubUsername": "bill-dall",
+  "dateUpdated": "2016-12-15"
 }
