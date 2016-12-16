@@ -66,7 +66,7 @@
         }
     },
     "variables": {
-        "storageAccountName": "4pblahblahvg",
+        "storageAccountName": "[concat(uniquestring(resourceGroup().id, deployment().name))]",
         "imagePublisher": "MicrosoftWindowsServer",
         "imageOffer": "WindowsServer",
         "windowsOSVersion": "2016-Datacenter",
