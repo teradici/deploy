@@ -62,7 +62,8 @@
             "type": "SecureString",
             "metadata": {
                 "description": "The password for the administrator account of the new VM and the domain"
-            },
+            }
+        },
         "_artifactsLocation": {
             "type": "string",
             "metadata": {
