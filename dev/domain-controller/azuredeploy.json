@@ -360,7 +360,7 @@
                         "value": "[parameters('adminPassword')]"
                     },
                     "_artifactsLocation": {
-                        "value": "[concat(parameters('_artifactsLocation'), '/new-vm-join-domain']"
+                        "value": "[concat(parameters('_artifactsLocation'), '/new-vm-join-domain')]"
                     }
                 }
             }
