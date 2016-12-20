@@ -20,7 +20,7 @@ if ( Get-Item -path "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft
 
 
 $source = "https://teradeploy.blob.core.windows.net/binaries/PCoIP_agent_release_installer_2.6.2.3771_standard.exe"
-$dest = ".\PCoIPAgentInstaller"
+$dest = "C:\WindowsAzure\PCoIPAgentInstaller"
 $installerFileName = "PCoIP_agent_release_installer_2.6.2.3771_standard.exe"
 New-Item -Path $dest -ItemType directory
 Invoke-WebRequest $source -OutFile "$dest\$installerFileName"
@@ -28,7 +28,7 @@ Invoke-WebRequest $source -OutFile "$dest\$installerFileName"
 cd $dest
 
 #stop any service that was running
-Stop-Service PCoIPAgent 
+#Stop-Service PCoIPAgent 
 
 #install the agent
 & ".\$installerFileName" /S
