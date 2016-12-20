@@ -358,6 +358,9 @@
                     },
                     "vmAdminPassword": {
                         "value": "[parameters('adminPassword')]"
+                    },
+                    "_artifactsLocation": {
+                        "value": "[concat(parameters('_artifactsLocation'), '/new-vm-join-domain']"
                     }
                 }
             }

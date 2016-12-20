@@ -62,6 +62,11 @@
             "type": "SecureString",
             "metadata": {
                 "description": "The password for the administrator account of the new VM and the domain"
+            },
+        "_artifactsLocation": {
+            "type": "string",
+            "metadata": {
+                "description": "The location of resources, such as templates and DSC modules, that the template depends on"
             }
         }
     },
@@ -74,7 +79,14 @@
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
         "publicIPName": "[concat(parameters('dnsLabelPrefix'),'Pip')]",
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
-        "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]"
+        "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
+
+
+        "scriptFolder": ".",
+        "scriptFileName": "Install-PCoIPAgent.ps1",
+        "fileToBeCopied": "FileToBeCopied.txt",
+        "scriptParameters": "[concat('-artifactsLocation ', parameters('_artifactsLocation'), ' -artifactsLocationSasToken \"', parameters('_artifactsLocationSasToken'), '\" -folderName ', variables('scriptFolder'), ' -fileToInstall ', variables('fileToBeCopied'))]"
+
     },
     "resources": [
         {
@@ -179,6 +191,29 @@
                     }
                 }
             },
+            "resources": [
+                {
+                    "type": "extensions",
+                    "name": "CustomScriptExtension",
+                    "apiVersion": "2015-06-15",
+                    "location": "[resourceGroup().location]",
+                    "dependsOn": [
+                        "[parameters('dnsLabelPrefix')]"
+                    ],
+                    "properties": {
+                        "publisher": "Microsoft.Compute",
+                        "type": "CustomScriptExtension",
+                        "typeHandlerVersion": "1.8",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "fileUris": [
+                                "[concat(parameters('_artifactsLocation'), '/', variables('ScriptFolder'), '/', variables('ScriptFileName'), parameters('_artifactsLocationSasToken'))]"
+                            ],
+                            "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File ', variables('scriptFolder'), '/', variables('scriptFileName'), ' ', variables('scriptParameters'))]"
+                        }
+                    }
+                }
+            ],
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts',variables('storageAccountName'))]",
                 "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
