@@ -227,7 +227,7 @@
             "apiVersion": "[variables('apiVersion')]",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[concat('Microsoft.Compute/virtualMachines/extensions/',parameters('dnsLabelPrefix'),'/joindomain')]"
+                "[resourceId('Microsoft.Compute/virtualMachines/extensions/',parameters('dnsLabelPrefix'),'/joindomain')]"
             ],
             "properties": {
                 "publisher": "Microsoft.Powershell",
