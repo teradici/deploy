@@ -199,7 +199,7 @@
         },
         {
             "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(parameters('dnsLabelPrefix'),'/joindomain')]",
+            "name": "[concat(parameters('dnsLabelPrefix'),'-joindomain')]",
             "apiVersion": "[variables('apiVersion')]",
             "location": "[resourceGroup().location]",
             "properties": {
@@ -227,7 +227,7 @@
             "apiVersion": "[variables('apiVersion')]",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[concat(parameters('dnsLabelPrefix'),'/joindomain')]"
+                "[concat(parameters('dnsLabelPrefix'),'-joindomain')]"
             ],
             "properties": {
                 "publisher": "Microsoft.Powershell",
