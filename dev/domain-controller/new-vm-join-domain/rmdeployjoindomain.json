@@ -222,9 +222,9 @@
             ]
         },
         {
-            "type": "extensions",
-            "name": "dscExtension",
-            "apiVersion": "2015-05-01-preview",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "PCoIPAgentDscExtension",
+            "apiVersion": "[variables('apiVersion')]",
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[concat(parameters('dnsLabelPrefix'),'/joindomain')]"
