@@ -239,7 +239,7 @@
                     "privacy": {
                         "DataCollection": "Disable"
                     },
-                    "configurationFunction": "Install-PCoIPAgent.ps1\\Install-PCoIPAgent"
+                    "configurationFunction": "Install-PCoIPAgent.ps1\\InstallPCoIPAgent"
                 }
             }
         }
