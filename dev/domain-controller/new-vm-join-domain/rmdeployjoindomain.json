@@ -223,7 +223,7 @@
         },
         {
             "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "PCoIPAgentDscExtension",
+            "name": "[concat(parameters('dnsLabelPrefix'),'/PCoIPAgentDscExtension')]",
             "apiVersion": "[variables('apiVersion')]",
             "location": "[resourceGroup().location]",
             "dependsOn": [
