@@ -8,6 +8,7 @@
 wget https://teradeploy.blob.core.windows.net/binaries/P-CM-1.6_SG-1.12.zip -P /tmp/
 wget https://teradeploy.blob.core.windows.net/binaries/P-LS-1.0.3.zip -P /tmp/
 
+exit 0
 
 unzip -o /tmp/P-CM-1.6_SG-1.12.zip
 
@@ -95,7 +96,7 @@ cd /opt/FNPLicenseServerManager/utils
 #./pcoip-return-license.sh -f fulfillment_ID
 
 # reboot now
-shutdown -r +1 "Server will restart in 1 minute."
+#shutdown -r +1 "Server will restart in 1 minute."
 
 exit 0
 
