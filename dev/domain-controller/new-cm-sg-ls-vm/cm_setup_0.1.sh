@@ -16,6 +16,7 @@ yum -y remove java-1.6.0-openjdk
 yum -y remove java-1.7.0-openjdk
 
 #open required ports
+iptables -I INPUT 1 -p tcp --dport 22 -j ACCEPT
 iptables -I INPUT 1 -p tcp --dport 443 -j ACCEPT
 iptables -I INPUT 1 -p tcp --dport 4172 -j ACCEPT
 #iptables -I INPUT 1 -p tcp --dport 8090 -j ACCEPT   # for LM Web GUI
