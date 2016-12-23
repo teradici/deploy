@@ -1,0 +1,30 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vmAdminUsername": {
+            "value": "bdall"
+        },
+        "vmAdminPassword": {
+            "value": ""
+        },
+        "dnsLabelPrefix": {
+            "value": "bdallad3-cm1"
+        },
+        "vmSize": {
+            "value": "Standard_A2"
+        },
+        "existingVNETName": {
+            "value": "adVNET"
+        },
+        "existingSubnetName": {
+            "value": "adSubnet"
+        },
+        "brokerFQDN": {
+            "value": "10.0.0.5"
+        },
+        "activationCode": {
+            "value": "xxxx-xxxx-xxxx-xxxx"
+        }
+    }
+}
