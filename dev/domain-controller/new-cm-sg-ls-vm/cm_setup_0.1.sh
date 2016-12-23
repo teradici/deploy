@@ -97,6 +97,11 @@ cd /opt/FNPLicenseServerManager/utils
 # reboot now
 # shutdown -r +1 "Server will restart in 1 minute."
 
+#or just restart all the services
+service security_gateway restart
+service connection_manager restart
+service lmadmin restart
+
 exit 0
 
 # /opt/FNPLicenseServerManager/conf/server.xml
