@@ -94,7 +94,7 @@
             "type": "Microsoft.Compute/virtualMachines/extensions",
             "name": "[concat(parameters('dnsLabelPrefix'),'/PCoIPAgentDscExtension')]",
             "apiVersion": "[variables('apiVersion')]",
-            "location": "[resourceGroup().location]"
+            "location": "[resourceGroup().location]",
             "properties": {
                 "publisher": "Microsoft.Powershell",
                 "type": "DSC",
