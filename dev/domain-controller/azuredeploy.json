@@ -201,7 +201,7 @@
             ],
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "Standard_D2_v2"
+                    "vmSize": "Standard_A1"
                 },
                 "availabilitySet": {
                     "id": "[resourceId('Microsoft.Compute/availabilitySets', variables('adAvailabilitySetName'))]"
@@ -234,7 +234,7 @@
                             "name": "[concat(variables('adVMName'), '-data-disk')]",
                             "caching": "None",
                             "createOption": "Empty",
-                            "diskSizeGB": "1000",
+                            "diskSizeGB": "100",
                             "lun": 0
                         }
                     ]
@@ -317,7 +317,7 @@
         },
         {
             "type": "Microsoft.Resources/deployments",
-            "name": "CreateDomainJoinMachine",
+            "name": "CreateAgentMachine",
             "apiVersion": "2016-02-01",
             "dependsOn": [
                 "Microsoft.Resources/deployments/UpdateVNetDNS"
@@ -325,7 +325,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(parameters('_artifactsLocation'), '/new-vm-join-domain/rmdeployjoindomain.json', parameters('_artifactsLocationSasToken'))]",
+                    "uri": "[concat(parameters('_artifactsLocation'), '/new-agent-vm/new-agent.json', parameters('_artifactsLocationSasToken'))]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
@@ -360,7 +360,154 @@
                         "value": "[parameters('adminPassword')]"
                     },
                     "_artifactsLocation": {
+                        "value": "[concat(parameters('_artifactsLocation'), '/new-agent-vm')]"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "name": "CreateAdminMachine",
+            "apiVersion": "2016-02-01",
+            "dependsOn": [
+                "Microsoft.Resources/deployments/UpdateVNetDNS"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('_artifactsLocation'), '/new-vm-join-domain/new-vm-join-domain.json', parameters('_artifactsLocationSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "existingVNETName": {
+                        "value": "[variables('virtualNetworkName')]"
+                    },
+                    "existingSubnetName": {
+                        "value": "[variables('adSubnetName')]"
+                    },
+                    "dnsLabelPrefix": {
+                        "value": "[concat(parameters('DCDnsPrefix'), '-au')]"
+                    },
+                    "vmSize": {
+                        "value": "Standard_A1"
+                    },
+                    "domainToJoin": {
+                        "value": "[parameters('domainName')]"
+                    },
+                    "domainUsername": {
+                        "value": "[parameters('adminUsername')]"
+                    },
+                    "domainPassword": {
+                        "value": "[parameters('adminPassword')]"
+                    },
+                    "domainJoinOptions": {
+                        "value": 3
+                    },
+                    "vmAdminUsername": {
+                        "value": "[parameters('adminUsername')]"
+                    },
+                    "vmAdminPassword": {
+                        "value": "[parameters('adminPassword')]"
+                    },
+                    "_artifactsLocation": {
                         "value": "[concat(parameters('_artifactsLocation'), '/new-vm-join-domain')]"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "name": "ConfigureAdminMachine",
+            "apiVersion": "2016-02-01",
+            "dependsOn": [
+                "Microsoft.Resources/deployments/CreateAdminMachine"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('_artifactsLocation'), '/new-admin-vm/new-admin-vm.json', parameters('_artifactsLocationSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "existingVNETName": {
+                        "value": "[variables('virtualNetworkName')]"
+                    },
+                    "existingSubnetName": {
+                        "value": "[variables('adSubnetName')]"
+                    },
+                    "dnsLabelPrefix": {
+                        "value": "[concat(parameters('DCDnsPrefix'), '-au')]"
+                    },
+                    "vmSize": {
+                        "value": "Standard_A1"
+                    },
+                    "domainToJoin": {
+                        "value": "[parameters('domainName')]"
+                    },
+                    "domainUsername": {
+                        "value": "[parameters('adminUsername')]"
+                    },
+                    "domainPassword": {
+                        "value": "[parameters('adminPassword')]"
+                    },
+                    "domainJoinOptions": {
+                        "value": 3
+                    },
+                    "vmAdminUsername": {
+                        "value": "[parameters('adminUsername')]"
+                    },
+                    "vmAdminPassword": {
+                        "value": "[parameters('adminPassword')]"
+                    },
+                    "_artifactsLocation": {
+                        "value": "[concat(parameters('_artifactsLocation'), '/new-admin-vm')]"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "name": "CreateCM",
+            "apiVersion": "2016-02-01",
+            "dependsOn": [
+                "Microsoft.Resources/deployments/UpdateVNetDNS"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('_artifactsLocation'), '/new-cm-sg-ls-vm/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "existingVNETName": {
+                        "value": "[variables('virtualNetworkName')]"
+                    },
+                    "existingSubnetName": {
+                        "value": "[variables('adSubnetName')]"
+                    },
+                    "dnsLabelPrefix": {
+                        "value": "[concat(parameters('DCDnsPrefix'), '-cm')]"
+                    },
+                    "vmSize": {
+                        "value": "Standard_A2"
+                    },
+                    "domainToJoin": {
+                        "value": "[parameters('domainName')]"
+                    },
+                    "domainUsername": {
+                        "value": "[parameters('adminUsername')]"
+                    },
+                    "domainPassword": {
+                        "value": "[parameters('adminPassword')]"
+                    },
+                    "domainJoinOptions": {
+                        "value": 3
+                    },
+                    "vmAdminUsername": {
+                        "value": "[parameters('adminUsername')]"
+                    },
+                    "vmAdminPassword": {
+                        "value": "[parameters('adminPassword')]"
                     }
                 }
             }
