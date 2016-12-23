@@ -8,6 +8,7 @@
 wget https://teradeploy.blob.core.windows.net/binaries/P-CM-1.6_SG-1.12.zip -P /tmp/
 wget https://teradeploy.blob.core.windows.net/binaries/P-LS-1.0.3.zip -P /tmp/
 
+exit 0
 
 unzip -o /tmp/P-CM-1.6_SG-1.12.zip
 
