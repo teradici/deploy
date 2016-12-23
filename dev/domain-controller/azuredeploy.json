@@ -408,9 +408,6 @@
                     },
                     "vmAdminPassword": {
                         "value": "[parameters('adminPassword')]"
-                    },
-                    "_artifactsLocation": {
-                        "value": "[concat(parameters('_artifactsLocation'), '/new-vm-join-domain')]"
                     }
                 }
             }
@@ -490,18 +487,6 @@
                     },
                     "vmSize": {
                         "value": "Standard_A2"
-                    },
-                    "domainToJoin": {
-                        "value": "[parameters('domainName')]"
-                    },
-                    "domainUsername": {
-                        "value": "[parameters('adminUsername')]"
-                    },
-                    "domainPassword": {
-                        "value": "[parameters('adminPassword')]"
-                    },
-                    "domainJoinOptions": {
-                        "value": 3
                     },
                     "vmAdminUsername": {
                         "value": "[parameters('adminUsername')]"
