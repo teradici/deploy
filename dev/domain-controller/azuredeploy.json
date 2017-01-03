@@ -361,6 +361,9 @@
                     },
                     "_artifactsLocation": {
                         "value": "[concat(parameters('_artifactsLocation'), '/new-agent-vm')]"
+                    },
+                    "storageAccountName": {
+                        "value":  "[variables('storageAccountName')]"
                     }
                 }
             }
@@ -408,6 +411,9 @@
                     },
                     "vmAdminPassword": {
                         "value": "[parameters('adminPassword')]"
+                    },
+                    "storageAccountName": {
+                        "value":  "[variables('storageAccountName')]"
                     }
                 }
             }
@@ -493,6 +499,9 @@
                     },
                     "vmAdminPassword": {
                         "value": "[parameters('adminPassword')]"
+                    },
+                    "storageAccountName": {
+                        "value":  "[variables('storageAccountName')]"
                     }
                 }
             }

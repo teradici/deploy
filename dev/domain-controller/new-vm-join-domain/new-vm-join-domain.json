@@ -63,10 +63,15 @@
             "metadata": {
                 "description": "The password for the administrator account of the new VM and the domain"
             }
+        },
+        "storageAccountName": {
+            "type": "string",
+            "metadata": {
+                "description": "Storage account to use for VM data and VHD's"
+            }
         }
     },
     "variables": {
-        "storageAccountName": "[concat(uniquestring(resourceGroup().id, deployment().name))]",
         "imagePublisher": "MicrosoftWindowsServer",
         "imageOffer": "WindowsServer",
         "windowsOSVersion": "2016-Datacenter",
@@ -87,15 +92,6 @@
                 "dnsSettings": {
                     "domainNameLabel": "[parameters('dnsLabelPrefix')]"
                 }
-            }
-        },
-        {
-            "type": "Microsoft.Storage/storageAccounts",
-            "name": "[variables('storageAccountName')]",
-            "apiVersion": "[variables('apiVersion')]",
-            "location": "[resourceGroup().location]",
-            "properties": {
-                "accountType": "Standard_LRS"
             }
         },
         {
@@ -180,7 +176,6 @@
                 }
             },
             "dependsOn": [
-                "[resourceId('Microsoft.Storage/storageAccounts',variables('storageAccountName'))]",
                 "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
             ]
         },
