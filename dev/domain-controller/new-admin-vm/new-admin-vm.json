@@ -79,7 +79,6 @@
         }
     },
     "variables": {
-        "storageAccountName": "[concat(uniquestring(resourceGroup().id, deployment().name))]",
         "imagePublisher": "MicrosoftWindowsServer",
         "imageOffer": "WindowsServer",
         "windowsOSVersion": "2016-Datacenter",
@@ -92,7 +91,7 @@
     "resources": [
         {
             "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(parameters('dnsLabelPrefix'),'/PCoIPAgentDscExtension')]",
+            "name": "[concat(parameters('dnsLabelPrefix'),'/InstallAdminGUIDscExtension')]",
             "apiVersion": "[variables('apiVersion')]",
             "location": "[resourceGroup().location]",
             "properties": {
@@ -101,11 +100,11 @@
                 "typeHandlerVersion": "2.9",
                 "autoUpgradeMinorVersion": "true",
                 "settings": {
-                    "modulesUrl": "[concat(parameters('_artifactsLocation'), '/Install-PCoIPAgent.zip')]",
+                    "modulesUrl": "[concat(parameters('_artifactsLocation'), '/Install-AUI.zip')]",
                     "privacy": {
                         "DataCollection": "Disable"
                     },
-                    "configurationFunction": "Install-PCoIPAgent.ps1\\InstallPCoIPAgent"
+                    "configurationFunction": "Install-AUI.ps1\\Install_AUI"
                 }
             }
         }
