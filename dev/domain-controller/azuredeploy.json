@@ -274,7 +274,7 @@
                         "value": "[parameters('adminPassword')]"
                     },
                     "DNSServerAddress": {
-                        "value":  "[variables('adNicIPAddress')]"
+                        "value": "[variables('adNicIPAddress')]"
                     },
                     "_artifactsLocation": {
                         "value": "[concat(parameters('_artifactsLocation'), '/configure-dc-and-ca')]"
@@ -284,10 +284,42 @@
         },
         {
             "type": "Microsoft.Resources/deployments",
-            "name": "CreateAgentMachine",
+            "name": "SetDNSForVNet",
             "apiVersion": "2016-02-01",
             "dependsOn": [
                 "Microsoft.Resources/deployments/ConfigureDCandCA"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('_artifactsLocation'), '/new-vnet/vnet.json', parameters('_artifactsLocationSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "virtualNetworkName": {
+                        "value": "[variables('virtualNetworkName')]"
+                    },
+                    "virtualNetworkAddressRange": {
+                        "value": "[variables('virtualNetworkAddressRange')]"
+                    },
+                    "subnetName": {
+                        "value": "[variables('adSubnetName')]"
+                    },
+                    "subnetRange": {
+                        "value": "[variables('adSubnetAddressPrefix')]"
+                    },
+                    "DNSServerAddress": {
+                        "value": "[variables('adNicIPAddress')]"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "name": "CreateAgentMachine",
+            "apiVersion": "2016-02-01",
+            "dependsOn": [
+                "Microsoft.Resources/deployments/SetDNSForVNet"
             ],
             "properties": {
                 "mode": "Incremental",
@@ -340,7 +372,7 @@
             "name": "CreateAdminMachine",
             "apiVersion": "2016-02-01",
             "dependsOn": [
-                "Microsoft.Resources/deployments/ConfigureDCandCA"
+                "Microsoft.Resources/deployments/SetDNSForVNet"
             ],
             "properties": {
                 "mode": "Incremental",
@@ -440,7 +472,7 @@
             "name": "CreateCM",
             "apiVersion": "2016-02-01",
             "dependsOn": [
-                "Microsoft.Resources/deployments/ConfigureDCandCA"
+                "Microsoft.Resources/deployments/SetDNSForVNet"
             ],
             "properties": {
                 "mode": "Incremental",

@@ -32,12 +32,6 @@
                 "description": "Existing VNET that contains the domain controller"
             }
         },
-        "DNSServerAddress": {
-            "type": "string",
-            "metadata": {
-                "description": "DNS server IP address"
-            }
-        },
         "_artifactsLocation": {
             "type": "string",
             "metadata": {
@@ -81,17 +75,6 @@
                     "Items": {
                         "AdminPassword": "[parameters('adminPassword')]"
                     }
-                }
-            }
-        },
-        {
-            "type": "Microsoft.Network/virtualNetworks",
-            "name": "[parameters('existingVNETName')]",
-            "apiVersion": "2016-03-30",
-            "location": "[resourceGroup().location]",
-            "properties": {
-                "dhcpOptions": {
-                    "dnsServers": "[parameters('DNSServerAddress')]"
                 }
             }
         }
