@@ -284,7 +284,7 @@
             "name": "CreateAgentMachine",
             "apiVersion": "2016-02-01",
             "dependsOn": [
-                "Microsoft.Resources/deployments/UpdateVNetDNS"
+                "Microsoft.Resources/deployments/ConfigureDCandCA"
             ],
             "properties": {
                 "mode": "Incremental",
@@ -337,7 +337,7 @@
             "name": "CreateAdminMachine",
             "apiVersion": "2016-02-01",
             "dependsOn": [
-                "Microsoft.Resources/deployments/UpdateVNetDNS"
+                "Microsoft.Resources/deployments/ConfigureDCandCA"
             ],
             "properties": {
                 "mode": "Incremental",
@@ -437,7 +437,7 @@
             "name": "CreateCM",
             "apiVersion": "2016-02-01",
             "dependsOn": [
-                "Microsoft.Resources/deployments/UpdateVNetDNS"
+                "Microsoft.Resources/deployments/ConfigureDCandCA"
             ],
             "properties": {
                 "mode": "Incremental",
