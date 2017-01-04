@@ -45,13 +45,6 @@ Configuration InstallAUI
             RebootNodeIfNeeded = $true
         }
 
-#        File Download_Directory 
-#        {
-#            Ensure          = "Present"
-#            Type            = "Directory"
-#            DestinationPath = $LocalDLPath
-#        }
-
 		xRemoteFile Download_Java_Installer
 		{
 			Uri = "$sourceURI/$javaInstaller"
@@ -70,12 +63,14 @@ Configuration InstallAUI
 			DestinationPath = "$LocalDLPath\$adminWAR"
 		}
 
+		# One day can split this to 'install java' and 'configure java environemnt' and use 'package' dsc like here:
+		# http://stackoverflow.com/questions/31562451/installing-jre-using-powershell-dsc-hangs
         Script Install_Java
         {
             DependsOn  = "[xRemoteFile]Download_Java_Installer"
             GetScript  = { @{ Result = "Install_Java" } }
 
-            #TODO: Just check for a directory being present? What to do when Java version changes?
+            #TODO: Just check for a directory being present? What to do when Java version changes? (Can also check registry key as in SetScript.)
             TestScript = { 
 				$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_91"
 		       	$JavaBinLocation = $JavaRootLocation + "\bin"
@@ -86,16 +81,11 @@ Configuration InstallAUI
             SetScript  = {
                 Write-Verbose "Install_Java"
 
-				#Why do you need to use Start-Process? Don't know.
-                #& "$dest\$installerFileName" /S
-#				Start-Process $LocalDLPath\$javaInstaller -ArgumentList '/s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"' -Wait
-
-
-
 		        $LocalDLPath = "$env:systemdrive\WindowsAzure\PCoIPAUIInstall"
 		        $javaInstaller = "jdk-8u91-windows-x64.exe"
-#				Start-Process $LocalDLPath\$javaInstaller -ArgumentList '/s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"' -Wait
 
+				# Run the installer. Start-Process does not work due to permissions issue however '&' calling will not wait so looks for registry key as 'completion.'
+				# Start-Process $LocalDLPath\$javaInstaller -ArgumentList '/s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"' -Wait
 				& "$LocalDLPath\$javaInstaller" /s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"
 
 				$retrycount = 1800
@@ -161,8 +151,8 @@ Configuration InstallAUI
 		        $LocalDLPath = "$env:systemdrive\WindowsAzure\PCoIPAUIInstall"
 		        $tomcatInstaller = "apache-tomcat-8.0.33.exe"
 
-				#Why do you need to use Start-Process? Don't know.
-#				Start-Process $LocalDLPath\$tomcatInstaller -ArgumentList '/S' -Wait
+				# Run the installer. Start-Process does not work due to permissions issue however '&' calling will not wait so looks for registry key as 'completion.'
+				# Start-Process $LocalDLPath\$tomcatInstaller -ArgumentList '/S' -Wait
 				& "$LocalDLPath\$tomcatInstaller" /S
 				# this may exit before install is complete - so wait for service and server.xml to show up before doing anything
 
@@ -197,9 +187,7 @@ Configuration InstallAUI
 					}
 				}
 
-				Set-Service Tomcat8 -startuptype "automatic"
-				Restart-Service Tomcat8
-
+				# This check is I think redundant. - Remove
 				$retrycount = 1800
 				while ($retryCount -gt 0)
 				{
@@ -280,6 +268,7 @@ Configuration InstallAUI
 				# $global:DSCMachineStatus = 1
 
 				# Restart service for new config
+				Set-Service Tomcat8 -startuptype "automatic"
 				Restart-Service Tomcat8
 	        }
         }
