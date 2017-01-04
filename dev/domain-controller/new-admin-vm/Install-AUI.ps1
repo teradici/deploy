@@ -112,7 +112,7 @@ Configuration InstallAUI
 					}
 				}
 
-				Write-Host "Setting up paths and environment"
+				Write-Host "Setting up Java paths and environment"
 
 				$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_91"
 				$JavaBinLocation = $JavaRootLocation + "\bin"
@@ -135,15 +135,34 @@ Configuration InstallAUI
             }
         }
 
+
+
+		Package Tomcat8
+        {
+			Ensure = 'Present'
+			Name = 'Tomcat8'
+			Path = "$LocalDLPath\$tomcatInstaller"
+			Arguments = '/S'
+			ProductId = ''
+            DependsOn  = @("[xRemoteFile]Download_Tomcat_Installer", "[Script]Install_Java")
+		}
+
 		Script Install_Tomcat
         {
-            DependsOn  = @("[xRemoteFile]Download_Tomcat_Installer", "[Script]Install_Java")
+            DependsOn  = @("[Package]Tomcat8")
             GetScript  = { @{ Result = "Install_Tomcat" } }
 
             TestScript = { 
-				if ( get-service Tomcat8 -ErrorAction SilentlyContinue )
-                            {return $true}
-                            else {return $false}
+				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
+				$CatalinaPath = (Get-ItemProperty -Path "$Reg" -Name CATALINA_BASE -ErrorAction SilentlyContinue)
+				if ( $CatalinaPath )
+                {
+					return $true
+				}
+				else
+				{
+					return $false
+				}
 			}
             SetScript  = {
                 Write-Verbose "Install_Tomcat"
@@ -153,7 +172,7 @@ Configuration InstallAUI
 
 				# Run the installer. Start-Process does not work due to permissions issue however '&' calling will not wait so looks for registry key as 'completion.'
 				# Start-Process $LocalDLPath\$tomcatInstaller -ArgumentList '/S' -Wait
-				& "$LocalDLPath\$tomcatInstaller" /S
+				# & "$LocalDLPath\$tomcatInstaller" /S
 				# this may exit before install is complete - so wait for service and server.xml to show up before doing anything
 
 
@@ -183,31 +202,6 @@ Configuration InstallAUI
 						else
 						{
 							Write-Host "Waiting for Tomcat to be created"
-						}
-					}
-				}
-
-				# This check is I think redundant. - Remove
-				$retrycount = 1800
-				while ($retryCount -gt 0)
-				{
-					$readyToConfigure = (Get-Item $ServerXMLFile -ErrorAction SilentlyContinue)
-
-					if ($readyToConfigure)
-					{
-						break   #success
-					}
-					else
-					{
-    					Start-Sleep -s 1;
-						$retrycount = $retrycount - 1;
-						if ( $retrycount -eq 0)
-						{
-							throw "server.xml not installed in time."
-						}
-						else
-						{
-							Write-Host "Waiting for server.xml to be created"
 						}
 					}
 				}
