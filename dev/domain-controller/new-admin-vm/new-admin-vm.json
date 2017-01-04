@@ -104,7 +104,7 @@
                     "privacy": {
                         "DataCollection": "Disable"
                     },
-                    "configurationFunction": "Install-AUI.ps1\\Install_AUI"
+                    "configurationFunction": "Install-AUI.ps1\\InstallAUI"
                 }
             }
         }
