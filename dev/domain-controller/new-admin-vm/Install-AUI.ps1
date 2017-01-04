@@ -1,4 +1,20 @@
 # Install-AUI.ps1
+# Compile to a local .zip file via this command:
+# Publish-AzureVMDscConfiguration -ConfigurationPath .\Install-AUI.ps1 -ConfigurationArchivePath .\Install-AUI.zip
+# And then push to GitHUB.
+#
+# Or to push to Azure Storage:
+#
+# example:
+#
+# $StorageAccount = 'teradeploy'
+# $StorageKey = '<put key here>'
+# $StorageContainer = 'binaries'
+# 
+# $StorageContext = New-AzureStorageContext -StorageAccountName $StorageAccount -StorageAccountKey $StorageKey
+# Publish-AzureVMDscConfiguration -ConfigurationPath .\Install-AUI.ps1  -ContainerName $StorageContainer -StorageContext $StorageContext
+#
+#
 Configuration InstallAUI
 {
 	# One day pull from Oracle as per here? https://github.com/gregjhogan/cJre8/blob/master/DSCResources/cJre8/cJre8.schema.psm1
@@ -61,8 +77,8 @@ Configuration InstallAUI
 
             #TODO: Just check for a directory being present? What to do when Java version changes?
             TestScript = { 
-							$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_91"
-		                	$JavaBinLocation = $JavaRootLocation + "\bin"
+				$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_91"
+		       	$JavaBinLocation = $JavaRootLocation + "\bin"
 				if ( Get-Item -path "$JavaBinLocation" -ErrorAction SilentlyContinue )
                             {return $true}
                             else {return $false}
@@ -71,11 +87,17 @@ Configuration InstallAUI
                 Write-Verbose "Install_Java"
 
 				#Why do you need to use Start-Process? Don't know.
-				Start-Process $LocalDLPath\$javaInstaller -ArgumentList '/s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"' -Wait
+                #& "$dest\$installerFileName" /S
+#				Start-Process $LocalDLPath\$javaInstaller -ArgumentList '/s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"' -Wait
+
+
+		        $LocalDLPath = "$env:systemdrive\WindowsAzure\PCoIPAUIInstall"
+		        $javaInstaller = "jdk-8u91-windows-x64.exe"
+#				Start-Process $LocalDLPath\$javaInstaller -ArgumentList '/s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"' -Wait
+
+				& "$LocalDLPath\$javaInstaller" /s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"
 
 				Write-Host "Setting up paths and environment"
-
-				#setup path and environment
 
 				$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_91"
 				$JavaBinLocation = $JavaRootLocation + "\bin"
@@ -111,15 +133,41 @@ Configuration InstallAUI
             SetScript  = {
                 Write-Verbose "Install_Tomcat"
 
-				#Why do you need to use Start-Process? Don't know.
-				Start-Process $LocalDLPath\$tomcatInstaller -ArgumentList '/S' -Wait
+		        $LocalDLPath = "$env:systemdrive\WindowsAzure\PCoIPAUIInstall"
+		        $tomcatInstaller = "apache-tomcat-8.0.33.exe"
 
-				Set-Service Tomcat8 -startuptype "automatic"
+				#Why do you need to use Start-Process? Don't know.
+#				Start-Process $LocalDLPath\$tomcatInstaller -ArgumentList '/S' -Wait
+				& "$LocalDLPath\$tomcatInstaller" /S
+				# this may exit before install is complete - so wait for service and server.xml to show up before doing anything
+
 
 				Write-Host "Setting Paths and Tomcat environment"
 
 				$CatalinaHomeLocation ="$env:systemdrive\Program Files\Apache Software Foundation\Tomcat 8.0"
 				$CatalinaBinLocation = $CatalinaHomeLocation + "\bin"
+				$ServerXMLFile = $CatalinaHomeLocation + '\conf\server.xml'
+
+				$retrycount = 1800
+				while ($retryCount -gt 0)
+				{
+					$readyToConfigure = ( get-service Tomcat8 -ErrorAction SilentlyContinue ) -and (Get-Item $ServerXMLFile -ErrorAction SilentlyContinue)
+
+					if ($readyToConfigure)
+					{
+						break   #success
+					}
+					else
+					{
+    					Start-Sleep -s 1;
+						$retrycount = $retrycount - 1;
+						if ( $retrycount -eq 0)
+						{
+							throw "Tomcat not installed in time."
+						}
+					}
+				}
+
 				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
 
 				$NewPath = (Get-ItemProperty -Path "$Reg" -Name PATH).Path
@@ -138,7 +186,7 @@ Configuration InstallAUI
 
 
 				#back up server.xml file
-				Copy-Item -Path ($CatalinaHomeLocation + '\conf\server.xml') `
+				Copy-Item -Path ($ServerXMLFile) `
 					-Destination ($CatalinaHomeLocation + '\conf\server.xml.orig')
 
 				#update server.xml file
@@ -162,19 +210,20 @@ Configuration InstallAUI
 					#ref child
 					$xml.Server.Service.Engine )
 
-				$xml.save($CatalinaHomeLocation + '\conf\server.xml')
+				$xml.save($ServerXMLFile)
 
 				Write-Host "Opening port 8443"
 
 				#open port in firewall
 				netsh advfirewall firewall add rule name="Open Port 8443" dir=in action=allow protocol=TCP localport=8443
 
-				####### Maybe remove this later after moving more to machine name symantics ############
-				# (Or at least use domain controller IP variable :) )
+				####### TODO: Make this a parameter and what to do about DC HA? Names? ############
 				Set-Item wsman:\localhost\client\trustedhosts 10.0.0.10 -Force
 
 				# Reboot machine
-				$global:DSCMachineStatus = 1 
+				# $global:DSCMachineStatus = 1
+				Set-Service Tomcat8 -startuptype "automatic"
+				Start-Service Tomcat8
 	        }
         }
 
@@ -186,6 +235,7 @@ Configuration InstallAUI
             #TODO: Check for other agent types as well?
             TestScript = {
 				$CatalinaHomeLocation ="$env:systemdrive\Program Files\Apache Software Foundation\Tomcat 8.0"
+				$adminWAR = "Powershell_Admin.war"
 				$WARPath = $CatalinaHomeLocation + "\webapps" + $adminWAR
  
 				if ( Get-Item $WARPath -ErrorAction SilentlyContinue )
@@ -193,6 +243,8 @@ Configuration InstallAUI
                             else {return $false}
 			}
             SetScript  = {
+				$LocalDLPath = "$env:systemdrive\WindowsAzure\PCoIPAUIInstall"
+				$adminWAR = "Powershell_Admin.war"
 				$CatalinaHomeLocation ="$env:systemdrive\Program Files\Apache Software Foundation\Tomcat 8.0"
 
                 Write-Verbose "Install_AUI"
