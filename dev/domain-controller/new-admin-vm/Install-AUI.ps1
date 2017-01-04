@@ -91,7 +91,7 @@ Configuration InstallAUI
 				$retrycount = 1800
 				while ($retryCount -gt 0)
 				{
-					$readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{64A3A4F4-B792-11D6-A78A-00B0D0180910}" )
+					$readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{64A3A4F4-B792-11D6-A78A-00B0D0180910}"  -ErrorAction SilentlyContinue )
 
 					if ($readyToConfigure)
 					{
