@@ -151,7 +151,7 @@ Configuration InstallAUI
 				$retrycount = 1800
 				while ($retryCount -gt 0)
 				{
-					$readyToConfigure = ( get-service Tomcat8 -ErrorAction SilentlyContinue ) -and (Get-Item $ServerXMLFile -ErrorAction SilentlyContinue)
+					$readyToConfigure = ( get-service Tomcat8 -ErrorAction SilentlyContinue )
 
 					if ($readyToConfigure)
 					{
@@ -164,6 +164,37 @@ Configuration InstallAUI
 						if ( $retrycount -eq 0)
 						{
 							throw "Tomcat not installed in time."
+						}
+						else
+						{
+							Write-Host "Waiting for Tomcat to be created"
+						}
+					}
+				}
+
+				Set-Service Tomcat8 -startuptype "automatic"
+				Restart-Service Tomcat8
+
+				$retrycount = 1800
+				while ($retryCount -gt 0)
+				{
+					$readyToConfigure = (Get-Item $ServerXMLFile -ErrorAction SilentlyContinue)
+
+					if ($readyToConfigure)
+					{
+						break   #success
+					}
+					else
+					{
+    					Start-Sleep -s 1;
+						$retrycount = $retrycount - 1;
+						if ( $retrycount -eq 0)
+						{
+							throw "server.xml not installed in time."
+						}
+						else
+						{
+							Write-Host "Waiting for server.xml to be created"
 						}
 					}
 				}
@@ -222,8 +253,9 @@ Configuration InstallAUI
 
 				# Reboot machine
 				# $global:DSCMachineStatus = 1
-				Set-Service Tomcat8 -startuptype "automatic"
-				Start-Service Tomcat8
+
+				# Restart service for new config
+				Restart-Service Tomcat8
 	        }
         }
 
