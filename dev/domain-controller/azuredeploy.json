@@ -273,9 +273,6 @@
                     "adminPassword": {
                         "value": "[parameters('adminPassword')]"
                     },
-                    "DNSServerAddress": {
-                        "value": "[variables('adNicIPAddress')]"
-                    },
                     "_artifactsLocation": {
                         "value": "[concat(parameters('_artifactsLocation'), '/configure-dc-and-ca')]"
                     }
@@ -309,7 +306,7 @@
                         "value": "[variables('adSubnetAddressPrefix')]"
                     },
                     "DNSServerAddress": {
-                        "value": "[variables('adNicIPAddress')]"
+                        "value": ["[variables('adNicIPAddress')]"]
                     }
                 }
             }
