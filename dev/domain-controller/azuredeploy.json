@@ -261,6 +261,9 @@
                     "existingVNETName": {
                         "value": "[variables('virtualNetworkName')]"
                     },
+                    "domainControllerVMName": {
+                        "value": "[variables('adVMName')]"
+                    },
                     "domainName": {
                         "value": "[parameters('domainName')]"
                     },
