@@ -2,66 +2,34 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+        "adminUsername": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the administrator account of the new VM and domain"
+            }
+        },
+        "adminPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "The password for the administrator account of the new VM and domain"
+            }
+        },
+        "domainName": {
+            "type": "string",
+            "metadata": {
+                "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
+            }
+        },
         "existingVNETName": {
             "type": "string",
             "metadata": {
                 "description": "Existing VNET that contains the domain controller"
             }
         },
-        "existingSubnetName": {
+        "DNSServerAddress": {
             "type": "string",
             "metadata": {
-                "description": "Existing subnet that contains the domain controller"
-            }
-        },
-        "dnsLabelPrefix": {
-            "type": "string",
-            "metadata": {
-                "description": "Unique public DNS prefix for the deployment. The fqdn will look something like '<dnsname>.westus.cloudapp.azure.com'. Up to 62 chars, digits or dashes, lowercase, should start with a letter: must conform to '^[a-z][a-z0-9-]{1,61}[a-z0-9]$'."
-            }
-        },
-        "vmSize": {
-            "defaultValue": "Standard_A2",
-            "type": "string",
-            "metadata": {
-                "description": "The size of the virtual machines"
-            }
-        },
-        "domainToJoin": {
-            "type": "string",
-            "metadata": {
-                "description": "The FQDN of the AD domain"
-            }
-        },
-        "domainUsername": {
-            "type": "string",
-            "metadata": {
-                "description": "Username of the account on the domain"
-            }
-        },
-        "domainPassword": {
-            "type": "securestring",
-            "metadata": {
-                "description": "Password of the account on the domain"
-            }
-        },
-        "domainJoinOptions": {
-            "defaultValue": 3,
-            "type": "int",
-            "metadata": {
-                "description": "Set of bit flags that define the join options. Default value of 3 is a combination of NETSETUP_JOIN_DOMAIN (0x00000001) & NETSETUP_ACCT_CREATE (0x00000002) i.e. will join the domain and create the account on the domain. For more information see https://msdn.microsoft.com/en-us/library/aa392154(v=vs.85).aspx"
-            }
-        },
-        "vmAdminUsername": {
-            "type": "string",
-            "metadata": {
-                "description": "The name of the administrator of the new VM and the domain. Exclusion list: 'admin','administrator"
-            }
-        },
-        "vmAdminPassword": {
-            "type": "securestring",
-            "metadata": {
-                "description": "The password for the administrator account of the new VM and the domain"
+                "description": "DNS server IP address"
             }
         },
         "_artifactsLocation": {
@@ -79,9 +47,6 @@
         }
     },
     "variables": {
-        "imagePublisher": "MicrosoftWindowsServer",
-        "imageOffer": "WindowsServer",
-        "windowsOSVersion": "2016-Datacenter",
         "apiVersion": "2015-06-15",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
         "publicIPName": "[concat(parameters('dnsLabelPrefix'),'Pip')]",
@@ -91,12 +56,9 @@
     "resources": [
         {
             "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(variables('adVMName'),'/CreateADForest')]",
+            "name": "CreateADForest",
             "apiVersion": "2015-06-15",
             "location": "[resourceGroup().location]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Compute/virtualMachines', variables('adVMName'))]"
-            ],
             "properties": {
                 "publisher": "Microsoft.Powershell",
                 "type": "DSC",
@@ -121,36 +83,13 @@
             }
         },
         {
-            "type": "Microsoft.Resources/deployments",
-            "name": "UpdateVNetDNS",
-            "apiVersion": "2016-02-01",
-            "dependsOn": [
-                "[resourceId('Microsoft.Compute/virtualMachines/extensions',variables('adVMName'),'CreateADForest')]"
-            ],
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[parameters('existingVNETName')]",
+            "apiVersion": "2016-03-30",
+            "location": "[resourceGroup().location]",
             "properties": {
-                "mode": "Incremental",
-                "templateLink": {
-                    "uri": "[concat(parameters('_artifactsLocation'), '/nestedtemplates/vnet.json', parameters('_artifactsLocationSasToken'))]",
-                    "contentVersion": "1.0.0.0"
-                },
-                "parameters": {
-                    "virtualNetworkName": {
-                        "value": "[variables('virtualNetworkName')]"
-                    },
-                    "virtualNetworkAddressRange": {
-                        "value": "[variables('virtualNetworkAddressRange')]"
-                    },
-                    "subnetName": {
-                        "value": "[variables('adSubnetName')]"
-                    },
-                    "subnetRange": {
-                        "value": "[variables('adSubnetAddressPrefix')]"
-                    },
-                    "DNSServerAddress": {
-                        "value": [
-                            "[variables('adNicIPAddress')]"
-                        ]
-                    }
+                "dhcpOptions": {
+                    "dnsServers": "[parameters('DNSServerAddress')]"
                 }
             }
         }
