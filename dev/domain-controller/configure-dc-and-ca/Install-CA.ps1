@@ -1,6 +1,12 @@
 Configuration CertificateAuthority
 {
-    Node ‘NodeName’
+	Param (
+		[System.Management.Automation.PSCredential]$domainAdminCredentials
+	)
+	
+	Import-DSCResource -ModuleName xAdcsDeployment
+
+	Node localhost
     {
         WindowsFeature ADCS-Cert-Authority
         {
@@ -10,7 +16,7 @@ Configuration CertificateAuthority
         xADCSCertificationAuthority ADCS
         {
             Ensure = 'Present'
-            Credential = $Node.Credential
+            Credential = $domainAdminCredentials
             CAType = 'EnterpriseRootCA'
             DependsOn = '[WindowsFeature]ADCS-Cert-Authority'
         }
@@ -24,7 +30,7 @@ Configuration CertificateAuthority
         {
             Ensure = 'Present'
             IsSingleInstance = 'Yes'
-            Credential = $Node.Credential
+            Credential = $domainAdminCredentials
             DependsOn = '[WindowsFeature]ADCS-Web-Enrollment','[xADCSCertificationAuthority]ADCS'
         }
     }

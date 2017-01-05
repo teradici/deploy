@@ -77,6 +77,41 @@
                     }
                 }
             }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('dnsLabelPrefix'),'/InstallAdminGUIDscExtension')]",
+            "apiVersion": "2015-06-15",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "publisher": "Microsoft.Powershell",
+                "type": "DSC",
+                "typeHandlerVersion": "2.9",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "configuration": {
+                        "url": "https://teradeploy.blob.core.windows.net/binaries/Install-CA.ps1.zip",
+                        "script": "Install-AUI.ps",
+                        "function": "InstallAUI"
+                    },
+                    "configurationArguments": {
+                        "nodeName": "[variables('vmName')]",
+                        "domainName": "[parameters('domainName')]",
+                        "domainAdminCredentials": {
+                            "UserName": "[parameters('adminUserName')]",
+                            "Password": "PrivateSettingsRef:Password"
+                        }
+                    },
+                    "privacy": {
+                        "DataCollection": "Disable"
+                    }
+                },
+                "protectedSettings": {
+                    "items": {
+                        "Password": "[parameters('adminPassword')]"
+                    }
+                }
+            }
         }
     ]
 }
