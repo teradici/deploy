@@ -46,9 +46,6 @@
             "defaultValue": ""
         }
     },
-    "variables": {
-        "apiVersion": "2015-06-15"
-    },
     "resources": [
         {
             "type": "Microsoft.Compute/virtualMachines/extensions",
@@ -80,7 +77,7 @@
         },
         {
             "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(parameters('domainControllerVMName'),'/InstallAdminGUIDscExtension')]",
+            "name": "[concat(parameters('domainControllerVMName'),'/InstallCA')]",
             "apiVersion": "2015-06-15",
             "location": "[resourceGroup().location]",
             "properties": {
@@ -95,8 +92,6 @@
                         "function": "InstallAUI"
                     },
                     "configurationArguments": {
-                        "nodeName": "[variables('vmName')]",
-                        "domainName": "[parameters('domainName')]",
                         "domainAdminCredentials": {
                             "UserName": "[parameters('adminUserName')]",
                             "Password": "PrivateSettingsRef:Password"
