@@ -140,11 +140,11 @@ Configuration InstallAUI
 		Package Tomcat8
         {
 			Ensure = 'Present'
-			Name = 'Tomcat8'
+			Name = 'Apache Tomcat 8.0 Tomcat8 (remove only)'  #If no productID then this must match the 'DisplayName' value in the 'uninstall' portion of the registry
 			Path = "$LocalDLPath\$tomcatInstaller"
 			Arguments = '/S'
-			ReturnCode = 2
-			ProductId = ''
+			ReturnCode = 2   #2? Why? Seems like an error but that's what happens now...
+			ProductId = ''   #This is not needed and can be empty but then Name must match.
             DependsOn = @("[xRemoteFile]Download_Tomcat_Installer", "[Script]Install_Java")
 		}
 
