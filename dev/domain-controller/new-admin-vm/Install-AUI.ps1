@@ -143,8 +143,9 @@ Configuration InstallAUI
 			Name = 'Tomcat8'
 			Path = "$LocalDLPath\$tomcatInstaller"
 			Arguments = '/S'
+			ReturnCode = 2
 			ProductId = ''
-            DependsOn  = @("[xRemoteFile]Download_Tomcat_Installer", "[Script]Install_Java")
+            DependsOn = @("[xRemoteFile]Download_Tomcat_Installer", "[Script]Install_Java")
 		}
 
 		Script Install_Tomcat
