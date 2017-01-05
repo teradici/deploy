@@ -57,6 +57,18 @@ Configuration InstallAUI
 			DestinationPath = "$LocalDLPath\$tomcatInstaller"
 		}
 
+		xRemoteFile Download_Firefox
+		{
+			Uri = "$sourceURI/Firefox Setup Stub 49.0.1.exe"
+			DestinationPath = "$LocalDLPath\Firefox Setup Stub 49.0.1.exe"
+		}
+
+		xRemoteFile Download_Keystore
+		{
+			Uri = "$sourceURI/.keystore"
+			DestinationPath = "$LocalDLPath\.keystore"
+		}
+
 		xRemoteFile Download_Admin_WAR
 		{
 			Uri = "$sourceURI/$adminWAR"
@@ -132,25 +144,30 @@ Configuration InstallAUI
 				Set-ItemProperty -Path "$Reg" -Name PATH –Value $NewPath
 				Set-ItemProperty -Path "$Reg" -Name JAVA_HOME –Value $JavaRootLocation
 				Set-ItemProperty -Path "$Reg" -Name classpath –Value $JavaLibLocation
+
+				# Reboot machine - seems to need to happen to get Tomcat to install???
+				$global:DSCMachineStatus = 1
             }
         }
 
 
 
-		Package Tomcat8
-        {
-			Ensure = 'Present'
-			Name = 'Apache Tomcat 8.0 Tomcat8 (remove only)'  #If no productID then this must match the 'DisplayName' value in the 'uninstall' portion of the registry
-			Path = "$LocalDLPath\$tomcatInstaller"
-			Arguments = '/S'
-			ReturnCode = 2   #2? Why? Seems like an error but that's what happens now...
-			ProductId = ''   #This is not needed and can be empty but then Name must match.
-            DependsOn = @("[xRemoteFile]Download_Tomcat_Installer", "[Script]Install_Java")
-		}
+		#Package Tomcat8
+  #      {
+		#	Ensure = 'Present'
+		#	Name = 'Apache Tomcat 8.0 Tomcat8 (remove only)'  #If no productID then this must match the 'DisplayName' value in the 'uninstall' portion of the registry
+		#	Path = "$LocalDLPath\$tomcatInstaller"
+		#	Arguments = '/S'
+		#	ReturnCode = 2   #2? Why? Seems like an error but that's what happens now...
+		#	ProductId = ''   #This is not needed and can be empty but then Name must match.
+  #          DependsOn = @("[xRemoteFile]Download_Tomcat_Installer", "[Script]Install_Java")
+		#}
 
 		Script Install_Tomcat
         {
-            DependsOn  = @("[Package]Tomcat8")
+			 #doesn't really need Firefox but that makes sure the dependancies pull it in. (Do we need that or is jsut being part of the configuration okay? Probably okay...)
+            DependsOn = @("[xRemoteFile]Download_Tomcat_Installer", "[Script]Install_Java", "[xRemoteFile]Download_Firefox", "[xRemoteFile]Download_Keystore")
+#            DependsOn  = @("[Package]Tomcat8")
             GetScript  = { @{ Result = "Install_Tomcat" } }
 
             TestScript = { 
@@ -173,7 +190,11 @@ Configuration InstallAUI
 
 				# Run the installer. Start-Process does not work due to permissions issue however '&' calling will not wait so looks for registry key as 'completion.'
 				# Start-Process $LocalDLPath\$tomcatInstaller -ArgumentList '/S' -Wait
-				# & "$LocalDLPath\$tomcatInstaller" /S
+				& "$LocalDLPath\$tomcatInstaller" /S
+
+				Write-Host "Tomcat Installer exit code: $LASTEXITCODE"
+
+
 				# this may exit before install is complete - so wait for service and server.xml to show up before doing anything
 
 
@@ -234,7 +255,7 @@ Configuration InstallAUI
 				$NewConnector = [xml] '<Connector
 				port="8443"
 				protocol="HTTP/1.1" SSLEnabled="true"
-				keystoreFile="c:\dev\psbinaries\.keystore"
+				keystoreFile="'+$LocalDLPath+'\.keystore"
 				maxThreads="2000" scheme="https" secure="true"
 				clientAuth="false" sslProtocol="TLS"
 				SSLEngine="on" keystorePass="changeit"
@@ -263,8 +284,10 @@ Configuration InstallAUI
 				# $global:DSCMachineStatus = 1
 
 				# Restart service for new config
+				Write-Host "Starting Tomcat Service"
 				Set-Service Tomcat8 -startuptype "automatic"
-				Restart-Service Tomcat8
+				Start-Sleep -s 10  #TODO: Is this sleep ACTUALLY needed?
+				Start-Service Tomcat8
 	        }
         }
 
