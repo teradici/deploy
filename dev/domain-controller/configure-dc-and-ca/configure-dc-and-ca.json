@@ -49,7 +49,7 @@
     "resources": [
         {
             "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(parameters('domainControllerVMName'),'/CreateADForest')]",
+            "name": "[concat(parameters('domainControllerVMName'),'/CreateADForestAndCA')]",
             "apiVersion": "2015-06-15",
             "location": "[resourceGroup().location]",
             "properties": {
@@ -58,8 +58,11 @@
                 "typeHandlerVersion": "2.19",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "modulesUrl": "[concat(parameters('_artifactsLocation'), '/DSC/CreateADPDC.zip', parameters('_artifactsLocationSasToken'))]",
-                    "configurationFunction": "CreateADPDC.ps1\\CreateADPDC",
+                    "configuration": {
+                        "url": "https://teradeploy.blob.core.windows.net/binaries/Install-DC-and-CA.ps1.zip",
+                        "script": "Install-DC-and-CA.ps1",
+                        "function": "CreateDCCA"
+                    },
                     "Properties": {
                         "DomainName": "[parameters('domainName')]",
                         "AdminCreds": {
@@ -71,39 +74,6 @@
                 "protectedSettings": {
                     "Items": {
                         "AdminPassword": "[parameters('adminPassword')]"
-                    }
-                }
-            }
-        },
-        {
-            "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(parameters('domainControllerVMName'),'/InstallCA')]",
-            "apiVersion": "2015-06-15",
-            "location": "[resourceGroup().location]",
-            "properties": {
-                "publisher": "Microsoft.Powershell",
-                "type": "DSC",
-                "typeHandlerVersion": "2.9",
-                "autoUpgradeMinorVersion": true,
-                "settings": {
-                    "configuration": {
-                        "url": "https://teradeploy.blob.core.windows.net/binaries/Install-CA.ps1.zip",
-                        "script": "Install-AUI.ps",
-                        "function": "InstallAUI"
-                    },
-                    "configurationArguments": {
-                        "domainAdminCredentials": {
-                            "UserName": "[parameters('adminUserName')]",
-                            "Password": "PrivateSettingsRef:Password"
-                        }
-                    },
-                    "privacy": {
-                        "DataCollection": "Disable"
-                    }
-                },
-                "protectedSettings": {
-                    "items": {
-                        "Password": "[parameters('adminPassword')]"
                     }
                 }
             }
