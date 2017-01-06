@@ -58,11 +58,8 @@
                 "typeHandlerVersion": "2.19",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "configuration": {
-                        "url": "https://teradeploy.blob.core.windows.net/binaries/Install-DC-and-CA.ps1.zip",
-                        "script": "Install-DC-and-CA.ps1",
-                        "function": "CreateDCCA"
-                    },
+                    "modulesUrl": "https://teradeploy.blob.core.windows.net/binaries/Install-DC-and-CA.ps1.zip",
+                    "configurationFunction": "Install-DC-and-CA.ps1\\CreateDCCA",
                     "Properties": {
                         "DomainName": "[parameters('domainName')]",
                         "AdminCreds": {
