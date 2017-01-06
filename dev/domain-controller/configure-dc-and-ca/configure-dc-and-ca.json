@@ -80,9 +80,6 @@
             "name": "[concat(parameters('domainControllerVMName'),'/InstallCA')]",
             "apiVersion": "2015-06-15",
             "location": "[resourceGroup().location]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('domainControllerVMName'),'CreateADForest')]"
-                ],
             "properties": {
                 "publisher": "Microsoft.Powershell",
                 "type": "DSC",
