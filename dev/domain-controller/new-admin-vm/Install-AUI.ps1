@@ -30,7 +30,7 @@ Configuration InstallAUI
         $javaInstaller = "jdk-8u91-windows-x64.exe",
 
         [string]
-        $tomcatInstaller = "apache-tomcat-8.0.33.exe",
+        $tomcatInstaller = "apache-tomcat-8.0.39-windows-x64.zip",
 
         [string]
         $adminWAR = "Powershell_Admin.war"
@@ -103,7 +103,8 @@ Configuration InstallAUI
 				$retrycount = 1800
 				while ($retryCount -gt 0)
 				{
-					$readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{64A3A4F4-B792-11D6-A78A-00B0D0180910}"  -ErrorAction SilentlyContinue )
+					$readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{26A24AE4-039D-4CA4-87B4-2F86418091F0}"  -ErrorAction SilentlyContinue )
+					# don't wait for {64A3A4F4-B792-11D6-A78A-00B0D0180910} - that's the JDK. The JRE is installed 2nd {26A...} so wait for that.
 
 					if ($readyToConfigure)
 					{
@@ -146,28 +147,13 @@ Configuration InstallAUI
 				Set-ItemProperty -Path "$Reg" -Name classpath –Value $JavaLibLocation
 
 				# Reboot machine - seems to need to happen to get Tomcat to install???
-				$global:DSCMachineStatus = 1
+				#$global:DSCMachineStatus = 1
             }
         }
 
-
-
-		#Package Tomcat8
-  #      {
-		#	Ensure = 'Present'
-		#	Name = 'Apache Tomcat 8.0 Tomcat8 (remove only)'  #If no productID then this must match the 'DisplayName' value in the 'uninstall' portion of the registry
-		#	Path = "$LocalDLPath\$tomcatInstaller"
-		#	Arguments = '/S'
-		#	ReturnCode = 2   #2? Why? Seems like an error but that's what happens now...
-		#	ProductId = ''   #This is not needed and can be empty but then Name must match.
-  #          DependsOn = @("[xRemoteFile]Download_Tomcat_Installer", "[Script]Install_Java")
-		#}
-
 		Script Install_Tomcat
         {
-			 #doesn't really need Firefox but that makes sure the dependancies pull it in. (Do we need that or is jsut being part of the configuration okay? Probably okay...)
-            DependsOn = @("[xRemoteFile]Download_Tomcat_Installer", "[Script]Install_Java", "[xRemoteFile]Download_Firefox", "[xRemoteFile]Download_Keystore")
-#            DependsOn  = @("[Package]Tomcat8")
+            DependsOn = @("[xRemoteFile]Download_Tomcat_Installer", "[Script]Install_Java", "[xRemoteFile]Download_Keystore")
             GetScript  = { @{ Result = "Install_Tomcat" } }
 
             TestScript = { 
@@ -185,48 +171,24 @@ Configuration InstallAUI
             SetScript  = {
                 Write-Verbose "Install_Tomcat"
 
+				#just going 'manual' now since installer has been a massive PITA
+
 		        $LocalDLPath = "$env:systemdrive\WindowsAzure\PCoIPAUIInstall"
-		        $tomcatInstaller = "apache-tomcat-8.0.33.exe"
+		        $tomcatInstaller = "apache-tomcat-8.0.39-windows-x64.zip"
+				$localtomcatpath = "$env:systemdrive\tomcat"
+				$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
+				$CatalinaBinLocation = $CatalinaHomeLocation + "\bin"
+				$ServerXMLFile = $CatalinaHomeLocation + '\conf\server.xml'
 
-				# Run the installer. Start-Process does not work due to permissions issue however '&' calling will not wait so looks for registry key as 'completion.'
-				# Start-Process $LocalDLPath\$tomcatInstaller -ArgumentList '/S' -Wait
-				& "$LocalDLPath\$tomcatInstaller" /S
+				#make sure we get a clean install
+				Remove-Item $localtomcatpath -Force -Recurse -ErrorAction SilentlyContinue
 
-				Write-Host "Tomcat Installer exit code: $LASTEXITCODE"
-
-
-				# this may exit before install is complete - so wait for service and server.xml to show up before doing anything
+				Expand-Archive "$LocalDLPath\$tomcatInstaller" -DestinationPath $localtomcatpath
 
 
 				Write-Host "Setting Paths and Tomcat environment"
 
-				$CatalinaHomeLocation ="$env:systemdrive\Program Files\Apache Software Foundation\Tomcat 8.0"
-				$CatalinaBinLocation = $CatalinaHomeLocation + "\bin"
-				$ServerXMLFile = $CatalinaHomeLocation + '\conf\server.xml'
 
-				$retrycount = 1800
-				while ($retryCount -gt 0)
-				{
-					$readyToConfigure = ( get-service Tomcat8 -ErrorAction SilentlyContinue )
-
-					if ($readyToConfigure)
-					{
-						break   #success
-					}
-					else
-					{
-    					Start-Sleep -s 1;
-						$retrycount = $retrycount - 1;
-						if ( $retrycount -eq 0)
-						{
-							throw "Tomcat not installed in time."
-						}
-						else
-						{
-							Write-Host "Waiting for Tomcat to be created"
-						}
-					}
-				}
 
 				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
 
@@ -242,27 +204,35 @@ Configuration InstallAUI
 				Set-ItemProperty -Path "$Reg" -Name CATALINA_BASE –Value $CatalinaHomeLocation
 				Set-ItemProperty -Path "$Reg" -Name CATALINA_HOME –Value $CatalinaHomeLocation
 
+				#set the local CATALINE_HOME as well since the service installer will need that
+				$env:CATALINA_BASE = $CatalinaHomeLocation
+				$env:CATALINA_HOME = $CatalinaHomeLocation
+
+
 				Write-Host "Configuring Tomcat"
 
-
-				#back up server.xml file
-				Copy-Item -Path ($ServerXMLFile) `
-					-Destination ($CatalinaHomeLocation + '\conf\server.xml.orig')
+				#back up server.xml file if not done in a previous round
+				if( -not ( Get-Item ($CatalinaHomeLocation + '\conf\server.xml.orig') -ErrorAction SilentlyContinue ) )
+				{
+					Copy-Item -Path ($ServerXMLFile) `
+						-Destination ($CatalinaHomeLocation + '\conf\server.xml.orig')
+				}
 
 				#update server.xml file
 				$xml = [xml](Get-Content ($CatalinaHomeLocation + '\conf\server.xml.orig'))
 
-				$NewConnector = [xml] '<Connector
-				port="8443"
-				protocol="HTTP/1.1" SSLEnabled="true"
-				keystoreFile="'+$LocalDLPath+'\.keystore"
-				maxThreads="2000" scheme="https" secure="true"
-				clientAuth="false" sslProtocol="TLS"
-				SSLEngine="on" keystorePass="changeit"
-				SSLPassword="changeit"
-				sslEnabledProtocols="TLSv1.0,TLSv1.1,TLSv1.2"
-				ciphers="TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_CBC_SHA"
-				/>'
+				$NewConnector = [xml] ('<Connector
+					port="8443"
+					protocol="org.apache.coyote.http11.Http11NioProtocol"
+					SSLEnabled="true"
+					keystoreFile="'+$LocalDLPath+'\.keystore"
+					maxThreads="2000" scheme="https" secure="true"
+					clientAuth="false" sslProtocol="TLS"
+					SSLEngine="on" keystorePass="changeit"
+					SSLPassword="changeit"
+					sslEnabledProtocols="TLSv1.0,TLSv1.1,TLSv1.2"
+					ciphers="TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_CBC_SHA"
+					/>')
 
 				$xml.Server.Service.InsertBefore(
 					# new child
@@ -271,6 +241,8 @@ Configuration InstallAUI
 					$xml.Server.Service.Engine )
 
 				$xml.save($ServerXMLFile)
+
+
 
 				Write-Host "Opening port 8443"
 
@@ -283,7 +255,12 @@ Configuration InstallAUI
 				# Reboot machine
 				# $global:DSCMachineStatus = 1
 
-				# Restart service for new config
+				# Install and start service for new config
+
+				& "$CatalinaBinLocation\service.bat" install
+				Write-Host "Tomcat Installer exit code: $LASTEXITCODE"
+				Start-Sleep -s 10  #TODO: Is this sleep ACTUALLY needed?
+
 				Write-Host "Starting Tomcat Service"
 				Set-Service Tomcat8 -startuptype "automatic"
 				Start-Sleep -s 10  #TODO: Is this sleep ACTUALLY needed?
@@ -298,7 +275,8 @@ Configuration InstallAUI
 
             #TODO: Check for other agent types as well?
             TestScript = {
-				$CatalinaHomeLocation ="$env:systemdrive\Program Files\Apache Software Foundation\Tomcat 8.0"
+				$localtomcatpath = "$env:systemdrive\tomcat"
+				$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
 				$adminWAR = "Powershell_Admin.war"
 				$WARPath = $CatalinaHomeLocation + "\webapps" + $adminWAR
  
@@ -309,7 +287,8 @@ Configuration InstallAUI
             SetScript  = {
 				$LocalDLPath = "$env:systemdrive\WindowsAzure\PCoIPAUIInstall"
 				$adminWAR = "Powershell_Admin.war"
-				$CatalinaHomeLocation ="$env:systemdrive\Program Files\Apache Software Foundation\Tomcat 8.0"
+				$localtomcatpath = "$env:systemdrive\tomcat"
+				$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
 
                 Write-Verbose "Install_AUI"
 
