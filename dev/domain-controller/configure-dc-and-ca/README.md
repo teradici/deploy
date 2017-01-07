@@ -16,6 +16,13 @@ Often, C:\Program Files\WindowsPowerShell\Modules should be there.
 
 To ensure cDisk was installed you can use: Get-Module -ListAvailable and check for cDisk.
 
+*** In addition, for the time being, the xActiveDirectory module also needs special handling ***
+
+Importing the xActiveDirectory module as per pull request #101 as referenced in this bug report: https://github.com/PowerShell/xActiveDirectory/issues/73
+
+At the time of writing the MSFT master version does not seem to work with Server 2016 domain controllers but the branched version (here) does. So this version is the one that must be added to the DSC configuration .zip file.
+
+
 
 Also a number of standard Modules need to be installed for DSC packaging. Example: (please add to the list as you find out more.)
 Install-Module –Name xAdcsDeployment
