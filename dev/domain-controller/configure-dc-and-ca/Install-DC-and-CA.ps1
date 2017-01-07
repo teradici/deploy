@@ -28,30 +28,18 @@
             RebootNodeIfNeeded = $true
         }
 
-        Script AddADDSFeature {
-            SetScript = {
-                Add-WindowsFeature "AD-Domain-Services" -ErrorAction SilentlyContinue   
-            }
-            GetScript =  { @{} }
-            TestScript = { $false }
-        }
-	
+
 	    WindowsFeature DNS 
         { 
             Ensure = "Present" 
             Name = "DNS"		
         }
 
-        Script script1
+	    WindowsFeature RSAT
 	    {
-      	    SetScript =  { 
-		        Set-DnsServerDiagnostics -All $true
-                Write-Verbose -Verbose "Enabling DNS client diagnostics" 
-            }
-            GetScript =  { @{} }
-            TestScript = { $false }
-	        DependsOn = "[WindowsFeature]DNS"
-        }
+	        Ensure = "Present"
+            Name = "RSAT"
+	    }
 
 	    WindowsFeature DnsTools
 	    {
@@ -64,7 +52,7 @@
             Address        = '127.0.0.1' 
             InterfaceAlias = $InterfaceAlias
             AddressFamily  = 'IPv4'
-	        DependsOn = "[WindowsFeature]DNS"
+	        DependsOn = "[WindowsFeature]DNS","[WindowsFeature]RSAT","[WindowsFeature]DnsTools"
         }
 
         xWaitforDisk Disk2
@@ -72,19 +60,22 @@
              DiskNumber = 2
              RetryIntervalSec =$RetryIntervalSec
              RetryCount = $RetryCount
+	 		 #Make sure all the modules are installed before proceeding - this may not be needed...
+	 		 DependsOn = "[xDnsServerAddress]DnsServerAddress"
         }
 
         cDiskNoRestart ADDataDisk
         {
             DiskNumber = 2
             DriveLetter = "F"
+			DependsOn="[xWaitforDisk]Disk2"
         }
 
         WindowsFeature ADDSInstall 
         { 
             Ensure = "Present" 
             Name = "AD-Domain-Services"
-	        DependsOn="[cDiskNoRestart]ADDataDisk", "[Script]AddADDSFeature"
+	        DependsOn="[cDiskNoRestart]ADDataDisk"
         } 
          
         xADDomain FirstDS 
@@ -95,7 +86,7 @@
             DatabasePath = "F:\NTDS"
             LogPath = "F:\NTDS"
             SysvolPath = "F:\SYSVOL"
-	        DependsOn = "[WindowsFeature]ADDSInstall"
+	        DependsOn = "[WindowsFeature]ADDSInstall","[xDnsServerAddress]DnsServerAddress"
         }
 
         WindowsFeature ADCS-Cert-Authority
@@ -108,7 +99,7 @@
         xADCSCertificationAuthority ADCS
         {
             Ensure = 'Present'
-            Credential = $Admincreds
+            Credential = $DomainCreds
             CAType = 'EnterpriseRootCA'
             DependsOn = '[WindowsFeature]ADCS-Cert-Authority'
         }
@@ -122,7 +113,7 @@
         {
             Ensure = 'Present'
             IsSingleInstance = 'Yes'
-            Credential = $Admincreds
+            Credential = $DomainCreds
             DependsOn = '[WindowsFeature]ADCS-Web-Enrollment','[xADCSCertificationAuthority]ADCS'
         }
     }
