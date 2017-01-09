@@ -466,6 +466,106 @@
         },
         {
             "type": "Microsoft.Resources/deployments",
+            "name": "CreateBrokerMachine",
+            "apiVersion": "2016-02-01",
+            "dependsOn": [
+                "Microsoft.Resources/deployments/SetDNSForVNet"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('_artifactsLocation'), '/new-vm-join-domain/new-vm-join-domain.json', parameters('_artifactsLocationSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "existingVNETName": {
+                        "value": "[variables('virtualNetworkName')]"
+                    },
+                    "existingSubnetName": {
+                        "value": "[variables('adSubnetName')]"
+                    },
+                    "dnsLabelPrefix": {
+                        "value": "[concat(variables('DCDnsPrefix'), '-br')]"
+                    },
+                    "vmSize": {
+                        "value": "Standard_A2_v2"
+                    },
+                    "domainToJoin": {
+                        "value": "[parameters('domainName')]"
+                    },
+                    "domainUsername": {
+                        "value": "[parameters('adminUsername')]"
+                    },
+                    "domainPassword": {
+                        "value": "[parameters('adminPassword')]"
+                    },
+                    "domainJoinOptions": {
+                        "value": 3
+                    },
+                    "vmAdminUsername": {
+                        "value": "[parameters('adminUsername')]"
+                    },
+                    "vmAdminPassword": {
+                        "value": "[parameters('adminPassword')]"
+                    },
+                    "storageAccountName": {
+                        "value":  "[variables('storageAccountName')]"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "name": "ConfigureBrokerMachine",
+            "apiVersion": "2016-02-01",
+            "dependsOn": [
+                "Microsoft.Resources/deployments/CreateBrokerMachine"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('_artifactsLocation'), '/new-broker-vm/new-broker-vm.json', parameters('_artifactsLocationSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "existingVNETName": {
+                        "value": "[variables('virtualNetworkName')]"
+                    },
+                    "existingSubnetName": {
+                        "value": "[variables('adSubnetName')]"
+                    },
+                    "dnsLabelPrefix": {
+                        "value": "[concat(variables('DCDnsPrefix'), '-br')]"
+                    },
+                    "vmSize": {
+                        "value": "Standard_A2_v2"
+                    },
+                    "domainToJoin": {
+                        "value": "[parameters('domainName')]"
+                    },
+                    "domainUsername": {
+                        "value": "[parameters('adminUsername')]"
+                    },
+                    "domainPassword": {
+                        "value": "[parameters('adminPassword')]"
+                    },
+                    "domainJoinOptions": {
+                        "value": 3
+                    },
+                    "vmAdminUsername": {
+                        "value": "[parameters('adminUsername')]"
+                    },
+                    "vmAdminPassword": {
+                        "value": "[parameters('adminPassword')]"
+                    },
+                    "_artifactsLocation": {
+                        "value": "[concat(parameters('_artifactsLocation'), '/new-broker-vm')]"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
             "name": "CreateCM",
             "apiVersion": "2016-02-01",
             "dependsOn": [
