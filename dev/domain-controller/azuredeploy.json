@@ -596,6 +596,9 @@
                     "vmAdminPassword": {
                         "value": "[parameters('adminPassword')]"
                     },
+                    "brokerFQDN": {
+                        "value": "[concat(variables('DCDnsPrefix'), '-br','.',parameters('domainName'))]"
+                    },
                     "storageAccountName": {
                         "value":  "[variables('storageAccountName')]"
                     }
