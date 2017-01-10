@@ -281,8 +281,9 @@ Configuration InstallBR
 
 				Write-Host "Starting Tomcat Service"
 				Set-Service Tomcat8 -startuptype "automatic"
-				Start-Sleep -s 10  #TODO: Is this sleep ACTUALLY needed?
-				Restart-Service Tomcat8
+
+				# Reboot machine - seems to need to happen to get Tomcat to run reliably or is there a big delay required? reboot for now :)
+				$global:DSCMachineStatus = 1
 	        }
         }
 
