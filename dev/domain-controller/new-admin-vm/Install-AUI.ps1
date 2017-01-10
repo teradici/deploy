@@ -249,8 +249,8 @@ Configuration InstallAUI
 				#open port in firewall
 				netsh advfirewall firewall add rule name="Open Port 8443" dir=in action=allow protocol=TCP localport=8443
 
-				####### TODO: Make this a parameter and what to do about DC HA? Names? ############
-				Set-Item wsman:\localhost\client\trustedhosts 10.0.0.10 -Force
+				####### TODO - do we need this? I don't think so... Or make this a parameter and what to do about DC HA? Names? ############
+				#Set-Item wsman:\localhost\client\trustedhosts 10.0.0.10 -Force
 
 				# Reboot machine
 				# $global:DSCMachineStatus = 1
@@ -264,7 +264,7 @@ Configuration InstallAUI
 				Write-Host "Starting Tomcat Service"
 				Set-Service Tomcat8 -startuptype "automatic"
 				Start-Sleep -s 10  #TODO: Is this sleep ACTUALLY needed?
-				Start-Service Tomcat8
+				Restart-Service Tomcat8
 	        }
         }
 

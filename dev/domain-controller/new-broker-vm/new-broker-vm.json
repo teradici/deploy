@@ -106,7 +106,7 @@
                     },
                     "configurationFunction": "Install-BR.ps1\\InstallBR",
                     "Properties": {
-                        "DomainName": "[parameters('domainName')]",
+                        "DomainName": "[parameters('domainToJoin')]",
                         "AdminCreds": {
                             "UserName": "[parameters('adminUsername')]",
                             "Password": "PrivateSettingsRef:AdminPassword"
