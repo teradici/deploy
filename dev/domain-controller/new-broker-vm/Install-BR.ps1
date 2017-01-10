@@ -33,8 +33,25 @@ Configuration InstallBR
         $tomcatInstaller = "apache-tomcat-8.0.39-windows-x64.zip",
 
         [string]
-        $brokerWAR = "pcoip-broker.war"
+        $brokerWAR = "pcoip-broker.war",
+
+        [Parameter(Mandatory)]
+        [String]$DomainName,
+
+        [Parameter(Mandatory)]
+        [System.Management.Automation.PSCredential]$Admincreds,
+
+        [Parameter(Mandatory)]
+        [String]$DCVMName #without the domain suffix
     )
+
+	$dcvmfqdn = "$DCVMName.$DomainName"
+	$pbvmfqdn = "$env:computername.$DomainName"
+	$family   = "Windows Server 2016"
+	$domaindns = $DomainName
+
+    $adminUsername = $Admincreds.GetNetworkCredential().Username
+    $adminPassword = $Admincreds.GetNetworkCredential().Password
 
 	Import-DscResource -ModuleName xPSDesiredStateConfiguration
 
@@ -146,7 +163,7 @@ Configuration InstallBR
 				Set-ItemProperty -Path "$Reg" -Name JAVA_HOME –Value $JavaRootLocation
 				Set-ItemProperty -Path "$Reg" -Name classpath –Value $JavaLibLocation
 
-				# Reboot machine - seems to need to happen to get Tomcat to install???
+				# Reboot machine - seems to need to happen to get Tomcat to install??? Nope!
 				#$global:DSCMachineStatus = 1
             }
         }
@@ -293,8 +310,95 @@ Configuration InstallBR
 
                 Write-Verbose "Install_Broker"
 
-				copy $LocalDLPath\$adminWAR ($CatalinaHomeLocation + "\webapps")
+				copy $LocalDLPath\$brokerWAR ($CatalinaHomeLocation + "\webapps")
 
+				#Make sure the properties file exists - as enough proof that the .war file has been processed
+
+
+
+		        #----- Update/overwrite the the file with configuration information -----
+				# (Tomcat needs to be running for this to happen... Just kick it again in case.)
+				Start-Service Tomcat8  -ErrorAction SilentlyContinue
+
+				$cbPropertiesFile = $catalinaHomeLocation + "\webapps\pcoip-broker\WEB-INF\classes\connectionbroker.properties"
+
+				$exists = $null
+				$loopCountRemaining = 600
+				#loop until it's created
+				while($exists -eq $null)
+				{
+					Write-Host "Waiting for broker properties file. Seconds remaining: $loopCountRemaining"
+					Start-Sleep -Seconds 1
+					$exists = Get-Content $cbPropertiesFile -ErrorAction SilentlyContinue
+					$loopCountRemaining = $loopCountRemaining - 1
+					if ($loopCountRemaining -eq 0)
+					{
+						throw "No properties file!"
+					}
+				}
+				Write-Host "Got broker configuration file. Updating."
+
+				$firstIPv4IP = Get-NetIPAddress | Where-Object {$_.AddressFamily -eq "IPv4"} | select -First 1
+
+				$cbProperties = @"
+ldapHost=ldaps://<FQDN of LDAP host>
+ldapAdminUsername=<username>
+ldapAdminPassword=<password>
+ldapDomain=<domain name>
+brokerHostName=<FQDN of broker machine>
+brokerProductName=Primesoft Connection Broker
+brokerPlatform=<operating system platform>
+brokerProductVersion=1.0
+brokerIpaddress=<host name or IP address of broker machine>
+brokerLocale=en_US
+"@
+
+				$cbProperties = $cbProperties -replace "<FQDN of LDAP host>", $Using:dcvmfqdn
+				$cbProperties = $cbProperties -replace "<username>", $Using:adminUsername
+				$cbProperties = $cbProperties -replace "<password>", $Using:adminPassword
+				$cbProperties = $cbProperties -replace "<domain name>", $Using:domaindns
+				$cbProperties = $cbProperties -replace "<FQDN of broker machine>",$Using:pbvmfqdn
+				$cbProperties = $cbProperties -replace "<operating system platform>",$Using:family
+				$cbProperties = $cbProperties -replace "<host name or IP address of broker machine>", $firstIPv4IP.IPAddress
+
+				Set-Content $cbPropertiesFile $cbProperties
+
+				#----- setup security trust for LDAP certificate from DC -----
+
+				#first, setup the Java options
+				$JavaRootLocation = "C:\Program Files\Java\jdk1.8.0_91"
+				$JavaBinLocation = $JavaRootLocation + "\bin"
+				$JavaLibLocation = $JavaRootLocation + "\jre\lib"
+				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
+
+				$jo_string = "-Djavax.net.ssl.trustStore=$JavaRootLocation\jre\lib\security\ldapcertkeystore.jks;-Djavax.net.ssl.trustStoreType=JKS;-Djavax.net.ssl.trustStorePassword=changeit"
+				Set-ItemProperty -Path "$Reg" -Name PR_JVMOPTIONS –Value $jo_string
+
+				#second, get the certificate file
+
+				$ldapCertFileName = "ldapcert.cert"
+				$certStoreLocationOnDC = "c:\" + $ldapCertFileName
+				$certSubject = "CN=$using:dcvmfqdn"
+		
+				$DCSession = New-PSSession $using:dcvmfqdn -Credential $using:Admincreds
+			    Invoke-Command $DCSession `
+			      -ScriptBlock {
+					  $cert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $using:certSubject }
+					  Export-Certificate -Cert $cert -filepath $using:certStoreLocationOnDC -force
+				}
+				Copy-Item -Path $certStoreLocationOnDC -Destination . -FromSession $DCSession
+				Remove-PSSession $DCSession
+
+				# Have the certificate file, add to a keystore 
+		        Remove-Item ldapcertkeystore.jks -ErrorAction SilentlyContinue
+#				Start-Process keytool -ArgumentList '-import -file ldapcert.cert -keystore ldapcertkeystore.jks -storepass changeit -noprompt' -Wait
+				& "keytool" -import -file ldapcert.cert -keystore ldapcertkeystore.jks -storepass changeit -noprompt
+				 
+		        Copy-Item ldapcertkeystore.jks -Destination ($env:classpath + "\security")
+
+		        Write-Host "Finished! Restarting Tomcat."
+
+				Restart-Service Tomcat8
             }
         }
     }
