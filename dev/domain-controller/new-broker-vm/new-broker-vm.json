@@ -108,7 +108,7 @@
                     "Properties": {
                         "DomainName": "[parameters('domainToJoin')]",
                         "AdminCreds": {
-                            "UserName": "[parameters('adminUsername')]",
+                            "UserName": "[parameters('vmAdminUsername')]",
                             "Password": "PrivateSettingsRef:AdminPassword"
                         },
                         "DCVMName": "advm"
@@ -116,7 +116,7 @@
                 },
                 "protectedSettings": {
                     "Items": {
-                        "AdminPassword": "[parameters('adminPassword')]"
+                        "AdminPassword": "[parameters('vmAdminPassword')]"
                     }
                 }
             }
