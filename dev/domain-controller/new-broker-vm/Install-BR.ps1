@@ -319,7 +319,9 @@ Configuration InstallBR
 
 		        #----- Update/overwrite the the file with configuration information -----
 				# (Tomcat needs to be running for this to happen... Just kick it again in case.)
-				Start-Service Tomcat8  -ErrorAction SilentlyContinue
+				$svc = get-service Tomcat8
+				if ($svc.Status -eq "Stopped") {$svc.start()}
+				elseIf ($svc.status -eq "Running") {Write-Host $svc.name "is running"}
 
 				$cbPropertiesFile = $catalinaHomeLocation + "\webapps\pcoip-broker\WEB-INF\classes\connectionbroker.properties"
 
