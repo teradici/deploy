@@ -163,8 +163,39 @@ Configuration InstallBR
 				Set-ItemProperty -Path "$Reg" -Name JAVA_HOME –Value $JavaRootLocation
 				Set-ItemProperty -Path "$Reg" -Name classpath –Value $JavaLibLocation
 
+
+
+				Write-Host "Waiting for JVM.dll"
+				$JREHome = $JavaRootLocation + "\jre"
+				$JVMServerdll = $JREHome + "\bin\server\jvm.dll"
+
+				$retrycount = 1800
+				while ($retryCount -gt 0)
+				{
+					$readyToConfigure = ( Get-Item $JVMServerdll -ErrorAction SilentlyContinue )
+					# don't wait for {64A3A4F4-B792-11D6-A78A-00B0D0180910} - that's the JDK. The JRE is installed 2nd {26A...} so wait for that.
+
+					if ($readyToConfigure)
+					{
+						break   #success
+					}
+					else
+					{
+    					Start-Sleep -s 1;
+						$retrycount = $retrycount - 1;
+						if ( $retrycount -eq 0)
+						{
+							throw "JVM.dll not installed in time."
+						}
+						else
+						{
+							Write-Host "Waiting for JVM.dll to be installed"
+						}
+					}
+				}
+
 				# Reboot machine - seems to need to happen to get Tomcat to install??? Nope!
-				#$global:DSCMachineStatus = 1
+				$global:DSCMachineStatus = 1
             }
         }
 
@@ -341,6 +372,8 @@ Configuration InstallBR
 				}
 				Write-Host "Got broker configuration file. Updating."
 
+				Stop-Service Tomcat8
+
 				$firstIPv4IP = Get-NetIPAddress | Where-Object {$_.AddressFamily -eq "IPv4"} | select -First 1
 
 				$cbProperties = @"
@@ -382,22 +415,29 @@ brokerLocale=en_US
 				$ldapCertFileName = "ldapcert.cert"
 				$certStoreLocationOnDC = "c:\" + $ldapCertFileName
 				$certSubject = "CN=$using:dcvmfqdn"
+
+				Write-Host "Looking for cert with $certSubject on $dcvmfqdn"
 		
 				$DCSession = New-PSSession $using:dcvmfqdn -Credential $using:Admincreds
-			    Invoke-Command $DCSession `
+
+			    Invoke-Command -Session $DCSession -ArgumentList $certSubject, $certStoreLocationOnDC `
 			      -ScriptBlock {
-					  $cert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $using:certSubject }
-					  Export-Certificate -Cert $cert -filepath $using:certStoreLocationOnDC -force
+                        $cs = $args[0]
+                        $cloc = $args[1]
+					  $cert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cs }
+					  Export-Certificate -Cert $cert -filepath  $cloc -force
 				}
-				Copy-Item -Path $certStoreLocationOnDC -Destination . -FromSession $DCSession
+
+				Write-Host "Exiting DC Session"
+				Copy-Item -Path $certStoreLocationOnDC -Destination "$env:systemdrive\$ldapCertFileName" -FromSession $DCSession
 				Remove-PSSession $DCSession
 
 				# Have the certificate file, add to a keystore 
-		        Remove-Item ldapcertkeystore.jks -ErrorAction SilentlyContinue
+		        Remove-Item "$env:systemdrive\ldapcertkeystore.jks" -ErrorAction SilentlyContinue
 #				Start-Process keytool -ArgumentList '-import -file ldapcert.cert -keystore ldapcertkeystore.jks -storepass changeit -noprompt' -Wait
-				& "keytool" -import -file ldapcert.cert -keystore ldapcertkeystore.jks -storepass changeit -noprompt
+				& "keytool" -import -file "$env:systemdrive\$ldapCertFileName" -keystore "$env:systemdrive\ldapcertkeystore.jks" -storepass changeit -noprompt
 				 
-		        Copy-Item ldapcertkeystore.jks -Destination ($env:classpath + "\security")
+		        Copy-Item "$env:systemdrive\ldapcertkeystore.jks" -Destination ($env:classpath + "\security")
 
 		        Write-Host "Finished! Restarting Tomcat."
 
