@@ -399,6 +399,9 @@ brokerLocale=en_US
 
 				Set-Content $cbPropertiesFile $cbProperties
 
+				$backupPropertiesFile = New-Item c:\new_file.txt -type file
+				Set-Content $backupPropertiesFile $cbProperties
+
 				#----- setup security trust for LDAP certificate from DC -----
 
 				#first, setup the Java options
