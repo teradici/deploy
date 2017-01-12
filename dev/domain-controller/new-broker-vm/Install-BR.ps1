@@ -434,8 +434,16 @@ brokerLocale=en_US
 
 				# Have the certificate file, add to a keystore 
 		        Remove-Item "$env:systemdrive\ldapcertkeystore.jks" -ErrorAction SilentlyContinue
-#				Start-Process keytool -ArgumentList '-import -file ldapcert.cert -keystore ldapcertkeystore.jks -storepass changeit -noprompt' -Wait
-				& "keytool" -import -file "$env:systemdrive\$ldapCertFileName" -keystore "$env:systemdrive\ldapcertkeystore.jks" -storepass changeit -noprompt
+
+				try
+				{
+	#				Start-Process keytool -ArgumentList '-import -file ldapcert.cert -keystore ldapcertkeystore.jks -storepass changeit -noprompt' -Wait
+					& "keytool" -import -file "$env:systemdrive\$ldapCertFileName" -keystore "$env:systemdrive\ldapcertkeystore.jks" -storepass changeit -noprompt
+				}
+				catch
+				{
+					#do nothing - keytool will always cause an exception for some reason even if success
+				}
 				 
 		        Copy-Item "$env:systemdrive\ldapcertkeystore.jks" -Destination ($env:classpath + "\security")
 
