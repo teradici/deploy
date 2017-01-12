@@ -597,7 +597,7 @@
                         "value": "[parameters('adminPassword')]"
                     },
                     "brokerFQDN": {
-                        "value": "[concat(variables('DCDnsPrefix'), '-br','.',parameters('domainName'))]"
+                        "value": "[concat(variables('DCDnsPrefix'), '-br','.',parameters('domainName'),':8443')]"
                     },
                     "storageAccountName": {
                         "value":  "[variables('storageAccountName')]"
