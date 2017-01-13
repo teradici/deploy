@@ -8,6 +8,8 @@
         [Parameter(Mandatory)]
         [System.Management.Automation.PSCredential]$Admincreds,
 
+	    [String]$adminDesktopVMName,
+
         [Int]$RetryCount=20,
         [Int]$RetryIntervalSec=30
     ) 
@@ -116,5 +118,22 @@
             Credential = $DomainCreds
             DependsOn = '[WindowsFeature]ADCS-Web-Enrollment','[xADCSCertificationAuthority]ADCS'
         }
-    }
+        Script Configure_Admin_Desktop
+        {
+            DependsOn  = @("[xADCSWebEnrollment]CertSrv")
+            GetScript  = { @{ Result = "Configure_Admin_Desktop" } }
+
+            TestScript = {
+			    $adminUsername = $using:Admincreds.Username
+				$u= Get-ADUser -Filter {Name -like $adminUsername} -Properties "info"
+				return ([bool]$u.info -or -not $using:adminDesktopVMName) # if anything is in info record or nothing to set, say we're done :)
+			}
+            SetScript  = {
+			    $adminUsername = $using:Admincreds.Username
+				Set-ADUser bdall –Replace @{info=
+					'{"cb-resources":{"broker-systems":[{"name":"community-broker-1","resources":[{"session":"VDI","name":"' + `
+					$using:adminDesktopVMName + '","resource-type":"DESKTOP"}]},{"name":"community-broker-2","resources":[{"session":"VDI","name":"test2-desktop","resource-type":"DESKTOP"}]}]}}'
+				}
+			}
+		}
 } 

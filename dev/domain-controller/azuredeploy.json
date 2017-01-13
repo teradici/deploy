@@ -280,8 +280,8 @@
                     "adminPassword": {
                         "value": "[parameters('adminPassword')]"
                     },
-                    "activationCode": {
-                        "value": "[parameters('activationCode')]"
+                    "adminDesktopVMName": {
+                        "value": "[concat(variables('DCDnsPrefix'), '-desk')]"
                     },
                     "_artifactsLocation": {
                         "value": "[concat(parameters('_artifactsLocation'), '/configure-dc-and-ca')]"
@@ -608,6 +608,9 @@
                     },
                     "brokerFQDN": {
                         "value": "[concat(variables('DCDnsPrefix'), '-br','.',parameters('domainName'),':8443')]"
+                    },
+                    "activationCode": {
+                        "value": "[parameters('activationCode')]"
                     },
                     "storageAccountName": {
                         "value":  "[variables('storageAccountName')]"

@@ -32,6 +32,12 @@
                 "description": "Existing VNET that contains the domain controller"
             }
         },
+        "adminDesktopVMName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the desktop to assign to the administrative user"
+            }
+        },
         "_artifactsLocation": {
             "type": "string",
             "metadata": {
@@ -62,6 +68,7 @@
                     "configurationFunction": "Install-DC-and-CA.ps1\\CreateDCCA",
                     "Properties": {
                         "DomainName": "[parameters('domainName')]",
+                        "adminDesktopVMName": "[parameters('adminDesktopVMName')]",
                         "AdminCreds": {
                             "UserName": "[parameters('adminUsername')]",
                             "Password": "PrivateSettingsRef:AdminPassword"
