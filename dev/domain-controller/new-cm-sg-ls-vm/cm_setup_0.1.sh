@@ -6,7 +6,7 @@
 
 #get the install zip files
 wget https://teradeploy.blob.core.windows.net/binaries/P-CM-1.6_SG-1.12.zip -P /tmp/
-wget https://teradeploy.blob.core.windows.net/binaries/P-LS-1.0.3.zip -P /tmp/
+wget https://teradeploy.blob.core.windows.net/binaries/P-LS-1.1.0.zip -P /tmp/
 
 
 unzip -o /tmp/P-CM-1.6_SG-1.12.zip
@@ -70,13 +70,17 @@ fi
 # now setup license server
 #
 #sudo rm -rf /opt/FNPLicenseServerManager
-unzip -o /tmp/P-LS-1.0.3.zip
+unzip -o /tmp/P-LS-1.1.0.zip
 yum -y install redhat-lsb.i686
-mkdir license-server_1.0.3
-mv license-server_1.0.3.tar.gz license-server_1.0.3/
-cd license-server_1.0.3/
-tar xvf license-server_1.0.3.tar.gz
+mkdir license-server_1.1
+mv license-server_1.1.tar.gz license-server_1.1/
+cd license-server_1.1/
+tar xvf license-server_1.1.tar.gz
 awk '{ sub(/-i console/,"-i silent"); print }' install.sh > install-silent.sh
+
+exit 0
+
+
 sh install-silent.sh > lm_install.log
 
 # setup vendor daemon port#
