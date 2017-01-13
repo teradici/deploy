@@ -20,6 +20,13 @@
                 "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
             }
         },
+        "activationCode": {
+            "type": "string",
+            "defaultValue": "xxxx-xxxx-xxxx-xxxx",
+            "metadata": {
+                "description": "The license activation code for the PCoIP CAS licenses"
+            }
+        },
         "_artifactsLocation": {
             "type": "string",
             "metadata": {
@@ -272,6 +279,9 @@
                     },
                     "adminPassword": {
                         "value": "[parameters('adminPassword')]"
+                    },
+                    "activationCode": {
+                        "value": "[parameters('activationCode')]"
                     },
                     "_artifactsLocation": {
                         "value": "[concat(parameters('_artifactsLocation'), '/configure-dc-and-ca')]"
