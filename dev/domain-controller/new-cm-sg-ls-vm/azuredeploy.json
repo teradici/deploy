@@ -41,7 +41,7 @@
         },
         "fileUris": {
             "type": "string",
-            "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller/new-cm-sg-ls-vm/cm_setup_0.1.sh",
+            "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/bd/dev/domain-controller/new-cm-sg-ls-vm/cm_setup_0.1.sh",
             "metadata": {
                 "description": "The uris of the files to download. Split by a space."
             }

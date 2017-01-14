@@ -77,10 +77,6 @@ mv license-server_1.1.0.tar.gz license-server_1.1/
 cd license-server_1.1/
 tar xvf license-server_1.1.0.tar.gz
 awk '{ sub(/-i console/,"-i silent"); print }' install.sh > install-silent.sh
-
-exit 0
-
-
 sh install-silent.sh > lm_install.log
 
 service lmadmin stop
