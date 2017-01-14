@@ -83,6 +83,8 @@ exit 0
 
 sh install-silent.sh > lm_install.log
 
+service lmadmin stop
+
 # setup vendor daemon port#
 # copy original config file to temp location
 cp -f /opt/FNPLicenseServerManager/conf/server.xml /opt/FNPLicenseServerManager/conf/server_orig.xml
