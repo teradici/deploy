@@ -157,26 +157,6 @@
             "dependsOn": [
                 "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
             ]
-        },
-
-        {
-          "type": "Microsoft.Compute/virtualMachines/extensions",
-          "name": "[concat(parameters('dnsLabelPrefix'),'/installcustomscript')]",
-          "apiVersion": "[variables('apiVersion')]",
-          "location": "[resourceGroup().location]",
-          "dependsOn": [
-            "[concat('Microsoft.Compute/virtualMachines/', parameters('dnsLabelPrefix'))]"
-          ],
-          "properties": {
-            "publisher": "Microsoft.OSTCExtensions",
-            "type": "CustomScriptForLinux",
-            "typeHandlerVersion": "1.0",
-            "autoUpgradeMinorVersion": true,
-            "settings": {
-              "fileUris": "[split(parameters('fileUris'), ' ')]",
-              "commandToExecute": "[variables('commandToExecute')]"
-            }
-          }
         }
     ]
 }
