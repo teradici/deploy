@@ -76,7 +76,7 @@ mkdir license-server_1.1
 mv license-server_1.1.0.tar.gz license-server_1.1/
 cd license-server_1.1/
 tar xvf license-server_1.1.0.tar.gz
-awk '{ sub(/-i console/,"-i silent\nsleep 120"); print }' install.sh > install-silent.sh
+awk '{ sub(/-i console/,"-i silent\nsleep 120\nchmod +x /opt/FNPLicenseServerManager/lmadmin"); print }' install.sh > install-silent.sh
 sh install-silent.sh > lm_install.log
 
 service lmadmin stop
