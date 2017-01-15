@@ -27,10 +27,9 @@ Configuration InstallPCoIPAgent
             SetScript  = {
                 Write-Verbose "Install_PCoIPAgent"
 
-
-                $source = "https://teradeploy.blob.core.windows.net/binaries/PCoIP_agent_release_installer_2.6.2.3771_standard.exe"
+                $source = "https://teradeploy.blob.core.windows.net/binaries/PCoIP_agent_release_installer_2.7.0.4060_standard.exe"
                 $dest = "C:\WindowsAzure\PCoIPAgentInstaller"
-                $installerFileName = "PCoIP_agent_release_installer_2.6.2.3771_standard.exe"
+                $installerFileName = "PCoIP_agent_release_installer_2.7.0.4060_standard.exe"
                 Invoke-WebRequest $source -OutFile "$dest\$installerFileName"
 
                 #install the agent
