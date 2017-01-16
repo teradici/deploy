@@ -60,7 +60,7 @@ if [ -n "$mypublicip" ]; then
 
 	#make the 'original' file one time only
 	cp -n /etc/SecurityGateway.conf /etc/SecurityGateway.conf.orig
-	awk -v externalip=$4 '/^ExternalRoutableIP/{printf "ExternalRoutableIP = %s\n",externalip;next};{print}' /etc/SecurityGateway.conf.orig > SecurityGateway.conf
+	awk -v externalip=$mypublicip '/^ExternalRoutableIP/{printf "ExternalRoutableIP = %s\n",externalip;next};{print}' /etc/SecurityGateway.conf.orig > SecurityGateway.conf
 	cp -f SecurityGateway.conf /etc/SecurityGateway.conf
 
 	echo "Finished setting up SG"
