@@ -427,8 +427,28 @@ brokerLocale=en_US
 			      -ScriptBlock {
                         $cs = $args[0]
                         $cloc = $args[1]
-					  $cert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cs }
-					  Export-Certificate -Cert $cert -filepath  $cloc -force
+
+					    $cert = $null
+						$loopCountRemaining = 600
+						#loop until it's created
+						while(-not $cert)
+						{
+							Write-Host "Waiting for LDAP certificate. Seconds remaining: $loopCountRemaining"
+
+					  		$cert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cs }
+
+							if(-not $cert)
+							{
+								Start-Sleep -Seconds 1
+								$loopCountRemaining = $loopCountRemaining - 1
+								if ($loopCountRemaining -eq 0)
+								{
+									throw "No LDAP certificate!"
+								}
+							}
+						}
+				        Export-Certificate -Cert $cert -filepath  $cloc -force
+						Write-Host "Exported LDAP certificate."
 				}
 
 				Write-Host "Exiting DC Session"
