@@ -166,7 +166,6 @@
                 "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
             ]
         },
-
         {
             "type": "Microsoft.Compute/virtualMachines/extensions",
             "name": "[concat(parameters('dnsLabelPrefix'),'/installcustomscript')]",
@@ -181,7 +180,7 @@
                 "typeHandlerVersion": "1.0",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "fileUris": "[split(variables('scriptFileURI')), ' ')]",
+                    "fileUris": "[split(variables('scriptFileURI'), ' ')]",
                     "commandToExecute": "[variables('commandToExecute')]"
                 }
             }
