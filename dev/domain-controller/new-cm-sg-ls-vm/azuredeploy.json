@@ -83,8 +83,7 @@
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
         "scriptFileName":  "cm_setup_0.1.sh",
-        "scriptFileURI":  "[concat(parameters('_artifactsLocation'), '/', variable('scriptFileName'), parameters('_artifactsLocationSasToken'))]"
-
+        "scriptFileURI":  "[concat(parameters('_artifactsLocation'), '/', variable('scriptFileName'), parameters('_artifactsLocationSasToken'))]",
         "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',parameters('activationCode'))]"
     },
     "resources": [
