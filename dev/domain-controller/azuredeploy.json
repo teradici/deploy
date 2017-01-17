@@ -613,7 +613,13 @@
                         "value": "[parameters('activationCode')]"
                     },
                     "storageAccountName": {
-                        "value":  "[variables('storageAccountName')]"
+                        "value": "[variables('storageAccountName')]"
+                    },
+                    "_artifactsLocation": {
+                        "value": "[concat(parameters('_artifactsLocation'), '/new-cm-sg-ls-vm')]"
+                    },
+                    "_artifactsLocationSasToken": {
+                        "value": "[parameters('_artifactsLocationSasToken')]"
                     }
                 }
             }

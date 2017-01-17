@@ -39,13 +39,6 @@
                 "description": "The password for the administrator account of the new VM and the domain"
             }
         },
-        "fileUris": {
-            "type": "string",
-            "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/bd/dev/domain-controller/new-cm-sg-ls-vm/cm_setup_0.1.sh",
-            "metadata": {
-                "description": "The uris of the files to download. Split by a space."
-            }
-        },
         "brokerFQDN": {
             "type": "string",
             "defaultValue": "10.0.0.5",
@@ -65,6 +58,19 @@
             "metadata": {
                 "description": "Storage account to use for VM data and VHD's"
             }
+        },
+        "_artifactsLocation": {
+            "type": "string",
+            "metadata": {
+                "description": "The location of resources, such as templates and DSC modules, that the template depends on"
+            }
+        },
+        "_artifactsLocationSasToken": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Auto-generated token to access _artifactsLocation"
+            },
+            "defaultValue": ""
         }
     },
     "variables": {
@@ -76,7 +82,10 @@
         "publicIPName": "[concat(parameters('dnsLabelPrefix'),'Pip')]",
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
-        "commandToExecute": "[concat('./cm_setup_0.1.sh ',parameters('brokerFQDN'),' ',parameters('activationCode'))]"
+        "scriptFileName":  "cm_setup_0.1.sh",
+        "scriptFileURI":  "[concat(parameters('_artifactsLocation'), '/', variable('scriptFileName'), parameters('_artifactsLocationSasToken'))]"
+
+        "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',parameters('activationCode'))]"
     },
     "resources": [
         {
@@ -160,23 +169,23 @@
         },
 
         {
-          "type": "Microsoft.Compute/virtualMachines/extensions",
-          "name": "[concat(parameters('dnsLabelPrefix'),'/installcustomscript')]",
-          "apiVersion": "[variables('apiVersion')]",
-          "location": "[resourceGroup().location]",
-          "dependsOn": [
-            "[concat('Microsoft.Compute/virtualMachines/', parameters('dnsLabelPrefix'))]"
-          ],
-          "properties": {
-            "publisher": "Microsoft.OSTCExtensions",
-            "type": "CustomScriptForLinux",
-            "typeHandlerVersion": "1.0",
-            "autoUpgradeMinorVersion": true,
-            "settings": {
-              "fileUris": "[split(parameters('fileUris'), ' ')]",
-              "commandToExecute": "[variables('commandToExecute')]"
-        }
-          }
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('dnsLabelPrefix'),'/installcustomscript')]",
+            "apiVersion": "[variables('apiVersion')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('dnsLabelPrefix'))]"
+            ],
+            "properties": {
+                "publisher": "Microsoft.OSTCExtensions",
+                "type": "CustomScriptForLinux",
+                "typeHandlerVersion": "1.0",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "fileUris": "[split(variables('scriptFileURI')), ' ')]",
+                    "commandToExecute": "[variables('commandToExecute')]"
+                }
+            }
         }
     ]
 }
