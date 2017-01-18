@@ -100,11 +100,11 @@
                 "typeHandlerVersion": "2.9",
                 "autoUpgradeMinorVersion": "true",
                 "settings": {
-                    "modulesUrl": "https://teradeploy.blob.core.windows.net/binaries/Install-AUI.ps1.zip",
+                    "modulesUrl": "https://teradeploy.blob.core.windows.net/binaries/Install-CASM.ps1.zip",
                     "privacy": {
                         "DataCollection": "Disable"
                     },
-                    "configurationFunction": "Install-AUI.ps1\\InstallAUI"
+                    "configurationFunction": "Install-CASM.ps1\\InstallAUI"
                 }
             }
         }
