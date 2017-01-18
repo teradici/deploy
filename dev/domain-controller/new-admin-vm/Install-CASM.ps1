@@ -33,7 +33,7 @@ Configuration InstallAUI
         $tomcatInstaller = "apache-tomcat-8.0.39-windows-x64.zip",
 
         [string]
-        $adminWAR = "CloudAccessSoftwareManager.war"
+        $adminWAR = "CloudAccessSoftwareManager.war",
 
         [Parameter(Mandatory)]
         [String]$DomainName,
