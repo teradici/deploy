@@ -375,27 +375,20 @@ Configuration InstallBR
 				Stop-Service Tomcat8
 
 				$firstIPv4IP = Get-NetIPAddress | Where-Object {$_.AddressFamily -eq "IPv4"} | select -First 1
+				$ipaddressString = $firstIPv4IP.IPAddress
 
 				$cbProperties = @"
-ldapHost=ldaps://<FQDN of LDAP host>
-ldapAdminUsername=<username>
-ldapAdminPassword=<password>
-ldapDomain=<domain name>
-brokerHostName=<FQDN of broker machine>
-brokerProductName=Primesoft Connection Broker
-brokerPlatform=<operating system platform>
+ldapHost=ldaps://$Using:dcvmfqdn
+ldapAdminUsername=$Using:adminUsername
+ldapAdminPassword=$Using:adminPassword
+ldapDomain=$Using:domaindns
+brokerHostName=$Using:pbvmfqdn
+brokerProductName=CAS Connection Broker
+brokerPlatform=$Using:family
 brokerProductVersion=1.0
-brokerIpaddress=<host name or IP address of broker machine>
+brokerIpaddress=$ipaddressString
 brokerLocale=en_US
 "@
-
-				$cbProperties = $cbProperties -replace "<FQDN of LDAP host>", $Using:dcvmfqdn
-				$cbProperties = $cbProperties -replace "<username>", $Using:adminUsername
-				$cbProperties = $cbProperties -replace "<password>", $Using:adminPassword
-				$cbProperties = $cbProperties -replace "<domain name>", $Using:domaindns
-				$cbProperties = $cbProperties -replace "<FQDN of broker machine>",$Using:pbvmfqdn
-				$cbProperties = $cbProperties -replace "<operating system platform>",$Using:family
-				$cbProperties = $cbProperties -replace "<host name or IP address of broker machine>", $firstIPv4IP.IPAddress
 
 				Set-Content $cbPropertiesFile $cbProperties
 

@@ -38,6 +38,8 @@ Configuration InstallAUI
         [Parameter(Mandatory)]
         [String]$DomainName,
 
+        [Parameter(Mandatory)]
+        [System.Management.Automation.PSCredential]$Admincreds,
 
         [Parameter(Mandatory)]
         [String]$DCVMName #without the domain suffix
@@ -45,6 +47,10 @@ Configuration InstallAUI
 
 	$dcvmfqdn = "$DCVMName.$DomainName"
 	$domaindns = $DomainName
+
+    $adminUsername = $Admincreds.GetNetworkCredential().Username
+    $adminPassword = $Admincreds.GetNetworkCredential().Password
+
 	Import-DscResource -ModuleName xPSDesiredStateConfiguration
 
     Node "localhost"
@@ -342,6 +348,77 @@ Configuration InstallAUI
 				$svc = get-service Tomcat8
 				if ($svc.Status -eq "Stopped") {$svc.start()}
 				elseIf ($svc.status -eq "Running") {Write-Host $svc.name "is running"}
+
+				$auPropertiesFile = $catalinaHomeLocation + "\webapps\CloudAccessSoftwareManager\WEB-INF\classes\config.properties"
+
+				$exists = $null
+				$loopCountRemaining = 600
+				#loop until it's created
+				while($exists -eq $null)
+				{
+					Write-Host "Waiting for CASM properties file. Seconds remaining: $loopCountRemaining"
+					Start-Sleep -Seconds 1
+					$exists = Get-Content $auPropertiesFile -ErrorAction SilentlyContinue
+					$loopCountRemaining = $loopCountRemaining - 1
+					if ($loopCountRemaining -eq 0)
+					{
+						throw "No properties file!"
+					}
+				}
+				Write-Host "Got CASM configuration file. Re-generating."
+
+				Stop-Service Tomcat8
+
+				#Now create the new output file.
+				#TODO - really only a couple parameters are used and set properly now. Needs cleanup.
+				$domainsplit = $using:domaindns
+				$domainsplit = $domainsplit.split(".".2)
+				$domainleaf = $domainsplit[0]  # get the first part of the domain name (before .local or .???)
+				$domainroot = $domainsplit[1]  # get the second part of the domain name
+				$date = Get-Date
+				$domainControllerFQDN = $using:dcvmfqdn
+
+				$auProperties = @"
+#$date
+cn=Users
+dom=$domainleaf
+dcDomain = $domainleaf
+dc=$domainroot
+adServerHostAddress=$domainControllerFQDN
+resourceGroupName=PRIMESOFT-DEV
+azureAccountUsername=ssunder@primesoft.teradici.com
+azureAccountPassword=primesoft12!
+adminUserID=testdom\\administrator
+source=C\:\\VMBackup\\
+destination=D:\\DestinationVM\\31_March_2016\\
+machineName=tempuser-pc
+machineUserID=testdom\\administrator
+vmid=tempuser-pc\\tempuser
+vmdefaultuser=tempuser
+machinePassword=Passw0rd
+windows_8=win81_64_1\\Virtual Machines\\2B083385-0FDE-470F-AF9F-3F6892708E9B.XML
+windowsServer_2008=2008R2-1\\Virtual Machines\\9B9FC212-D5A0-4CFC-A28F-219FF0414BEC.XML
+windows_7=Template_21_March_2016\\VDI-Win7-Main\\Virtual Machines\\15EB00D5-E5ED-4F88-8734-AB9207D15157.XML
+"@
+
+				$targetDir = "$env:CATALINA_HOME\adminproperty"
+				$configFileName = "$targetDir\config.properties"
+
+				if(-not (Test-Path $targetDir))
+				{
+					New-Item $targetDir -type directory
+				}
+
+				if(-not (Test-Path $configFileName))
+				{
+					New-Item $configFileName -type directory
+				}
+
+				Set-Content $configFileName $auProperties -Force
+
+		        Write-Host "Finished! Restarting Tomcat."
+
+				Restart-Service Tomcat8
             }
         }
     }
