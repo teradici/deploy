@@ -60,7 +60,7 @@
         "adAvailabilitySetName": "adAvailabiltySet",
         "adLBName": "adLoadBalancer",
         "DCDnsPrefix": "[resourceGroup().name]",
-        "serverRootName":  "vm"
+        "serverRootName": "vm"
 
     },
     "resources": [
@@ -331,7 +331,7 @@
                         "value": "[variables('gatewaySubnetAddressPrefix')]"
                     },
                     "DNSServerAddress": {
-                        "value": ["[variables('adNicIPAddress')]"]
+                        "value": [ "[variables('adNicIPAddress')]" ]
                     }
                 }
             }
@@ -384,7 +384,7 @@
                         "value": "[concat(parameters('_artifactsLocation'), '/new-agent-vm')]"
                     },
                     "storageAccountName": {
-                        "value":  "[variables('storageAccountName')]"
+                        "value": "[variables('storageAccountName')]"
                     }
                 }
             }
@@ -434,7 +434,7 @@
                         "value": "[parameters('adminPassword')]"
                     },
                     "storageAccountName": {
-                        "value":  "[variables('storageAccountName')]"
+                        "value": "[variables('storageAccountName')]"
                     }
                 }
             }
@@ -534,7 +534,7 @@
                         "value": "[parameters('adminPassword')]"
                     },
                     "storageAccountName": {
-                        "value":  "[variables('storageAccountName')]"
+                        "value": "[variables('storageAccountName')]"
                     }
                 }
             }
@@ -582,6 +582,9 @@
                     },
                     "vmAdminPassword": {
                         "value": "[parameters('adminPassword')]"
+                    },
+                    "domainControllerName": {
+                        "value": "[variables('adVMName')]"
                     },
                     "_artifactsLocation": {
                         "value": "[concat(parameters('_artifactsLocation'), '/new-broker-vm')]"
@@ -635,6 +638,39 @@
                     },
                     "_artifactsLocationSasToken": {
                         "value": "[parameters('_artifactsLocationSasToken')]"
+                    }
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Resources/deployments",
+            "name": "CreateAppGateway",
+            "apiVersion": "2016-02-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines', variables('adVMName'))]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('_artifactsLocation'), '/new-app-gateway/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+
+                    "subnetRef": {
+                        "value": "[concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')),'/subnets/',variables('appGatewaySubnet'))]"
+                        },
+                    "skuName": {
+                        "value": "Standard_Small"
+                    },
+                    "capacity": {
+                        "value": 2
+                    },
+                    "backendIpAddress1": {
+                        "value": "10.0.0.5"
+                    },
+                    "backendIpAddress2": {
+                        "value": "10.0.0.6"
                     }
                 }
             }
