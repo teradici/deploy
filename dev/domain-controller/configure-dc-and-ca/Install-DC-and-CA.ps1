@@ -130,7 +130,7 @@
 			}
             SetScript  = {
 			    $adminUsername = $using:Admincreds.Username
-				Set-ADUser bdall –Replace @{info=
+				Set-ADUser $adminUsername –Replace @{info=
 					'{"cb-resources":{"broker-systems":[{"name":"community-broker-1","resources":[{"session":"VDI","name":"' + `
 					$using:adminDesktopVMName + '","resource-type":"DESKTOP"}]},{"name":"community-broker-2","resources":[{"session":"VDI","name":"test2-desktop","resource-type":"DESKTOP"}]}]}}'
 				}
