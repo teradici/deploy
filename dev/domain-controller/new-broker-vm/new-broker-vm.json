@@ -27,6 +27,12 @@
                 "description": "The size of the virtual machines"
             }
         },
+        "domainControllerName": {
+            "type": "string",
+            "metadata": {
+                "description": "The network name of the domain controller (without domain suffix)"
+            }
+        },
         "domainToJoin": {
             "type": "string",
             "metadata": {
@@ -111,7 +117,7 @@
                             "UserName": "[parameters('vmAdminUsername')]",
                             "Password": "PrivateSettingsRef:AdminPassword"
                         },
-                        "DCVMName": "advm"
+                        "DCVMName": "[parameters('domainControllerName')]"
                     }
                 },
                 "protectedSettings": {
