@@ -43,23 +43,24 @@
         }
     },
     "variables": {
-        "virtualNetworkName": "adVNET",
+        "virtualNetworkName": "vnet-OrangeBox",
         "virtualNetworkAddressRange": "10.0.0.0/16",
         "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'adsa')]",
         "adLBFE": "LBFE",
         "adLBBE": "LBBE",
         "adRDPNAT": "adRDP",
-        "adNicName": "adNic",
+        "adNicName": "vm-ad-nic",
         "adNicIPAddress": "10.0.0.4",
-        "adVMName": "adVM",
-        "adSubnetName": "adSubnet",
+        "adVMName": "vm-dc",
+        "adSubnetName": "Subnet-OrangeBox",
         "adSubnetAddressPrefix": "10.0.0.0/24",
-        "gatewaySubnetName": "GatewaySubnet",
+        "gatewaySubnetName": "Subnet-gateway",
         "gatewaySubnetAddressPrefix": "10.0.1.0/24",
         "publicIPAddressName": "adPublicIP",
         "adAvailabilitySetName": "adAvailabiltySet",
         "adLBName": "adLoadBalancer",
-        "DCDnsPrefix": "[resourceGroup().name]"
+        "DCDnsPrefix": "[resourceGroup().name]",
+        "serverRootName":  "vm"
 
     },
     "resources": [
@@ -289,7 +290,7 @@
                         "value": "[parameters('adminPassword')]"
                     },
                     "adminDesktopVMName": {
-                        "value": "[concat(variables('DCDnsPrefix'), '-desk')]"
+                        "value": "[concat(variables('serverRootName'), '-desk')]"
                     },
                     "_artifactsLocation": {
                         "value": "[concat(parameters('_artifactsLocation'), '/configure-dc-and-ca')]"
@@ -323,6 +324,12 @@
                     "subnetRange": {
                         "value": "[variables('adSubnetAddressPrefix')]"
                     },
+                    "gatewaySubnetName": {
+                        "value": "[variables('gatewaySubnetName')]"
+                    },
+                    "gatewaySubnetRange": {
+                        "value": "[variables('gatewaySubnetAddressPrefix')]"
+                    },
                     "DNSServerAddress": {
                         "value": ["[variables('adNicIPAddress')]"]
                     }
@@ -350,7 +357,7 @@
                         "value": "[variables('adSubnetName')]"
                     },
                     "dnsLabelPrefix": {
-                        "value": "[concat(variables('DCDnsPrefix'), '-desk')]"
+                        "value": "[concat(variables('serverRootName'), '-desk')]"
                     },
                     "vmSize": {
                         "value": "Standard_A2_v2"
@@ -403,7 +410,7 @@
                         "value": "[variables('adSubnetName')]"
                     },
                     "dnsLabelPrefix": {
-                        "value": "[concat(variables('DCDnsPrefix'), '-au')]"
+                        "value": "[concat(variables('serverRootName'), '-au')]"
                     },
                     "vmSize": {
                         "value": "Standard_A2_v2"
@@ -453,7 +460,7 @@
                         "value": "[variables('adSubnetName')]"
                     },
                     "dnsLabelPrefix": {
-                        "value": "[concat(variables('DCDnsPrefix'), '-au')]"
+                        "value": "[concat(variables('serverRootName'), '-au')]"
                     },
                     "vmSize": {
                         "value": "Standard_A2_v2"
@@ -503,7 +510,7 @@
                         "value": "[variables('adSubnetName')]"
                     },
                     "dnsLabelPrefix": {
-                        "value": "[concat(variables('DCDnsPrefix'), '-br')]"
+                        "value": "[concat(variables('serverRootName'), '-br')]"
                     },
                     "vmSize": {
                         "value": "Standard_A2_v2"
@@ -553,7 +560,7 @@
                         "value": "[variables('adSubnetName')]"
                     },
                     "dnsLabelPrefix": {
-                        "value": "[concat(variables('DCDnsPrefix'), '-br')]"
+                        "value": "[concat(variables('serverRootName'), '-br')]"
                     },
                     "vmSize": {
                         "value": "Standard_A2_v2"
@@ -603,7 +610,7 @@
                         "value": "[variables('adSubnetName')]"
                     },
                     "dnsLabelPrefix": {
-                        "value": "[concat(variables('DCDnsPrefix'), '-cm')]"
+                        "value": "[concat(variables('serverRootName'), '-cm')]"
                     },
                     "vmSize": {
                         "value": "Standard_A2_v2"
@@ -615,7 +622,7 @@
                         "value": "[parameters('adminPassword')]"
                     },
                     "brokerFQDN": {
-                        "value": "[concat(variables('DCDnsPrefix'), '-br','.',parameters('domainName'),':8443')]"
+                        "value": "[concat(variables('serverRootName'), '-br','.',parameters('domainName'),':8443')]"
                     },
                     "activationCode": {
                         "value": "[parameters('activationCode')]"
