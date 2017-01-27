@@ -28,6 +28,19 @@
       },
       "defaultValue": "10.0.0.0/24"
     },
+    "gatewaySubnetName": {
+      "type": "string",
+        "metadata": {
+            "description": "The name of the gateway subnet created in the new VNET"
+        }
+    },
+    "gatewaySubnetRange": {
+      "type": "string",
+      "metadata": {
+        "description": "The address range of the gateway subnet created in the new VNET"
+      },
+      "defaultValue": "10.0.1.0/24"
+    },
     "DNSServerAddress": {
       "type": "array",
       "metadata": {
@@ -57,7 +70,13 @@
             "properties": {
               "addressPrefix": "[parameters('subnetRange')]"
             }
-          }
+          },
+        {
+            "name": "[parameters('gatewaySubnetName')]",
+            "properties": {
+                "addressPrefix": "[parameters('gatewaySubnetRange')]"
+            }
+        }
         ]
       }
     }

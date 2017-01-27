@@ -54,6 +54,8 @@
         "adVMName": "adVM",
         "adSubnetName": "adSubnet",
         "adSubnetAddressPrefix": "10.0.0.0/24",
+        "gatewaySubnetName": "GatewaySubnet",
+        "gatewaySubnetAddressPrefix": "10.0.1.0/24",
         "publicIPAddressName": "adPublicIP",
         "adAvailabilitySetName": "adAvailabiltySet",
         "adLBName": "adLoadBalancer",
@@ -113,6 +115,12 @@
                     },
                     "subnetRange": {
                         "value": "[variables('adSubnetAddressPrefix')]"
+                    },
+                    "gatewaySubnetName": {
+                        "value": "[variables('gatewaySubnetName')]"
+                    },
+                    "gatewaySubnetRange": {
+                        "value": "[variables('gatewaySubnetAddressPrefix')]"
                     }
                 }
             }
