@@ -3,38 +3,38 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "existingVNETName": {
-            "type": "String",
+            "type": "string",
             "metadata": {
                 "description": "Existing VNET that contains the domain controller"
             }
         },
         "existingSubnetName": {
-            "type": "String",
+            "type": "string",
             "metadata": {
                 "description": "Existing subnet that contains the domain controller"
             }
         },
         "dnsLabelPrefix": {
-            "type": "String",
+            "type": "string",
             "metadata": {
-                "description": "Unique public DNS prefix for the deployment. The fqdn will look something like '<dnsname>.westus.cloudapp.azure.com'. Up to 62 chars, digits or dashes, lowercase, should start with a letter: must conform to '^[a-z][a-z0-9-]{1,61}[a-z0-9]$'."
+                "description": "Unique machine name used for naming the machine in the Azure resource group and also for local DNS. Up to ?15? chars, digits or dashes, lowercase, should start with a letter: must conform to '^[a-z][a-z0-9-]{1,61}[a-z0-9]$'."
             }
         },
         "vmSize": {
             "defaultValue": "Standard_D1_v2",
-            "type": "String",
+            "type": "string",
             "metadata": {
                 "description": "The size of the virtual machines"
             }
         },
         "vmAdminUsername": {
-            "type": "String",
+            "type": "string",
             "metadata": {
                 "description": "The name of the administrator of the new VM and the domain. Exclusion list: 'admin','administrator"
             }
         },
         "vmAdminPassword": {
-            "type": "SecureString",
+            "type": "securestring",
             "metadata": {
                 "description": "The password for the administrator account of the new VM and the domain"
             }
@@ -79,7 +79,6 @@
         "windowsOSVersion": "2016-Datacenter",
         "apiVersion": "2015-06-15",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
-        "publicIPName": "[concat(parameters('dnsLabelPrefix'),'Pip')]",
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
         "scriptFileName":  "cm_setup_0.1.sh",
@@ -87,18 +86,6 @@
         "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',parameters('activationCode'))]"
     },
     "resources": [
-        {
-            "type": "Microsoft.Network/publicIPAddresses",
-            "name": "[variables('publicIPName')]",
-            "apiVersion": "[variables('apiVersion')]",
-            "location": "[resourceGroup().location]",
-            "properties": {
-                "publicIPAllocationMethod": "Dynamic",
-                "dnsSettings": {
-                    "domainNameLabel": "[parameters('dnsLabelPrefix')]"
-                }
-            }
-        },
         {
             "type": "Microsoft.Network/networkInterfaces",
             "name": "[variables('nicName')]",
@@ -110,19 +97,13 @@
                         "name": "ipconfig",
                         "properties": {
                             "privateIPAllocationMethod": "Dynamic",
-                            "publicIPAddress": {
-                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPName'))]"
-                            },
                             "subnet": {
                                 "id": "[variables('subnetId')]"
                             }
                         }
                     }
                 ]
-            },
-            "dependsOn": [
-                "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPName'))]"
-            ]
+            }
         },
         {
             "type": "Microsoft.Compute/virtualMachines",
