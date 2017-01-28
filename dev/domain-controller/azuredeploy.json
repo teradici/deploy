@@ -664,7 +664,7 @@
                         "value": "Standard_Small"
                     },
                     "capacity": {
-                        "value": 2
+                        "value": 1
                     },
                     "backendIpAddress1": {
                         "value": "10.0.0.5"
