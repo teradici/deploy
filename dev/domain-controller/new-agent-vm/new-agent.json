@@ -3,63 +3,63 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "existingVNETName": {
-            "type": "String",
+            "type": "string",
             "metadata": {
                 "description": "Existing VNET that contains the domain controller"
             }
         },
         "existingSubnetName": {
-            "type": "String",
+            "type": "string",
             "metadata": {
                 "description": "Existing subnet that contains the domain controller"
             }
         },
         "dnsLabelPrefix": {
-            "type": "String",
+            "type": "string",
             "metadata": {
-                "description": "Unique public DNS prefix for the deployment. The fqdn will look something like '<dnsname>.westus.cloudapp.azure.com'. Up to 62 chars, digits or dashes, lowercase, should start with a letter: must conform to '^[a-z][a-z0-9-]{1,61}[a-z0-9]$'."
+                "description": "Virtual machine name for both Azure and AD"
             }
         },
         "vmSize": {
             "defaultValue": "Standard_A2",
-            "type": "String",
+            "type": "string",
             "metadata": {
                 "description": "The size of the virtual machines"
             }
         },
         "domainToJoin": {
-            "type": "String",
+            "type": "string",
             "metadata": {
                 "description": "The FQDN of the AD domain"
             }
         },
         "domainUsername": {
-            "type": "String",
+            "type": "string",
             "metadata": {
                 "description": "Username of the account on the domain"
             }
         },
         "domainPassword": {
-            "type": "SecureString",
+            "type": "securestring",
             "metadata": {
                 "description": "Password of the account on the domain"
             }
         },
         "domainJoinOptions": {
             "defaultValue": 3,
-            "type": "Int",
+            "type": "int",
             "metadata": {
                 "description": "Set of bit flags that define the join options. Default value of 3 is a combination of NETSETUP_JOIN_DOMAIN (0x00000001) & NETSETUP_ACCT_CREATE (0x00000002) i.e. will join the domain and create the account on the domain. For more information see https://msdn.microsoft.com/en-us/library/aa392154(v=vs.85).aspx"
             }
         },
         "vmAdminUsername": {
-            "type": "String",
+            "type": "string",
             "metadata": {
                 "description": "The name of the administrator of the new VM and the domain. Exclusion list: 'admin','administrator"
             }
         },
         "vmAdminPassword": {
-            "type": "SecureString",
+            "type": "securestring",
             "metadata": {
                 "description": "The password for the administrator account of the new VM and the domain"
             }
@@ -90,23 +90,10 @@
         "windowsOSVersion": "2016-Datacenter",
         "apiVersion": "2015-06-15",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
-        "publicIPName": "[concat(parameters('dnsLabelPrefix'),'Pip')]",
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]"
     },
     "resources": [
-        {
-            "type": "Microsoft.Network/publicIPAddresses",
-            "name": "[variables('publicIPName')]",
-            "apiVersion": "[variables('apiVersion')]",
-            "location": "[resourceGroup().location]",
-            "properties": {
-                "publicIPAllocationMethod": "Dynamic",
-                "dnsSettings": {
-                    "domainNameLabel": "[parameters('dnsLabelPrefix')]"
-                }
-            }
-        },
         {
             "type": "Microsoft.Network/networkInterfaces",
             "name": "[variables('nicName')]",
@@ -118,19 +105,13 @@
                         "name": "ipconfig",
                         "properties": {
                             "privateIPAllocationMethod": "Dynamic",
-                            "publicIPAddress": {
-                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPName'))]"
-                            },
                             "subnet": {
                                 "id": "[variables('subnetId')]"
                             }
                         }
                     }
                 ]
-            },
-            "dependsOn": [
-                "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPName'))]"
-            ]
+            }
         },
         {
             "type": "Microsoft.Compute/virtualMachines",
