@@ -258,15 +258,28 @@ Configuration InstallAUI
 
 				Write-Host "Configuring Tomcat"
 
-				#back up server.xml file if not done in a previous round
+				# back up server.xml file if not done in a previous round
 				if( -not ( Get-Item ($CatalinaHomeLocation + '\conf\server.xml.orig') -ErrorAction SilentlyContinue ) )
 				{
 					Copy-Item -Path ($ServerXMLFile) `
 						-Destination ($CatalinaHomeLocation + '\conf\server.xml.orig')
 				}
 
-				#update server.xml file
+				#
+				# update server.xml file
+				#
+
 				$xml = [xml](Get-Content ($CatalinaHomeLocation + '\conf\server.xml.orig'))
+
+				# port 8080 unencrypted connector 
+
+				$unencConnector = [xml] ('<Connector port="8080" protocol="HTTP/1.1" connectionTimeout="20000" redirectPort="8443" />')
+
+				$xml.Server.Service.InsertBefore(
+					# new child
+					$xml.ImportNode($unencConnector.Connector,$true),
+					#ref child
+					$xml.Server.Service.Engine )
 
 				$NewConnector = [xml] ('<Connector
 					port="8443"
@@ -281,6 +294,8 @@ Configuration InstallAUI
 					ciphers="TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_CBC_SHA"
 					/>')
 
+				# port 8443 encrypted connector 
+
 				$xml.Server.Service.InsertBefore(
 					# new child
 					$xml.ImportNode($NewConnector.Connector,$true),
@@ -291,13 +306,12 @@ Configuration InstallAUI
 
 
 
-				Write-Host "Opening port 8443"
+				Write-Host "Opening port 8443 and 8080"
 
 				#open port in firewall
-				netsh advfirewall firewall add rule name="Open Port 8443" dir=in action=allow protocol=TCP localport=8443
+				netsh advfirewall firewall add rule name="Tomcat Port 8443" dir=in action=allow protocol=TCP localport=8443
+				netsh advfirewall firewall add rule name="Tomcat Port 8080" dir=in action=allow protocol=TCP localport=8080
 
-				# Reboot machine
-				# $global:DSCMachineStatus = 1
 
 				# Install and start service for new config
 
