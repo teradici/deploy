@@ -55,9 +55,10 @@ echo "Setting up Tomcat to allow an unencrypted link over port 8080"
 #make the 'original' file
 cp -n /opt/Teradici/thirdparty/tomcat/conf/server.xml /opt/Teradici/thirdparty/tomcat/conf/server.xml.orig
 
-#add port 8080 http listener
+#add port 8080 http listener and make the 'info' page available at 'root' to not confuse L7 load balancers.
 awk  '/<Service name=\"Catalina\">/{printf "<Service name=\"Catalina\">\n<Connector port=\"8080\" protocol=\"HTTP/1.1\" connectionTimeout=\"20000\" redirectPort=\"443\" />\n";next};{print}' \
- /opt/Teradici/thirdparty/tomcat/conf/server.xml.orig \
+ /opt/Teradici/thirdparty/tomcat/conf/server.xml.orig | \
+awk '/xmlValidation=\"false\" xmlNamespaceAware=\"false\"/{print $0; print "<Context path=\"\" docBase=\"/opt/Teradici/thirdparty/tomcat/webapps/info\" />\n";next}1' \
  > /opt/Teradici/thirdparty/tomcat/conf/server.xml
 
 echo "Finished setting up CM without SG"
