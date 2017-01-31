@@ -18,6 +18,7 @@ yum -y remove java-1.7.0-openjdk
 #open required ports
 iptables -I INPUT 1 -p tcp --dport 22 -j ACCEPT
 iptables -I INPUT 1 -p tcp --dport 443 -j ACCEPT
+iptables -I INPUT 1 -p tcp --dport 8080 -j ACCEPT
 iptables -I INPUT 1 -p tcp --dport 4172 -j ACCEPT
 #iptables -I INPUT 1 -p tcp --dport 8090 -j ACCEPT   # for LM Web GUI
 iptables -I INPUT 1 -p tcp --dport 27000 -j ACCEPT  # for LM licensing Port
@@ -41,12 +42,23 @@ service network restart
 sh cm_setup.sh
 
 # modify CM setup
-#make the 'original' file one time only
+#make the 'original' file
 cp -n /etc/ConnectionManager.conf /etc/ConnectionManager.conf.orig
 awk -v broker=$1 '/^PcoipAddress/{printf "PcoipAddress = %s\n",broker;next};{print}' /etc/ConnectionManager.conf.orig | \
 awk  -v lserver="27000@$myprivateip" '/^LicenseServerAddress/{printf "LicenseServerAddress = %s\n",lserver;next};{print}'  \
     > ConnectionManager.conf
 cp -f ConnectionManager.conf /etc/ConnectionManager.conf
+
+
+echo "Setting up Tomcat to allow an unencrypted link over port 8080"
+
+#make the 'original' file
+cp -n /opt/Teradici/thirdparty/tomcat/conf/server.xml /opt/Teradici/thirdparty/tomcat/conf/server.xml.orig
+
+#add port 8080 http listener
+awk  '/<Service name=\"Catalina\">/{printf "<Service name=\"Catalina\">\n<Connector port=\"8080\" protocol=\"HTTP/1.1\" connectionTimeout=\"20000\" redirectPort=\"443\" />\n";next};{print}' \
+ /opt/Teradici/thirdparty/tomcat/conf/server.xml.orig \
+ > /opt/Teradici/thirdparty/tomcat/conf/server.xml
 
 echo "Finished setting up CM without SG"
 
