@@ -152,16 +152,6 @@
               ]
             }
           },
-          {
-            "name": "appGatewayBackendPool2",
-            "properties": {
-              "BackendAddresses": [
-                {
-                  "IpAddress": "[parameters('backendIpAddressForPathRule2')]"
-                }
-              ]
-            }
-          }
         ],
         "backendHttpSettingsCollection": [
           {
@@ -202,32 +192,18 @@
               },
               "pathRules": [
                 {
-                  "name": "pathRule1",
-                  "properties": {
-                    "paths": [
-                      "[parameters('pathMatch1')]"
-                    ],
-                    "backendAddressPool": {
-                      "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/appGatewayBackendPool1')]"
-                    },
-                    "backendHttpSettings": {
-                      "id": "[concat(variables('applicationGatewayID'), '/backendHttpSettingsCollection/appGatewayBackendHttpSettings')]"
+                    "name": "pathRule1",
+                    "properties": {
+                        "paths": [
+                            "[parameters('pathMatch1')]"
+                        ],
+                        "backendAddressPool": {
+                            "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/appGatewayBackendPool1')]"
+                        },
+                        "backendHttpSettings": {
+                            "id": "[concat(variables('applicationGatewayID'), '/backendHttpSettingsCollection/appGatewayBackendHttpSettings')]"
+                        }
                     }
-                  }
-                },
-                {
-                  "name": "pathRule2",
-                  "properties": {
-                    "paths": [
-                      "[parameters('pathMatch2')]"
-                    ],
-                    "backendAddressPool": {
-                      "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/appGatewayBackendPool2')]"
-                    },
-                    "backendHttpSettings": {
-                      "id": "[concat(variables('applicationGatewayID'), '/backendHttpSettingsCollection/appGatewayBackendHttpSettings')]"
-                    }
-                  }
                 }
               ]
             }
