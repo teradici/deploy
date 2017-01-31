@@ -658,7 +658,7 @@
                 "parameters": {
 
                     "subnetRef": {
-                        "value": "[concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')),'/subnets/',variables('appGatewaySubnet'))]"
+                        "value": "[concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')),'/subnets/',variables('gatewaySubnetName'))]"
                         },
                     "skuName": {
                         "value": "Standard_Small"
