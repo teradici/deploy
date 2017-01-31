@@ -666,11 +666,14 @@
                     "capacity": {
                         "value": 1
                     },
-                    "backendIpAddress1": {
-                        "value": "10.0.0.5"
+                    "backendIpAddressDefault": {
+                        "value": "vm-au.bdallad.local"
                     },
-                    "backendIpAddress2": {
-                        "value": "10.0.0.6"
+                    "backendIpAddressForPathRule1": {
+                        "value": "vm-cm"
+                    },
+                    "pathMatch1": {
+                        "value": "/pcoip-broker/*"
                     }
                 }
             }
