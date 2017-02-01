@@ -41,9 +41,14 @@
         },
         "brokerFQDN": {
             "type": "string",
-            "defaultValue": "10.0.0.5",
             "metadata": {
                 "description": "IP or FQDN of the broker machine from the CM's perspective"
+            }
+        },
+        "privateIP": {
+            "type": "string",
+            "metadata": {
+                "description": "private IP of the instance to create"
             }
         },
         "activationCode": {
@@ -106,13 +111,14 @@
                     {
                         "name": "ipconfig",
                         "properties": {
-                            "privateIPAllocationMethod": "Dynamic",
+                            "privateIPAllocationMethod": "Static",
                             "publicIPAddress": {
                                 "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPName'))]"
                             },
                             "subnet": {
                                 "id": "[variables('subnetId')]"
-                            }
+                            },
+                            "privateIPAddress": "[parameters('privateIP')]"
                         }
                     }
                 ]

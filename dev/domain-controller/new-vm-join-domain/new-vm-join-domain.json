@@ -27,6 +27,12 @@
                 "description": "The size of the virtual machines"
             }
         },
+        "privateIP": {
+            "type": "string",
+            "metadata": {
+                "description": "private IP of the instance to create"
+            }
+        },
         "domainToJoin": {
             "type": "string",
             "metadata": {
@@ -91,10 +97,11 @@
                     {
                         "name": "ipconfig",
                         "properties": {
-                            "privateIPAllocationMethod": "Dynamic",
+                            "privateIPAllocationMethod": "Static",
                             "subnet": {
                                 "id": "[variables('subnetId')]"
-                            }
+                            },
+                            "privateIPAddress": "[parameters('privateIP')]"
                         }
                     }
                 ]

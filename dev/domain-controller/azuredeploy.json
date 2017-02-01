@@ -415,6 +415,9 @@
                     "vmSize": {
                         "value": "Standard_A2_v2"
                     },
+                    "privateIP": {
+                        "value": "10.0.0.11"
+                    },
                     "domainToJoin": {
                         "value": "[parameters('domainName')]"
                     },
@@ -514,6 +517,9 @@
                     },
                     "vmSize": {
                         "value": "Standard_A2_v2"
+                    },
+                    "privateIP": {
+                        "value": "10.0.0.12"
                     },
                     "domainToJoin": {
                         "value": "[parameters('domainName')]"
@@ -627,6 +633,9 @@
                     "brokerFQDN": {
                         "value": "[concat(variables('serverRootName'), '-br','.',parameters('domainName'),':8443')]"
                     },
+                    "privateIP": {
+                        "value": "10.0.0.10"
+                    },
                     "activationCode": {
                         "value": "[parameters('activationCode')]"
                     },
@@ -667,10 +676,10 @@
                         "value": 1
                     },
                     "backendIpAddressDefault": {
-                        "value": "vm-au.bdallad.local"
+                        "value": "[reference(concat(variables('serverRootName'),'-au','Nic')).ipConfigurations[0].properties.privateIPAddress]"
                     },
                     "backendIpAddressForPathRule1": {
-                        "value": "vm-cm"
+                        "value": "[reference(concat(variables('serverRootName'),'-cm','Nic')).ipConfigurations[0].properties.privateIPAddress]"
                     },
                     "pathMatch1": {
                         "value": "/pcoip-broker/*"
