@@ -51,6 +51,9 @@
         "adRDPNAT": "adRDP",
         "adNicName": "vm-ad-nic",
         "adNicIPAddress": "10.0.0.4",
+        "cmPrivateIP":  "10.0.0.10",
+        "auPrivateIP":  "10.0.0.11",
+        "brPrivateIP":  "10.0.0.12",
         "adVMName": "vm-dc",
         "adSubnetName": "Subnet-OrangeBox",
         "adSubnetAddressPrefix": "10.0.0.0/24",
@@ -416,7 +419,7 @@
                         "value": "Standard_A2_v2"
                     },
                     "privateIP": {
-                        "value": "10.0.0.11"
+                        "value": "[variables('auPrivateIP')]"
                     },
                     "domainToJoin": {
                         "value": "[parameters('domainName')]"
@@ -519,7 +522,7 @@
                         "value": "Standard_A2_v2"
                     },
                     "privateIP": {
-                        "value": "10.0.0.12"
+                        "value": "[variables('brPrivateIP')]"
                     },
                     "domainToJoin": {
                         "value": "[parameters('domainName')]"
@@ -634,7 +637,7 @@
                         "value": "[concat(variables('serverRootName'), '-br','.',parameters('domainName'),':8443')]"
                     },
                     "privateIP": {
-                        "value": "10.0.0.10"
+                        "value": "[variables('cmPrivateIP')]"
                     },
                     "activationCode": {
                         "value": "[parameters('activationCode')]"
@@ -676,10 +679,10 @@
                         "value": 1
                     },
                     "backendIpAddressDefault": {
-                        "value": "[reference(concat(variables('serverRootName'),'-au','Nic')).ipConfigurations[0].properties.privateIPAddress]"
+                        "value": "[variables('auPrivateIP')]"
                     },
                     "backendIpAddressForPathRule1": {
-                        "value": "[reference(concat(variables('serverRootName'),'-cm','Nic')).ipConfigurations[0].properties.privateIPAddress]"
+                        "value": "[variables('cmPrivateIP')]"
                     },
                     "pathMatch1": {
                         "value": "/pcoip-broker/*"
