@@ -41,6 +41,9 @@ service network restart
 
 sh cm_setup.sh
 
+service security_gateway stop
+service connection_manager stop
+
 # modify CM setup
 #make the 'original' file
 cp -n /etc/ConnectionManager.conf /etc/ConnectionManager.conf.orig
@@ -79,6 +82,9 @@ if [ -n "$mypublicip" ]; then
 	echo "Finished setting up SG"
 fi
 
+#Theory - WAR file was not decompressed and deployed properly by the time we got here so the 'info' rerute was nt taking effect. Somehow a service restart later fixed it. Ill jsut restart the service here.
+service security_gateway restart
+service connection_manager restart
 
 # now setup license server
 #
