@@ -425,10 +425,30 @@ windows_7=Template_21_March_2016\\VDI-Win7-Main\\Virtual Machines\\15EB00D5-E5ED
 
 				if(-not (Test-Path $configFileName))
 				{
-					New-Item $configFileName -type directory
+					New-Item $configFileName -type file
 				}
 
 				Set-Content $configFileName $auProperties -Force
+
+		        Write-Host "Redirecting ROOT to Cloud Access Software Manager."
+
+
+                $redirectString = '<%response.sendRedirect("CloudAccessSoftwareManager/login.jsp");%>'
+				$targetDir = "$env:CATALINA_HOME\webapps\ROOT"
+				$indexFileName = "$targetDir\index.jsp"
+
+				if(-not (Test-Path $targetDir))
+				{
+					New-Item $targetDir -type directory
+				}
+
+				if(-not (Test-Path $indexFileName))
+				{
+					New-Item $indexFileName -type file
+				}
+
+				Set-Content $indexFileName $redirectString -Force
+
 
 		        Write-Host "Finished! Restarting Tomcat."
 
