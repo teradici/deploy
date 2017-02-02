@@ -52,6 +52,12 @@
                 "description": "Set of bit flags that define the join options. Default value of 3 is a combination of NETSETUP_JOIN_DOMAIN (0x00000001) & NETSETUP_ACCT_CREATE (0x00000002) i.e. will join the domain and create the account on the domain. For more information see https://msdn.microsoft.com/en-us/library/aa392154(v=vs.85).aspx"
             }
         },
+        "domainControllerName": {
+            "type": "string",
+            "metadata": {
+                "description": "The network name of the domain controller (without domain suffix)"
+            }
+        },
         "vmAdminUsername": {
             "type": "string",
             "metadata": {
@@ -111,7 +117,7 @@
                             "UserName": "[parameters('vmAdminUsername')]",
                             "Password": "PrivateSettingsRef:AdminPassword"
                         },
-                        "DCVMName": "advm"
+                        "DCVMName": "[variables('domainControllerName')]"
                     }
                 },
                 "protectedSettings": {

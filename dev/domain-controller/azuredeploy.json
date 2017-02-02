@@ -489,6 +489,9 @@
                     "vmAdminPassword": {
                         "value": "[parameters('adminPassword')]"
                     },
+                    "domainControllerName": {
+                        "value": "[variables('adVMName')]"
+                    },
                     "_artifactsLocation": {
                         "value": "[concat(parameters('_artifactsLocation'), '/new-admin-vm')]"
                     }
