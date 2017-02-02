@@ -422,7 +422,7 @@ brokerLocale=en_US
                         $cloc = $args[1]
 
 					    $cert = $null
-						$loopCountRemaining = 600
+						$loopCountRemaining = 1800
 						#loop until it's created
 						while(-not $cert)
 						{
