@@ -117,7 +117,7 @@
                             "UserName": "[parameters('vmAdminUsername')]",
                             "Password": "PrivateSettingsRef:AdminPassword"
                         },
-                        "DCVMName": "[variables('domainControllerName')]"
+                        "DCVMName": "[parameters('domainControllerName')]"
                     }
                 },
                 "protectedSettings": {
