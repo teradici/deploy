@@ -120,6 +120,12 @@ service security_gateway restart
 service connection_manager restart
 service lmadmin restart
 
+#Hack... try to restart the CM after 60 seconds to ensure that the info record is remapped to ROOT. This does not seem to be happening on its own.
+
+sleep 60
+service connection_manager restart
+
+
 exit 0
 
 # /opt/FNPLicenseServerManager/conf/server.xml
