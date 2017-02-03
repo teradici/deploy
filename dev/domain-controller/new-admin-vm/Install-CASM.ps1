@@ -39,17 +39,26 @@ Configuration InstallAUI
         [String]$DomainName,
 
         [Parameter(Mandatory)]
-        [System.Management.Automation.PSCredential]$Admincreds,
+        [System.Management.Automation.PSCredential]$AdminCreds,
 
         [Parameter(Mandatory)]
-        [String]$DCVMName #without the domain suffix
-    )
+        [System.Management.Automation.PSCredential]$AzureCreds,
+
+        [Parameter(Mandatory)]
+        [String]$DCVMName, #without the domain suffix
+
+        [Parameter(Mandatory)]
+        [String]$RGName #Azure resource group name
+	)
 
 	$dcvmfqdn = "$DCVMName.$DomainName"
 	$domaindns = $DomainName
 
-    $adminUsername = $Admincreds.GetNetworkCredential().Username
-    $adminPassword = $Admincreds.GetNetworkCredential().Password
+    $adminUsername = $AdminCreds.GetNetworkCredential().Username
+    $adminPassword = $AdminCreds.GetNetworkCredential().Password
+
+    $AzureUsername = $AzureCreds.GetNetworkCredential().Username
+    $AzurePassword = $AzureCreds.GetNetworkCredential().Password
 
 	Import-DscResource -ModuleName xPSDesiredStateConfiguration
 
@@ -349,6 +358,11 @@ Configuration InstallAUI
 				$localtomcatpath = "$env:systemdrive\tomcat"
 				$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
 
+                Write-Verbose "Install Nuget and AzureRM packages"
+
+				Install-packageProvider -Name NuGet -Force
+				Install-Module -Name AzureRM -Force
+
                 Write-Verbose "Install_AUI"
 
 				copy $LocalDLPath\$adminWAR ($CatalinaHomeLocation + "\webapps")
@@ -392,6 +406,10 @@ Configuration InstallAUI
 				$date = Get-Date
 				$domainControllerFQDN = $using:dcvmfqdn
 
+				$AzureUsernameLocal = $using:AzureUsername
+				$AzurePasswordLocal = $using:AzurePassword
+				$RGNameLocal        = $using:RGName
+
 				$auProperties = @"
 #$date
 cn=Users
@@ -399,9 +417,9 @@ dom=$domainleaf
 dcDomain = $domainleaf
 dc=$domainroot
 adServerHostAddress=$domainControllerFQDN
-resourceGroupName=PRIMESOFT-DEV
-azureAccountUsername=ssunder@primesoft.teradici.com
-azureAccountPassword=primesoft12!
+resourceGroupName=$RGNameLocal
+azureAccountUsername=$AzureUsernameLocal
+azureAccountPassword=$AzurePasswordLocal
 adminUserID=testdom\\administrator
 source=C\:\\VMBackup\\
 destination=D:\\DestinationVM\\31_March_2016\\

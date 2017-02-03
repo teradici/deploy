@@ -133,7 +133,8 @@
                             "UserName": "[parameters('AzureAdminUsername')]",
                             "Password": "PrivateSettingsRef:AzureAdminPassword"
                         },
-                        "DCVMName": "[parameters('domainControllerName')]"
+                        "DCVMName": "[parameters('domainControllerName')]",
+                        "RGName": "[resourceGroup().name]"
                     }
                 },
                 "protectedSettings": {
