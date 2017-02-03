@@ -2,13 +2,13 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "adminUsername": {
+        "domainAdminUsername": {
             "type": "string",
             "metadata": {
                 "description": "The name of the administrator account of the new VM and domain"
             }
         },
-        "adminPassword": {
+        "domainAdminPassword": {
             "type": "securestring",
             "metadata": {
                 "description": "The password for the administrator account of the new VM and domain"
@@ -18,6 +18,18 @@
             "type": "string",
             "metadata": {
                 "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
+            }
+        },
+        "AzureAdminUsername": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the Azure account/service principal with contributor access to the subscription. This account cannot require MFA."
+            }
+        },
+        "AzureAdminPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "The password of the Azure account/service principal with contributor access to the subscription. This account cannot require MFA."
             }
         },
         "activationCode": {
@@ -43,6 +55,7 @@
         }
     },
     "variables": {
+        "configuration-name": "Complete CAM deployment with included Active Directory",
         "virtualNetworkName": "vnet-OrangeBox",
         "virtualNetworkAddressRange": "10.0.0.0/16",
         "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'adsa')]",
@@ -223,8 +236,8 @@
                 },
                 "osProfile": {
                     "computerName": "[variables('adVMName')]",
-                    "adminUsername": "[parameters('adminUsername')]",
-                    "adminPassword": "[parameters('adminPassword')]"
+                    "adminUsername": "[parameters('domainAdminUsername')]",
+                    "adminPassword": "[parameters('domainAdminPassword')]"
                 },
                 "storageProfile": {
                     "imageReference": {
@@ -287,10 +300,10 @@
                         "value": "[parameters('domainName')]"
                     },
                     "adminUsername": {
-                        "value": "[parameters('adminUsername')]"
+                        "value": "[parameters('domainAdminUsername')]"
                     },
                     "adminPassword": {
-                        "value": "[parameters('adminPassword')]"
+                        "value": "[parameters('domainAdminPassword')]"
                     },
                     "adminDesktopVMName": {
                         "value": "[concat(variables('serverRootName'), '-desk')]"
@@ -369,19 +382,19 @@
                         "value": "[parameters('domainName')]"
                     },
                     "domainUsername": {
-                        "value": "[parameters('adminUsername')]"
+                        "value": "[parameters('domainAdminUsername')]"
                     },
                     "domainPassword": {
-                        "value": "[parameters('adminPassword')]"
+                        "value": "[parameters('domainAdminPassword')]"
                     },
                     "domainJoinOptions": {
                         "value": 3
                     },
                     "vmAdminUsername": {
-                        "value": "[parameters('adminUsername')]"
+                        "value": "[parameters('domainAdminUsername')]"
                     },
                     "vmAdminPassword": {
-                        "value": "[parameters('adminPassword')]"
+                        "value": "[parameters('domainAdminPassword')]"
                     },
                     "_artifactsLocation": {
                         "value": "[concat(parameters('_artifactsLocation'), '/new-agent-vm')]"
@@ -425,19 +438,19 @@
                         "value": "[parameters('domainName')]"
                     },
                     "domainUsername": {
-                        "value": "[parameters('adminUsername')]"
+                        "value": "[parameters('domainAdminUsername')]"
                     },
                     "domainPassword": {
-                        "value": "[parameters('adminPassword')]"
+                        "value": "[parameters('domainAdminPassword')]"
                     },
                     "domainJoinOptions": {
                         "value": 3
                     },
                     "vmAdminUsername": {
-                        "value": "[parameters('adminUsername')]"
+                        "value": "[parameters('domainAdminUsername')]"
                     },
                     "vmAdminPassword": {
-                        "value": "[parameters('adminPassword')]"
+                        "value": "[parameters('domainAdminPassword')]"
                     },
                     "storageAccountName": {
                         "value": "[variables('storageAccountName')]"
@@ -475,19 +488,25 @@
                         "value": "[parameters('domainName')]"
                     },
                     "domainUsername": {
-                        "value": "[parameters('adminUsername')]"
+                        "value": "[parameters('domainAdminUsername')]"
                     },
                     "domainPassword": {
-                        "value": "[parameters('adminPassword')]"
+                        "value": "[parameters('domainAdminPassword')]"
+                    },
+                    "AzureAdminUsername": {
+                        "value": "[parameters('AzureAdminUsername')]"
+                    },
+                    "AzureAdminPassword": {
+                        "value": "[parameters('AzureAdminPassword')]"
                     },
                     "domainJoinOptions": {
                         "value": 3
                     },
                     "vmAdminUsername": {
-                        "value": "[parameters('adminUsername')]"
+                        "value": "[parameters('domainAdminUsername')]"
                     },
                     "vmAdminPassword": {
-                        "value": "[parameters('adminPassword')]"
+                        "value": "[parameters('domainAdminPassword')]"
                     },
                     "domainControllerName": {
                         "value": "[variables('adVMName')]"
@@ -531,19 +550,19 @@
                         "value": "[parameters('domainName')]"
                     },
                     "domainUsername": {
-                        "value": "[parameters('adminUsername')]"
+                        "value": "[parameters('domainAdminUsername')]"
                     },
                     "domainPassword": {
-                        "value": "[parameters('adminPassword')]"
+                        "value": "[parameters('domainAdminPassword')]"
                     },
                     "domainJoinOptions": {
                         "value": 3
                     },
                     "vmAdminUsername": {
-                        "value": "[parameters('adminUsername')]"
+                        "value": "[parameters('domainAdminUsername')]"
                     },
                     "vmAdminPassword": {
-                        "value": "[parameters('adminPassword')]"
+                        "value": "[parameters('domainAdminPassword')]"
                     },
                     "storageAccountName": {
                         "value": "[variables('storageAccountName')]"
@@ -581,19 +600,19 @@
                         "value": "[parameters('domainName')]"
                     },
                     "domainUsername": {
-                        "value": "[parameters('adminUsername')]"
+                        "value": "[parameters('domainAdminUsername')]"
                     },
                     "domainPassword": {
-                        "value": "[parameters('adminPassword')]"
+                        "value": "[parameters('domainAdminPassword')]"
                     },
                     "domainJoinOptions": {
                         "value": 3
                     },
                     "vmAdminUsername": {
-                        "value": "[parameters('adminUsername')]"
+                        "value": "[parameters('domainAdminUsername')]"
                     },
                     "vmAdminPassword": {
-                        "value": "[parameters('adminPassword')]"
+                        "value": "[parameters('domainAdminPassword')]"
                     },
                     "domainControllerName": {
                         "value": "[variables('adVMName')]"
@@ -631,10 +650,10 @@
                         "value": "Standard_A2_v2"
                     },
                     "vmAdminUsername": {
-                        "value": "[parameters('adminUsername')]"
+                        "value": "[parameters('domainAdminUsername')]"
                     },
                     "vmAdminPassword": {
-                        "value": "[parameters('adminPassword')]"
+                        "value": "[parameters('domainAdminPassword')]"
                     },
                     "brokerFQDN": {
                         "value": "[concat(variables('serverRootName'), '-br','.',parameters('domainName'),':8443')]"
