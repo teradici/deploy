@@ -39,6 +39,13 @@
                 "description": "The license activation code for the PCoIP CAS licenses"
             }
         },
+        "adminVMBlobSource": {
+            "type": "string",
+            "defaultValue": "https://teradeploy.blob.core.windows.net/binaries",
+            "metadata": {
+                "description": "The location of the blobs for admin GUI machine installation"
+            }
+        },
         "_artifactsLocation": {
             "type": "string",
             "metadata": {
@@ -510,6 +517,9 @@
                     },
                     "domainControllerName": {
                         "value": "[variables('adVMName')]"
+                    },
+                    "blobSource": {
+                        "value": "[parameters('adminVMBlobSource')]"
                     },
                     "_artifactsLocation": {
                         "value": "[concat(parameters('_artifactsLocation'), '/new-admin-vm')]"

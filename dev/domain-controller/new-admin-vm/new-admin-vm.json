@@ -82,6 +82,12 @@
                 "description": "The password for the administrator account of the new VM and the domain"
             }
         },
+        "blobSource": {
+            "type": "string",
+            "metadata": {
+                "description": "The source location of the required powershell and application installer blobs"
+            }
+        },
         "_artifactsLocation": {
             "type": "string",
             "metadata": {
@@ -118,13 +124,13 @@
                 "typeHandlerVersion": "2.9",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "modulesUrl": "https://teradeploy.blob.core.windows.net/binaries/Install-CASM.ps1.zip",
+                    "modulesUrl": "[concat(parameters('blobSource'),'/Install-CASM.ps1.zip')]",
                     "privacy": {
                         "DataCollection": "Disable"
                     },
                     "configurationFunction": "Install-CASM.ps1\\InstallAUI",
                     "Properties": {
-                        "DomainName": "[parameters('domainToJoin')]",
+                        "sourceURI": "[parameters('blobSource')]",
                         "AdminCreds": {
                             "UserName": "[parameters('vmAdminUsername')]",
                             "Password": "PrivateSettingsRef:AdminPassword"

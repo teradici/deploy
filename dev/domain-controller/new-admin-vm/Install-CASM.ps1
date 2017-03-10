@@ -23,8 +23,8 @@ Configuration InstallAUI
         [string]
         $LocalDLPath = "$env:systemdrive\WindowsAzure\PCoIPAUIInstall",
 
-        [string]
-        $sourceURI = "https://teradeploy.blob.core.windows.net/binaries",
+        [Parameter(Mandatory)]
+		[String]$sourceURI,
 
         [string]
         $javaInstaller = "jdk-8u91-windows-x64.exe",
