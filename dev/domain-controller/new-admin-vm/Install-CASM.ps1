@@ -1,6 +1,6 @@
-# Install-AUI.ps1
+# Install-CAM.ps1
 # Compile to a local .zip file via this command:
-# Publish-AzureVMDscConfiguration -ConfigurationPath .\Install-AUI.ps1 -ConfigurationArchivePath .\Install-AUI.zip
+# Publish-AzureVMDscConfiguration -ConfigurationPath .\Install-CAM.ps1 -ConfigurationArchivePath .\Install-CAM.ps1.zip
 # And then push to GitHUB.
 #
 # Or to push to Azure Storage:
@@ -12,16 +12,16 @@
 # $StorageContainer = 'binaries'
 # 
 # $StorageContext = New-AzureStorageContext -StorageAccountName $StorageAccount -StorageAccountKey $StorageKey
-# Publish-AzureVMDscConfiguration -ConfigurationPath .\Install-AUI.ps1  -ContainerName $StorageContainer -StorageContext $StorageContext
+# Publish-AzureVMDscConfiguration -ConfigurationPath .\Install-CAM.ps1  -ContainerName $StorageContainer -StorageContext $StorageContext
 #
 #
-Configuration InstallAUI
+Configuration InstallCAM
 {
 	# One day pull from Oracle as per here? https://github.com/gregjhogan/cJre8/blob/master/DSCResources/cJre8/cJre8.schema.psm1
     param
     (
         [string]
-        $LocalDLPath = "$env:systemdrive\WindowsAzure\PCoIPAUIInstall",
+        $LocalDLPath = "$env:systemdrive\WindowsAzure\PCoIPCAMInstall",
 
         [Parameter(Mandatory)]
 		[String]$sourceURI,
@@ -35,11 +35,26 @@ Configuration InstallAUI
         [string]
         $adminWAR = "CloudAccessSoftwareManager.war",
 
-        [Parameter(Mandatory)]
-        [String]$DomainName,
+        [string]
+        $agentARM = "server2016-standard-agent.json",
 
         [Parameter(Mandatory)]
-        [System.Management.Automation.PSCredential]$AdminCreds,
+        [String]$domainFQDN,
+
+        [Parameter(Mandatory)]
+        [String]$existingVNETName,
+
+        [Parameter(Mandatory)]
+        [String]$existingSubnetName,
+
+        [Parameter(Mandatory)]
+        [String]$storageAccountName,
+
+        [Parameter(Mandatory)]
+        [System.Management.Automation.PSCredential]$VMAdminCreds,
+
+        [Parameter(Mandatory)]
+        [System.Management.Automation.PSCredential]$DomainAdminCreds,
 
         [Parameter(Mandatory)]
         [System.Management.Automation.PSCredential]$AzureCreds,
@@ -51,11 +66,11 @@ Configuration InstallAUI
         [String]$RGName #Azure resource group name
 	)
 
-	$dcvmfqdn = "$DCVMName.$DomainName"
-	$domaindns = $DomainName
+    $VMAdminUsername = $VMAdminCreds.GetNetworkCredential().Username
+    $VMAdminPassword = $VMAdminCreds.GetNetworkCredential().Password
 
-    $adminUsername = $AdminCreds.GetNetworkCredential().Username
-    $adminPassword = $AdminCreds.GetNetworkCredential().Password
+    $DomainAdminUsername = $DomainAdminCreds.GetNetworkCredential().Username
+    $DomainAdminPassword = $DomainAdminCreds.GetNetworkCredential().Password
 
     $AzureUsername = $AzureCreds.GetNetworkCredential().Username
     $AzurePassword = $AzureCreds.GetNetworkCredential().Password
@@ -99,6 +114,13 @@ Configuration InstallAUI
 			DestinationPath = "$LocalDLPath\$adminWAR"
 		}
 
+		xRemoteFile Download_Agent_ARM
+		{
+			Uri = "$sourceURI/$agentARM"
+			DestinationPath = "$LocalDLPath\$agentARM"
+		}
+
+
 		# One day can split this to 'install java' and 'configure java environemnt' and use 'package' dsc like here:
 		# http://stackoverflow.com/questions/31562451/installing-jre-using-powershell-dsc-hangs
         Script Install_Java
@@ -117,7 +139,7 @@ Configuration InstallAUI
             SetScript  = {
                 Write-Verbose "Install_Java"
 
-		        $LocalDLPath = "$env:systemdrive\WindowsAzure\PCoIPAUIInstall"
+		        $LocalDLPath = $using:LocalDLPath
 		        $javaInstaller = "jdk-8u91-windows-x64.exe"
 
 				# Run the installer. Start-Process does not work due to permissions issue however '&' calling will not wait so looks for registry key as 'completion.'
@@ -229,7 +251,7 @@ Configuration InstallAUI
 				#just going 'manual' now since installer has been a massive PITA
                 #(but perhaps unfairly so since it might have been affected by some Java install issues I had previously as well.)
 
-		        $LocalDLPath = "$env:systemdrive\WindowsAzure\PCoIPAUIInstall"
+		        $LocalDLPath = $using:LocalDLPath
 		        $tomcatInstaller = "apache-tomcat-8.0.39-windows-x64.zip"
 				$localtomcatpath = "$env:systemdrive\tomcat"
 				$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
@@ -338,7 +360,7 @@ Configuration InstallAUI
 
         Script Install_AUI
         {
-            DependsOn  = @("[xRemoteFile]Download_Admin_WAR", "[Script]Install_Tomcat")
+            DependsOn  = @("[xRemoteFile]Download_Admin_WAR", "[xRemoteFile]Download_Agent_ARM", "[Script]Install_Tomcat")
             GetScript  = { @{ Result = "Install_AUI" } }
 
             #TODO: Check for other agent types as well?
@@ -353,8 +375,9 @@ Configuration InstallAUI
                             else {return $false}
 			}
             SetScript  = {
-				$LocalDLPath = "$env:systemdrive\WindowsAzure\PCoIPAUIInstall"
+		        $LocalDLPath = $using:LocalDLPath
 				$adminWAR = $using:adminWAR
+                $agentARM = $using:agentARM
 				$localtomcatpath = "$env:systemdrive\tomcat"
 				$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
 
@@ -365,7 +388,7 @@ Configuration InstallAUI
 
                 Write-Verbose "Install_AUI"
 
-				copy $LocalDLPath\$adminWAR ($CatalinaHomeLocation + "\webapps")
+				copy "$LocalDLPath\$adminWAR" ($CatalinaHomeLocation + "\webapps")
 
 				#Make sure the properties file exists - as enough proof that the .war file has been processed
 
@@ -384,7 +407,7 @@ Configuration InstallAUI
 				#loop until it's created
 				while($exists -eq $null)
 				{
-					Write-Host "Waiting for CASM properties file. Seconds remaining: $loopCountRemaining"
+					Write-Host "Waiting for CAM properties file. Seconds remaining: $loopCountRemaining"
 					Start-Sleep -Seconds 1
 					$exists = Get-Content $auPropertiesFile -ErrorAction SilentlyContinue
 					$loopCountRemaining = $loopCountRemaining - 1
@@ -393,7 +416,7 @@ Configuration InstallAUI
 						throw "No properties file!"
 					}
 				}
-				Write-Host "Got CASM configuration file. Re-generating."
+				Write-Host "Got CAM configuration file. Re-generating."
 
 				Stop-Service Tomcat8
 
@@ -448,7 +471,7 @@ windows_7=Template_21_March_2016\\VDI-Win7-Main\\Virtual Machines\\15EB00D5-E5ED
 
 				Set-Content $configFileName $auProperties -Force
 
-		        Write-Host "Redirecting ROOT to Cloud Access Software Manager."
+		        Write-Host "Redirecting ROOT to Cloud Access Manager."
 
 
                 $redirectString = '<%response.sendRedirect("CloudAccessSoftwareManager/login.jsp");%>'
@@ -467,6 +490,50 @@ windows_7=Template_21_March_2016\\VDI-Win7-Main\\Virtual Machines\\15EB00D5-E5ED
 
 				Set-Content $indexFileName $redirectString -Force
 
+
+		        Write-Host "Pulling in Agent machine deployment script."
+
+				$templateLoc = "$CatalinaHomeLocation\ARMtemplateFiles"
+				
+				#clear out whatever was stuffed in from the deployment WAR file
+				Remove-Item "$templateLoc\*" -Recurse
+				
+				copy "$LocalDLPath\$agentARM" $templateLoc
+
+				#now make the default parameters file - same root name but different suffix
+				$agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
+
+				$armParamContent = @"
+{
+    "$schema": "http:\/\/schema.management.azure.com\/schemas\/2015-01-01\/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "existingSubnetName": { "value": "$using:existingSubnetName" },
+        "domainUsername": { "value": "$using:DomainAdminUsername" },
+        "dnsLabelPrefix": { "value": "tbd-vmname" },
+        "vmAdminPassword": { "value": "$using:VMAdminPassword" },
+        "existingVNETName": { "value": "$using:existingVNETName" },
+        "domainPassword": { "value": "$using:DomainAdminPassword" },
+        "vmAdminUsername": { "value": "$using:VMAdminUsername" },
+        "domainToJoin": { "value": "$using:domainFQDN" },
+        "storageAccountName": { "value": "$using:storageAccountName" },
+        "_artifactsLocation": { "value": "https:\/\/raw.githubusercontent.com\/teradici\/deploy\/master\/dev\/domain-controller\/new-agent-vm" }
+    }
+}
+
+"@
+				$ParamTargetDir = "$CatalinaHomeLocation\ARMParametertemplateFiles"
+				$ParamTargetFilePath = "$ParamTargetDir\$agentARMparam"
+
+				#clear out whatever was stuffed in from the deployment WAR file
+				Remove-Item "$ParamTargetDir\*" -Recurse
+
+				if(-not (Test-Path $ParamTargetFilePath))
+				{
+					New-Item $ParamTargetFilePath -type file
+				}
+
+				Set-Content $ParamTargetFilePath $armParamContent -Force
 
 		        Write-Host "Finished! Restarting Tomcat."
 

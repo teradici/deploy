@@ -88,6 +88,12 @@
                 "description": "The source location of the required powershell and application installer blobs"
             }
         },
+        "storageAccountName": {
+            "type": "string",
+            "metadata": {
+                "description": "Storage account to use for VM data and VHD's"
+            }
+        },
         "_artifactsLocation": {
             "type": "string",
             "metadata": {
@@ -124,28 +130,37 @@
                 "typeHandlerVersion": "2.9",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "modulesUrl": "[concat(parameters('blobSource'),'/Install-CASM.ps1.zip')]",
+                    "modulesUrl": "[concat(parameters('blobSource'),'/Install-CAM.ps1.zip')]",
                     "privacy": {
                         "DataCollection": "Disable"
                     },
-                    "configurationFunction": "Install-CASM.ps1\\InstallAUI",
+                    "configurationFunction": "Install-CAM.ps1\\InstallCAM",
                     "Properties": {
+                        "domainFQDN":  "[parameters('domainToJoin')]",
                         "sourceURI": "[parameters('blobSource')]",
-                        "AdminCreds": {
+                        "VMAdminCreds": {
                             "UserName": "[parameters('vmAdminUsername')]",
-                            "Password": "PrivateSettingsRef:AdminPassword"
+                            "Password": "PrivateSettingsRef:vmAdminPassword"
+                        },
+                        "DomainAdminCreds": {
+                            "UserName": "[parameters('domainUsername')]",
+                            "Password": "PrivateSettingsRef:DomainAdminPassword"
                         },
                         "AzureCreds": {
                             "UserName": "[parameters('AzureAdminUsername')]",
                             "Password": "PrivateSettingsRef:AzureAdminPassword"
                         },
                         "DCVMName": "[parameters('domainControllerName')]",
-                        "RGName": "[resourceGroup().name]"
+                        "RGName": "[resourceGroup().name]",
+                        "existingVNETName": "[parameters('existingVNETName')]",
+                        "existingSubnetName": "[parameters('existingSubnetName')]",
+                        "storageAccountName": "[parameters('storageAccountName')]"
                     }
                 },
                 "protectedSettings": {
                     "Items": {
-                        "AdminPassword": "[parameters('vmAdminPassword')]",
+                        "DomainAdminPassword": "[parameters('domainPassword')]",
+                        "vmAdminPassword": "[parameters('vmAdminPassword')]",
                         "AzureAdminPassword": "[parameters('AzureAdminPassword')]"
                     }
                 }
