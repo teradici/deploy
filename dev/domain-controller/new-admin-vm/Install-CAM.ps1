@@ -66,6 +66,8 @@ Configuration InstallCAM
         [String]$RGName #Azure resource group name
 	)
 
+	$dcvmfqdn = "$DCVMName.$domainFQDN"
+
     $VMAdminUsername = $VMAdminCreds.GetNetworkCredential().Username
     $VMAdminPassword = $VMAdminCreds.GetNetworkCredential().Password
 
@@ -386,7 +388,7 @@ Configuration InstallCAM
 				Install-packageProvider -Name NuGet -Force
 				Install-Module -Name AzureRM -Force
 
-                Write-Verbose "Install_AUI"
+                Write-Verbose "Install_CAM"
 
 				copy "$LocalDLPath\$adminWAR" ($CatalinaHomeLocation + "\webapps")
 
@@ -422,7 +424,7 @@ Configuration InstallCAM
 
 				#Now create the new output file.
 				#TODO - really only a couple parameters are used and set properly now. Needs cleanup.
-				$domainsplit = $using:domaindns
+				$domainsplit = $using:domainFQDN
 				$domainsplit = $domainsplit.split(".".2)
 				$domainleaf = $domainsplit[0]  # get the first part of the domain name (before .local or .???)
 				$domainroot = $domainsplit[1]  # get the second part of the domain name
@@ -495,6 +497,11 @@ windows_7=Template_21_March_2016\\VDI-Win7-Main\\Virtual Machines\\15EB00D5-E5ED
 
 				$templateLoc = "$CatalinaHomeLocation\ARMtemplateFiles"
 				
+				if(-not (Test-Path $templateLoc))
+				{
+					New-Item $templateLoc -type directory
+				}
+
 				#clear out whatever was stuffed in from the deployment WAR file
 				Remove-Item "$templateLoc\*" -Recurse
 				
@@ -524,6 +531,11 @@ windows_7=Template_21_March_2016\\VDI-Win7-Main\\Virtual Machines\\15EB00D5-E5ED
 "@
 				$ParamTargetDir = "$CatalinaHomeLocation\ARMParametertemplateFiles"
 				$ParamTargetFilePath = "$ParamTargetDir\$agentARMparam"
+
+				if(-not (Test-Path $ParamTargetDir))
+				{
+					New-Item $ParamTargetDir -type directory
+				}
 
 				#clear out whatever was stuffed in from the deployment WAR file
 				Remove-Item "$ParamTargetDir\*" -Recurse
