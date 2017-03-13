@@ -512,7 +512,7 @@ windows_7=Template_21_March_2016\\VDI-Win7-Main\\Virtual Machines\\15EB00D5-E5ED
 
 				$armParamContent = @"
 {
-    "$schema": "http:\/\/schema.management.azure.com\/schemas\/2015-01-01\/deploymentParameters.json#",
+    "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
         "existingSubnetName": { "value": "$using:existingSubnetName" },
@@ -524,7 +524,7 @@ windows_7=Template_21_March_2016\\VDI-Win7-Main\\Virtual Machines\\15EB00D5-E5ED
         "vmAdminUsername": { "value": "$using:VMAdminUsername" },
         "domainToJoin": { "value": "$using:domainFQDN" },
         "storageAccountName": { "value": "$using:storageAccountName" },
-        "_artifactsLocation": { "value": "https:\/\/raw.githubusercontent.com\/teradici\/deploy\/master\/dev\/domain-controller\/new-agent-vm" }
+        "_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller/new-agent-vm" }
     }
 }
 
