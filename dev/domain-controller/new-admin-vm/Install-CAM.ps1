@@ -33,7 +33,7 @@ Configuration InstallCAM
         $tomcatInstaller = "apache-tomcat-8.0.39-windows-x64.zip",
 
         [string]
-        $adminWAR = "CloudAccessSoftwareManager.war",
+        $adminWAR = "CloudAccessManager.war",
 
         [string]
         $agentARM = "server2016-standard-agent.json",
@@ -393,7 +393,7 @@ Configuration InstallCAM
 				if ($svc.Status -eq "Stopped") {$svc.start()}
 				elseIf ($svc.status -eq "Running") {Write-Host $svc.name "is running"}
 
-				$auPropertiesFile = $catalinaHomeLocation + "\webapps\CloudAccessSoftwareManager\WEB-INF\classes\config.properties"
+				$auPropertiesFile = $catalinaHomeLocation + "\webapps\CloudAccessManager\WEB-INF\classes\config.properties"
 
 				$exists = $null
 				$loopCountRemaining = 600
@@ -459,7 +459,7 @@ azureAccountPassword=$AzurePasswordLocal
 		        Write-Host "Redirecting ROOT to Cloud Access Manager."
 
 
-                $redirectString = '<%response.sendRedirect("CloudAccessSoftwareManager/login.jsp");%>'
+                $redirectString = '<%response.sendRedirect("CloudAccessManager/login.jsp");%>'
 				$targetDir = "$env:CATALINA_HOME\webapps\ROOT"
 				$indexFileName = "$targetDir\index.jsp"
 
