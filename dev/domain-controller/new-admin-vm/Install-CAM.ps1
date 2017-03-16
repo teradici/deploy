@@ -68,15 +68,6 @@ Configuration InstallCAM
 
 	$dcvmfqdn = "$DCVMName.$domainFQDN"
 
-    $VMAdminUsername = $VMAdminCreds.GetNetworkCredential().Username
-    $VMAdminPassword = $VMAdminCreds.GetNetworkCredential().Password
-
-    $DomainAdminUsername = $DomainAdminCreds.GetNetworkCredential().Username
-    $DomainAdminPassword = $DomainAdminCreds.GetNetworkCredential().Password
-
-    $AzureUsername = $AzureCreds.GetNetworkCredential().Username
-    $AzurePassword = $AzureCreds.GetNetworkCredential().Password
-
 	Import-DscResource -ModuleName xPSDesiredStateConfiguration
 
     Node "localhost"
@@ -431,8 +422,11 @@ Configuration InstallCAM
 				$date = Get-Date
 				$domainControllerFQDN = $using:dcvmfqdn
 
-				$AzureUsernameLocal = $using:AzureUsername
-				$AzurePasswordLocal = $using:AzurePassword
+				$localAzureCreds = $using:AzureCreds
+
+				$AzureUsernameLocal = $localAzureCreds.GetNetworkCredential().Username
+				$AzurePasswordLocal = $localAzureCreds.GetNetworkCredential().Password
+
 				$RGNameLocal        = $using:RGName
 
 				$auProperties = @"
@@ -445,17 +439,6 @@ adServerHostAddress=$domainControllerFQDN
 resourceGroupName=$RGNameLocal
 azureAccountUsername=$AzureUsernameLocal
 azureAccountPassword=$AzurePasswordLocal
-adminUserID=testdom\\administrator
-source=C\:\\VMBackup\\
-destination=D:\\DestinationVM\\31_March_2016\\
-machineName=tempuser-pc
-machineUserID=testdom\\administrator
-vmid=tempuser-pc\\tempuser
-vmdefaultuser=tempuser
-machinePassword=Passw0rd
-windows_8=win81_64_1\\Virtual Machines\\2B083385-0FDE-470F-AF9F-3F6892708E9B.XML
-windowsServer_2008=2008R2-1\\Virtual Machines\\9B9FC212-D5A0-4CFC-A28F-219FF0414BEC.XML
-windows_7=Template_21_March_2016\\VDI-Win7-Main\\Virtual Machines\\15EB00D5-E5ED-4F88-8734-AB9207D15157.XML
 "@
 
 				$targetDir = "$env:CATALINA_HOME\adminproperty"
@@ -510,18 +493,26 @@ windows_7=Template_21_March_2016\\VDI-Win7-Main\\Virtual Machines\\15EB00D5-E5ED
 				#now make the default parameters file - same root name but different suffix
 				$agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
 
+				$localVMAdminCreds = $using:VMAdminCreds
+				$VMAdminUsername = $localVMAdminCreds.GetNetworkCredential().Username
+				$VMAdminPassword = $localVMAdminCreds.GetNetworkCredential().Password
+
+				$localDomainAdminCreds = $using:DomainAdminCreds
+				$DomainAdminUsername = $localDomainAdminCreds.GetNetworkCredential().Username
+				$DomainAdminPassword = $localDomainAdminCreds.GetNetworkCredential().Password
+
 				$armParamContent = @"
 {
     "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
         "existingSubnetName": { "value": "$using:existingSubnetName" },
-        "domainUsername": { "value": "$using:DomainAdminUsername" },
+        "domainUsername": { "value": "$DomainAdminUsername" },
         "dnsLabelPrefix": { "value": "tbd-vmname" },
-        "vmAdminPassword": { "value": "$using:VMAdminPassword" },
+        "vmAdminPassword": { "value": "$VMAdminPassword" },
         "existingVNETName": { "value": "$using:existingVNETName" },
-        "domainPassword": { "value": "$using:DomainAdminPassword" },
-        "vmAdminUsername": { "value": "$using:VMAdminUsername" },
+        "domainPassword": { "value": "$DomainAdminPassword" },
+        "vmAdminUsername": { "value": "$VMAdminUsername" },
         "domainToJoin": { "value": "$using:domainFQDN" },
         "storageAccountName": { "value": "$using:storageAccountName" },
         "_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller/new-agent-vm" }
