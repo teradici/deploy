@@ -400,41 +400,55 @@ brokerLocale=en_US
 				$certSubject = "CN=$using:dcvmfqdn"
 
 				Write-Host "Looking for cert with $certSubject on $dcvmfqdn"
-		
-				$DCSession = New-PSSession $using:dcvmfqdn -Credential $using:Admincreds
 
-			    Invoke-Command -Session $DCSession -ArgumentList $certSubject, $certStoreLocationOnDC `
-			      -ScriptBlock {
-                        $cs = $args[0]
-                        $cloc = $args[1]
+				$foundCert = $false
+				$loopCountRemaining = 3600
+				#loop until it's created
+				while(-not $foundCert)
+				{
+					Write-Host "Waiting for LDAP certificate. Seconds remaining: $loopCountRemaining"
 
-					    $cert = $null
-						$loopCountRemaining = 3600
-						#loop until it's created
-						while(-not $cert)
-						{
-							Write-Host "Waiting for LDAP certificate. Seconds remaining: $loopCountRemaining"
+					$DCSession = New-PSSession $using:dcvmfqdn -Credential $using:Admincreds
 
-					  		$cert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cs }
+					$foundCert  =
+						Invoke-Command -Session $DCSession -ArgumentList $certSubject, $certStoreLocationOnDC `
+						  -ScriptBlock {
+								$cs = $args[0]
+								$cloc = $args[1]
 
-							if(-not $cert)
-							{
-								Start-Sleep -Seconds 1
-								$loopCountRemaining = $loopCountRemaining - 1
-								Invoke-WebRequest -Uri https://127.0.0.1:636 -ErrorAction SilentlyContinue
-								if ($loopCountRemaining -eq 0)
+				  				$cert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cs }
+								if(-not $cert)
 								{
-									throw "No LDAP certificate!"
+									# maybe kick the machine to generate a cert?
+									Invoke-WebRequest -Uri https://127.0.0.1:636 -ErrorAction SilentlyContinue
+									return $false
+								}
+								else
+								{
+									Export-Certificate -Cert $cert -filepath  $cloc -force
+									Write-Host "Exported LDAP certificate."
+									return $true
 								}
 							}
-						}
-				        Export-Certificate -Cert $cert -filepath  $cloc -force
-						Write-Host "Exported LDAP certificate."
-				}
 
-				Write-Host "Exiting DC Session"
-				Copy-Item -Path $certStoreLocationOnDC -Destination "$env:systemdrive\$ldapCertFileName" -FromSession $DCSession
-				Remove-PSSession $DCSession
+					if(-not $foundCert)
+					{
+						Start-Sleep -Seconds 1
+						$loopCountRemaining = $loopCountRemaining - 1
+						if ($loopCountRemaining -eq 0)
+						{
+							Remove-PSSession $DCSession
+							throw "No LDAP certificate!"
+						}
+					}
+					else
+					{
+						#found it! copy
+						Write-Host "Copying cert and exiting DC Session"
+						Copy-Item -Path $certStoreLocationOnDC -Destination "$env:systemdrive\$ldapCertFileName" -FromSession $DCSession
+					}
+					Remove-PSSession $DCSession
+				}
 
 				# Have the certificate file, add to a keystore 
 		        Remove-Item "$env:systemdrive\ldapcertkeystore.jks" -ErrorAction SilentlyContinue
