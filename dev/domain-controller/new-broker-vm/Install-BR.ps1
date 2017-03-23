@@ -53,6 +53,15 @@ Configuration InstallBR
     $adminUsername = $Admincreds.GetNetworkCredential().Username
     $adminPassword = $Admincreds.GetNetworkCredential().Password
 
+	$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_91"
+	$JavaBinLocation = $JavaRootLocation + "\bin"
+	$JavaLibLocation = $JavaRootLocation + "\jre\lib"
+	$JREHome = $JavaRootLocation + "\jre"
+
+	$localtomcatpath = "$env:systemdrive\tomcat"
+	$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
+	$CatalinaBinLocation = $CatalinaHomeLocation + "\bin"
+
 	Import-DscResource -ModuleName xPSDesiredStateConfiguration
 
     Node "localhost"
@@ -92,6 +101,7 @@ Configuration InstallBR
 			DestinationPath = "$LocalDLPath\$brokerWAR"
 		}
 
+
 		# One day can split this to 'install java' and 'configure java environemnt' and use 'package' dsc like here:
 		# http://stackoverflow.com/questions/31562451/installing-jre-using-powershell-dsc-hangs
         Script Install_Java
@@ -100,22 +110,17 @@ Configuration InstallBR
             GetScript  = { @{ Result = "Install_Java" } }
 
             #TODO: Just check for a directory being present? What to do when Java version changes? (Can also check registry key as in SetScript.)
-            TestScript = { 
-				$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_91"
-		       	$JavaBinLocation = $JavaRootLocation + "\bin"
-				if ( Get-Item -path "$JavaBinLocation" -ErrorAction SilentlyContinue )
+            TestScript = {
+				if ( Get-Item -path "$using:JavaBinLocation" -ErrorAction SilentlyContinue )
                             {return $true}
                             else {return $false}
 			}
             SetScript  = {
                 Write-Verbose "Install_Java"
 
-		        $LocalDLPath = "$env:systemdrive\WindowsAzure\PCoIPBRInstall"
-		        $javaInstaller = "jdk-8u91-windows-x64.exe"
-
 				# Run the installer. Start-Process does not work due to permissions issue however '&' calling will not wait so looks for registry key as 'completion.'
 				# Start-Process $LocalDLPath\$javaInstaller -ArgumentList '/s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"' -Wait
-				& "$LocalDLPath\$javaInstaller" /s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"
+				& "$using:LocalDLPath\$using:javaInstaller" /s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"
 
 				$retrycount = 1800
 				while ($retryCount -gt 0)
@@ -144,9 +149,6 @@ Configuration InstallBR
 
 				Write-Host "Setting up Java paths and environment"
 
-				$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_91"
-				$JavaBinLocation = $JavaRootLocation + "\bin"
-				$JavaLibLocation = $JavaRootLocation + "\jre\lib"
 				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
 
 				#set path. Don't add strings that are already there...
@@ -154,20 +156,19 @@ Configuration InstallBR
 				$NewPath = (Get-ItemProperty -Path "$Reg" -Name PATH).Path
 
 				#put java path in front of the oracle defined path
-				if ($NewPath -notlike "*"+$JavaBinLocation+"*")
+				if ($NewPath -notlike "*"+$using:JavaBinLocation+"*")
 				{
-				  $NewPath= $JavaBinLocation + ’;’ + $NewPath
+				  $NewPath= $using:JavaBinLocation + ’;’ + $NewPath
 				}
 
 				Set-ItemProperty -Path "$Reg" -Name PATH –Value $NewPath
-				Set-ItemProperty -Path "$Reg" -Name JAVA_HOME –Value $JavaRootLocation
-				Set-ItemProperty -Path "$Reg" -Name classpath –Value $JavaLibLocation
+				Set-ItemProperty -Path "$Reg" -Name JAVA_HOME –Value $using:JavaRootLocation
+				Set-ItemProperty -Path "$Reg" -Name classpath –Value $using:JavaLibLocation
 
 
 
 				Write-Host "Waiting for JVM.dll"
-				$JREHome = $JavaRootLocation + "\jre"
-				$JVMServerdll = $JREHome + "\bin\server\jvm.dll"
+				$JVMServerdll = $using:JREHome + "\bin\server\jvm.dll"
 
 				$retrycount = 1800
 				while ($retryCount -gt 0)
@@ -222,17 +223,12 @@ Configuration InstallBR
 				#just going 'manual' now since installer has been a massive PITA
                 #(but perhaps unfairly so since it might have been affected by some Java install issues I had previously as well.)
 
-		        $LocalDLPath = "$env:systemdrive\WindowsAzure\PCoIPBRInstall"
-		        $tomcatInstaller = "apache-tomcat-8.0.39-windows-x64.zip"
-				$localtomcatpath = "$env:systemdrive\tomcat"
-				$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
-				$CatalinaBinLocation = $CatalinaHomeLocation + "\bin"
 				$ServerXMLFile = $CatalinaHomeLocation + '\conf\server.xml'
 
 				#make sure we get a clean install
-				Remove-Item $localtomcatpath -Force -Recurse -ErrorAction SilentlyContinue
+				Remove-Item $using:localtomcatpath -Force -Recurse -ErrorAction SilentlyContinue
 
-				Expand-Archive "$LocalDLPath\$tomcatInstaller" -DestinationPath $localtomcatpath
+				Expand-Archive "$using:LocalDLPath\$using:tomcatInstaller" -DestinationPath $using:localtomcatpath
 
 
 				Write-Host "Setting Paths and Tomcat environment"
@@ -244,37 +240,37 @@ Configuration InstallBR
 				$NewPath = (Get-ItemProperty -Path "$Reg" -Name PATH).Path
 
 				#put tomcat path at the end
-				if ($NewPath -notlike "*"+$CatalinaBinLocation+"*")
+				if ($NewPath -notlike "*"+$using:CatalinaBinLocation+"*")
 				{
-				  $NewPath= $NewPath + ’;’ + $CatalinaBinLocation
+				  $NewPath= $NewPath + ’;’ + $using:CatalinaBinLocation
 				}
 
 				Set-ItemProperty -Path "$Reg" -Name PATH –Value $NewPath
-				Set-ItemProperty -Path "$Reg" -Name CATALINA_BASE –Value $CatalinaHomeLocation
-				Set-ItemProperty -Path "$Reg" -Name CATALINA_HOME –Value $CatalinaHomeLocation
+				Set-ItemProperty -Path "$Reg" -Name CATALINA_BASE –Value $using:CatalinaHomeLocation
+				Set-ItemProperty -Path "$Reg" -Name CATALINA_HOME –Value $using:CatalinaHomeLocation
 
-				#set the local CATALINE_HOME as well since the service installer will need that
-				$env:CATALINA_BASE = $CatalinaHomeLocation
-				$env:CATALINA_HOME = $CatalinaHomeLocation
+				#set the current environment CATALINE_HOME as well since the service installer will need that
+				$env:CATALINA_BASE = $using:CatalinaHomeLocation
+				$env:CATALINA_HOME = $using:CatalinaHomeLocation
 
 
 				Write-Host "Configuring Tomcat"
 
 				#back up server.xml file if not done in a previous round
-				if( -not ( Get-Item ($CatalinaHomeLocation + '\conf\server.xml.orig') -ErrorAction SilentlyContinue ) )
+				if( -not ( Get-Item ($using:CatalinaHomeLocation + '\conf\server.xml.orig') -ErrorAction SilentlyContinue ) )
 				{
 					Copy-Item -Path ($ServerXMLFile) `
-						-Destination ($CatalinaHomeLocation + '\conf\server.xml.orig')
+						-Destination ($using:CatalinaHomeLocation + '\conf\server.xml.orig')
 				}
 
 				#update server.xml file
-				$xml = [xml](Get-Content ($CatalinaHomeLocation + '\conf\server.xml.orig'))
+				$xml = [xml](Get-Content ($using:CatalinaHomeLocation + '\conf\server.xml.orig'))
 
 				$NewConnector = [xml] ('<Connector
 					port="8443"
 					protocol="org.apache.coyote.http11.Http11NioProtocol"
 					SSLEnabled="true"
-					keystoreFile="'+$LocalDLPath+'\.keystore"
+					keystoreFile="'+$using:LocalDLPath+'\.keystore"
 					maxThreads="2000" scheme="https" secure="true"
 					clientAuth="false" sslProtocol="TLS"
 					SSLEngine="on" keystorePass="changeit"
@@ -306,7 +302,7 @@ Configuration InstallBR
 
 				# Install and start service for new config
 
-				& "$CatalinaBinLocation\service.bat" install
+				& "$using:CatalinaBinLocation\service.bat" install
 				Write-Host "Tomcat Installer exit code: $LASTEXITCODE"
 				Start-Sleep -s 10  #TODO: Is this sleep ACTUALLY needed?
 
@@ -325,24 +321,16 @@ Configuration InstallBR
 
             #TODO: Check for other agent types as well?
             TestScript = {
-				$localtomcatpath = "$env:systemdrive\tomcat"
-				$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
-				$brokerWAR = "pcoip-broker.war"
-				$WARPath = $CatalinaHomeLocation + "\webapps" + $brokerWAR
+				$WARPath = $using:CatalinaHomeLocation + "\webapps" + $using:brokerWAR
  
 				if ( Get-Item $WARPath -ErrorAction SilentlyContinue )
                             {return $true}
                             else {return $false}
 			}
             SetScript  = {
-				$LocalDLPath = "$env:systemdrive\WindowsAzure\PCoIPBRInstall"
-				$brokerWAR = "pcoip-broker.war"
-				$localtomcatpath = "$env:systemdrive\tomcat"
-				$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
-
                 Write-Verbose "Install_Broker"
 
-				copy $LocalDLPath\$brokerWAR ($CatalinaHomeLocation + "\webapps")
+				copy $using:LocalDLPath\$using:brokerWAR ($using:CatalinaHomeLocation + "\webapps")
 
 				#Make sure the properties file exists - as enough proof that the .war file has been processed
 
@@ -354,7 +342,7 @@ Configuration InstallBR
 				if ($svc.Status -eq "Stopped") {$svc.start()}
 				elseIf ($svc.status -eq "Running") {Write-Host $svc.name "is running"}
 
-				$cbPropertiesFile = $catalinaHomeLocation + "\webapps\pcoip-broker\WEB-INF\classes\connectionbroker.properties"
+				$cbPropertiesFile = $using:catalinaHomeLocation + "\webapps\pcoip-broker\WEB-INF\classes\connectionbroker.properties"
 
 				$exists = $null
 				$loopCountRemaining = 600
@@ -392,18 +380,15 @@ brokerLocale=en_US
 
 				Set-Content $cbPropertiesFile $cbProperties
 
-				$backupPropertiesFile = New-Item c:\new_file.txt -type file
+				$backupPropertiesFile = New-Item "c:\backupCBProperties.txt" -type file
 				Set-Content $backupPropertiesFile $cbProperties
 
 				#----- setup security trust for LDAP certificate from DC -----
 
 				#first, setup the Java options
-				$JavaRootLocation = "C:\Program Files\Java\jdk1.8.0_91"
-				$JavaBinLocation = $JavaRootLocation + "\bin"
-				$JavaLibLocation = $JavaRootLocation + "\jre\lib"
 				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
 
-				$jo_string = "-Djavax.net.ssl.trustStore=$JavaRootLocation\jre\lib\security\ldapcertkeystore.jks;-Djavax.net.ssl.trustStoreType=JKS;-Djavax.net.ssl.trustStorePassword=changeit"
+				$jo_string = "-Djavax.net.ssl.trustStore=$using:JavaRootLocation\jre\lib\security\ldapcertkeystore.jks;-Djavax.net.ssl.trustStoreType=JKS;-Djavax.net.ssl.trustStorePassword=changeit"
 				Set-ItemProperty -Path "$Reg" -Name PR_JVMOPTIONS –Value $jo_string
 
 				#second, get the certificate file
@@ -434,6 +419,7 @@ brokerLocale=en_US
 							{
 								Start-Sleep -Seconds 1
 								$loopCountRemaining = $loopCountRemaining - 1
+								Invoke-WebRequest -Uri https://127.0.0.1:636 -ErrorAction SilentlyContinue
 								if ($loopCountRemaining -eq 0)
 								{
 									throw "No LDAP certificate!"
@@ -456,7 +442,7 @@ brokerLocale=en_US
                 $ErrorActionPreference = 'SilentlyContinue'
 				& "keytool" -import -file "$env:systemdrive\$ldapCertFileName" -keystore "$env:systemdrive\ldapcertkeystore.jks" -storepass changeit -noprompt
                 $ErrorActionPreference = $eap
-				 
+
 		        Copy-Item "$env:systemdrive\ldapcertkeystore.jks" -Destination ($env:classpath + "\security")
 
 		        Write-Host "Finished! Restarting Tomcat."
