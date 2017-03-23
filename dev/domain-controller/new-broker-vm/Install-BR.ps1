@@ -419,8 +419,6 @@ brokerLocale=en_US
 				  				$cert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cs }
 								if(-not $cert)
 								{
-									# maybe kick the machine to generate a cert?
-									Invoke-WebRequest -Uri https://127.0.0.1:636 -ErrorAction SilentlyContinue
 									return $false
 								}
 								else
