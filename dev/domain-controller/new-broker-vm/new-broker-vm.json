@@ -46,7 +46,7 @@
             }
         },
         "domainPassword": {
-            "type": "secureString",
+            "type": "securestring",
             "metadata": {
                 "description": "Password of the account on the domain"
             }
@@ -68,6 +68,12 @@
             "type": "securestring",
             "metadata": {
                 "description": "The password for the administrator account of the new VM and the domain"
+            }
+        },
+        "blobSource": {
+            "type": "string",
+            "metadata": {
+                "description": "The source location of the required powershell and application installer blobs"
             }
         },
         "_artifactsLocation": {
@@ -106,7 +112,7 @@
                 "typeHandlerVersion": "2.9",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "modulesUrl": "https://teradeploy.blob.core.windows.net/binaries/Install-BR.ps1.zip",
+                    "modulesUrl": "[concat(parameters('blobSource'),'/Install-BR.ps1.zip')]",
                     "privacy": {
                         "DataCollection": "Disable"
                     },
