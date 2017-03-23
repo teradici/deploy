@@ -577,9 +577,6 @@
                     "vmAdminPassword": {
                         "value": "[parameters('domainAdminPassword')]"
                     },
-                    "blobSource": {
-                        "value": "[parameters('CAMDeploymentBlobSource')]"
-                    },
                     "storageAccountName": {
                         "value": "[variables('storageAccountName')]"
                     }
@@ -632,6 +629,9 @@
                     },
                     "domainControllerName": {
                         "value": "[variables('adVMName')]"
+                    },
+                    "blobSource": {
+                        "value": "[parameters('CAMDeploymentBlobSource')]"
                     },
                     "_artifactsLocation": {
                         "value": "[concat(parameters('_artifactsLocation'), '/new-broker-vm')]"
