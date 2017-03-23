@@ -50,9 +50,6 @@ Configuration InstallBR
 	$family   = "Windows Server 2016"
 	$domaindns = $DomainName
 
-    $adminUsername = $Admincreds.GetNetworkCredential().Username
-    $adminPassword = $Admincreds.GetNetworkCredential().Password
-
 	$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_91"
 	$JavaBinLocation = $JavaRootLocation + "\bin"
 	$JavaLibLocation = $JavaRootLocation + "\jre\lib"
@@ -365,10 +362,15 @@ Configuration InstallBR
 				$firstIPv4IP = Get-NetIPAddress | Where-Object {$_.AddressFamily -eq "IPv4"} | select -First 1
 				$ipaddressString = $firstIPv4IP.IPAddress
 
+				$localAdminCreds = $using:Admincreds
+				$adminUsername = $localAdminCreds.GetNetworkCredential().Username
+				$adminPassword = $localAdminCreds.GetNetworkCredential().Password
+
+
 				$cbProperties = @"
 ldapHost=ldaps://$Using:dcvmfqdn
-ldapAdminUsername=$Using:adminUsername
-ldapAdminPassword=$Using:adminPassword
+ldapAdminUsername=$adminUsername
+ldapAdminPassword=$adminPassword
 ldapDomain=$Using:domaindns
 brokerHostName=$Using:pbvmfqdn
 brokerProductName=CAS Connection Broker
