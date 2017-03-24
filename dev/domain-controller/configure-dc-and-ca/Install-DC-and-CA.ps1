@@ -134,6 +134,9 @@
 					'{"cb-resources":{"broker-systems":[{"name":"community-broker-1","resources":[{"session":"VDI","name":"' + `
 					$using:adminDesktopVMName + '","resource-type":"DESKTOP"}]},{"name":"community-broker-2","resources":[{"session":"VDI","name":"test2-desktop","resource-type":"DESKTOP"}]}]}}'
 				}
+				# Reboot machine - might help getting a certificate made???
+				$global:DSCMachineStatus = 1
+
 			}
 		}
 	}
