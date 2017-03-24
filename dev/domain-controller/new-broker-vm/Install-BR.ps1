@@ -402,7 +402,7 @@ brokerLocale=en_US
 				Write-Host "Looking for cert with $certSubject on $dcvmfqdn"
 
 				$foundCert = $false
-				$loopCountRemaining = 3600
+				$loopCountRemaining = 360
 				#loop until it's created
 				while(-not $foundCert)
 				{
@@ -419,6 +419,8 @@ brokerLocale=en_US
 				  				$cert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cs }
 								if(-not $cert)
 								{
+									#maybe a certutil -pulse will help?
+									& "certutil" -pulse
 									return $false
 								}
 								else
@@ -431,7 +433,7 @@ brokerLocale=en_US
 
 					if(-not $foundCert)
 					{
-						Start-Sleep -Seconds 1
+						Start-Sleep -Seconds 10
 						$loopCountRemaining = $loopCountRemaining - 1
 						if ($loopCountRemaining -eq 0)
 						{
