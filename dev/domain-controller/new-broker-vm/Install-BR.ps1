@@ -402,7 +402,7 @@ brokerLocale=en_US
 				Write-Host "Looking for cert with $certSubject on $dcvmfqdn"
 
 				$foundCert = $false
-				$loopCountRemaining = 360
+				$loopCountRemaining = 180
 				#loop until it's created
 				while(-not $foundCert)
 				{
@@ -410,7 +410,7 @@ brokerLocale=en_US
 
 					$DCSession = New-PSSession $using:dcvmfqdn -Credential $using:Admincreds
 
-					$foundCert  =
+					$foundCert =
 						Invoke-Command -Session $DCSession -ArgumentList $certSubject, $certStoreLocationOnDC `
 						  -ScriptBlock {
 								$cs = $args[0]
@@ -419,8 +419,10 @@ brokerLocale=en_US
 				  				$cert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cs }
 								if(-not $cert)
 								{
+									Write-Host "Did not find LDAP certificate."
 									#maybe a certutil -pulse will help?
-									& "certutil" -pulse
+									# NOTE - must redirect stdout to $null otherwise the success return here pollutes the return value of $foundCert
+									& "certutil" -pulse > $null
 									return $false
 								}
 								else
