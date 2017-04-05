@@ -538,6 +538,81 @@ azureAccountPassword=$AzurePasswordLocal
 
 				Set-Content $ParamTargetFilePath $armParamContent -Force
 
+
+# create SP and write to credential file
+# as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
+
+				Login-AzureRmAccount -Credential $localAzureCreds
+
+				#Application name
+				$appName = "CAM-$RGNameLocal"
+				# 16 letter password
+				$generatedPassword = -join ((65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
+
+				#first make sure if there is an app there that it's deleted.
+				if ( $app = Get-AzureRmADApplication -DisplayName $appName )
+				{
+					Write-Host "Removing previous SP application $appName"
+					Remove-AzureRmADApplication -ApplicationObjectId $app.ApplicationObjectId -Force
+				}
+
+				$app = New-AzureRmADApplication -DisplayName $appName -HomePage "https://www.teradici.com" -IdentifierUris "https://www.teradici.com" -Password $generatedPassword
+				New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId
+
+				#retry required since it can take a few seconds for the app registration to percolate through Azure.
+				#(Online recommendation was sleep 15 seconds - this is both faster and more conservative)
+				$rollAssignmentRetry = 120
+				while($rollAssignmentRetry -ne 0)
+				{
+					$rollAssignmentRetry--
+
+					try
+					{
+						New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $RGNameLocal -ServicePrincipalName $app.ApplicationId -ErrorAction Stop
+						break
+					}
+					catch
+					{
+						$exceptionCode = $_.Exception.Error.Code
+						If ($exceptionCode -eq "PrincipalNotFound")
+						{
+							Write-Host "Waiting for service principal $rollAssignmentRetry"
+							Start-sleep -Seconds 1
+						}
+						else
+						{
+						#re-throw whatever the original exception was
+							throw
+						}
+					}
+				}
+
+				$sub = Get-AzureRmSubscription
+				$subID = $sub.SubscriptionId
+				$tenantID = $sub.TenantId
+				$clientID = $app.ApplicationId
+
+				$authFileContent = @"
+subscription=$subID
+client=$clientID
+key=$generatedPassword
+tenant=$tenantID
+managementURI=https\://management.core.windows.net/
+baseURL=https\://management.azure.com/
+authURL=https\://login.windows.net/
+graphURL=https\://graph.windows.net/
+"@
+
+$targetDir = "$env:CATALINA_HOME\adminproperty"
+$authFileName = "$targetDir\authfile.txt"
+
+				if(-not (Test-Path $authFileName))
+				{
+					New-Item $authFileName -type file
+				}
+
+				Set-Content $authFileName $authFileContent -Force
+
 		        Write-Host "Finished! Restarting Tomcat."
 
 				Restart-Service Tomcat8
