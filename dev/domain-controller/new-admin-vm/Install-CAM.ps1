@@ -539,6 +539,8 @@ azureAccountPassword=$AzurePasswordLocal
 				Set-Content $ParamTargetFilePath $armParamContent -Force
 
 
+				Write-Host "Creating SP and writing auth file."
+
 # create SP and write to credential file
 # as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
 
@@ -548,15 +550,22 @@ azureAccountPassword=$AzurePasswordLocal
 				$appName = "CAM-$RGNameLocal"
 				# 16 letter password
 				$generatedPassword = -join ((65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
+				$generatedID = -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})
+                $appURI = "https://www.$generatedID.com"
 
-				#first make sure if there is an app there that it's deleted.
-				if ( $app = Get-AzureRmADApplication -DisplayName $appName )
+
+				Write-Host "Purge any registered app's with the same name."
+
+				#first make sure if there is an app there (or more than one) that they're deleted.
+                $appArray = Get-AzureRmADApplication -DisplayName $appName
+                foreach($app in $appArray)
 				{
-					Write-Host "Removing previous SP application $appName"
-					Remove-AzureRmADApplication -ApplicationObjectId $app.ApplicationObjectId -Force
+                    $aoID = $app.ObjectId
+					Write-Host "Removing previous SP application $appName  $aoID"
+					Remove-AzureRmADApplication -ObjectId $aoID -Force
 				}
 
-				$app = New-AzureRmADApplication -DisplayName $appName -HomePage "https://www.teradici.com" -IdentifierUris "https://www.teradici.com" -Password $generatedPassword
+				$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword
 				New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId
 
 				#retry required since it can take a few seconds for the app registration to percolate through Azure.
@@ -587,6 +596,9 @@ azureAccountPassword=$AzurePasswordLocal
 					}
 				}
 
+				Write-Host "Create auth file."
+
+
 				$sub = Get-AzureRmSubscription
 				$subID = $sub.SubscriptionId
 				$tenantID = $sub.TenantId
@@ -604,14 +616,21 @@ graphURL=https\://graph.windows.net/
 "@
 
 $targetDir = "$env:CATALINA_HOME\adminproperty"
-$authFileName = "$targetDir\authfile.txt"
+$authFilePath = "$targetDir\authfile.txt"
 
-				if(-not (Test-Path $authFileName))
+				if(-not (Test-Path $authFilePath))
 				{
-					New-Item $authFileName -type file
+					New-Item $authFilePath -type file
 				}
 
-				Set-Content $authFileName $authFileContent -Force
+				Set-Content $authFilePath $authFileContent -Force
+
+
+				Write-Host "Update registry so AZURE_AUTH_LOCATION points to auth file."
+
+				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
+
+				Set-ItemProperty -Path "$Reg" -Name AZURE_AUTH_LOCATION –Value $authFilePath
 
 		        Write-Host "Finished! Restarting Tomcat."
 
