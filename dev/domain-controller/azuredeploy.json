@@ -4,6 +4,7 @@
     "parameters": {
         "domainAdminUsername": {
             "type": "string",
+            "defaultValue": "adminUser",
             "metadata": {
                 "description": "The name of the administrator account of the new VM and domain"
             }
@@ -16,12 +17,14 @@
         },
         "domainName": {
             "type": "string",
+            "defaultValue": "example.com",
             "metadata": {
                 "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
             }
         },
         "AzureAdminUsername": {
             "type": "string",
+            "defaultValue": "adminuser@example.com",
             "metadata": {
                 "description": "The name of the Azure account/service principal with contributor access to the subscription. This account cannot require MFA."
             }
