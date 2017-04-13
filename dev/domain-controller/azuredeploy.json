@@ -82,7 +82,7 @@
         "publicIPAddressName": "adPublicIP",
         "adLBName": "adLoadBalancer",
         "serverRootName": "vm",
-        "dcnsgId": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('dc-nsg'))]"
+        "dcnsgId": "[resourceId('Microsoft.Network/networkSecurityGroups', 'dc-nsg')]"
     },
     "resources": [
         {
