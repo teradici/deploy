@@ -69,9 +69,6 @@
         "virtualNetworkName": "vnet-OrangeBox",
         "virtualNetworkAddressRange": "10.0.0.0/16",
         "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'adsa')]",
-        "adLBFE": "LBFE",
-        "adLBBE": "LBBE",
-        "adRDPNAT": "adRDP",
         "adNicName": "vm-ad-nic",
         "adNicIPAddress": "10.0.0.4",
         "cmPrivateIP":  "10.0.0.10",
@@ -83,10 +80,9 @@
         "gatewaySubnetName": "Subnet-gateway",
         "gatewaySubnetAddressPrefix": "10.0.1.0/24",
         "publicIPAddressName": "adPublicIP",
-        "adAvailabilitySetName": "adAvailabiltySet",
         "adLBName": "adLoadBalancer",
-        "serverRootName": "vm"
-
+        "serverRootName": "vm",
+        "dcnsgId": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('dc-nsg'))]"
     },
     "resources": [
         {
@@ -108,13 +104,6 @@
             "properties": {
                 "publicIPAllocationMethod": "Dynamic"
             }
-        },
-        {
-            "type": "Microsoft.Compute/availabilitySets",
-            "name": "[variables('adAvailabilitySetName')]",
-            "apiVersion": "2015-06-15",
-            "location": "[resourceGroup().location]",
-            "properties": { }
         },
         {
             "type": "Microsoft.Resources/deployments",
@@ -149,43 +138,15 @@
             }
         },
         {
-            "type": "Microsoft.Network/loadBalancers",
-            "name": "[variables('adLBName')]",
-            "apiVersion": "2016-03-30",
-            "location": "[resourceGroup().location]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
-            ],
+            "type": "Microsoft.Resources/deployments",
+            "name": "CreateNetworkSGs",
+            "apiVersion": "2016-02-01",
             "properties": {
-                "frontendIPConfigurations": [
-                    {
-                        "name": "[variables('adLBFE')]",
-                        "properties": {
-                            "publicIPAddress": {
-                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
-                            }
-                        }
-                    }
-                ],
-                "backendAddressPools": [
-                    {
-                        "name": "[variables('adLBBE')]"
-                    }
-                ],
-                "inboundNatRules": [
-                    {
-                        "name": "[variables('adRDPNAT')]",
-                        "properties": {
-                            "frontendIPConfiguration": {
-                                "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', variables('adLBName'), variables('adLBFE'))]"
-                            },
-                            "protocol": "tcp",
-                            "frontendPort": 3389,
-                            "backendPort": 3389,
-                            "enableFloatingIP": false
-                        }
-                    }
-                ]
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(parameters('_artifactsLocation'), '/new-sg-s/new-sg-s.json', parameters('_artifactsLocationSasToken'))]",
+                    "contentVersion": "1.0.0.0"
+                }
             }
         },
         {
@@ -195,7 +156,7 @@
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "Microsoft.Resources/deployments/VNet",
-                "[resourceId('Microsoft.Network/loadBalancers', variables('adLBName'))]"
+                "Microsoft.Resources/deployments/CreateNetworkSGs"
             ],
             "properties": {
                 "ipConfigurations": [
@@ -207,16 +168,12 @@
                             "subnet": {
                                 "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('adSubnetName'))]"
                             },
-                            "loadBalancerBackendAddressPools": [
-                                {
-                                    "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', variables('adLBName'), variables('adLBBE'))]"
-                                }
-                            ],
-                            "loadBalancerInboundNatRules": [
-                                {
-                                    "id": "[resourceId('Microsoft.Network/loadBalancers/inboundNatRules', variables('adLBName'), variables('adRDPNAT'))]"
-                                }
-                            ]
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
+                            },
+                            "networkSecurityGroup": {
+                              "id": "[variables('dcnsgId')]"
+                            }
                         }
                     }
                 ]
@@ -229,16 +186,11 @@
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
-                "[resourceId('Microsoft.Network/networkInterfaces', variables('adNicName'))]",
-                "[resourceId('Microsoft.Compute/availabilitySets', variables('adAvailabilitySetName'))]",
-                "[resourceId('Microsoft.Network/loadBalancers', variables('adLBName'))]"
+                "[resourceId('Microsoft.Network/networkInterfaces', variables('adNicName'))]"
             ],
             "properties": {
                 "hardwareProfile": {
                     "vmSize": "Standard_D2_v2"
-                },
-                "availabilitySet": {
-                    "id": "[resourceId('Microsoft.Compute/availabilitySets', variables('adAvailabilitySetName'))]"
                 },
                 "osProfile": {
                     "computerName": "[variables('adVMName')]",
@@ -643,6 +595,7 @@
             "name": "CreateCM",
             "apiVersion": "2016-02-01",
             "dependsOn": [
+                "Microsoft.Resources/deployments/CreateNetworkSGs",
                 "Microsoft.Resources/deployments/SetDNSForVNet"
             ],
             "properties": {
