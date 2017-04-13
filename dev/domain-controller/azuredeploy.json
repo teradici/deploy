@@ -66,7 +66,7 @@
     },
     "variables": {
         "configuration-name": "Complete CAM deployment with included Active Directory",
-        "virtualNetworkName": "vnet-OrangeBox",
+        "virtualNetworkName": "vnet-CloudAccessManager",
         "virtualNetworkAddressRange": "10.0.0.0/16",
         "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'adsa')]",
         "adNicName": "vm-ad-nic",
@@ -75,14 +75,15 @@
         "auPrivateIP":  "10.0.0.11",
         "brPrivateIP":  "10.0.0.12",
         "adVMName": "vm-dc",
-        "adSubnetName": "Subnet-OrangeBox",
+        "adSubnetName": "Subnet-CloudAccessManager",
         "adSubnetAddressPrefix": "10.0.0.0/24",
         "gatewaySubnetName": "Subnet-gateway",
         "gatewaySubnetAddressPrefix": "10.0.1.0/24",
         "publicIPAddressName": "adPublicIP",
         "adLBName": "adLoadBalancer",
         "serverRootName": "vm",
-        "dcnsgId": "[resourceId('Microsoft.Network/networkSecurityGroups', 'dc-nsg')]"
+        "dcnsgName": "dcNSG",
+        "cmnsgName": "cmNSG"
     },
     "resources": [
         {
@@ -146,6 +147,14 @@
                 "templateLink": {
                     "uri": "[concat(parameters('_artifactsLocation'), '/new-sg-s/new-sg-s.json', parameters('_artifactsLocationSasToken'))]",
                     "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "dcnsgName": {
+                        "value": "[variables('dcnsgName')]"
+                    },
+                    "cmnsgName": {
+                        "value": "[variables('cmnsgName')]"
+                    }
                 }
             }
         },
@@ -172,7 +181,7 @@
                                 "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
                             },
                             "networkSecurityGroup": {
-                              "id": "[variables('dcnsgId')]"
+                              "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('dcnsgName'))]"
                             }
                         }
                     }
@@ -610,6 +619,9 @@
                     },
                     "existingSubnetName": {
                         "value": "[variables('adSubnetName')]"
+                    },
+                    "cmnsgName": {
+                        "value": "[variables('cmnsgName')]"
                     },
                     "dnsLabelPrefix": {
                         "value": "[concat(variables('serverRootName'), '-cm')]"

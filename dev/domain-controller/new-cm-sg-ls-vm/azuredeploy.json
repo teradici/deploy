@@ -14,6 +14,14 @@
                 "description": "Existing subnet that contains the domain controller"
             }
         },
+        "cmnsgName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the network security group.",
+                "minLength": 1,
+                "maxLength": 80
+            }
+        },
         "dnsLabelPrefix": {
             "type": "string",
             "metadata": {
@@ -89,8 +97,7 @@
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
         "scriptFileName":  "cm_setup_0.1.sh",
         "scriptFileURI":  "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'), parameters('_artifactsLocationSasToken'))]",
-        "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',parameters('activationCode'))]",
-        "cmnsgId": "[resourceId('Microsoft.Network/networkSecurityGroups', 'cm-nsg')]"
+        "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',parameters('activationCode'))]"
     },
     "resources": [
         {
@@ -121,7 +128,7 @@
                             },
                             "privateIPAddress": "[parameters('privateIP')]",
                             "networkSecurityGroup": {
-                              "id": "[variables('cmnsgId')]"
+                              "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('cmnsgName'))]"
                             }
                         }
                     }
