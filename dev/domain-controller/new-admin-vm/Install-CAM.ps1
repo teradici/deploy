@@ -437,8 +437,6 @@ dcDomain = $domainleaf
 dc=$domainroot
 adServerHostAddress=$domainControllerFQDN
 resourceGroupName=$RGNameLocal
-azureAccountUsername=$AzureUsernameLocal
-azureAccountPassword=$AzurePasswordLocal
 "@
 
 				$targetDir = "$env:CATALINA_HOME\adminproperty"
