@@ -168,6 +168,9 @@
                 "Microsoft.Resources/deployments/CreateNetworkSGs"
             ],
             "properties": {
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('dcnsgName'))]"
+                },
                 "ipConfigurations": [
                     {
                         "name": "ipconfig1",
@@ -179,9 +182,6 @@
                             },
                             "publicIPAddress": {
                                 "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
-                            },
-                            "networkSecurityGroup": {
-                              "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('dcnsgName'))]"
                             }
                         }
                     }

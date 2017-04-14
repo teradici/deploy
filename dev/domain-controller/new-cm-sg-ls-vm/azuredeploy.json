@@ -115,6 +115,9 @@
             "apiVersion": "[variables('apiVersion')]",
             "location": "[resourceGroup().location]",
             "properties": {
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('cmnsgName'))]"
+                },
                 "ipConfigurations": [
                     {
                         "name": "ipconfig",
@@ -126,10 +129,7 @@
                             "subnet": {
                                 "id": "[variables('subnetId')]"
                             },
-                            "privateIPAddress": "[parameters('privateIP')]",
-                            "networkSecurityGroup": {
-                              "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('cmnsgName'))]"
-                            }
+                            "privateIPAddress": "[parameters('privateIP')]"
                         }
                     }
                 ]
