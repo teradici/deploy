@@ -17,19 +17,19 @@ And use the modified link for ‘_artifactsLocation’
 To pull in different binaries, change the URI for “CAMDeploymentBlobSource.”
 
 The system currently needs the following files in the CAMDeploymentBlobSource store:
-apache-tomcat-8.0.39-windows-x64.zip
-CloudAccessManager.war
-Install-BR.ps1.zip
-Install-CAM.ps1.zip
-jdk-8u91-windows-x64.exe
-server2016-standard-agent.json
-pcoip-broker.war
-P-CM-1.6_SG-1.12.zip (*)
-P-LS_1.1.0.zip (*)
-PCoIP_agent_release_installer_2.7.0.4060_standard.exe (*)
-Install-DC-and-CA.ps1.zip (*)
-.keystore (**)
-Firefox Setup Stub 49.0.1.exe (**)
+* apache-tomcat-8.0.39-windows-x64.zip
+* CloudAccessManager.war
+* Install-BR.ps1.zip
+* Install-CAM.ps1.zip
+* jdk-8u91-windows-x64.exe
+* server2016-standard-agent.json
+* pcoip-broker.war
+* P-CM-1.6_SG-1.12.zip (*)
+* P-LS_1.1.0.zip (*)
+* PCoIP_agent_release_installer_2.7.0.4060_standard.exe (*)
+* Install-DC-and-CA.ps1.zip (*)
+* .keystore (**)
+* Firefox Setup Stub 49.0.1.exe (**)
 
 Some of these locations are hard-coded in the deployment scripts to https://teradeploy.blob.core.windows.net/binaries regardless of the setting. These are marked with (*). Items marked with (**) may need to be in both locations. Neither this list, nor the (*)’s and (**)’s have been verified.
 
