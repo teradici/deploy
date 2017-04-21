@@ -452,8 +452,26 @@ resourceGroupName=$RGNameLocal
 					New-Item $configFileName -type file
 				}
 
-				Set-Content $configFileName $auProperties -Force
-
+				# write to $configFileName with retry in case another process still has a lock
+				$loopCountRemaining = 600
+				#loop until it's created
+				while($loopCountRemaining-- -gt 0)
+				{
+					try
+					{
+						Set-Content $configFileName $auProperties -Force -ErrorAction Stop
+						break # success exit while loop
+					}
+					catch
+					{
+						Write-Host "Writing CAM configuration file. Seconds remaining: $loopCountRemaining"
+						Start-Sleep -Seconds 1
+						if($loopCountRemaining -eq 0)
+						{
+							throw
+						}
+					}
+				}
 		        Write-Host "Redirecting ROOT to Cloud Access Manager."
 
 
@@ -542,7 +560,36 @@ resourceGroupName=$RGNameLocal
 # create SP and write to credential file
 # as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
 
-				Login-AzureRmAccount -Credential $localAzureCreds
+				function Login-AzureRmAccountWithBetterReporting($Credential)
+				{
+					try
+					{
+						$userName = $Credential.userName
+						Login-AzureRmAccount -Credential $Credential @args -ErrorAction stop
+					}
+					catch
+					{
+						$es = "Error authenticating AzureAdminUsername $userName for Azure subscription access.`n"
+						$exceptionMessage = $_.Exception.Message
+						$exceptionMessageErrorCode = $exceptionMessage.split(':')[0]
+
+						switch($exceptionMessageErrorCode)
+						{
+							"AADSTS50076" {$es += "Please ensure your account does not require Multi-Factor Authentication`n"; break}
+							"Federated service at https" {$es += "Unable to perform federated login - Unknown username or password?`n"; break}
+							"unknown_user_type" {$es += "Please ensure your username is in UPN format. e.g., user@example.com`n"; break}
+							"AADSTS50126" {$es += "User not found in directory`n"; break}
+							"AADSTS70002" {$es += "Please check your password`n"; break}
+						}
+
+
+
+						throw "$es$exceptionMessage"
+
+					}
+				}
+
+				Login-AzureRmAccountWithBetterReporting -Credential $localAzureCreds
 
 				#Application name
 				$appName = "CAM-$RGNameLocal"
