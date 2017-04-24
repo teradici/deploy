@@ -1,0 +1,41 @@
+{
+"api.version": "v1",
+"sources": [
+    {
+        "name":  "CAMPOC_Teradici_AdminUI_Azure_Logs",
+        "category":  "CAMPOC/Teradici/AdminUI/Logs",
+        "automaticDateParsing":  true,
+        "multilineProcessingEnabled":  false,
+        "useAutolineMatching":  false,
+        "forceTimeZone":  false,
+        "timeZone":  "Etc/UTC",
+        "filters":  [
+                    ],
+        "cutoffTimestamp":  1445151600000,
+        "encoding":  "UTF-8",
+        "pathExpression":  "C:\\WindowsAzure\\Logs\\*",
+        "blacklist":  [
+                      ],
+        "sourceType":  "LocalFile",
+        "alive":  false
+    },
+    {
+        "name":  "CAMPOC_Teradici_AdminUI_Tomcat_Logs",
+        "category":  "CAMPOC/Teradici/AdminUI/Logs",
+        "automaticDateParsing":  true,
+        "multilineProcessingEnabled":  false,
+        "useAutolineMatching":  false,
+        "forceTimeZone":  false,
+        "timeZone":  "Etc/UTC",
+        "filters":  [
+                    ],
+        "cutoffTimestamp":  1445151600000,
+        "encoding":  "UTF-8",
+        "pathExpression":  "C:\\tomcat\\apache-tomcat-8.0.39\\logs\\*",
+        "blacklist":  [
+                      ],
+        "sourceType":  "LocalFile",
+        "alive":  false
+    },
+]
+}
