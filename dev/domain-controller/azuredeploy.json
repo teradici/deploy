@@ -54,7 +54,7 @@
             "metadata": {
                 "description": "The location of resources, such as templates and DSC modules, that the template depends on"
             },
-            "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/deploy-sumo/dev/domain-controller"
+            "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller"
         },
         "_artifactsLocationSasToken": {
             "type": "securestring",
