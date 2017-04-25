@@ -132,15 +132,13 @@ Configuration InstallCAM
 
                 $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/SumoCollector-windows-x64_19_182-25.exe"
                 $sumo_config = "/new-admin-vm/sumo.conf"
-                $sumo_config = "/new-admin-vm/sum-admin-vm.conf"
-                $sumo_collector_json = "https://teradeploy.blob.core.windows.net/binaries/sumo-admin-vm.json"
+                $sumo_collector_json = "/new-admin-vm/sum-admin-vm.json"
                 $dest = "C:\sumo"
                 Invoke-WebRequest $sumo_config -OutFile "$dest\sumo.conf"
                 Invoke-WebRequest $sumo_collecor_json -OutFile "$dest\sumo-admin-vm.json"
                 
                 $installerFileName = "SumoCollector-windows-x64_19_182-25.exe"
-                Invoke-WebRequest $source -OutFile "$dest\$installerFileName"
-
+		Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
                 #install the collector
                 & "$dest\$installerFileName" /S
             }
