@@ -35,12 +35,12 @@
                 "description": "The password of the Azure account/service principal with contributor access to the subscription. This account cannot require MFA."
             }
         },
-        "activationCode": {
-            "type": "string",
-            "defaultValue": "xxxx-xxxx-xxxx-xxxx",
-            "metadata": {
-                "description": "The license activation code for the PCoIP CAS licenses"
-            }
+        "registrationCode": {
+          "type": "securestring",
+          "minLength": 21,
+          "metadata": {
+            "description": "PCoIP Standard Agent License Registration Code."
+          }
         },
         "CAMDeploymentBlobSource": {
             "type": "string",
@@ -329,7 +329,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(parameters('_artifactsLocation'), '/new-agent-vm/new-agent.json', parameters('_artifactsLocationSasToken'))]",
+                    "uri": "[concat(parameters('_artifactsLocation'), '/new-agent-vm/server2016-standard-agent.json', parameters('_artifactsLocationSasToken'))]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
@@ -365,6 +365,12 @@
                     },
                     "_artifactsLocation": {
                         "value": "[concat(parameters('_artifactsLocation'), '/new-agent-vm')]"
+                    },
+                    "CAMDeploymentBlobSource": {
+                        "value": "[parameters('CAMDeploymentBlobSource')]"
+                    },
+                    "registrationCode": {
+                        "value": "[parameters('registrationCode')]"
                     },
                     "storageAccountName": {
                         "value": "[variables('storageAccountName')]"
@@ -642,7 +648,7 @@
                         "value": "[variables('cmPrivateIP')]"
                     },
                     "activationCode": {
-                        "value": "[parameters('activationCode')]"
+                        "value": "[parameters('registrationCode')]"
                     },
                     "storageAccountName": {
                         "value": "[variables('storageAccountName')]"
