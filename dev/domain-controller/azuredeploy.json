@@ -391,7 +391,7 @@
                         "fileUris": "[concat(parameters('_artifactsLocation'), '/FinalizeDeployment.ps1')]"
                     },
                     "private": {
-                        "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File FinalizeDeployment.ps1 -domainUser ',parameters('domainAdminUsername'),' -domainPassword ',parameters('domainAdminPassword'),' -machineToJoin ',variables('adminDesktopVMName'),' -groupToJoin ',variables('ADGroupToJoin'))]"
+                        "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File FinalizeDeployment.ps1 -domainUserUPN ',parameters('domainAdminUsername'),'@',parameters('domainName'),' -domainPassword ',parameters('domainAdminPassword'),' -machineToJoin ',variables('adminDesktopVMName'),' -groupToJoin ',variables('ADGroupToJoin'))]"
                     }
                 }
             }
