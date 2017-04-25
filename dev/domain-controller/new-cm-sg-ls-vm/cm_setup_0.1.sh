@@ -11,10 +11,10 @@ wget https://teradeploy.blob.core.windows.net/binaries/SC_1.0.zip -P /tmp/
 
 #Install and setup the Sumo Collector
 unzip -o /tmp/SC_1.0.zip
-dpkg -i /tmp/sumo/sumocollector_19.182-25_amd64.deb
+cd /tmp/sumo
+rpm -i SumoCollector-19.182-25.x86_64.rpm
 cp /tmp/sumo/user.properties /opt/SumoCollector/config/
 cp /tmp/sumo/sump_cm_vm.json /opt/SumoCollector/config/
-systemctl daemon-reload
 service collector start
 service collector status
 
