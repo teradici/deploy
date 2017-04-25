@@ -82,6 +82,8 @@
         "publicIPAddressName": "adPublicIP",
         "adLBName": "adLoadBalancer",
         "serverRootName": "vm",
+        "adminDesktopVMName": "[concat(variables('serverRootName'), '-desk')]",
+        "ADGroupToJoin":  "\"Cloud Access Application Servers\"",
         "dcnsgName": "dcNSG",
         "cmnsgName": "cmNSG"
     },
@@ -199,7 +201,7 @@
             ],
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "Standard_D2_v2"
+                    "vmSize": "Standard_D1_v2"
                 },
                 "osProfile": {
                     "computerName": "[variables('adVMName')]",
@@ -273,7 +275,7 @@
                         "value": "[parameters('domainAdminPassword')]"
                     },
                     "adminDesktopVMName": {
-                        "value": "[concat(variables('serverRootName'), '-desk')]"
+                        "value": "[variables('adminDesktopVMName')]"
                     },
                     "_artifactsLocation": {
                         "value": "[concat(parameters('_artifactsLocation'), '/configure-dc-and-ca')]"
@@ -340,7 +342,7 @@
                         "value": "[variables('adSubnetName')]"
                     },
                     "dnsLabelPrefix": {
-                        "value": "[concat(variables('serverRootName'), '-desk')]"
+                        "value": "[variables('adminDesktopVMName')]"
                     },
                     "vmSize": {
                         "value": "Standard_A2_v2"
@@ -373,6 +375,28 @@
             }
         },
         {
+            "name": "[concat(variables('adVMName'),'/FinalizeDeployment')]",
+            "type": "Microsoft.ClassicCompute/virtualMachines/extensions",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2015-06-01",
+            "dependsOn": [
+                "Microsoft.Resources/deployments/CreateAgentMachine"
+            ],
+            "properties": {
+                "publisher": "Microsoft.Compute",
+                "extension": "CustomScriptExtension",
+                "version": "1.8",
+                "parameters": {
+                    "public": {
+                        "fileUris": "[concat(parameters('_artifactsLocation'), '/FinalizeDeployment.ps1')]"
+                    },
+                    "private": {
+                        "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File FinalizeDeployment.ps1 -domainUser ',parameters('domainAdminUsername'),' -domainPassword ',parameters('domainAdminPassword'),' -machineToJoin ',variables('adminDesktopVMName'),' -groupToJoin ',variables('ADGroupToJoin'))]"
+                    }
+                }
+            }
+        },
+        {
             "type": "Microsoft.Resources/deployments",
             "name": "CreateAdminMachine",
             "apiVersion": "2016-02-01",
@@ -396,7 +420,7 @@
                         "value": "[concat(variables('serverRootName'), '-au')]"
                     },
                     "vmSize": {
-                        "value": "Standard_A2_v2"
+                        "value": "Standard_D1_v2"
                     },
                     "privateIP": {
                         "value": "[variables('auPrivateIP')]"
@@ -447,9 +471,6 @@
                     },
                     "dnsLabelPrefix": {
                         "value": "[concat(variables('serverRootName'), '-au')]"
-                    },
-                    "vmSize": {
-                        "value": "Standard_A2_v2"
                     },
                     "domainToJoin": {
                         "value": "[parameters('domainName')]"
@@ -514,7 +535,7 @@
                         "value": "[concat(variables('serverRootName'), '-br')]"
                     },
                     "vmSize": {
-                        "value": "Standard_A2_v2"
+                        "value": "Standard_D1_v2"
                     },
                     "privateIP": {
                         "value": "[variables('brPrivateIP')]"
@@ -565,9 +586,6 @@
                     },
                     "dnsLabelPrefix": {
                         "value": "[concat(variables('serverRootName'), '-br')]"
-                    },
-                    "vmSize": {
-                        "value": "Standard_A2_v2"
                     },
                     "domainToJoin": {
                         "value": "[parameters('domainName')]"
@@ -627,7 +645,7 @@
                         "value": "[concat(variables('serverRootName'), '-cm')]"
                     },
                     "vmSize": {
-                        "value": "Standard_A2_v2"
+                        "value": "Standard_D2_v2"
                     },
                     "vmAdminUsername": {
                         "value": "[parameters('domainAdminUsername')]"
