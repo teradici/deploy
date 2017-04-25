@@ -7,6 +7,16 @@
 #get the install zip files
 wget https://teradeploy.blob.core.windows.net/binaries/P-CM-1.6_SG-1.12.zip -P /tmp/
 wget https://teradeploy.blob.core.windows.net/binaries/P-LS_1.1.0.zip -P /tmp/
+wget https://teradeploy.blob.core.windows.net/binaries/SC_1.0.zip -P /tmp/
+
+#Install and setup the Sumo Collector
+unzip -o /tmp/SC_1.0.zip
+dpkg -i /tmp/sumo/sumocollector_19.182-25_amd64.deb
+cp /tmp/sumo/user.properties /opt/SumoCollector/config/
+cp /tmp/sumo/sump_cm_vm.json /opt/SumoCollector/config/
+systemctl daemon-reload
+service collector start
+service collector status
 
 
 unzip -o /tmp/P-CM-1.6_SG-1.12.zip
