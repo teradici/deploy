@@ -651,9 +651,9 @@ $authFilePath = "$targetDir\authfile.txt"
 
 				$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGNameLocal
 				$kvName = "CAM-$generatedKVID"
-				New-AzureRmKeyVault -VaultName $kvName -ResourceGroupName $azureRGName -Location $rg.Location -EnabledForTemplateDeployment -EnabledForDeployment
+				New-AzureRmKeyVault -VaultName $kvName -ResourceGroupName $RGNameLocal -Location $rg.Location -EnabledForTemplateDeployment -EnabledForDeployment
 
-				Set-AzureRmKeyVaultAccessPolicy -VaultName $kvName -ServicePrincipalName $sp.ServicePrincipalName -PermissionsToSecrets get
+				Set-AzureRmKeyVaultAccessPolicy -VaultName $kvName -ServicePrincipalName $app.ApplicationId -PermissionsToSecrets get
 
 				$djSecretName = 'domainJoinPassword'
 				$djSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $djSecretName -SecretValue $localDomainAdminCreds.Password
