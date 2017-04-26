@@ -31,7 +31,7 @@
                     ],
         "cutoffTimestamp":  0,
         "encoding":  "UTF-8",
-        "pathExpression":  "/var/log/Teradici/SecurityGateWay/*.log",
+        "pathExpression":  "/var/log/Teradici/SecurityGateway/*.log",
         "blacklist":  [
                       ],
         "sourceType":  "LocalFile",
