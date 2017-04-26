@@ -154,7 +154,8 @@
                         "RGName": "[resourceGroup().name]",
                         "existingVNETName": "[parameters('existingVNETName')]",
                         "existingSubnetName": "[parameters('existingSubnetName')]",
-                        "storageAccountName": "[parameters('storageAccountName')]"
+                        "storageAccountName": "[parameters('storageAccountName')]",
+                        "sumoCollectorID": "[subscription().subscriptionID]"
                     }
                 },
                 "protectedSettings": {

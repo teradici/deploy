@@ -14,6 +14,7 @@ unzip -o /tmp/SC_1.0.zip
 rpm -i sumo/SumoCollector-19.182-25.x86_64.rpm
 cp sumo/user.properties /opt/SumoCollector/config/
 cp sumo/sumo_cm_vm.json /opt/SumoCollector/config/
+sed -i 's/collectorID/$3/' /opt/sumo/user.properties
 service collector start
 service collector status
 
