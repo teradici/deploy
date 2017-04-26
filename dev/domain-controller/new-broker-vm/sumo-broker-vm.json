@@ -1,0 +1,23 @@
+{
+"api.version": "v1",
+"sources": [
+    {
+        "name":  "CAMPOC_Teradici_Broker_Azure_Logs",
+        "category":  "CAMPOC/Teradici/AdminUI/Logs",
+        "automaticDateParsing":  true,
+        "multilineProcessingEnabled":  false,
+        "useAutolineMatching":  false,
+        "forceTimeZone":  false,
+        "timeZone":  "Etc/UTC",
+        "filters":  [
+                    ],
+        "cutoffTimestamp":  0,
+        "encoding":  "UTF-8",
+        "pathExpression":  "C:\\WindowsAzure\\Logs\\*",
+        "blacklist":  [
+                      ],
+        "sourceType":  "LocalFile",
+        "alive":  false
+    }
+]
+}
