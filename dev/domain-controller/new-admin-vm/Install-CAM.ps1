@@ -121,7 +121,7 @@ Configuration InstallCAM
         {
             Ensure          = "Present"
             Type            = "Directory"
-            DestinationPath = "C:\sumo
+            DestinationPath = "C:\sumo"
         }
         # Aim to install the collector first and start the log collection before any 
         # other applications are installed.
