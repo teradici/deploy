@@ -345,7 +345,7 @@
                         "value": "[variables('adminDesktopVMName')]"
                     },
                     "vmSize": {
-                        "value": "Standard_A2_v2"
+                        "value": "Standard_D2_v2"
                     },
                     "domainToJoin": {
                         "value": "[parameters('domainName')]"
@@ -384,21 +384,22 @@
             "name": "[concat(variables('adVMName'),'/FinalizeDeployment')]",
             "type": "Microsoft.Compute/virtualMachines/extensions",
             "location": "[resourceGroup().location]",
-            "apiVersion": "2015-06-01",
+            "apiVersion": "2015-06-15",
             "dependsOn": [
                 "Microsoft.Resources/deployments/CreateAgentMachine"
             ],
             "properties": {
                 "publisher": "Microsoft.Compute",
                 "extension": "CustomScriptExtension",
-                "version": "1.8",
-                "parameters": {
-                    "public": {
-                        "fileUris": "[concat(parameters('_artifactsLocation'), '/FinalizeDeployment.ps1')]"
-                    },
-                    "private": {
-                        "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File FinalizeDeployment.ps1 -domainUserUPN ',parameters('domainAdminUsername'),'@',parameters('domainName'),' -domainPassword ',parameters('domainAdminPassword'),' -machineToJoin ',variables('adminDesktopVMName'),' -groupToJoin ',variables('ADGroupToJoin'))]"
-                    }
+                "typeHandlerVersion": "1.8",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "fileUris": [
+                        "[concat(parameters('_artifactsLocation'), '/FinalizeDeployment.ps1')]"
+                    ]
+                },
+                "protectedSettings": {
+                    "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File FinalizeDeployment.ps1 -domainUserUPN ',parameters('domainAdminUsername'),'@',parameters('domainName'),' -domainPassword ',parameters('domainAdminPassword'),' -machineToJoin ',variables('adminDesktopVMName'),' -groupToJoin ',variables('ADGroupToJoin'))]"
                 }
             }
         },
