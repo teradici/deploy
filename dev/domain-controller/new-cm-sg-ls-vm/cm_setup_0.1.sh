@@ -6,7 +6,7 @@
 
 #get the install zip files
 wget https://teradeploy.blob.core.windows.net/binaries/P-CM-1.6_SG-1.12.zip -P /tmp/
-wget https://teradeploy.blob.core.windows.net/binaries/P-LS_1.1.0.zip -P /tmp/
+#wget https://teradeploy.blob.core.windows.net/binaries/P-LS_1.1.0.zip -P /tmp/
 
 
 unzip -o /tmp/P-CM-1.6_SG-1.12.zip
@@ -47,9 +47,13 @@ service connection_manager stop
 # modify CM setup
 #make the 'original' file
 cp -n /etc/ConnectionManager.conf /etc/ConnectionManager.conf.orig
-awk -v broker=$1 '/^PcoipAddress/{printf "PcoipAddress = %s\n",broker;next};{print}' /etc/ConnectionManager.conf.orig | \
-awk  -v lserver="27000@$myprivateip" '/^LicenseServerAddress/{printf "LicenseServerAddress = %s\n",lserver;next};{print}'  \
-    > ConnectionManager.conf
+#awk -v broker=$1 '/^PcoipAddress/{printf "PcoipAddress = %s\n",broker;next};{print}' /etc/ConnectionManager.conf.orig | \
+#awk  -v lserver="27000@$myprivateip" '/^LicenseServerAddress/{printf "LicenseServerAddress = %s\n",lserver;next};{print}'  \
+#    > ConnectionManager.conf
+
+awk -v broker=$1 '/^PcoipAddress/{printf "PcoipAddress = %s\n",broker;next};{print}' /etc/ConnectionManager.conf.orig > ConnectionManager.conf
+
+
 cp -f ConnectionManager.conf /etc/ConnectionManager.conf
 
 
@@ -86,26 +90,26 @@ fi
 # now setup license server
 #
 #sudo rm -rf /opt/FNPLicenseServerManager
-unzip -o /tmp/P-LS_1.1.0.zip
-yum -y install redhat-lsb.i686
-mkdir license-server_1.1
-mv license-server_1.1.0.tar.gz license-server_1.1/
-cd license-server_1.1/
-tar xvf license-server_1.1.0.tar.gz
-awk '{ sub(/-i console/,"-i silent\nsleep 120\nchmod +x /opt/FNPLicenseServerManager/lmadmin"); print }' install.sh > install-silent.sh
-sh install-silent.sh > lm_install.log
+#unzip -o /tmp/P-LS_1.1.0.zip
+#yum -y install redhat-lsb.i686
+#mkdir license-server_1.1
+#mv license-server_1.1.0.tar.gz license-server_1.1/
+#cd license-server_1.1/
+#tar xvf license-server_1.1.0.tar.gz
+#awk '{ sub(/-i console/,"-i silent\nsleep 120\nchmod +x /opt/FNPLicenseServerManager/lmadmin"); print }' install.sh > install-silent.sh
+#sh install-silent.sh > lm_install.log
 
-service lmadmin stop
+#service lmadmin stop
 
 # setup vendor daemon port#
 # copy original config file to temp location
-cp -f /opt/FNPLicenseServerManager/conf/server.xml /opt/FNPLicenseServerManager/conf/server_orig.xml
+#cp -f /opt/FNPLicenseServerManager/conf/server.xml /opt/FNPLicenseServerManager/conf/server_orig.xml
 #rewrite original with new port#
-awk '{ sub(/name="TERADICI" port="0"/,"name=\"TERADICI\" port=\"27001\""); print }' /opt/FNPLicenseServerManager/conf/server_orig.xml > /opt/FNPLicenseServerManager/conf/server.xml
+#awk '{ sub(/name="TERADICI" port="0"/,"name=\"TERADICI\" port=\"27001\""); print }' /opt/FNPLicenseServerManager/conf/server_orig.xml > /opt/FNPLicenseServerManager/conf/server.xml
 
 #activate licenses
-cd /opt/FNPLicenseServerManager/utils
-./pcoip-activate-license.sh -k "$2" -c 1
+#cd /opt/FNPLicenseServerManager/utils
+#./pcoip-activate-license.sh -k "$2" -c 1
 
 #to return license
 # need to find license, use  ./pcoip-view-license.sh and look for the line with "Fulfillment ID:" in it
@@ -118,7 +122,7 @@ cd /opt/FNPLicenseServerManager/utils
 #or just restart all the services
 service security_gateway restart
 service connection_manager restart
-service lmadmin restart
+#service lmadmin restart
 
 #Hack... try to restart the CM after 60 seconds to ensure that the info record is remapped to ROOT. This does not seem to be happening on its own.
 
