@@ -51,6 +51,9 @@ Configuration InstallCAM
         [String]$storageAccountName,
 
         [Parameter(Mandatory)]
+        [String]$sumoCollectorID,
+        
+	[Parameter(Mandatory)]
         [System.Management.Automation.PSCredential]$VMAdminCreds,
 
         [Parameter(Mandatory)]
@@ -118,7 +121,7 @@ Configuration InstallCAM
         {
             Ensure          = "Present"
             Type            = "Directory"
-            DestinationPath = "C:\sumo
+            DestinationPath = "C:\sumo"
         }
         # Aim to install the collector first and start the log collection before any 
         # other applications are installed.
@@ -136,9 +139,8 @@ Configuration InstallCAM
                 $dest = "C:\sumo"
                 Invoke-WebRequest $sumo_config -OutFile "$dest\sumo.conf"
                 Invoke-WebRequest $sumo_collecor_json -OutFile "$dest\sumo-admin-vm.json"
-
-                # Insert unique ID
-                (Get-Content "$dest\sumo.conf").Replace("collectorID", $sumoCollectorID) | Set-Content "$dest\sumo.conf"
+		# Insert unique ID
+                (Get-Content "$dest\sumo.conf").Replace("collectorID", $using:sumoCollectorID) | Set-Content "$dest\sumo.conf"
                 
                 $installerFileName = "SumoCollector-windows-x64_19_182-25.exe"
 		        Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
