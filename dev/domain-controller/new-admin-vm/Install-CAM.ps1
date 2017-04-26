@@ -663,7 +663,7 @@ $authFilePath = "$targetDir\authfile.txt"
 
 				Write-Host "Creating Local Admin Password for new machines"
 
-				$localAdminPasswordStr =  -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})
+				$localAdminPasswordStr =  "5!" + (-join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})) # "5!" is to ensure numbers and symbols
 
 				$localAdminPassword = ConvertTo-SecureString $localAdminPasswordStr -AsPlainText -Force
 
