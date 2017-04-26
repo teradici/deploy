@@ -77,6 +77,19 @@
             },
             "defaultValue": ""
         },
+        "CAMDeploymentBlobSource": {
+            "type": "string",
+            "metadata": {
+                "description": "The location of the blobs for admin GUI machine installation"
+            }
+        },
+        "registrationCode": {
+          "type": "securestring",
+          "minLength": 21,
+          "metadata": {
+            "description": "PCoIP Standard Agent License Registration Code."
+          }
+        },
         "storageAccountName": {
             "type": "string",
             "metadata": {
@@ -91,7 +104,10 @@
         "apiVersion": "2015-06-15",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
-        "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]"
+        "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
+        "pcoipAgentInstallerUrl": "[concat(parameters('CAMDeploymentBlobSource'),'/PCoIP_agent_release_installer_2.8.0.5813_standard.exe')]",
+        "videoDriverUrl": "",
+        "registrationCode": "[parameters('registrationCode')]"
     },
     "resources": [
         {
@@ -198,26 +214,41 @@
             ]
         },
         {
-            "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(parameters('dnsLabelPrefix'),'/PCoIPAgentDscExtension')]",
-            "apiVersion": "[variables('apiVersion')]",
-            "location": "[resourceGroup().location]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Compute/virtualMachines/extensions',parameters('dnsLabelPrefix'),'joindomain')]"
-            ],
-            "properties": {
-                "publisher": "Microsoft.Powershell",
-                "type": "DSC",
-                "typeHandlerVersion": "2.9",
-                "autoUpgradeMinorVersion": "true",
-                "settings": {
-                    "modulesUrl": "[concat(parameters('_artifactsLocation'), '/Install-PCoIPAgent.zip')]",
-                    "privacy": {
-                        "DataCollection": "Disable"
-                    },
-                    "configurationFunction": "Install-PCoIPAgent.ps1\\InstallPCoIPAgent"
+          "type": "Microsoft.Compute/virtualMachines/extensions",
+          "name": "[concat(parameters('dnsLabelPrefix'),'/PCoIPAgentDscExtension')]",
+          "apiVersion": "2017-03-30",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+              "[resourceId('Microsoft.Compute/virtualMachines/extensions',parameters('dnsLabelPrefix'),'joindomain')]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.Powershell",
+            "type": "DSC",
+            "typeHandlerVersion": "2.9",
+            "autoUpgradeMinorVersion": "true",
+            "settings": {
+              "configuration": {
+                "url": "[concat(parameters('_artifactsLocation'), '/Install-PCoIPAgent.zip')]",
+                "script": "Install-PCoIPAgent.ps1",
+                "function": "InstallPCoIPAgent"
+              },
+              "configurationArguments": {
+                "pcoipAgentInstallerUrl": "[variables('pcoipAgentInstallerUrl')]",
+                "videoDriverUrl": "[variables('videoDriverUrl')]"
+              },
+              "privacy": {
+                "DataCollection": "Disable"
+              }
+            },
+            "protectedSettings": {
+              "configurationArguments": {
+                "registrationCodeCredential": {
+                  "userName": "dummyUser",
+                  "password": "[variables('registrationCode')]"
                 }
+              }
             }
+          }
         }
     ]
 }

@@ -1,41 +1,245 @@
 # Install-PCoIPAgent.ps1
 Configuration InstallPCoIPAgent
 {
+	param(
+     	[Parameter(Mandatory=$true)]
+     	[String] $pcoipAgentInstallerUrl,
+
+     	[Parameter(Mandatory=$false)]
+     	[String] $videoDriverUrl,
+    
+     	[Parameter(Mandatory=$true)]
+     	[PSCredential] $registrationCodeCredential
+	)
+    
+    $isSA = [string]::IsNullOrWhiteSpace($videoDriverUrl)
+
+    $regPath = If ($isSA) {
+				    "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\PCoIP Standard Agent"
+			   }
+			   Else {
+					"HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\PCoIP Graphics Agent"
+			   }
+	
     Node "localhost"
     {
+        VmUsability TheVmUsability
+
         LocalConfigurationManager
         {
             RebootNodeIfNeeded = $true
         }
 
-        File Download_Directory 
+        File Agent_Download_Directory 
         {
             Ensure          = "Present"
             Type            = "Directory"
             DestinationPath = "C:\WindowsAzure\PCoIPAgentInstaller"
         }
 
+        File Nvidia_Download_Directory 
+        {
+            Ensure          = "Present"
+            Type            = "Directory"
+            DestinationPath = "C:\WindowsAzure\NvidiaInstaller"
+        }
+
+        Script InstallVideoDriver
+        {
+            DependsOn  = "[File]Nvidia_Download_Directory"
+
+            GetScript  = { @{ Result = "Install_Video_Driver" } }
+
+            TestScript = {
+                $isSA = $using:isSA
+
+                if ($isSA -or (Test-Path -path "HKLM:\SOFTWARE\NVIDIA Corporation\Installer2\Drivers")) {
+					return $true
+				}else {
+					return $false
+				} 
+			}
+
+            SetScript  = {
+                Write-Verbose "Downloading Nvidia driver"
+                $videoDriverUrl = $using:videoDriverUrl
+                $installerFileName = [System.IO.Path]::GetFileName($videoDriverUrl)
+                $destFile = "c:\WindowsAzure\NvidiaInstaller\" + $installerFileName
+                Invoke-WebRequest $videoDriverUrl -OutFile $destFile
+
+                Write-Verbose "Installing Nvidia driver"
+                $ret = Start-Process -FilePath $destFile -ArgumentList "/s /noeula /noreboot" -PassThru -Wait
+                Write-Verbose ("Nvidia driver exit code: "  + $ret.ExitCode)
+
+                # treat returned code 0 and 1 as success
+				if (($ret.ExitCode -ne 0) -and ($ret.ExitCode -ne 1)) {
+                    $stdout = $ret.StandardOutput.ReadToEnd();
+                    $stderr = $ret.StandardError.ReadToEnd();
+					$errMsg = "Failed to install nvidia driver. standard output: " + $stdout + "; standard error: " + $stderr
+					Write-Verbose $errMsg
+					throw $errMsg
+				} else {
+					Write-Verbose "Request reboot machine after Installing Video Driver."
+					# Setting the global:DSCMachineStatus = 1 tells DSC that a reboot is required
+					$global:DSCMachineStatus = 1
+				}
+
+                Write-Verbose "Finished Nvidia driver Installation"
+            }
+        }
+
         Script Install_PCoIPAgent
         {
-            DependsOn  = "[File]Download_Directory"
+            DependsOn  = @("[File]Agent_Download_Directory","[Script]InstallVideoDriver")
             GetScript  = { @{ Result = "Install_PCoIPAgent" } }
 
             #TODO: Check for other agent types as well?
-            TestScript = { if ( Get-Item -path "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\PCoIP Standard Agent" -ErrorAction SilentlyContinue )
-                            {return $true}
-                            else {return $false} }
-            SetScript  = {
-                Write-Verbose "Install_PCoIPAgent"
+            TestScript = {
+                $regPath = $using:regPath
+				if ( Test-Path -path $regPath)  {
+					return $true
+				}else {
+					return $false
+				} 
+			}
 
-                $source = "https://teradeploy.blob.core.windows.net/binaries/PCoIP_agent_release_installer_2.7.0.4060_standard.exe"
-                $dest = "C:\WindowsAzure\PCoIPAgentInstaller"
-                $installerFileName = "PCoIP_agent_release_installer_2.7.0.4060_standard.exe"
-                Invoke-WebRequest $source -OutFile "$dest\$installerFileName"
+            SetScript  = {
+                Write-Verbose "Starting to Install PCoIPAgent"
+
+				#agent installer exit code 1641 require reboot machine
+				Set-Variable EXIT_CODE_REBOOT 1641 -Option Constant
+
+                $pcoipAgentInstallerUrl = $using:pcoipAgentInstallerUrl
+                $installerFileName = [System.IO.Path]::GetFileName($pcoipAgentInstallerUrl)
+                $destFile = "C:\WindowsAzure\PCoIPAgentInstaller\" + $installerFileName
+                
+				Write-Verbose "Downloading PCoIP Agent"
+                Invoke-WebRequest $pcoipAgentInstallerUrl -OutFile $destFile
 
                 #install the agent
-                & "$dest\$installerFileName" /S
+				Write-Verbose "Installing PCoIP Agent"
+                $ret = Start-Process -FilePath $destFile -ArgumentList "/S /nopostreboot" -PassThru -Wait
+
+				# Check installer return code
+				if ($ret.ExitCode -ne 0) {
+					#exit code 1641 means requiring reboot machine after intallation is done, other non zere exit code means installation has some error
+					if ($ret.ExitCode -eq $EXIT_CODE_REBOOT) {
+						Write-Verbose "Request reboot machine after Installing pcoip agent."
+						# Setting the global:DSCMachineStatus = 1 tells DSC that a reboot is required
+						$global:DSCMachineStatus = 1
+					} else {
+						$errMsg = "Failed to install PCoIP Agent. Exit Code: " + $ret.ExitCode
+						Write-Verbose $errMsg
+						throw $errMsg
+					}
+				}
+				
+	            Write-Verbose "Finished PCoIP Agent Installation"
+            }
+        }
+
+        Script Register
+        {
+            DependsOn  = @("[Script]Install_PCoIPAgent")
+
+            GetScript  = { return 'registration'}
+            
+            TestScript = { 
+                cd "C:\Program Files (x86)\Teradici\PCoIP Agent"
+ 	            $ret = & .\pcoip-validate-license.ps1
+
+				# the powershell variable $? to indicate the last executing command status
+				return $?
+            }
+
+            SetScript  = {
+                #register code is stored at the password property of PSCredential object
+                $registrationCode = ($using:registrationCodeCredential).GetNetworkCredential().password
+                if ($registrationCode) {
+	                cd "C:\Program Files (x86)\Teradici\PCoIP Agent"
+
+					Write-Verbose "Activating License Code"               
+ 	                $ret = & .\pcoip-register-host.ps1 -RegistrationCode $registrationCode
+					$isExeSucc = $?
+
+					if ($isExeSucc) {
+						Write-Verbose "Succeeded to activate License Code." 
+					} else {
+						$retMsg = $ret | Out-String
+						$errMsg = "Failed to activate License Code because " + $retMsg
+						Write-Verbose  $errMsg              
+						throw $errMsg
+					}
+
+					Write-Verbose "Validating License"               
+ 	                $ret = & .\pcoip-validate-license.ps1
+					$isExeSucc = $?
+
+					if ($isExeSucc) {
+						Write-Verbose "License validation was successful."
+					} else {
+						$retMsg = $ret | Out-String
+						$errMsg = "Failed to validate license because " + $retMsg
+						Write-Verbose  $errMsg              
+						throw $errMsg
+					}
+                }
+               
+				#start service if it is not started
+				$serviceName = "PCoIPAgent"
+				$svc = Get-Service -Name $serviceName   
+
+				if ($svc.StartType -eq "Disabled") {
+					Set-Service -name  $serviceName -StartupType Automatic
+				}
+					
+				if ($svc.status -eq "Paused") {
+					$svc.Continue()
+				}
+
+				if ( $svc.status -eq "Stopped" )	{
+					Write-Verbose "Starting PCoIP Agent Service because it is at stopped status."
+					$svc.Start()
+					$svc.WaitForStatus("Running", 120)
+				}
             }
         }
     }
 }
 
+Configuration VmUsability
+{
+    Node "localhost"
+    {
+        DisableServerManager TheDisableServerManager
+        InstallFirefox TheInstallFirefox
+    }
+}
+
+Configuration DisableServerManager
+{
+    Node "localhost"
+    {
+        Registry DisableServerManager
+        {
+            Ensure = "Present"
+            Key = "HKLM:\Software\Microsoft\ServerManager"
+            ValueName = "DoNotOpenServerManagerAtLogon"
+            ValueData = "1"
+            ValueType = "Dword"
+        }
+    }
+}
+
+Configuration InstallFirefox
+{
+    Import-DscResource -module xFirefox
+
+    Node "localhost"
+    {
+        MSFT_xFirefox InstallFirefox
+        {
+            #install the latest firefox browser
+        }
+    }
+}
