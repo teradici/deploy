@@ -156,7 +156,6 @@ Configuration InstallPCoIPAgent
                 #register code is stored at the password property of PSCredential object
                 $registrationCode = ($using:registrationCodeCredential).GetNetworkCredential().password
                 if ($registrationCode) {
-					# Insert a delay before activating license
 	                cd "C:\Program Files (x86)\Teradici\PCoIP Agent"
 
 					Write-Verbose "Activating License Code"               
@@ -164,7 +163,7 @@ Configuration InstallPCoIPAgent
 					$isExeSucc = $?
 
 					if ($isExeSucc) {
-						Write-Verbose "succeeded to activate License Code." 
+						Write-Verbose "Succeeded to activate License Code." 
 					} else {
 						$retMsg = $ret | Out-String
 						$errMsg = "Failed to activate License Code because " + $retMsg
@@ -177,7 +176,7 @@ Configuration InstallPCoIPAgent
 					$isExeSucc = $?
 
 					if ($isExeSucc) {
-						Write-Verbose "succeeded to validate License."
+						Write-Verbose "License validation was successful."
 					} else {
 						$retMsg = $ret | Out-String
 						$errMsg = "Failed to validate license because " + $retMsg
