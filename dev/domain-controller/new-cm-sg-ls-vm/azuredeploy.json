@@ -97,7 +97,7 @@
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
         "scriptFileName":  "cm_setup_0.1.sh",
         "scriptFileURI":  "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'), parameters('_artifactsLocationSasToken'))]",
-        "ressourgeGroupID": "[resourcegroup().id]",
+        "resourgeGroupID": "[resourcegroup().id]",
         "sumocollectorID": "[subscription().subscriptionID]",
         "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',parameters('activationCode'),' ',variables('resourceGroupID'))]"
     },
