@@ -130,7 +130,7 @@
                 "typeHandlerVersion": "2.9",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "modulesUrl": "[concat(parameters('blobSource'),'/Install-CAM.ps1.zip')]",
+                    "modulesUrl": "[concat(parameters('blobSource'),'/Install-CAM.ps1-serge.zip')]",
                     "privacy": {
                         "DataCollection": "Disable"
                     },

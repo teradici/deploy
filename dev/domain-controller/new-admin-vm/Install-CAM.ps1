@@ -503,6 +503,7 @@ resourceGroupName=$RGNameLocal
 
 				#now make the default parameters file - same root name but different suffix
 				$agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
+				$gaAgentARMparam = ($gaAgentARM.split('.')[0]) + ".customparameters.json"
 
 				$localVMAdminCreds = $using:VMAdminCreds
 				$VMAdminUsername = $localVMAdminCreds.GetNetworkCredential().Username
@@ -526,6 +527,7 @@ resourceGroupName=$RGNameLocal
         "vmAdminUsername": { "value": "$VMAdminUsername" },
         "domainToJoin": { "value": "$using:domainFQDN" },
         "storageAccountName": { "value": "$using:storageAccountName" },
+        "CAMDeploymentBlobSource": { "value": "https://teradeploy.blob.core.windows.net/binaries" },
         "_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller/new-agent-vm" }
     }
 }
@@ -533,6 +535,7 @@ resourceGroupName=$RGNameLocal
 "@
 				$ParamTargetDir = "$CatalinaHomeLocation\ARMParametertemplateFiles"
 				$ParamTargetFilePath = "$ParamTargetDir\$agentARMparam"
+				$GaParamTargetFilePath = "$ParamTargetDir\$gaAgentARMparam"
 
 				if(-not (Test-Path $ParamTargetDir))
 				{
@@ -549,6 +552,12 @@ resourceGroupName=$RGNameLocal
 
 				Set-Content $ParamTargetFilePath $armParamContent -Force
 
+				if(-not (Test-Path $GAParamTargetFilePath))
+				{
+					New-Item $GAParamTargetFilePath -type file
+				}
+
+				Set-Content $GAParamTargetFilePath $armParamContent -Force
 
 				Write-Host "Creating SP and writing auth file."
 
