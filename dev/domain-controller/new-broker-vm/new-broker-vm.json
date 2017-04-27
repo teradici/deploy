@@ -98,6 +98,7 @@
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
         "publicIPName": "[concat(parameters('dnsLabelPrefix'),'Pip')]",
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
+        "sumocollectorID": "[subscription().subscriptionID]",
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]"
     },
     "resources": [
