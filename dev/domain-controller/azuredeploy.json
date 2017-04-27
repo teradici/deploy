@@ -390,7 +390,7 @@
             ],
             "properties": {
                 "publisher": "Microsoft.Compute",
-                "extension": "CustomScriptExtension",
+                "type": "CustomScriptExtension",
                 "typeHandlerVersion": "1.8",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
