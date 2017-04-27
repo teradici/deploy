@@ -552,12 +552,12 @@ resourceGroupName=$RGNameLocal
 
 				Set-Content $ParamTargetFilePath $armParamContent -Force
 
-				if(-not (Test-Path $GAParamTargetFilePath))
+				if(-not (Test-Path $GaParamTargetFilePath))
 				{
-					New-Item $GAParamTargetFilePath -type file
+					New-Item $GaParamTargetFilePath -type file
 				}
 
-				Set-Content $GAParamTargetFilePath $armParamContent -Force
+				Set-Content $GaParamTargetFilePath $armParamContent -Force
 
 				Write-Host "Creating SP and writing auth file."
 
