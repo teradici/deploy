@@ -647,9 +647,6 @@
                     "privateIP": {
                         "value": "[variables('cmPrivateIP')]"
                     },
-                    "activationCode": {
-                        "value": "[parameters('registrationCode')]"
-                    },
                     "storageAccountName": {
                         "value": "[variables('storageAccountName')]"
                     },

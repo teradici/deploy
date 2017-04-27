@@ -26,6 +26,9 @@ Configuration InstallCAM
         [Parameter(Mandatory)]
 		[String]$sourceURI,
 
+        [Parameter(Mandatory)]
+		[String]$templateURI,
+
         [string]
         $javaInstaller = "jdk-8u91-windows-x64.exe",
 
@@ -38,6 +41,9 @@ Configuration InstallCAM
         [string]
         $agentARM = "server2016-standard-agent.json",
 
+        [string]
+        $gaAgentARM = "server2016-graphics-agent.json",
+		
         [Parameter(Mandatory)]
         [String]$domainFQDN,
 
@@ -109,10 +115,15 @@ Configuration InstallCAM
 
 		xRemoteFile Download_Agent_ARM
 		{
-			Uri = "$sourceURI/$agentARM"
+			Uri = "$templateURI/$agentARM"
 			DestinationPath = "$LocalDLPath\$agentARM"
 		}
 
+		xRemoteFile Download_Ga_Agent_ARM
+		{
+			Uri = "$templateURI/$gaAgentARM"
+			DestinationPath = "$LocalDLPath\$gaAgentARM"
+		}		
 
 		# One day can split this to 'install java' and 'configure java environemnt' and use 'package' dsc like here:
 		# http://stackoverflow.com/questions/31562451/installing-jre-using-powershell-dsc-hangs
@@ -371,6 +382,7 @@ Configuration InstallCAM
 		        $LocalDLPath = $using:LocalDLPath
 				$adminWAR = $using:adminWAR
                 $agentARM = $using:agentARM
+                $gaAgentARM = $using:gaAgentARM
 				$localtomcatpath = "$env:systemdrive\tomcat"
 				$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
 
@@ -487,6 +499,7 @@ resourceGroupName=$RGNameLocal
 				Remove-Item "$templateLoc\*" -Recurse
 				
 				copy "$LocalDLPath\$agentARM" $templateLoc
+				copy "$LocalDLPath\$gaAgentARM" $templateLoc
 
 				#now make the default parameters file - same root name but different suffix
 				$agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
