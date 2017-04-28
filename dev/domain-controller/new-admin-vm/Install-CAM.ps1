@@ -523,7 +523,6 @@ resourceGroupName=$RGNameLocal
 
 
 				Write-Host "Creating SP and writing auth file."
-        "CAMDeploymentBlobSource": { "value": "https://teradeploy.blob.core.windows.net/binaries" },
 
 # create SP and write to credential file
 # as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
@@ -706,6 +705,7 @@ $authFilePath = "$targetDir\authfile.txt"
     "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+        "CAMDeploymentBlobSource": { "value": "https://teradeploy.blob.core.windows.net/binaries" },
         "existingSubnetName": { "value": "$using:existingSubnetName" },
         "domainUsername": { "value": "$DomainAdminUsername" },
         "domainPassword": {
