@@ -22,9 +22,6 @@
         },
         "brokerFQDN": {
             "value": "10.0.0.5"
-        },
-        "activationCode": {
-            "value": "xxxx-xxxx-xxxx-xxxx"
         }
     }
 }

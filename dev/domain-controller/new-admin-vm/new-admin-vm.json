@@ -138,6 +138,7 @@
                     "Properties": {
                         "domainFQDN":  "[parameters('domainToJoin')]",
                         "sourceURI": "[parameters('blobSource')]",
+						"templateURI": "[parameters('_artifactsLocation')]",
                         "VMAdminCreds": {
                             "UserName": "[parameters('vmAdminUsername')]",
                             "Password": "PrivateSettingsRef:vmAdminPassword"

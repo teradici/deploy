@@ -513,7 +513,7 @@
                         "value": "[variables('storageAccountName')]"
                     },
                     "_artifactsLocation": {
-                        "value": "[concat(parameters('_artifactsLocation'), '/new-admin-vm')]"
+                        "value": "[concat(parameters('_artifactsLocation'), '/new-agent-vm')]"
                     }
                 }
             }
@@ -665,9 +665,6 @@
                     },
                     "privateIP": {
                         "value": "[variables('cmPrivateIP')]"
-                    },
-                    "activationCode": {
-                        "value": "[parameters('registrationCode')]"
                     },
                     "storageAccountName": {
                         "value": "[variables('storageAccountName')]"

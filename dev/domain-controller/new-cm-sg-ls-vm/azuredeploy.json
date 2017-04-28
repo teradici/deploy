@@ -59,13 +59,6 @@
                 "description": "private IP of the instance to create"
             }
         },
-        "activationCode": {
-            "type": "string",
-            "defaultValue": "xxxx-xxxx-xxxx-xxxx",
-            "metadata": {
-                "description": "The license activation code for the PCoIP CAS licenses"
-            }
-        },
         "storageAccountName": {
             "type": "string",
             "metadata": {
@@ -97,7 +90,7 @@
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
         "scriptFileName":  "cm_setup_0.1.sh",
         "scriptFileURI":  "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'), parameters('_artifactsLocationSasToken'))]",
-        "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',parameters('activationCode'))]"
+        "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'))]"
     },
     "resources": [
         {
