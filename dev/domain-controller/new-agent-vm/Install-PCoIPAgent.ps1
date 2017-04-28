@@ -21,7 +21,7 @@ Configuration InstallPCoIPAgent
             SetScript  = {
                 Write-Verbose "Install_SumoCollector"
 
-                $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/SumoCollector-windows-x64_19_182-25.exe"
+                $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/SumoCollector_windows-x64_19_182-25.exe"
                 $sumo_config = "/new-admin-vm/sumo.conf"
                 $sumo_collector_json = "/new-admin-vm/sumo-admin-vm.json"
                 $dest = "C:\sumo"
