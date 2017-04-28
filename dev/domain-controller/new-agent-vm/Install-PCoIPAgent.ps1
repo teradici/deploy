@@ -22,15 +22,16 @@ Configuration InstallPCoIPAgent
                 Write-Verbose "Install_SumoCollector"
 
                 $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/SumoCollector_windows-x64_19_182-25.exe"
+                $sumo_packahe = "https://teradeploy.blob.core.windows.net/binaries/SumoCollector_windows-x64_19_182-25.exe"
                 $sumo_config = "/new-admin-vm/sumo.conf"
-                $sumo_collector_json = "/new-admin-vm/sumo-admin-vm.json"
+                # $sumo_collector_json = "/new-admin-vm/sumo-admin-vm.json"
                 $dest = "C:\sumo"
-                Invoke-WebRequest $sumo_config -OutFile "$dest\sumo.conf"
-                Invoke-WebRequest $sumo_collecor_json -OutFile "$dest\sumo-admin-vm.json"
+                # Invoke-WebRequest $sumo_config -OutFile "$dest\sumo.conf"
+                # Invoke-WebRequest $sumo_collecor_json -OutFile "$dest\sumo-admin-vm.json"
 	        	# Insert unique ID
-        		(Get-Content "$dest\sumo.conf").Replace("collectorID", $using:sumoCollectorID) | Set-Content "$dest\sumo.conf"
+        		# (Get-Content "$dest\sumo.conf").Replace("collectorID", $using:sumoCollectorID) | Set-Content "$dest\sumo.conf"
                 
-                $installerFileName = "SumoCollector-windows-x64_19_182-25.exe"
+                $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
 		        Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
                 #install the collector
                 & "$dest\$installerFileName" /S
