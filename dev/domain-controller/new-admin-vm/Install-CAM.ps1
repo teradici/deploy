@@ -464,8 +464,26 @@ resourceGroupName=$RGNameLocal
 					New-Item $configFileName -type file
 				}
 
-				Set-Content $configFileName $auProperties -Force
-
+				# write to $configFileName with retry in case another process still has a lock
+				$loopCountRemaining = 600
+				#loop until it's created
+				while($loopCountRemaining-- -gt 0)
+				{
+					try
+					{
+						Set-Content $configFileName $auProperties -Force -ErrorAction Stop
+						break # success exit while loop
+					}
+					catch
+					{
+						Write-Host "Writing CAM configuration file. Seconds remaining: $loopCountRemaining"
+						Start-Sleep -Seconds 1
+						if($loopCountRemaining -eq 0)
+						{
+							throw
+						}
+					}
+				}
 		        Write-Host "Redirecting ROOT to Cloud Access Manager."
 
 
@@ -501,56 +519,38 @@ resourceGroupName=$RGNameLocal
 				copy "$LocalDLPath\$agentARM" $templateLoc
 				copy "$LocalDLPath\$gaAgentARM" $templateLoc
 
-				#now make the default parameters file - same root name but different suffix
-				$agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
 				$gaAgentARMparam = ($gaAgentARM.split('.')[0]) + ".customparameters.json"
 
-				$localVMAdminCreds = $using:VMAdminCreds
-				$VMAdminUsername = $localVMAdminCreds.GetNetworkCredential().Username
-				$VMAdminPassword = $localVMAdminCreds.GetNetworkCredential().Password
 
-				$localDomainAdminCreds = $using:DomainAdminCreds
-				$DomainAdminUsername = $localDomainAdminCreds.GetNetworkCredential().Username
-				$DomainAdminPassword = $localDomainAdminCreds.GetNetworkCredential().Password
-
-				$armParamContent = @"
-{
-    "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
-        "existingSubnetName": { "value": "$using:existingSubnetName" },
-        "domainUsername": { "value": "$DomainAdminUsername" },
-        "dnsLabelPrefix": { "value": "tbd-vmname" },
-        "vmAdminPassword": { "value": "$VMAdminPassword" },
-        "existingVNETName": { "value": "$using:existingVNETName" },
-        "domainPassword": { "value": "$DomainAdminPassword" },
-        "vmAdminUsername": { "value": "$VMAdminUsername" },
-        "domainToJoin": { "value": "$using:domainFQDN" },
-        "storageAccountName": { "value": "$using:storageAccountName" },
+				Write-Host "Creating SP and writing auth file."
         "CAMDeploymentBlobSource": { "value": "https://teradeploy.blob.core.windows.net/binaries" },
-        "_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller/new-agent-vm" }
-    }
-}
 
-"@
-				$ParamTargetDir = "$CatalinaHomeLocation\ARMParametertemplateFiles"
-				$ParamTargetFilePath = "$ParamTargetDir\$agentARMparam"
+# create SP and write to credential file
+# as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
 				$GaParamTargetFilePath = "$ParamTargetDir\$gaAgentARMparam"
 
-				if(-not (Test-Path $ParamTargetDir))
+				function Login-AzureRmAccountWithBetterReporting($Credential)
 				{
-					New-Item $ParamTargetDir -type directory
-				}
+					try
+					{
+						$userName = $Credential.userName
+						Login-AzureRmAccount -Credential $Credential @args -ErrorAction stop
+					}
+					catch
+					{
+						$es = "Error authenticating AzureAdminUsername $userName for Azure subscription access.`n"
+						$exceptionMessage = $_.Exception.Message
+						$exceptionMessageErrorCode = $exceptionMessage.split(':')[0]
 
-				#clear out whatever was stuffed in from the deployment WAR file
-				Remove-Item "$ParamTargetDir\*" -Recurse
+						switch($exceptionMessageErrorCode)
+						{
+							"AADSTS50076" {$es += "Please ensure your account does not require Multi-Factor Authentication`n"; break}
+							"Federated service at https" {$es += "Unable to perform federated login - Unknown username or password?`n"; break}
+							"unknown_user_type" {$es += "Please ensure your username is in UPN format. e.g., user@example.com`n"; break}
+							"AADSTS50126" {$es += "User not found in directory`n"; break}
+							"AADSTS70002" {$es += "Please check your password`n"; break}
+						}
 
-				if(-not (Test-Path $ParamTargetFilePath))
-				{
-					New-Item $ParamTargetFilePath -type file
-				}
-
-				Set-Content $ParamTargetFilePath $armParamContent -Force
 
 				if(-not (Test-Path $GaParamTargetFilePath))
 				{
@@ -559,12 +559,12 @@ resourceGroupName=$RGNameLocal
 
 				Set-Content $GaParamTargetFilePath $armParamContent -Force
 
-				Write-Host "Creating SP and writing auth file."
+						throw "$es$exceptionMessage"
 
-# create SP and write to credential file
-# as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
+					}
+				}
 
-				Login-AzureRmAccount -Credential $localAzureCreds
+				Login-AzureRmAccountWithBetterReporting -Credential $localAzureCreds
 
 				#Application name
 				$appName = "CAM-$RGNameLocal"
@@ -586,7 +586,7 @@ resourceGroupName=$RGNameLocal
 				}
 
 				$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword
-				New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId
+				$sp  = New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId
 
 				#retry required since it can take a few seconds for the app registration to percolate through Azure.
 				#(Online recommendation was sleep 15 seconds - this is both faster and more conservative)
@@ -651,6 +651,107 @@ $authFilePath = "$targetDir\authfile.txt"
 				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
 
 				Set-ItemProperty -Path "$Reg" -Name AZURE_AUTH_LOCATION –Value $authFilePath
+
+
+
+				#Get local version of passed-in credentials
+				$localVMAdminCreds = $using:VMAdminCreds
+				$VMAdminUsername = $localVMAdminCreds.GetNetworkCredential().Username
+				$VMAdminPassword = $localVMAdminCreds.GetNetworkCredential().Password
+
+				$localDomainAdminCreds = $using:DomainAdminCreds
+				$DomainAdminUsername = $localDomainAdminCreds.GetNetworkCredential().Username
+				$DomainAdminPassword = $localDomainAdminCreds.GetNetworkCredential().Password
+
+
+
+
+				Write-Host "Creating Azure KeyVault"
+
+				#Keyvault names must be globally (or at least regionally) unique, so make a unique string
+				$generatedKVID = -join ((65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
+
+				$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGNameLocal
+				$kvName = "CAM-$generatedKVID"
+				New-AzureRmKeyVault -VaultName $kvName -ResourceGroupName $RGNameLocal -Location $rg.Location -EnabledForTemplateDeployment -EnabledForDeployment
+
+				Set-AzureRmKeyVaultAccessPolicy -VaultName $kvName -ServicePrincipalName $app.ApplicationId -PermissionsToSecrets get
+
+				$djSecretName = 'domainJoinPassword'
+				$djSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $djSecretName -SecretValue $localDomainAdminCreds.Password
+				$djSecretVersionedURL = $djSecret.Id
+				$djSecretURL = $djSecretVersionedURL.Substring(0, $djSecretVersionedURL.lastIndexOf('/'))
+
+
+				Write-Host "Creating Local Admin Password for new machines"
+
+				$localAdminPasswordStr =  "5!" + (-join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})) # "5!" is to ensure numbers and symbols
+
+				$localAdminPassword = ConvertTo-SecureString $localAdminPasswordStr -AsPlainText -Force
+
+				$laSecretName = 'localAdminPassword'
+				$laSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $laSecretName -SecretValue $localAdminPassword
+				$laSecretVersionedURL = $laSecret.Id
+				$laSecretURL = $laSecretVersionedURL.Substring(0, $laSecretVersionedURL.lastIndexOf('/'))
+
+
+
+				Write-Host "Creating default template parameters file"
+
+				#now make the default parameters file - same root name but different suffix
+				$agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
+
+				$armParamContent = @"
+{
+    "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "existingSubnetName": { "value": "$using:existingSubnetName" },
+        "domainUsername": { "value": "$DomainAdminUsername" },
+        "domainPassword": {
+			"reference": {
+			  "keyVault": {
+				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+			  },
+			  "secretName": "$djSecretName"
+			}		
+		},
+        "dnsLabelPrefix": { "value": "tbd-vmname" },
+        "existingVNETName": { "value": "$using:existingVNETName" },
+        "vmAdminUsername": { "value": "$VMAdminUsername" },
+        "vmAdminPassword": {
+			"reference": {
+			  "keyVault": {
+				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+			  },
+			  "secretName": "$laSecretName"
+			}		
+		},
+        "domainToJoin": { "value": "$using:domainFQDN" },
+        "storageAccountName": { "value": "$using:storageAccountName" },
+        "_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller/new-agent-vm" }
+    }
+}
+
+"@
+				$ParamTargetDir = "$CatalinaHomeLocation\ARMParametertemplateFiles"
+				$ParamTargetFilePath = "$ParamTargetDir\$agentARMparam"
+
+				if(-not (Test-Path $ParamTargetDir))
+				{
+					New-Item $ParamTargetDir -type directory
+				}
+
+				#clear out whatever was stuffed in from the deployment WAR file
+				Remove-Item "$ParamTargetDir\*" -Recurse
+
+				if(-not (Test-Path $ParamTargetFilePath))
+				{
+					New-Item $ParamTargetFilePath -type file
+				}
+
+				Set-Content $ParamTargetFilePath $armParamContent -Force
+
 
 		        Write-Host "Finished! Restarting Tomcat."
 
