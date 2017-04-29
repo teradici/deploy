@@ -364,7 +364,11 @@ Configuration InstallCAM
 
         Script Install_AUI
         {
-            DependsOn  = @("[xRemoteFile]Download_Admin_WAR", "[xRemoteFile]Download_Agent_ARM", "[Script]Install_Tomcat")
+            DependsOn  = @("[xRemoteFile]Download_Admin_WAR",
+						   "[xRemoteFile]Download_Agent_ARM",
+						   "[Script]Install_Tomcat",
+						   "[xRemoteFile]Download_Ga_Agent_ARM")
+
             GetScript  = { @{ Result = "Install_AUI" } }
 
             #TODO: Check for other agent types as well?
@@ -519,14 +523,12 @@ resourceGroupName=$RGNameLocal
 				copy "$LocalDLPath\$agentARM" $templateLoc
 				copy "$LocalDLPath\$gaAgentARM" $templateLoc
 
-				$gaAgentARMparam = ($gaAgentARM.split('.')[0]) + ".customparameters.json"
 
 
 				Write-Host "Creating SP and writing auth file."
 
 # create SP and write to credential file
 # as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
-				$GaParamTargetFilePath = "$ParamTargetDir\$gaAgentARMparam"
 
 				function Login-AzureRmAccountWithBetterReporting($Credential)
 				{
@@ -550,13 +552,6 @@ resourceGroupName=$RGNameLocal
 							"AADSTS70002" {$es += "Please check your password`n"; break}
 						}
 
-
-				if(-not (Test-Path $GaParamTargetFilePath))
-				{
-					New-Item $GaParamTargetFilePath -type file
-				}
-
-				Set-Content $GaParamTargetFilePath $armParamContent -Force
 
 						throw "$es$exceptionMessage"
 
@@ -697,8 +692,6 @@ $authFilePath = "$targetDir\authfile.txt"
 
 				Write-Host "Creating default template parameters file"
 
-				#now make the default parameters file - same root name but different suffix
-				$agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
 
 				$armParamContent = @"
 {
@@ -734,6 +727,12 @@ $authFilePath = "$targetDir\authfile.txt"
 }
 
 "@
+
+				#now make the default parameters file - same root name but different suffix
+				$agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
+				$gaAgentARMparam = ($gaAgentARM.split('.')[0]) + ".customparameters.json"
+				$GaParamTargetFilePath = "$ParamTargetDir\$gaAgentARMparam"
+
 				$ParamTargetDir = "$CatalinaHomeLocation\ARMParametertemplateFiles"
 				$ParamTargetFilePath = "$ParamTargetDir\$agentARMparam"
 
@@ -745,12 +744,22 @@ $authFilePath = "$targetDir\authfile.txt"
 				#clear out whatever was stuffed in from the deployment WAR file
 				Remove-Item "$ParamTargetDir\*" -Recurse
 
+				# Standard Agent Parameter file
 				if(-not (Test-Path $ParamTargetFilePath))
 				{
 					New-Item $ParamTargetFilePath -type file
 				}
 
 				Set-Content $ParamTargetFilePath $armParamContent -Force
+
+
+				# Graphics Agent Parameter file
+				if(-not (Test-Path $GaParamTargetFilePath))
+				{
+					New-Item $GaParamTargetFilePath -type file
+				}
+
+				Set-Content $GaParamTargetFilePath $armParamContent -Force
 
 
 		        Write-Host "Finished! Restarting Tomcat."
