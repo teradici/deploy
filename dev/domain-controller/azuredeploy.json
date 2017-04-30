@@ -503,6 +503,9 @@
                     "vmAdminPassword": {
                         "value": "[parameters('domainAdminPassword')]"
                     },
+                    "registrationCode": {
+                        "value": "[parameters('registrationCode')]"
+                    },
                     "domainControllerName": {
                         "value": "[variables('adVMName')]"
                     },

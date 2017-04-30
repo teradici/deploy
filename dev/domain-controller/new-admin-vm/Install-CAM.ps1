@@ -29,6 +29,9 @@ Configuration InstallCAM
         [Parameter(Mandatory)]
 		[String]$templateURI,
 
+        [Parameter(Mandatory)]
+		[System.Security.SecureString]$registrationCode,
+
         [string]
         $javaInstaller = "jdk-8u91-windows-x64.exe",
 
@@ -371,7 +374,6 @@ Configuration InstallCAM
 
             GetScript  = { @{ Result = "Install_AUI" } }
 
-            #TODO: Check for other agent types as well?
             TestScript = {
 				$localtomcatpath = "$env:systemdrive\tomcat"
 				$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
@@ -400,7 +402,6 @@ Configuration InstallCAM
 				copy "$LocalDLPath\$adminWAR" ($CatalinaHomeLocation + "\webapps")
 
 				#Make sure the properties file exists - as enough proof that the .war file has been processed
-
 
 
 		        #----- Update/overwrite the the file with configuration information -----
@@ -604,7 +605,7 @@ resourceGroupName=$RGNameLocal
 						}
 						else
 						{
-						#re-throw whatever the original exception was
+							#re-throw whatever the original exception was
 							throw
 						}
 					}
@@ -671,6 +672,16 @@ $authFilePath = "$targetDir\authfile.txt"
 
 				Set-AzureRmKeyVaultAccessPolicy -VaultName $kvName -ServicePrincipalName $app.ApplicationId -PermissionsToSecrets get
 
+				Write-Host "Populating Azure KeyVault"
+				
+				$localRegistrationCode = $using:registrationCode
+
+				$rcSecretName = 'cloudAccessRegistrationCode'
+				$rcSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $rcSecretName -SecretValue $localRegistrationCode
+				$rcSecretVersionedURL = $rcSecret.Id
+				$rcSecretURL = $rcSecretVersionedURL.Substring(0, $rcSecretVersionedURL.lastIndexOf('/'))
+
+
 				$djSecretName = 'domainJoinPassword'
 				$djSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $djSecretName -SecretValue $localDomainAdminCreds.Password
 				$djSecretVersionedURL = $djSecret.Id
@@ -707,6 +718,14 @@ $authFilePath = "$targetDir\authfile.txt"
 				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
 			  },
 			  "secretName": "$djSecretName"
+			}		
+		},
+        "registrationCode": {
+			"reference": {
+			  "keyVault": {
+				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+			  },
+			  "secretName": "$rcSecretName"
 			}		
 		},
         "dnsLabelPrefix": { "value": "tbd-vmname" },
