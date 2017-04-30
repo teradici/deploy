@@ -30,7 +30,7 @@ Configuration InstallCAM
 		[String]$templateURI,
 
         [Parameter(Mandatory)]
-		[System.Security.SecureString]$registrationCode,
+		[System.Management.Automation.PSCredential]$registrationCodeAsCred,
 
         [string]
         $javaInstaller = "jdk-8u91-windows-x64.exe",
@@ -674,10 +674,11 @@ $authFilePath = "$targetDir\authfile.txt"
 
 				Write-Host "Populating Azure KeyVault"
 				
-				$localRegistrationCode = $using:registrationCode
+				$rcCred = $using:registrationCodeAsCred
+				$registrationCode = $rcCred.Password
 
 				$rcSecretName = 'cloudAccessRegistrationCode'
-				$rcSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $rcSecretName -SecretValue $localRegistrationCode
+				$rcSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $rcSecretName -SecretValue $registrationCode
 				$rcSecretVersionedURL = $rcSecret.Id
 				$rcSecretURL = $rcSecretVersionedURL.Substring(0, $rcSecretVersionedURL.lastIndexOf('/'))
 

@@ -157,7 +157,10 @@
                             "UserName": "[parameters('AzureAdminUsername')]",
                             "Password": "PrivateSettingsRef:AzureAdminPassword"
                         },
-                        "registrationCode": "PrivateSettingsRef:registrationCode",
+                        "registrationCodeAsCred": {
+                            "UserName": "dummy",
+                            "Password": "PrivateSettingsRef:registrationCode"
+                        },
                         "DCVMName": "[parameters('domainControllerName')]",
                         "RGName": "[resourceGroup().name]",
                         "existingVNETName": "[parameters('existingVNETName')]",
