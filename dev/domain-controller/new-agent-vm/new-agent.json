@@ -91,7 +91,8 @@
         "apiVersion": "2015-06-15",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
-        "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]"
+       	"gitLocation": "[concat(parameters('_artifactsLocation'),'/new-agent-vm')]", 
+	"subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]"
     },
     "resources": [
         {

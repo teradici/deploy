@@ -1,0 +1,23 @@
+{
+"api.version": "v1",
+"sources": [
+    {
+        "name":  "CAMPOC_Teradici_Agent_Azure_Logs",
+        "category":  "CAMPOC/Teradici/Agent/Logs",
+        "automaticDateParsing":  true,
+        "multilineProcessingEnabled":  false,
+        "useAutolineMatching":  false,
+        "forceTimeZone":  false,
+        "timeZone":  "Etc/UTC",
+        "filters":  [
+                    ],
+        "cutoffTimestamp":  1445151600000,
+        "encoding":  "UTF-8",
+        "pathExpression":  "C:\\ProgramData\\Teradici\\PCoIPAgent\\Logs\\*.log",
+        "blacklist":  [
+                      ],
+        "sourceType":  "LocalFile",
+        "alive":  false
+    }
+]
+}
