@@ -22,15 +22,17 @@ Configuration InstallPCoIPAgent
                 Write-Verbose "Install_SumoCollector"
 
                 $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/SumoCollector_windows-x64_19_182-25.exe"
-		$sumo_config = "$using:gitLocation/sumo.conf"	
-		$sumo_collector_json= "$using:gitLocation/sumo-agent-vm.conf"	
+		$sumo_config = "https://raw.githubusercontent.com/teradici/deploy/sumo/dev/domain-controller/new-agent-vm/sumo.conf"
+		$sumo_collector_json = "https://raw.githubusercontent.com/teradici/deploy/sumo/dev/domain-controller/new-agent-vm/sumo-agent-vm.conf"
+		#$sumo_config = "$using:gitLocation/sumo.conf"	
+		#$sumo_collector_json= "$using:gitLocation/sumo-agent-vm.conf"	
 		#$sumo_config = "/new-admin-vm/sumo.conf"
-                # $sumo_collector_json = "/new-admin-vm/sumo-admin-vm.json"
+                #$sumo_collector_json = "/new-admin-vm/sumo-admin-vm.json"
                 $dest = "C:\sumo"
 		Invoke-WebRequest $sumo_config -OutFile "$dest\sumo.conf"
-		Invoke-WebRequest $sumo_collector_json -OutFile "$dest\sumo-admin-vm.json"
-	        	# Insert unique ID
-        		# (Get-Content "$dest\sumo.conf").Replace("collectorID", $using:sumoCollectorID) | Set-Content "$dest\sumo.conf"
+		Invoke-WebRequest $sumo_collector_json -OutFile "$dest\sumo-agent-vm.json"
+	        #Insert unique ID
+        	#(Get-Content "$dest\sumo.conf").Replace("collectorID", $using:sumoCollectorID) | Set-Content "$dest\sumo.conf"
                 
                 $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
 		Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
