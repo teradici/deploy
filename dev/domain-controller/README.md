@@ -34,6 +34,7 @@ Click the button below to deploy
 
 * This solution will only deploy machines in one region. If you wish to use NV series virtual machines for GPU accelerated graphics, then you must deploy the complete solution into one of the supported regions for NV series instance types. Currently this is limited to the following locations: EAST US, NORTH CENTRAL US, SOUTH CENTRAL US, SOUTHEAST ASIA, or WEST EUROPE.
 * Do not use passwords with the '%' symbol. Those are currently not supported.
+* The current certificate that is deployed is expired so PCoIP clients must be configured for security_mode=0 (verification is not required) in order to connect. See here for instructions: http://www.teradici.com/web-help/TWAS_UG22_HTML5/08_AppA_Security.htm
 * Occasionally the Azure Application Gateway can fail with an 'internal error.' If this happens, you can quickly redeploy the application gateway to recover.
   1. In the Azure Portal, in Resource Groups, select the resource group.
   1. Go to Deployments -> CreateAppGateway
