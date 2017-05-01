@@ -138,13 +138,13 @@ Configuration InstallCAM
                 $sumo_config = "$using:gitLocation/sumo.conf"
                 $sumo_collector_json = "$using:gitLocation/sumo-admin-vm.json"
                 $dest = "C:\sumo"
-                Invoke-WebRequest $sumo_config -OutFile "$dest\sumo.conf"
-                Invoke-WebRequest $sumo_collecor_json -OutFile "$dest\sumo-admin-vm.json"
+                Invoke-WebRequest -Uri $sumo_config -PassThru -OutFile "$dest\sumo.conf"
+                Invoke-WebRequest -Uri $sumo_collecor_json -PassThru -OutFile "$dest\sumo-admin-vm.json"
 		        # Insert unique ID
 		        (Get-Content "$dest\sumo.conf").Replace("collectorID", $using:sumoCollectorID) | Set-Content "$dest\sumo.conf"
                 
                 $installerFileName = "SumoCollector-windows-x64_19_182-25.exe"
-		        Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
+		        Invoke-WebRequest -Uri $sumo_package -PassThru -OutFile "$dest\$installerFileName"
                 #install the collector
                 & "$dest\$installerFileName"
             }
