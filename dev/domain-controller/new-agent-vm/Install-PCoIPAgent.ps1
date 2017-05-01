@@ -28,7 +28,7 @@ Configuration InstallPCoIPAgent
                 # $sumo_collector_json = "/new-admin-vm/sumo-admin-vm.json"
                 $dest = "C:\sumo"
 		Invoke-WebRequest $sumo_config -OutFile "$dest\sumo.conf"
-		Invoke-WebRequest $sumo_collecor_json -OutFile "$dest\sumo-admin-vm.json"
+		Invoke-WebRequest $sumo_collector_json -OutFile "$dest\sumo-admin-vm.json"
 	        	# Insert unique ID
         		# (Get-Content "$dest\sumo.conf").Replace("collectorID", $using:sumoCollectorID) | Set-Content "$dest\sumo.conf"
                 
