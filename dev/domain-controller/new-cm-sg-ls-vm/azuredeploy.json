@@ -97,9 +97,8 @@
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
         "scriptFileName":  "cm_setup_0.1.sh",
         "scriptFileURI":  "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'), parameters('_artifactsLocationSasToken'))]",
-        "resourceGroupID": "[resourceGroup().id]",
-        "sumocollectorID": "[subscription().subscriptionID]",
-        "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',parameters('activationCode'),' ',variables('resourceGroupID'))]"
+        "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-CM-',resourceGroup().id)]",
+        "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',parameters('activationCode'),' ',variables('sumoCollectorID'))]"
     },
     "resources": [
         {
