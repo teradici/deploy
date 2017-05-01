@@ -1,13 +1,12 @@
 # Create a complete deployment of the Cloud Access Manager solution including a Domain Controller
 
-This template will deploy 5 virtual machines (along with a new VNet, Storage Account, Load Balancer, and Gateway).
+This template will deploy 5 virtual machines (along with a new VNet, Storage Account, Load Balancer, Azure KeyVault, and Gateway).
 
 To administer the deployment through the Cloud Access Manager GUI, https: to the public IP of the applicationGateway1 Application Gateway.
 
 To connect to the pre-created Agent virtual machine, point the PCoIP client to the public IP of the applicationGateway1 Application gateway and login with the administrator credentials.
 
-To manage the Active Directory Domain, RDP to the domain controller by initiating an RDP session to the adLoadBalancer Load Balancer public IP.
-
+To manage the Active Directory Domain, RDP to the public IP address of vm-dc (the domain controller).
 
 Click the button below to deploy
 
@@ -26,14 +25,16 @@ Click the button below to deploy
 * AzureAdminUsername: The UPN name of the Azure account with **owner** access to the subscription. This account cannot require MFA, or be a Service Principal. Example: uname@example.com.
   * This account is only required to deploy the system. During deployment, it will create an application in the Azure Active Directory account associated with the current Azure subscription. The application name is 'CAM-\<resourceGroupName\>'. It will also create a Service Principal account as part of this application which has contributor access to the resource group being deployed to. After deployment, only the Service Principal account is used for interaction with Azure API's.
 * AzureAdminPassword: The password of the Azure account with **owner** access to the subscription.
-* activationCode: The license activation code for the PCoIP CAS licenses. This key must be a CAS standard agent licence for the License Server. If the license expires or needs to be changed, this can be accomblished by SSH'ing to the connection manager/security gateway/licence manager machine.
+* registrationCode: The license registration code for the PCoIP CAS licenses.
 * adminVMBlobSource: The location of the blobs for admin GUI machine installation. Use the default unless you are specifically deploying with modified binaries.
 * \_artifactsLocation: The location of resources, such as templates and DSC modules, that the template depends on. Use the default unless you are specifically deploying with modified templates or binaries.
 * \_artifactsLocationSasToken: - an auto-generated token to access _artifactsLocation. If _artifactsLocation does not need an access token (which is the default) then this can be blank.
 
 ## Known issues with deploying the solution
 
-* Occasionally the Azure Application gateway can fail with an 'internal error.' If this happens, you can quickly redeploy the application gateway to recover.
+* This solution will only deploy machines in one region. If you wish to use NV series virtual machines for GPU accelerated graphics, then you must deploy the complete solution into one of the supported regions for NV series instance types. Currently this is limited to the following locations: EAST US, NORTH CENTRAL US, SOUTH CENTRAL US, SOUTHEAST ASIA, or WEST EUROPE.
+* Do not use passwords with the '%' symbol. Those are currently not supported.
+* Occasionally the Azure Application Gateway can fail with an 'internal error.' If this happens, you can quickly redeploy the application gateway to recover.
   1. In the Azure Portal, in Resource Groups, select the resource group.
   1. Go to Deployments -> CreateAppGateway
   1. Click on the 'Redeploy' button. This will bring you to the 'custom deployment' screen.
@@ -42,7 +43,7 @@ Click the button below to deploy
   1. Accept the terms and contitions.
   1. Click Purchase.
   1. The Application gateway should deploy successfully.
-* Occasionally other failures can happen such as 'timeout' or 'can't start WinRM service.' Start the deployment from scratch in a new resource group.
+* Occasionally other failures can happen such as 'timeout' or 'can't start WinRM service.' Start a new deployment from scratch in a new resource group and it should succeed.
 * A common deployment failure is when the quota is reached for the subscription. In this case you have to either remove or deallocate virtual machines from the subscription, or request a core quota increase from Microsoft to alleviate the problem.
 
         
