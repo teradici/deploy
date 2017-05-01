@@ -44,7 +44,7 @@
         },
         "CAMDeploymentBlobSource": {
             "type": "string",
-            "defaultValue": "https://teradeploy.blob.core.windows.net/binaries",
+            "defaultValue": "https://teradeploy.blob.core.windows.net/sumobin",
             "metadata": {
                 "description": "The location of the blobs for admin GUI machine installation"
             }
