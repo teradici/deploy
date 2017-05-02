@@ -22,8 +22,9 @@ Configuration InstallPCoIPAgent
                 Write-Verbose "Install_SumoCollector"
 
                 $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/SumoCollector_windows-x64_19_182-25.exe"
-		$sumo_config = "$using:gitLocation/sumo.conf"	
-		$sumo_collector_json= "$using:gitLocation/sumo-agent-vm.conf"	
+		$gitLoc = $using:gitLocation
+		$sumo_config = "$gitLoc/sumo.conf"	
+		$sumo_collector_json= "$gitLoc/sumo-agent-vm.conf"	
 		#$sumo_config = "/new-admin-vm/sumo.conf"
                 #$sumo_collector_json = "/new-admin-vm/sumo-admin-vm.json"
                 $dest = "C:\sumo"
