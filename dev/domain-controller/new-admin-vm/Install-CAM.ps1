@@ -751,10 +751,10 @@ $authFilePath = "$targetDir\authfile.txt"
 				#now make the default parameters file - same root name but different suffix
 				$agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
 				$gaAgentARMparam = ($gaAgentARM.split('.')[0]) + ".customparameters.json"
-				$GaParamTargetFilePath = "$ParamTargetDir\$gaAgentARMparam"
 
 				$ParamTargetDir = "$CatalinaHomeLocation\ARMParametertemplateFiles"
 				$ParamTargetFilePath = "$ParamTargetDir\$agentARMparam"
+				$GaParamTargetFilePath = "$ParamTargetDir\$gaAgentARMparam"
 
 				if(-not (Test-Path $ParamTargetDir))
 				{
