@@ -1,10 +1,13 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
+  "variables": {
+    "kvName": "[concat(uniqueString(resourceGroup().id, deployment().name), '-KV')]"
+  },
   "resources": [
     {
       "type": "Microsoft.KeyVault/vaults",
-      "name": "certKV",
+      "name": "[variables('kvName')]",
       "apiVersion": "2015-06-01",
       "location": "[resourceGroup().location]",
       "tags": {
@@ -38,7 +41,7 @@
   "outputs": {
     "keyVaultId": {
       "type": "string",
-      "value": "[resourceId('Microsoft.KeyVault/vaults', 'certKV')]"
+      "value": "[resourceId('Microsoft.KeyVault/vaults', variables('kvName'))]"
     }
   }
 }
