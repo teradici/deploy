@@ -1,0 +1,44 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "resources": [
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "name": "certKV",
+      "apiVersion": "2015-06-01",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "CamPocKeyVault"
+      },
+      "properties": {
+        "tenantId": "[subscription().tenantId]",
+        "sku": {
+          "name": "Standard",
+          "family": "A"
+        },
+        "accessPolicies": [
+          {
+            "tenantId": "[subscription().tenantId]",
+            "objectId": "a52d2e92-2e1c-4886-9317-8dc7993bb91f",
+            "permissions": {
+              "secrets": [
+                "All"
+              ],
+              "certificates": [
+                "All"
+              ]
+            }
+          }
+        ],
+        "enabledForDeployment": true,
+        "enabledForTemplateDeployment": true
+      }
+    }
+  ],
+  "outputs": {
+    "keyVaultId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.KeyVault/vaults', 'certKV')]"
+    }
+  }
+}

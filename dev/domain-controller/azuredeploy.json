@@ -91,6 +91,18 @@
   },
   "resources": [
     {
+      "type": "Microsoft.Resources/deployments",
+      "name": "deployKV",
+      "apiVersion": "2016-02-01",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('_artifactsLocation'), '/cert_keyvault.json', parameters('_artifactsLocationSasToken'))]",
+          "contentVersion": "1.0.0.0"
+        }
+      }
+    },
+    {
       "type": "Microsoft.Storage/storageAccounts",
       "name": "[variables('storageAccountName')]",
       "apiVersion": "2016-01-01",
@@ -100,38 +112,6 @@
       },
       "kind": "Storage",
       "properties": {}
-    },
-    {
-      "type": "Microsoft.KeyVault/vaults",
-      "name": "[variables('keyVaultName')]",
-      "apiVersion": "2015-06-01",
-      "location": "[resourceGroup().location]",
-      "tags": {
-        "displayName": "CamPocKeyVault"
-      },
-      "properties": {
-        "tenantId": "[subscription().tenantId]",
-        "sku": {
-          "name": "Standard",
-          "family": "A"
-        },
-        "accessPolicies": [
-          {
-            "tenantId": "[subscription().tenantId]",
-            "objectId": "a52d2e92-2e1c-4886-9317-8dc7993bb91f",
-            "permissions": {
-              "secrets": [
-                "All"
-              ],
-              "certificates": [
-                "All"
-              ]
-            }
-          }
-        ],
-        "enabledForDeployment": true,
-        "enabledForTemplateDeployment": true
-      }
     },
     {
       "type": "Microsoft.Network/publicIPAddresses",
@@ -420,7 +400,8 @@
       "location": "[resourceGroup().location]",
       "apiVersion": "2015-06-15",
       "dependsOn": [
-        "Microsoft.Resources/deployments/CreateAgentMachine"
+        "Microsoft.Resources/deployments/CreateAgentMachine",
+        "deployKV"
       ],
       "properties": {
         "publisher": "Microsoft.Compute",
@@ -495,8 +476,7 @@
       "name": "ConfigureAdminMachine",
       "apiVersion": "2016-02-01",
       "dependsOn": [
-        "Microsoft.Resources/deployments/CreateAdminMachine",
-        "[resourceId('Microsoft.KeyVault/vaults',variables('keyVaultName'))]"
+        "Microsoft.Resources/deployments/CreateAdminMachine"
       ],
       "properties": {
         "mode": "Incremental",
@@ -722,7 +702,7 @@
       "apiVersion": "2016-02-01",
       "dependsOn": [
         "[resourceId('Microsoft.Compute/virtualMachines', variables('adVMName'))]",
-        "Microsoft.Resources/deployments/ConfigureAdminMachine"
+        "[resourceId('Microsoft.Compute/virtualMachines/extensions', variables('adVMName') ,'FinalizeDeployment')]"
       ],
       "properties": {
         "mode": "Incremental",
@@ -753,7 +733,7 @@
           "certData": {
             "reference": {
               "keyVault": {
-                "id": "[concat(resourceGroup().id, '/providers/Microsoft.KeyVault/vaults/', variables('keyVaultName'))]"
+                "id": "[reference('deployKV').outputs.keyVaultId.value]"
               },
               "secretName": "selfSignedCert"
             }
