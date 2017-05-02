@@ -5,6 +5,8 @@
   [string]$groupToJoin
 )
 
+Install-Module AzureRM
+
 # Finalize the deployment of the system.
 # When all the machines are deployed, then this script will do any finalization functions.
 # Currently, that finalization is to just add the deployed administrator desktop/application server machine to the correct domain group.
@@ -20,3 +22,8 @@ Invoke-Command -Session $psSession -ScriptBlock {
     New-ADGroup -name $using:groupToJoin -GroupScope Global
 	Add-ADGroupMember -Identity $using:groupToJoin -Members $machineToJoin
 }
+
+$vaultName='certKV'
+$certificateName='selfSignedCert'
+$policy = New-AzureKeyVaultCertificatePolicy  -SubjectName "CN=local.teradici.com"   -IssuerName Self   -ValidityInMonths 12
+Add-AzureKeyVaultCertificate -VaultName $vaultName -Name $certificateName -CertificatePolicy $policy
