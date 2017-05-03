@@ -36,8 +36,11 @@ Configuration InstallPCoIPAgent
                 
                 $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
 		Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
-                #install the collector
-                & "$dest\$installerFileName" /S
+                
+		#install the collector
+		$command = "$dest\$installerFileName -console -q"
+		$Invoke-Expression $command
+		#& "$dest\$installerFileName" /S
             }
         }
 
