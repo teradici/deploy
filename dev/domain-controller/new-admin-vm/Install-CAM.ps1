@@ -130,8 +130,8 @@ Configuration InstallCAM
             TestScript = { return $false }
             SetScript  = {
                 Write-Verbose "Install_SumoCollector"
-
-                $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/SumoCollector-windows-x64_19_182-25.exe"
+                #$sumo_package = "$CAMDeploymentBlobSource/SumoCollector_windows-x64_19_182-25.exe"
+                $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/SumoCollector_windows-x64_19_182-25.exe"
                 $sumo_config = "$gitLocation/sumo.conf"
                 $sumo_collector_json = "$gitLocation/sumo-admin-vm.json"
                 $dest = "C:\sumo"
@@ -140,10 +140,11 @@ Configuration InstallCAM
 		        # Insert unique ID
 		        (Get-Content "$dest\sumo.conf").Replace("collectorID", $sumoCollectorID) | Set-Content "$dest\sumo.conf"
                 
-                $installerFileName = "SumoCollector-windows-x64_19_182-25.exe"
+                $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
 		        Invoke-WebRequest $sumo_package -PassThru -OutFile "$dest\$installerFileName"
+                $command = "$dest\$installerFileName -console -q"
                 #install the collector
-                & "$dest\$installerFileName"
+                $Invoke-Expression $command
             }
         }
         #
