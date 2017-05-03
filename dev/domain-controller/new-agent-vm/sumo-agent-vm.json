@@ -13,7 +13,7 @@
                     ],
         "cutoffTimestamp":  1445151600000,
         "encoding":  "UTF-8",
-        "pathExpression":  "C:\\ProgramData\\Teradici\\PCoIPAgent\\Logs\\*.log",
+        "pathExpression":  "C:\\ProgramData\\Teradici\\PCoIPAgent\\logs\\*.log",
         "blacklist":  [
                       ],
         "sourceType":  "LocalFile",
