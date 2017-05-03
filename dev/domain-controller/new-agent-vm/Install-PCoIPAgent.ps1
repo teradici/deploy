@@ -29,8 +29,8 @@ Configuration InstallPCoIPAgent
                 $sumo_config = "https://raw.githubusercontent.com/teradici/deploy/sumo/dev/domain-controller/new-agent-vm/sumo.conf"
                 $sumo_collector_json = "https://raw.githubusercontent.com/teradici/deploy/sumo/dev/domain-controller/new-agent-vm/sumo-agent-vm.json"
 		$dest = "C:\sumo"
-		Invoke-WebRequest -Uri $sumo_config -PassThru -OutFile "$dest\sumo.conf"
-		Invoke-WebRequest -Uri $sumo_collector_json -PassThru -OutFile "$dest\sumo-agent-vm.json"
+		Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile "$dest\sumo.conf"
+		Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile "$dest\sumo-agent-vm.json"
 	        #Insert unique ID
         	#(Get-Content "$dest\sumo.conf").Replace("collectorID", $using:sumoCollectorID) | Set-Content "$dest\sumo.conf"
                 
