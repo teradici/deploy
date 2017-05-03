@@ -128,7 +128,7 @@ Configuration InstallBR
 		        Invoke-WebRequest $sumo_package -PassThru -OutFile "$dest\$installerFileName"
                 $command = "$dest\$installerFileName -console -q"
                 #install the collector
-                $Invoke-Expression $command
+                Invoke-Expression $command
             }
         }
 
