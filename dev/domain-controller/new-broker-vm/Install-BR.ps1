@@ -414,8 +414,8 @@ brokerLocale=en_US
 
 					$DCSession = New-PSSession $using:dcvmfqdn -Credential $using:Admincreds
 
-					$foundCert =
-						Invoke-Command -Session $DCSession -ArgumentList $certSubject, $certStoreLocationOnDC, $issuerCertStoreLocationOnDC`
+					$foundCert = `
+						Invoke-Command -Session $DCSession -ArgumentList $certSubject, $certStoreLocationOnDC, $issuerCertStoreLocationOnDC `
 						  -ScriptBlock {
 								$cs = $args[0]
 								$cloc = $args[1]
