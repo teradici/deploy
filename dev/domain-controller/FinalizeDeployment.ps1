@@ -2,7 +2,8 @@
   [string]$domainUserUPN,
   [string]$domainPassword,
   [string]$machineToJoin,
-  [string]$groupToJoin
+  [string]$groupToJoin,
+  [string]$keyVaultName
 )
 
 Install-Module AzureRM
@@ -23,7 +24,6 @@ Invoke-Command -Session $psSession -ScriptBlock {
 	Add-ADGroupMember -Identity $using:groupToJoin -Members $machineToJoin
 }
 
-$vaultName='certKV'
 $certificateName='selfSignedCert'
 $policy = New-AzureKeyVaultCertificatePolicy  -SubjectName "CN=local.teradici.com"   -IssuerName Self   -ValidityInMonths 12
-Add-AzureKeyVaultCertificate -VaultName $vaultName -Name $certificateName -CertificatePolicy $policy
+Add-AzureKeyVaultCertificate -VaultName $keyVaultName -Name $certificateName -CertificatePolicy $policy
