@@ -50,9 +50,6 @@ Configuration InstallCAM
         [Parameter(Mandatory)]
         [String]$storageAccountName,
 
-	#[Parameter(Mandatory)]
-	#[String]$sumoCollectorID,
-        
 	[Parameter(Mandatory)]
         [System.Management.Automation.PSCredential]$VMAdminCreds,
 
@@ -138,13 +135,13 @@ Configuration InstallCAM
                 $sumo_config = "$gitLocation/sumo.conf"
                 $sumo_collector_json = "$gitLocation/sumo-admin-vm.json"
                 $dest = "C:\sumo"
-                Invoke-WebRequest -Uri $sumo_config -PassThru -OutFile "$dest\sumo.conf"
-                Invoke-WebRequest -Uri $sumo_collecor_json -PassThru -OutFile "$dest\sumo-admin-vm.json"
+                Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile "$dest\sumo.conf"
+                Invoke-WebRequest -UseBasicParsing -Uri $sumo_collecor_json -PassThru -OutFile "$dest\sumo-admin-vm.json"
 		        # Insert unique ID
 		        (Get-Content "$dest\sumo.conf").Replace("collectorID", $sumoCollectorID) | Set-Content "$dest\sumo.conf"
                 
                 $installerFileName = "SumoCollector-windows-x64_19_182-25.exe"
-		        Invoke-WebRequest -Uri $sumo_package -PassThru -OutFile "$dest\$installerFileName"
+		        Invoke-WebRequest $sumo_package -PassThru -OutFile "$dest\$installerFileName"
                 #install the collector
                 & "$dest\$installerFileName"
             }
