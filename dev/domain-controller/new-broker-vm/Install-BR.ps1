@@ -111,19 +111,21 @@ Configuration InstallBR
             DependsOn  = "[File]Sumo_Directory"
             GetScript  = { @{ Result = "Install_SumoCollector" } }
 
+            TestScript = { return $false }
+
             SetScript  = {
                 Write-Verbose "Install_SumoCollector"
 
-                $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/SumoCollector-windows-x64_19_182-25.exe"
-                $sumo_config = "/new-broker-vm/sumo.conf"
-                $sumo_collector_json = "/new-broker-vm/sumo-admin-vm.json"
+                $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/SumoCollector_windows-x64_19_182-25.exe"
+                $sumo_config = "https://raw.githubusercontent.com/teradici/deploy/sumo/dev/domain-controller/new-broker-vm/sumo.conf"
+                $sumo_collector_json = "https://raw.githubusercontent.com/teradici/deploy/sumo/dev/domain-controller/new-broker-vm/sumo-broker-vm.json"
                 $dest = "C:\sumo"
                 Invoke-WebRequest $sumo_config -OutFile "$dest\sumo.conf"
-                Invoke-WebRequest $sumo_collecor_json -OutFile "$dest\sumo-admin-vm.json"
+                Invoke-WebRequest $sumo_collecor_json -OutFile "$dest\sumo-broker-vm.json"
 		        # Insert unique ID
                 (Get-Content "$dest\sumo.conf").Replace("collectorID", $sumoCollectorID) | Set-Content "$dest\sumo.conf"
                 
-                $installerFileName = "SumoCollector-windows-x64_19_182-25.exe"
+                $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
 		        Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
                 #install the collector
                 & "$dest\$installerFileName" /S
