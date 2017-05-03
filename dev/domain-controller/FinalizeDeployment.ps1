@@ -8,7 +8,7 @@
 
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 
-Install-Module AzureRM
+Install-Module AzureRM -Force
 
 # Finalize the deployment of the system.
 # When all the machines are deployed, then this script will do any finalization functions.
