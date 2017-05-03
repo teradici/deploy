@@ -39,7 +39,7 @@ Configuration InstallPCoIPAgent
                 
 		#install the collector
 		$command = "$dest\$installerFileName -console -q"
-		$Invoke-Expression $command
+		Invoke-Expression $command
 		#& "$dest\$installerFileName" /S
             }
         }
