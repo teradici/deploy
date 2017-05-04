@@ -35,7 +35,8 @@ $cert = New-SelfSignedCertificate -certstorelocation $certLoc -dnsname local.ter
 
 $certPath = $certLoc + '\' + $cert.Thumbprint
 $certPfx = 'C:\WindowsAzure\mySelfSignedCert.pfx'
-$certPwd = ConvertTo-SecureString -String 'passw0rd!' -AsPlainText -Force
+$randomPswd = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
+$certPwd = ConvertTo-SecureString -String $randomPswd -AsPlainText -Force
 
 #generate pfx file
 Export-PfxCertificate -Cert $certPath -FilePath $certPfx -Password $certPwd
