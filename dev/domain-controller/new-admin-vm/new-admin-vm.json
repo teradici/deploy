@@ -116,8 +116,6 @@
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
         "publicIPName": "[concat(parameters('dnsLabelPrefix'),'Pip')]",
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
-        "gitLocation": "[concat(parameters('_artifactsLocation'),'/new-admin-vm')]",
-        "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-AdminUI-',subscription().subscriptionId)]",
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]"
     },
     "resources": [
@@ -156,7 +154,9 @@
                         "RGName": "[resourceGroup().name]",
                         "existingVNETName": "[parameters('existingVNETName')]",
                         "existingSubnetName": "[parameters('existingSubnetName')]",
-                        "storageAccountName": "[parameters('storageAccountName')]"
+                        "storageAccountName": "[parameters('storageAccountName')]",
+                        "gitLocation": "[concat(parameters('_artifactsLocation'),'/new-admin-vm')]",
+                        "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-AdminUI-',subscription().subscriptionId)]"
                     }
                 },
                 "protectedSettings": {

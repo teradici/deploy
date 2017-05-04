@@ -217,7 +217,11 @@
                     "privacy": {
                         "DataCollection": "Disable"
                     },
-                    "configurationFunction": "Install-PCoIPAgent.ps1\\InstallPCoIPAgent"
+                    "configurationFunction": "Install-PCoIPAgent.ps1\\InstallPCoIPAgent",
+                    "Properties": {
+                        "gitLocation": "[concat(parameters('_artifactsLocation'),'/new-agent-vm')]",
+                        "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId)]"
+                    }
                 }
             }
         }
