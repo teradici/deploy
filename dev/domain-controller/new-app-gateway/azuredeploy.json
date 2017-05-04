@@ -174,8 +174,9 @@
                 "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendPort')]"
               },
               "Protocol": "Https",
-              "SslCert": "[parameters('certData')]"
-            }
+              "SslCertificate": {
+                "Id": "[concat(variables('applicationGatewayID'), '/sslCertificates/appGatewaySslCert')]"
+              }            }
           }
         ],
         "urlPathMaps": [
