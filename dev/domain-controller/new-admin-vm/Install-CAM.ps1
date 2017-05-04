@@ -139,7 +139,7 @@ Configuration InstallCAM
                 #$sumo_package = "$CAMDeploymentBlobSource/SumoCollector_windows-x64_19_182-25.exe"
                 $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/SumoCollector_windows-x64_19_182-25.exe"
                 $sumo_config = "$using:gitLocation/sumo.conf"	
-                $sumo_collector_json = "$using:gitLocation/sumo-admin-vm.conf"	
+                $sumo_collector_json = "$using:gitLocation/sumo-admin-vm.json"	
                 #$sumo_config = "https://raw.githubusercontent.com/teradici/deploy/sumo/dev/domain-controller/new-broker-vm/sumo.conf"
                 #$sumo_collector_json = "https://raw.githubusercontent.com/teradici/deploy/sumo/dev/domain-controller/new-broker-vm/sumo-broker-vm.json"
                 $dest = "C:\sumo"
@@ -147,7 +147,8 @@ Configuration InstallCAM
                 Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile "$dest\sumo-admin-vm.json"
                 #
                 #Insert unique ID
-                (Get-Content -Path "$dest\sumo.conf").Replace("collectorID", $using:sumoCollectorID) | Set-Content -Path "$dest\sumo.conf"
+                collectorID = "$using:sumoCollectorID"
+                (Get-Content -Path "$dest\sumo.conf").Replace("collectorID", $collectorID) | Set-Content -Path "$dest\sumo.conf"
                 
                 $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
 		        Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"

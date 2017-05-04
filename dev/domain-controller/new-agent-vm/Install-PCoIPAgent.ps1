@@ -31,7 +31,7 @@ Configuration InstallPCoIPAgent
 
                 $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/SumoCollector_windows-x64_19_182-25.exe"
                 $sumo_config = "$using:gitLocation/sumo.conf"	
-                $sumo_collector_json = "using:$gitLocation/sumo-agent-vm.conf"	
+                $sumo_collector_json = "using:$gitLocation/sumo-agent-vm.json"	
                 #$sumo_config = "https://raw.githubusercontent.com/teradici/deploy/sumo/dev/domain-controller/new-agent-vm/sumo.conf"
                 #$sumo_collector_json = "https://raw.githubusercontent.com/teradici/deploy/sumo/dev/domain-controller/new-agent-vm/sumo-agent-vm.json"
                 $dest = "C:\sumo"
@@ -39,7 +39,8 @@ Configuration InstallPCoIPAgent
                 Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile "$dest\sumo-agent-vm.json"
                 #
                 #Insert unique ID
-                (Get-Content -Path "$dest\sumo.conf").Replace("collectorID", $using:sumoCollectorID) | Set-Content -Path "$dest\sumo.conf"
+                collectorID = "$using:sumoCollectorID"
+                (Get-Content -Path "$dest\sumo.conf").Replace("collectorID", $collectorID) | Set-Content -Path "$dest\sumo.conf"
                 
                 $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
 		        Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
