@@ -414,7 +414,7 @@
           ]
         },
         "protectedSettings": {
-          "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File FinalizeDeployment.ps1 -domainUserUPN ',parameters('domainAdminUsername'),'@',parameters('domainName'),' -domainPassword ',parameters('domainAdminPassword'),' -machineToJoin ',variables('adminDesktopVMName'),' -groupToJoin ',variables('ADGroupToJoin'),' -keyVaultName ', reference('deployKV').outputs.keyVaultName.value)]"
+          "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File FinalizeDeployment.ps1 -domainUserUPN ',parameters('domainAdminUsername'),'@',parameters('domainName'),' -domainPassword ',parameters('domainAdminPassword'),' -machineToJoin ',variables('adminDesktopVMName'),' -groupToJoin ',variables('ADGroupToJoin'),' -azureUserName ', parameters('AzureAdminUsername'), '-azurePassword', parameters('AzureAdminPassword'), ' -keyVaultName ', reference('deployKV').outputs.keyVaultName.value)]"
         }
       }
     },
@@ -735,7 +735,15 @@
               "keyVault": {
                 "id": "[reference('deployKV').outputs.keyVaultId.value]"
               },
-              "secretName": "selfSignedCert"
+              "secretName": "certData"
+            }
+          },
+          "certPassword": {
+            "reference": {
+              "keyVault": {
+                "id": "[reference('deployKV').outputs.keyVaultId.value]"
+              },
+              "secretName": "certPassword"
             }
           }
         }

@@ -3,6 +3,8 @@
   [string]$domainPassword,
   [string]$machineToJoin,
   [string]$groupToJoin,
+  [string]$azureUserName, 
+  [string]$azurePassword, 
   [string]$keyVaultName
 )
 
@@ -26,6 +28,28 @@ Invoke-Command -Session $psSession -ScriptBlock {
 	Add-ADGroupMember -Identity $using:groupToJoin -Members $machineToJoin
 }
 
-$certificateName='selfSignedCert'
-$policy = New-AzureKeyVaultCertificatePolicy  -SubjectName "CN=local.teradici.com"   -IssuerName Self   -ValidityInMonths 12
-Add-AzureKeyVaultCertificate -VaultName $keyVaultName -Name $certificateName -CertificatePolicy $policy
+
+# create self signed certificate
+$certLoc = 'cert:Localmachine\My'
+$cert = New-SelfSignedCertificate -certstorelocation $certLoc -dnsname local.teradici.com
+
+$certPath = $certLoc + '\' + $cert.Thumbprint
+$certPfx = 'C:\WindowsAzure\mySelfSignedCert.pfx'
+$certPwd = ConvertTo-SecureString -String 'passw0rd!' -AsPlainText -Force
+
+#generate pfx file
+Export-PfxCertificate -Cert $certPath -FilePath $certPfx -Password $certPwd
+
+#read from pfx file and generate secure string
+$fileContentBytes = get-content $certPfx -Encoding Byte
+$fileContentEncoded = [System.Convert]::ToBase64String($fileContentBytes)
+$certData = ConvertTo-SecureString -String $fileContentEncoded -AsPlainText -Force
+
+# Login to azure
+$azurePwd = ConvertTo-SecureString $azurePassword -AsPlainText -Force
+$cred = New-Object -TypeName pscredential –ArgumentList $azureUserName, $azurePwd
+Login-AzureRmAccount -Credential $cred
+
+#put into keyvault
+Set-AzureKeyVaultSecret -VaultName $keyVaultName -Name 'certData' -SecretValue $certData
+Set-AzureKeyVaultSecret -VaultName $keyVaultName -Name 'certPassword' -SecretValue $certPwd
