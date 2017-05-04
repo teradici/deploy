@@ -92,7 +92,8 @@
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
        	"gitLocation": "[concat(parameters('_artifactsLocation'),'/new-agent-vm')]", 
-	"subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]"
+        "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId)]",
+    	"subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]"
     },
     "resources": [
         {
