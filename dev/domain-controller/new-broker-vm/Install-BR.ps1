@@ -125,7 +125,7 @@ Configuration InstallBR
                 Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile "$dest\sumo-broker-vm.json"
                 #
                 #Insert unique ID
-                (Get-Content -Path "$dest\sumo.conf").Replace("collectorID", $sumoCollectorID) | Set-Content -Path "$dest\sumo.conf"
+                (Get-Content -Path "$dest\sumo.conf").Replace("collectorID", $using:sumoCollectorID) | Set-Content -Path "$dest\sumo.conf"
                 
                 $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
 		        Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
