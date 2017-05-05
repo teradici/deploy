@@ -217,7 +217,7 @@
                     },
                     "configurationFunction": "Install-PCoIPAgent.ps1\\InstallPCoIPAgent",
                     "Properties": {
-                        "gitLocation": "[concat(parameters('_artifactsLocation')]",
+                        "gitLocation": "[parameters('_artifactsLocation')]",
                         "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId)]"
                     }
                 }
