@@ -155,7 +155,7 @@
                         "existingVNETName": "[parameters('existingVNETName')]",
                         "existingSubnetName": "[parameters('existingSubnetName')]",
                         "storageAccountName": "[parameters('storageAccountName')]",
-                        "gitLocation": "[concat(parameters('_artifactsLocation'),'/new-admin-vm')]",
+                        "gitLocation": "[concat(parameters('_artifactsLocation')]",
                         "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-AdminUI-',subscription().subscriptionId)]"
                     }
                 },

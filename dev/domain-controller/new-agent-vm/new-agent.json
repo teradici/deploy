@@ -91,8 +91,6 @@
         "apiVersion": "2015-06-15",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
-       	"gitLocation": "[concat(parameters('_artifactsLocation'),'/new-agent-vm')]", 
-        "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId)]",
     	"subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]"
     },
     "resources": [
@@ -219,7 +217,7 @@
                     },
                     "configurationFunction": "Install-PCoIPAgent.ps1\\InstallPCoIPAgent",
                     "Properties": {
-                        "gitLocation": "[concat(parameters('_artifactsLocation'),'/new-agent-vm')]",
+                        "gitLocation": "[concat(parameters('_artifactsLocation')]",
                         "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId)]"
                     }
                 }

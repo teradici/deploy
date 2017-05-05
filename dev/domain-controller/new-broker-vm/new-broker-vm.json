@@ -124,7 +124,7 @@
                             "Password": "PrivateSettingsRef:AdminPassword"
                         },
                         "DCVMName": "[parameters('domainControllerName')]",
-                        "gitLocation": "[concat(parameters('_artifactsLocation'),'/new-broker-vm')]",
+                        "gitLocation": "[concat(parameters('_artifactsLocation')]",
                         "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Broker-',subscription().subscriptionId)]"
                     }
                 },

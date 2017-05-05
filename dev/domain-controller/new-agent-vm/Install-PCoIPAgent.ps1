@@ -31,7 +31,7 @@ Configuration InstallPCoIPAgent
 
                 $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/SumoCollector_windows-x64_19_182-25.exe"
                 $sumo_config = "$using:gitLocation/sumo.conf"	
-                $sumo_collector_json = "using:$gitLocation/sumo-agent-vm.json"	
+                $sumo_collector_json = "$using:gitLocation/sumo-agent-vm.json"	
                 #$sumo_config = "https://raw.githubusercontent.com/teradici/deploy/sumo/dev/domain-controller/new-agent-vm/sumo.conf"
                 #$sumo_collector_json = "https://raw.githubusercontent.com/teradici/deploy/sumo/dev/domain-controller/new-agent-vm/sumo-agent-vm.json"
                 $dest = "C:\sumo"

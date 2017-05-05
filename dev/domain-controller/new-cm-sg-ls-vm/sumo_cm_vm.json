@@ -21,7 +21,7 @@
     },
     {
         "name":  "CAMPOC_Teradici_SG_Logs",
-        "category":  "CAMPOC/Teradici/CM/Logs",
+        "category":  "CAMPOC/Teradici/SG/Logs",
         "automaticDateParsing":  true,
         "multilineProcessingEnabled":  false,
         "useAutolineMatching":  false,
@@ -39,7 +39,7 @@
     },
     {
         "name":  "CAMPOC_Teradici_CM_Deployment_Logs",
-        "category":  "CAMPOC/Teradici/CM/Logs",
+        "category":  "CAMPOC/Teradici/Azure/Logs",
         "automaticDateParsing":  true,
         "multilineProcessingEnabled":  false,
         "useAutolineMatching":  false,
@@ -57,7 +57,7 @@
     },
     {
         "name":  "CAMPOC_Teradici_CM_Azure_Logs",
-        "category":  "CAMPOC/Teradici/CM/Logs",
+        "category":  "CAMPOC/Teradici/Azure/Logs",
         "automaticDateParsing":  true,
         "multilineProcessingEnabled":  false,
         "useAutolineMatching":  false,
