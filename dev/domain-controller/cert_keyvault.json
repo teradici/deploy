@@ -22,12 +22,8 @@
         "accessPolicies": [
           {
             "tenantId": "[subscription().tenantId]",
-            "objectId": "a52d2e92-2e1c-4886-9317-8dc7993bb91f",
             "permissions": {
               "secrets": [
-                "All"
-              ],
-              "certificates": [
                 "All"
               ]
             }
