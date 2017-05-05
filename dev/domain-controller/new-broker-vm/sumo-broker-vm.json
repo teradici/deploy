@@ -2,8 +2,8 @@
 "api.version": "v1",
 "sources": [
     {
-        "name":  "CAMPOC_Teradici_Broker_Logs",
-        "category":  "CAMPOC/Teradici/Broker/Logs",
+        "name":  "CAMPOC_Teradici_Broker_Azure_Logs",
+        "category":  "CAMPOC/Teradici/Azure/Logs",
         "automaticDateParsing":  true,
         "multilineProcessingEnabled":  false,
         "useAutolineMatching":  false,
@@ -20,7 +20,7 @@
         "alive":  false
     },
     {
-        "name":  "CAMPOC_Teradici_Broker_Azure_Logs",
+        "name":  "CAMPOC_Teradici_Broker_Logs",
         "category":  "CAMPOC/Teradici/Broker/Logs",
         "automaticDateParsing":  true,
         "multilineProcessingEnabled":  false,
@@ -31,7 +31,7 @@
                     ],
         "cutoffTimestamp":  0,
         "encoding":  "UTF-8",
-        "pathExpression":  "C:\\tomcat\\apace-tomacat-*\\logs\\*",
+        "pathExpression":  "C:\\tomcat\\apache-tomcat-*\\logs\\*",
         "blacklist":  [
                       ],
         "sourceType":  "LocalFile",

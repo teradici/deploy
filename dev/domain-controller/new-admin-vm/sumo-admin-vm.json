@@ -3,7 +3,7 @@
 "sources": [
     {
         "name":  "CAMPOC_Teradici_AdminUI_Azure_Logs",
-        "category":  "CAMPOC/Teradici/AdminUI/Logs",
+        "category":  "CAMPOC/Teradici/Azure/Logs",
         "automaticDateParsing":  true,
         "multilineProcessingEnabled":  false,
         "useAutolineMatching":  false,
