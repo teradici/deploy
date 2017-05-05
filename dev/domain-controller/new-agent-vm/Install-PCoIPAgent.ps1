@@ -39,7 +39,7 @@ Configuration InstallPCoIPAgent
                 Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile "$dest\sumo-agent-vm.json"
                 #
                 #Insert unique ID
-                collectorID = "$using:sumoCollectorID"
+                $collectorID = "$using:sumoCollectorID"
                 (Get-Content -Path "$dest\sumo.conf").Replace("collectorID", $collectorID) | Set-Content -Path "$dest\sumo.conf"
                 
                 $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
