@@ -1,4 +1,17 @@
-# Create a complete deployment of the Cloud Access Manager solution including a Domain Controller
+ ## What is Cloud Access Manager?
+ A general overview of CAM based on information from the TSW space on Confluence.
+ ## Account Requirements
+ Specific Account requirments required to complete a succesfull deployment
+ ## Deployment (Previously Create a complete deployment of the Cloud Access Manager solution including a Domain Controller)
+ Procedural steps involved in deploying through Azure a deployment of CAM with a DC.
+ ## Deployment Parameters
+ Use the Deployment Parameters already stated below with some changes and adjustments.
+ ## Know Issues with deploying the solution
+ Use the section below with some changes and adjustments.
+ 
+ 
+ 
+ # Create a complete deployment of the Cloud Access Manager solution including a Domain Controller
 
 This template will deploy 5 virtual machines (along with a new VNet, Storage Account, Load Balancer, Azure KeyVault, and Gateway).
 
