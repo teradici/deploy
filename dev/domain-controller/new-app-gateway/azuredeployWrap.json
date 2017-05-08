@@ -1,0 +1,121 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "subnetRef": {
+      "type": "string",
+      "metadata": {
+        "description": "Subnet resource reference in the form of (vnet resourceId/subnets/(subnetname))"
+      }
+    },
+    "skuName": {
+      "type": "string",
+      "allowedValues": [
+        "Standard_Small",
+        "Standard_Medium",
+        "Standard_Large"
+      ],
+      "defaultValue": "Standard_Medium",
+      "metadata": {
+        "description": "Sku Name"
+      }
+    },
+    "capacity": {
+      "type": "int",
+      "minValue": 1,
+      "maxValue": 10,
+      "defaultValue": 2,
+      "metadata": {
+        "description": "Number of instances"
+      }
+    },
+    "backendIpAddressDefault": {
+      "type": "string",
+      "metadata": {
+        "description": "IP Address of Default Backend Server"
+      }
+    },
+    "backendIpAddressForPathRule1": {
+      "type": "string",
+      "metadata": {
+        "description": "IP Address of Backend Server for Path Rule 1 match"
+      }
+    },
+    "pathMatch1": {
+      "type": "string",
+      "metadata": {
+        "description": "Path match string for Path Rule 1"
+      }
+    },
+    "kvName": {
+      "type": "string",
+      "metadata": {
+        "description": "The key value name at which stored the .pfx file and password"
+      }
+    },
+    "_artifactsLocation": {
+      "type": "string",
+      "metadata": {
+        "description": "The location of resources, such as templates and DSC modules, that the template depends on"
+      },
+      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller"
+    },
+    "_artifactsLocationSasToken": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Auto-generated token to access _artifactsLocation"
+      },
+      "defaultValue": ""
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "CreateAppGateway",
+      "apiVersion": "2016-02-01",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('_artifactsLocation'), '/new-app-gateway/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "subnetRef": {
+            "value": "[parameters('subnetRef')]"
+          },
+          "skuName": {
+            "value": "[parameters('skuName')]"
+          },
+          "capacity": {
+            "value": "[parameters('capacity')]"
+          },
+          "backendIpAddressDefault": {
+            "value": "[parameters('backendIpAddressDefault')]"
+          },
+          "backendIpAddressForPathRule1": {
+            "value": "[parameters('backendIpAddressForPathRule1')]"
+          },
+          "pathMatch1": {
+            "value": "[parameters('pathMatch1')]"
+          },
+          "certData": {
+            "reference": {
+              "keyVault": {
+                "id": "[resourceId('Microsoft.KeyVault/vaults', parameters('kvName'))]"
+              },
+              "secretName": "certData"
+            }
+          },
+          "certPassword": {
+            "reference": {
+              "keyVault": {
+                "id": "[resourceId('Microsoft.KeyVault/vaults', parameters('kvName'))]"
+              },
+              "secretName": "certPassword"
+            }
+          }
+        }
+      }
+    }
+  ]
+}
