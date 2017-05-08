@@ -51,6 +51,10 @@ $azurePwd = ConvertTo-SecureString $azurePassword -AsPlainText -Force
 $cred = New-Object -TypeName pscredential –ArgumentList $azureUserName, $azurePwd
 Login-AzureRmAccount -Credential $cred
 
+#set keyvault policy
+$objectId = (Get-AzureRmADUser -UserPrincipalName $azureUserName)[0].id
+Set-AzureRmKeyVaultAccessPolicy -VaultName $keyVaultName -ObjectId $objectId -PermissionsToSecrets all
+
 #put into keyvault
 Set-AzureKeyVaultSecret -VaultName $keyVaultName -Name 'certData' -SecretValue $certData
 Set-AzureKeyVaultSecret -VaultName $keyVaultName -Name 'certPassword' -SecretValue $certPwd

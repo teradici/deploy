@@ -86,8 +86,7 @@
     "adminDesktopVMName": "[concat(variables('serverRootName'), '-desk')]",
     "ADGroupToJoin": "\"Cloud Access Application Servers\"",
     "dcnsgName": "dcNSG",
-    "cmnsgName": "cmNSG",
-    "keyVaultName": "certKV"
+    "cmnsgName": "cmNSG"
   },
   "resources": [
     {

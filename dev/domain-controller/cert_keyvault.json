@@ -19,16 +19,7 @@
           "name": "Standard",
           "family": "A"
         },
-        "accessPolicies": [
-          {
-            "tenantId": "[subscription().tenantId]",
-            "permissions": {
-              "secrets": [
-                "All"
-              ]
-            }
-          }
-        ],
+        "accessPolicies": [],
         "enabledForDeployment": true,
         "enabledForTemplateDeployment": true
       }
