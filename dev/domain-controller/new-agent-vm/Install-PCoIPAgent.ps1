@@ -29,6 +29,7 @@ Configuration InstallPCoIPAgent
             SetScript  = {
                 Write-Verbose "Install_SumoCollector"
 
+                $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
                 $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/SumoCollector_windows-x64_19_182-25.exe"
                 $sumo_config = "$using:gitLocation/sumo.conf"	
                 $sumo_collector_json = "$using:gitLocation/sumo-agent-vm.json"	
@@ -42,7 +43,6 @@ Configuration InstallPCoIPAgent
                 $collectorID = "$using:sumoCollectorID"
                 (Get-Content -Path "$dest\sumo.conf").Replace("collectorID", $collectorID) | Set-Content -Path "$dest\sumo.conf"
                 
-                $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
 		        Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
                 
                 #install the collector

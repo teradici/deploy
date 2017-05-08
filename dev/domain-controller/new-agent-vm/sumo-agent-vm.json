@@ -11,9 +11,27 @@
         "timeZone":  "Etc/UTC",
         "filters":  [
                     ],
-        "cutoffTimestamp":  1445151600000,
+        "cutoffTimestamp":  0,
         "encoding":  "UTF-8",
         "pathExpression":  "C:\\ProgramData\\Teradici\\PCoIPAgent\\logs\\*.txt",
+        "blacklist":  [
+                      ],
+        "sourceType":  "LocalFile",
+        "alive":  false
+    },
+    {
+        "name":  "CAMPOC_Teradici_Agent_Azure_Logs",
+        "category":  "CAMPOC/Teradici/Azure/Logs",
+        "automaticDateParsing":  true,
+        "multilineProcessingEnabled":  false,
+        "useAutolineMatching":  false,
+        "forceTimeZone":  false,
+        "timeZone":  "Etc/UTC",
+        "filters":  [
+                    ],
+        "cutoffTimestamp":  0,
+        "encoding":  "UTF-8",
+        "pathExpression":  "C:\\WindowsAzure\\**\\*.log",
         "blacklist":  [
                       ],
         "sourceType":  "LocalFile",

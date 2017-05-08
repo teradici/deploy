@@ -11,9 +11,9 @@
         "timeZone":  "Etc/UTC",
         "filters":  [
                     ],
-        "cutoffTimestamp":  1445151600000,
+        "cutoffTimestamp":  0,
         "encoding":  "UTF-8",
-        "pathExpression":  "C:\\WindowsAzure\\Logs\\*",
+        "pathExpression":  "C:\\WindowsAzure\\**\\*.log",
         "blacklist":  [
                       ],
         "sourceType":  "LocalFile",
@@ -29,9 +29,9 @@
         "timeZone":  "Etc/UTC",
         "filters":  [
                     ],
-        "cutoffTimestamp":  1445151600000,
+        "cutoffTimestamp": 0,
         "encoding":  "UTF-8",
-        "pathExpression":  "C:\\tomcat\\apache-tomcat-8.0.39\\logs\\*",
+        "pathExpression":  "C:\\tomcat\\apache-tomcat-*\\logs\\*.log",
         "blacklist":  [
                       ],
         "sourceType":  "LocalFile",
