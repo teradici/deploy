@@ -1,12 +1,17 @@
 ﻿Param(
+  [string]$deploymentName,
+  [string]$rgName,
   [string]$domainUserUPN,
   [string]$domainPassword,
   [string]$machineToJoin,
   [string]$groupToJoin,
   [string]$azureUserName, 
   [string]$azurePassword, 
-  [string]$keyVaultName,
-  [string]$rgName  #resource group name
+  #[string]$keyVaultName,
+  [string]$subnetRef,
+  [string]$backendIpAddressDefault,
+  [string]$backendIpAddressForPathRule1,
+  [string]$templateUri
 )
 
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
@@ -42,23 +47,32 @@ $certPwd = ConvertTo-SecureString -String $randomPswd -AsPlainText -Force
 #generate pfx file
 Export-PfxCertificate -Cert $certPath -FilePath $certPfx -Password $certPwd
 
-#read from pfx file and generate secure string
+#read from pfx file and generate 64base encoded string
 $fileContentBytes = get-content $certPfx -Encoding Byte
 $fileContentEncoded = [System.Convert]::ToBase64String($fileContentBytes)
-$certData = ConvertTo-SecureString -String $fileContentEncoded -AsPlainText -Force
+#$certData = ConvertTo-SecureString -String $fileContentEncoded -AsPlainText -Force
 
 # Login to azure
-$azurePwd = ConvertTo-SecureString $azurePassword -AsPlainText -Force
-$cred = New-Object -TypeName pscredential –ArgumentList $azureUserName, $azurePwd
-Login-AzureRmAccount -Credential $cred
+#$azurePwd = ConvertTo-SecureString $azurePassword -AsPlainText -Force
+#$cred = New-Object -TypeName pscredential –ArgumentList $azureUserName, $azurePwd
+#Login-AzureRmAccount -Credential $cred
 
 #set keyvault policy
-$rgObj = Get-AzureRmResourceGroup -ResourceGroupName $rgName
-New-AzureRmKeyVault -VaultName $keyVaultName -ResourceGroupName $rgName -Location $rgObj.Location -EnabledForTemplateDeployment -EnabledForDeployment
+#$rgObj = Get-AzureRmResourceGroup -ResourceGroupName $rgName
+#New-AzureRmKeyVault -VaultName $keyVaultName -ResourceGroupName $rgName -Location $rgObj.Location -EnabledForTemplateDeployment -EnabledForDeployment
 #Set-AzureRmKeyVaultAccessPolicy -VaultName $keyVaultName -UserPrincipalName $azureUserName -PermissionsToSecrets all
 
 #put into keyvault
-Set-AzureKeyVaultSecret -VaultName $keyVaultName -Name 'certData' -SecretValue $certData
-Set-AzureKeyVaultSecret -VaultName $keyVaultName -Name 'certPassword' -SecretValue $certPwd
+#Set-AzureKeyVaultSecret -VaultName $keyVaultName -Name 'certData' -SecretValue $certData
+#Set-AzureKeyVaultSecret -VaultName $keyVaultName -Name 'certPassword' -SecretValue $certPwd
 
+$parameters = @{}
+$parameters.Add(“subnetRef”, $subnetRef)
+$parameters.Add(“skuName”, "Standard_Small")
+$parameters.Add(“capacity”, 1)
+$parameters.Add(“backendIpAddressDefault”, "$backendIpAddressDefault")
+$parameters.Add(“backendIpAddressForPathRule1”, "$backendIpAddressForPathRule1")
+$parameters.Add(“certData”, "$fileContentEncoded")
+$parameters.Add(“certPassword”, "$certPwd")
 
+New-AzureRmResourceGroupDeployment -Mode Incremental -Name myTestDeployment $deploymentName -ResourceGroupName $rgName -TemplateUri $templateUri -TemplateParameterObject $parameters
