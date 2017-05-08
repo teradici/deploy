@@ -1,7 +1,26 @@
  ## What is Cloud Access Manager?
- A general overview of CAM based on information from the TSW space on Confluence.
+ Teradici Cloud Access Manager (CAM) is a one click deployment solution that provides a level of brokering on top of existing CAS deployments. CAM will enable you to assign and revoke virtual machines to users as well as creating and destroying virtual workstations. The CAM solution consists of the following components:
+ * Deployment Cloud Server
+ * Domain Controller
+ * Connection Broker
+ * Security Gateway
+ * Publicly available binaries
+ * Licensing information
+ * An Active Directory
+ * One or more virtual workstations
+ * ARM Templates
+ * External data stores
+ 
  ## Account Requirements
- Specific Account requirments required to complete a succesfull deployment
+In order to successfully deploy CAM you are required to have the following external data stores:
+* Private Deployment Metadata
+* Standard Deployment ARM Templates
+* Standard Deployment DSC packages and binaries
+
+NOTE: For customised deployments the Customer Deployment and DSC package and binaries store will need to be available.
+
+You must have an Azure account and subscription that does not require multi-factor authentication.
+
  ## Deployment (Previously Create a complete deployment of the Cloud Access Manager solution including a Domain Controller)
  Procedural steps involved in deploying through Azure a deployment of CAM with a DC.
  ## Deployment Parameters
