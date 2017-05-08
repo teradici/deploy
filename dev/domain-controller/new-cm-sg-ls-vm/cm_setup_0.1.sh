@@ -14,8 +14,8 @@ unzip -o /tmp/SC_1.0.zip
 rpm -i sumo/SumoCollector-19.182-25.x86_64.rpm
 cp sumo/user.properties /opt/SumoCollector/config/
 cp sumo/sumo_cm_vm.json /opt/SumoCollector/config/
-echo "Attemtping to set sumo collector ID to: " $3
-sed -i s/collectorID/$3/ /opt/SumoCollector/config/user.properties
+echo "Attemtping to set sumo collector ID to: " $2
+sed -i s/collectorID/$2/ /opt/SumoCollector/config/user.properties
 # service collector install - configures the collector to start at boot time
 service collector install
 service collector restart
