@@ -19,7 +19,7 @@ In order to successfully deploy CAM you are required to have the following exter
 
 NOTE: For customised deployments the Customer Deployment and DSC package and binaries store will need to be available.
 
-You must have an Azure account and subscription that does not require multi-factor authentication.
+You must have an Azure account and subscription that does not require multi-factor authentication. You must have a valid activation code for PCoIP Standard Agent to be able successfully connect and deploy CAM.  
 
  ## Deployment (Previously Create a complete deployment of the Cloud Access Manager solution including a Domain Controller)
  Procedural steps involved in deploying through Azure a deployment of CAM with a DC.
