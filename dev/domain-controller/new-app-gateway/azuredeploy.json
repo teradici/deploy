@@ -41,24 +41,18 @@
                 "description": "IP Address of Backend Server for Path Rule 1 match"
             }
         },
-        "pathMatch1": {
-            "type": "string",
-            "metadata": {
-                "description": "Path match string for Path Rule 1"
-            }
-        },
-        "certData": {
-            "type": "string",
-            "metadata": {
-                "description": "Base-64 encoded form of the .pfx file"
-            }
-        },
-        "certPassword": {
-            "type": "securestring",
-            "metadata": {
-                "description": "Password for .pfx certificate"
-            }
+      "pathMatch1": {
+        "type": "string",
+        "metadata": {
+          "description": "Path match string for Path Rule 1"
         }
+      },
+      "kvName": {
+        "type": "string",
+        "metadata": {
+          "description": "The key value name at which stored the .pfx file and password"
+        }
+      }
     },
     "variables": {
         "applicationGatewayName": "applicationGateway1",
@@ -96,8 +90,22 @@
           {
             "name": "appGatewaySslCert",
             "properties": {
-              "data": "[parameters('certData')]",
-              "password": "[parameters('certPassword')]"
+              "data": {
+                "reference": {
+                  "keyVault": {
+                    "id": "[resourceId('Microsoft.KeyVault/vaults', parameters('kvName'))]"
+                  },
+                  "secretName": "certData"
+                }
+              },
+              "password": {
+                "reference": {
+                  "keyVault": {
+                    "id": "[resourceId('Microsoft.KeyVault/vaults', parameters('kvName'))]"
+                  },
+                  "secretName": "certPassword"
+                }
+              }
             }
           }
         ],
