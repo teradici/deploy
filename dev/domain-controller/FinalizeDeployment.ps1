@@ -58,13 +58,13 @@ $cred = New-Object -TypeName pscredential –ArgumentList $azureUserName, $azure
 Login-AzureRmAccount -Credential $cred
 
 #set keyvault policy
-$rgObj = Get-AzureRmResourceGroup -ResourceGroupName $rgName
-New-AzureRmKeyVault -VaultName $keyVaultName -ResourceGroupName $rgName -Location $rgObj.Location -EnabledForTemplateDeployment -EnabledForDeployment
-Set-AzureRmKeyVaultAccessPolicy -VaultName $keyVaultName -UserPrincipalName $azureUserName -PermissionsToSecrets all
+#$rgObj = Get-AzureRmResourceGroup -ResourceGroupName $rgName
+#New-AzureRmKeyVault -VaultName $keyVaultName -ResourceGroupName $rgName -Location $rgObj.Location -EnabledForTemplateDeployment -EnabledForDeployment
+#Set-AzureRmKeyVaultAccessPolicy -VaultName $keyVaultName -UserPrincipalName $azureUserName -PermissionsToSecrets all
 
 #put into keyvault
-Set-AzureKeyVaultSecret -VaultName $keyVaultName -Name 'certData' -SecretValue $certData
-Set-AzureKeyVaultSecret -VaultName $keyVaultName -Name 'certPassword' -SecretValue $certPwd
+#Set-AzureKeyVaultSecret -VaultName $keyVaultName -Name 'certData' -SecretValue $certData
+#Set-AzureKeyVaultSecret -VaultName $keyVaultName -Name 'certPassword' -SecretValue $certPwd
 
 $parameters = @{}
 $parameters.Add(“subnetRef”, $subnetRef)
