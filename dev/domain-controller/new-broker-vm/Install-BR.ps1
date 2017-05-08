@@ -441,6 +441,10 @@ brokerLocale=en_US
 
 				$ldapCertFileName = "ldapcert.cert"
 				$certStoreLocationOnDC = "c:\" + $ldapCertFileName
+
+				$issuerCertFileName = "issuercert.cert"
+				$issuerCertStoreLocationOnDC = "c:\" + $issuerCertFileName
+
 				$certSubject = "CN=$using:dcvmfqdn"
 
 				Write-Host "Looking for cert with $certSubject on $dcvmfqdn"
@@ -454,11 +458,12 @@ brokerLocale=en_US
 
 					$DCSession = New-PSSession $using:dcvmfqdn -Credential $using:Admincreds
 
-					$foundCert =
-						Invoke-Command -Session $DCSession -ArgumentList $certSubject, $certStoreLocationOnDC `
+					$foundCert = `
+						Invoke-Command -Session $DCSession -ArgumentList $certSubject, $certStoreLocationOnDC, $issuerCertStoreLocationOnDC `
 						  -ScriptBlock {
 								$cs = $args[0]
 								$cloc = $args[1]
+								$icloc = $args[2]
 
 				  				$cert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cs }
 								if(-not $cert)
@@ -473,6 +478,11 @@ brokerLocale=en_US
 								{
 									Export-Certificate -Cert $cert -filepath  $cloc -force
 									Write-Host "Exported LDAP certificate."
+
+									#Now export issuer Certificate
+									$issuerCert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cert.Issuer }
+									Export-Certificate -Cert $issuerCert -filepath  $icloc -force
+
 									return $true
 								}
 							}
@@ -490,8 +500,9 @@ brokerLocale=en_US
 					else
 					{
 						#found it! copy
-						Write-Host "Copying cert and exiting DC Session"
+						Write-Host "Copying certs and exiting DC Session"
 						Copy-Item -Path $certStoreLocationOnDC -Destination "$env:systemdrive\$ldapCertFileName" -FromSession $DCSession
+						Copy-Item -Path $issuerCertStoreLocationOnDC -Destination "$env:systemdrive\$issuerCertFileName" -FromSession $DCSession
 					}
 					Remove-PSSession $DCSession
 				}
@@ -502,7 +513,7 @@ brokerLocale=en_US
                 # keytool seems to be causing an error but succeeding. Ignore and continue.
                 $eap = $ErrorActionPreference
                 $ErrorActionPreference = 'SilentlyContinue'
-				& "keytool" -import -file "$env:systemdrive\$ldapCertFileName" -keystore "$env:systemdrive\ldapcertkeystore.jks" -storepass changeit -noprompt
+				& "keytool" -import -file "$env:systemdrive\$issuerCertFileName" -keystore "$env:systemdrive\ldapcertkeystore.jks" -storepass changeit -noprompt
                 $ErrorActionPreference = $eap
 
 		        Copy-Item "$env:systemdrive\ldapcertkeystore.jks" -Destination ($env:classpath + "\security")

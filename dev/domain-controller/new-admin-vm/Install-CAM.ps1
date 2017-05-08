@@ -26,6 +26,12 @@ Configuration InstallCAM
         [Parameter(Mandatory)]
 		[String]$sourceURI,
 
+        [Parameter(Mandatory)]
+		[String]$templateURI,
+
+        [Parameter(Mandatory)]
+		[System.Management.Automation.PSCredential]$registrationCodeAsCred,
+
         [string]
         $javaInstaller = "jdk-8u91-windows-x64.exe",
 
@@ -38,6 +44,9 @@ Configuration InstallCAM
         [string]
         $agentARM = "server2016-standard-agent.json",
 
+        [string]
+        $gaAgentARM = "server2016-graphics-agent.json",
+		
         [Parameter(Mandatory)]
         [String]$domainFQDN,
 
@@ -115,10 +124,15 @@ Configuration InstallCAM
 
 		xRemoteFile Download_Agent_ARM
 		{
-			Uri = "$sourceURI/$agentARM"
+			Uri = "$templateURI/$agentARM"
 			DestinationPath = "$LocalDLPath\$agentARM"
 		}
 
+		xRemoteFile Download_Ga_Agent_ARM
+		{
+			Uri = "$templateURI/$gaAgentARM"
+			DestinationPath = "$LocalDLPath\$gaAgentARM"
+		}		
 
         File Sumo_Directory 
         {
@@ -398,10 +412,13 @@ Configuration InstallCAM
 
         Script Install_AUI
         {
-            DependsOn  = @("[xRemoteFile]Download_Admin_WAR", "[xRemoteFile]Download_Agent_ARM", "[Script]Install_Tomcat")
+            DependsOn  = @("[xRemoteFile]Download_Admin_WAR",
+						   "[xRemoteFile]Download_Agent_ARM",
+						   "[Script]Install_Tomcat",
+						   "[xRemoteFile]Download_Ga_Agent_ARM")
+
             GetScript  = { @{ Result = "Install_AUI" } }
 
-            #TODO: Check for other agent types as well?
             TestScript = {
 				$localtomcatpath = "$env:systemdrive\tomcat"
 				$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
@@ -416,6 +433,7 @@ Configuration InstallCAM
 		        $LocalDLPath = $using:LocalDLPath
 				$adminWAR = $using:adminWAR
                 $agentARM = $using:agentARM
+                $gaAgentARM = $using:gaAgentARM
 				$localtomcatpath = "$env:systemdrive\tomcat"
 				$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
 
@@ -429,7 +447,6 @@ Configuration InstallCAM
 				copy "$LocalDLPath\$adminWAR" ($CatalinaHomeLocation + "\webapps")
 
 				#Make sure the properties file exists - as enough proof that the .war file has been processed
-
 
 
 		        #----- Update/overwrite the the file with configuration information -----
@@ -497,8 +514,26 @@ resourceGroupName=$RGNameLocal
 					New-Item $configFileName -type file
 				}
 
-				Set-Content $configFileName $auProperties -Force
-
+				# write to $configFileName with retry in case another process still has a lock
+				$loopCountRemaining = 600
+				#loop until it's created
+				while($loopCountRemaining-- -gt 0)
+				{
+					try
+					{
+						Set-Content $configFileName $auProperties -Force -ErrorAction Stop
+						break # success exit while loop
+					}
+					catch
+					{
+						Write-Host "Writing CAM configuration file. Seconds remaining: $loopCountRemaining"
+						Start-Sleep -Seconds 1
+						if($loopCountRemaining -eq 0)
+						{
+							throw
+						}
+					}
+				}
 		        Write-Host "Redirecting ROOT to Cloud Access Manager."
 
 
@@ -532,54 +567,8 @@ resourceGroupName=$RGNameLocal
 				Remove-Item "$templateLoc\*" -Recurse
 				
 				copy "$LocalDLPath\$agentARM" $templateLoc
+				copy "$LocalDLPath\$gaAgentARM" $templateLoc
 
-				#now make the default parameters file - same root name but different suffix
-				$agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
-
-				$localVMAdminCreds = $using:VMAdminCreds
-				$VMAdminUsername = $localVMAdminCreds.GetNetworkCredential().Username
-				$VMAdminPassword = $localVMAdminCreds.GetNetworkCredential().Password
-
-				$localDomainAdminCreds = $using:DomainAdminCreds
-				$DomainAdminUsername = $localDomainAdminCreds.GetNetworkCredential().Username
-				$DomainAdminPassword = $localDomainAdminCreds.GetNetworkCredential().Password
-
-				$armParamContent = @"
-{
-    "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
-        "existingSubnetName": { "value": "$using:existingSubnetName" },
-        "domainUsername": { "value": "$DomainAdminUsername" },
-        "dnsLabelPrefix": { "value": "tbd-vmname" },
-        "vmAdminPassword": { "value": "$VMAdminPassword" },
-        "existingVNETName": { "value": "$using:existingVNETName" },
-        "domainPassword": { "value": "$DomainAdminPassword" },
-        "vmAdminUsername": { "value": "$VMAdminUsername" },
-        "domainToJoin": { "value": "$using:domainFQDN" },
-        "storageAccountName": { "value": "$using:storageAccountName" },
-        "_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller/new-agent-vm" }
-    }
-}
-
-"@
-				$ParamTargetDir = "$CatalinaHomeLocation\ARMParametertemplateFiles"
-				$ParamTargetFilePath = "$ParamTargetDir\$agentARMparam"
-
-				if(-not (Test-Path $ParamTargetDir))
-				{
-					New-Item $ParamTargetDir -type directory
-				}
-
-				#clear out whatever was stuffed in from the deployment WAR file
-				Remove-Item "$ParamTargetDir\*" -Recurse
-
-				if(-not (Test-Path $ParamTargetFilePath))
-				{
-					New-Item $ParamTargetFilePath -type file
-				}
-
-				Set-Content $ParamTargetFilePath $armParamContent -Force
 
 
 				Write-Host "Creating SP and writing auth file."
@@ -587,7 +576,35 @@ resourceGroupName=$RGNameLocal
 # create SP and write to credential file
 # as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
 
-				Login-AzureRmAccount -Credential $localAzureCreds
+				function Login-AzureRmAccountWithBetterReporting($Credential)
+				{
+					try
+					{
+						$userName = $Credential.userName
+						Login-AzureRmAccount -Credential $Credential @args -ErrorAction stop
+					}
+					catch
+					{
+						$es = "Error authenticating AzureAdminUsername $userName for Azure subscription access.`n"
+						$exceptionMessage = $_.Exception.Message
+						$exceptionMessageErrorCode = $exceptionMessage.split(':')[0]
+
+						switch($exceptionMessageErrorCode)
+						{
+							"AADSTS50076" {$es += "Please ensure your account does not require Multi-Factor Authentication`n"; break}
+							"Federated service at https" {$es += "Unable to perform federated login - Unknown username or password?`n"; break}
+							"unknown_user_type" {$es += "Please ensure your username is in UPN format. e.g., user@example.com`n"; break}
+							"AADSTS50126" {$es += "User not found in directory`n"; break}
+							"AADSTS70002" {$es += "Please check your password`n"; break}
+						}
+
+
+						throw "$es$exceptionMessage"
+
+					}
+				}
+
+				Login-AzureRmAccountWithBetterReporting -Credential $localAzureCreds
 
 				#Application name
 				$appName = "CAM-$RGNameLocal"
@@ -609,7 +626,7 @@ resourceGroupName=$RGNameLocal
 				}
 
 				$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword
-				New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId
+				$sp  = New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId
 
 				#retry required since it can take a few seconds for the app registration to percolate through Azure.
 				#(Online recommendation was sleep 15 seconds - this is both faster and more conservative)
@@ -633,7 +650,7 @@ resourceGroupName=$RGNameLocal
 						}
 						else
 						{
-						#re-throw whatever the original exception was
+							#re-throw whatever the original exception was
 							throw
 						}
 					}
@@ -674,6 +691,141 @@ $authFilePath = "$targetDir\authfile.txt"
 				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
 
 				Set-ItemProperty -Path "$Reg" -Name AZURE_AUTH_LOCATION –Value $authFilePath
+
+
+
+				#Get local version of passed-in credentials
+				$localVMAdminCreds = $using:VMAdminCreds
+				$VMAdminUsername = $localVMAdminCreds.GetNetworkCredential().Username
+				$VMAdminPassword = $localVMAdminCreds.GetNetworkCredential().Password
+
+				$localDomainAdminCreds = $using:DomainAdminCreds
+				$DomainAdminUsername = $localDomainAdminCreds.GetNetworkCredential().Username
+				$DomainAdminPassword = $localDomainAdminCreds.GetNetworkCredential().Password
+
+
+
+
+				Write-Host "Creating Azure KeyVault"
+
+				#Keyvault names must be globally (or at least regionally) unique, so make a unique string
+				$generatedKVID = -join ((65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
+
+				$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGNameLocal
+				$kvName = "CAM-$generatedKVID"
+				New-AzureRmKeyVault -VaultName $kvName -ResourceGroupName $RGNameLocal -Location $rg.Location -EnabledForTemplateDeployment -EnabledForDeployment
+
+				Set-AzureRmKeyVaultAccessPolicy -VaultName $kvName -ServicePrincipalName $app.ApplicationId -PermissionsToSecrets get
+
+				Write-Host "Populating Azure KeyVault"
+				
+				$rcCred = $using:registrationCodeAsCred
+				$registrationCode = $rcCred.Password
+
+				$rcSecretName = 'cloudAccessRegistrationCode'
+				$rcSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $rcSecretName -SecretValue $registrationCode
+				$rcSecretVersionedURL = $rcSecret.Id
+				$rcSecretURL = $rcSecretVersionedURL.Substring(0, $rcSecretVersionedURL.lastIndexOf('/'))
+
+
+				$djSecretName = 'domainJoinPassword'
+				$djSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $djSecretName -SecretValue $localDomainAdminCreds.Password
+				$djSecretVersionedURL = $djSecret.Id
+				$djSecretURL = $djSecretVersionedURL.Substring(0, $djSecretVersionedURL.lastIndexOf('/'))
+
+
+				Write-Host "Creating Local Admin Password for new machines"
+
+				$localAdminPasswordStr =  "5!" + (-join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})) # "5!" is to ensure numbers and symbols
+
+				$localAdminPassword = ConvertTo-SecureString $localAdminPasswordStr -AsPlainText -Force
+
+				$laSecretName = 'localAdminPassword'
+				$laSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $laSecretName -SecretValue $localAdminPassword
+				$laSecretVersionedURL = $laSecret.Id
+				$laSecretURL = $laSecretVersionedURL.Substring(0, $laSecretVersionedURL.lastIndexOf('/'))
+
+
+
+				Write-Host "Creating default template parameters file"
+
+
+				$armParamContent = @"
+{
+    "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "CAMDeploymentBlobSource": { "value": "https://teradeploy.blob.core.windows.net/binaries" },
+        "existingSubnetName": { "value": "$using:existingSubnetName" },
+        "domainUsername": { "value": "$DomainAdminUsername" },
+        "domainPassword": {
+			"reference": {
+			  "keyVault": {
+				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+			  },
+			  "secretName": "$djSecretName"
+			}		
+		},
+        "registrationCode": {
+			"reference": {
+			  "keyVault": {
+				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+			  },
+			  "secretName": "$rcSecretName"
+			}		
+		},
+        "dnsLabelPrefix": { "value": "tbd-vmname" },
+        "existingVNETName": { "value": "$using:existingVNETName" },
+        "vmAdminUsername": { "value": "$VMAdminUsername" },
+        "vmAdminPassword": {
+			"reference": {
+			  "keyVault": {
+				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+			  },
+			  "secretName": "$laSecretName"
+			}		
+		},
+        "domainToJoin": { "value": "$using:domainFQDN" },
+        "storageAccountName": { "value": "$using:storageAccountName" },
+        "_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller/new-agent-vm" }
+    }
+}
+
+"@
+
+				#now make the default parameters file - same root name but different suffix
+				$agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
+				$gaAgentARMparam = ($gaAgentARM.split('.')[0]) + ".customparameters.json"
+
+				$ParamTargetDir = "$CatalinaHomeLocation\ARMParametertemplateFiles"
+				$ParamTargetFilePath = "$ParamTargetDir\$agentARMparam"
+				$GaParamTargetFilePath = "$ParamTargetDir\$gaAgentARMparam"
+
+				if(-not (Test-Path $ParamTargetDir))
+				{
+					New-Item $ParamTargetDir -type directory
+				}
+
+				#clear out whatever was stuffed in from the deployment WAR file
+				Remove-Item "$ParamTargetDir\*" -Recurse
+
+				# Standard Agent Parameter file
+				if(-not (Test-Path $ParamTargetFilePath))
+				{
+					New-Item $ParamTargetFilePath -type file
+				}
+
+				Set-Content $ParamTargetFilePath $armParamContent -Force
+
+
+				# Graphics Agent Parameter file
+				if(-not (Test-Path $GaParamTargetFilePath))
+				{
+					New-Item $GaParamTargetFilePath -type file
+				}
+
+				Set-Content $GaParamTargetFilePath $armParamContent -Force
+
 
 		        Write-Host "Finished! Restarting Tomcat."
 

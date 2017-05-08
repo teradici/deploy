@@ -82,6 +82,12 @@
                 "description": "The password for the administrator account of the new VM and the domain"
             }
         },
+        "registrationCode": {
+            "type": "securestring",
+            "metadata": {
+                "description": "The registration code for Cloud Access Software"
+            }
+        },
         "blobSource": {
             "type": "string",
             "metadata": {
@@ -138,6 +144,7 @@
                     "Properties": {
                         "domainFQDN":  "[parameters('domainToJoin')]",
                         "sourceURI": "[parameters('blobSource')]",
+						"templateURI": "[parameters('_artifactsLocation')]",
                         "VMAdminCreds": {
                             "UserName": "[parameters('vmAdminUsername')]",
                             "Password": "PrivateSettingsRef:vmAdminPassword"
@@ -149,6 +156,10 @@
                         "AzureCreds": {
                             "UserName": "[parameters('AzureAdminUsername')]",
                             "Password": "PrivateSettingsRef:AzureAdminPassword"
+                        },
+                        "registrationCodeAsCred": {
+                            "UserName": "dummy",
+                            "Password": "PrivateSettingsRef:registrationCode"
                         },
                         "DCVMName": "[parameters('domainControllerName')]",
                         "RGName": "[resourceGroup().name]",
@@ -163,7 +174,8 @@
                     "Items": {
                         "DomainAdminPassword": "[parameters('domainPassword')]",
                         "vmAdminPassword": "[parameters('vmAdminPassword')]",
-                        "AzureAdminPassword": "[parameters('AzureAdminPassword')]"
+                        "AzureAdminPassword": "[parameters('AzureAdminPassword')]",
+                        "registrationCode": "[parameters('registrationCode')]"
                     }
                 }
             }

@@ -35,12 +35,13 @@
                 "description": "The password of the Azure account/service principal with contributor access to the subscription. This account cannot require MFA."
             }
         },
-        "activationCode": {
-            "type": "string",
-            "defaultValue": "xxxx-xxxx-xxxx-xxxx",
-            "metadata": {
-                "description": "The license activation code for the PCoIP CAS licenses"
-            }
+        "registrationCode": {
+          "type": "securestring",
+          "minLength": 21,
+          "defaultValue": "xxxxxxxxxxxx@nnnn-nnnn-nnnn-nnnn",
+          "metadata": {
+            "description": "PCoIP Agent License Registration Code."
+          }
         },
         "CAMDeploymentBlobSource": {
             "type": "string",
@@ -82,6 +83,8 @@
         "publicIPAddressName": "adPublicIP",
         "adLBName": "adLoadBalancer",
         "serverRootName": "vm",
+        "adminDesktopVMName": "[concat(variables('serverRootName'), '-desk')]",
+        "ADGroupToJoin":  "\"Cloud Access Application Servers\"",
         "dcnsgName": "dcNSG",
         "cmnsgName": "cmNSG"
     },
@@ -199,7 +202,7 @@
             ],
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "Standard_D2_v2"
+                    "vmSize": "Standard_D1_v2"
                 },
                 "osProfile": {
                     "computerName": "[variables('adVMName')]",
@@ -273,7 +276,7 @@
                         "value": "[parameters('domainAdminPassword')]"
                     },
                     "adminDesktopVMName": {
-                        "value": "[concat(variables('serverRootName'), '-desk')]"
+                        "value": "[variables('adminDesktopVMName')]"
                     },
                     "_artifactsLocation": {
                         "value": "[concat(parameters('_artifactsLocation'), '/configure-dc-and-ca')]"
@@ -329,7 +332,7 @@
             "properties": {
                 "mode": "Incremental",
                 "templateLink": {
-                    "uri": "[concat(parameters('_artifactsLocation'), '/new-agent-vm/new-agent.json', parameters('_artifactsLocationSasToken'))]",
+                    "uri": "[concat(parameters('_artifactsLocation'), '/new-agent-vm/server2016-standard-agent.json', parameters('_artifactsLocationSasToken'))]",
                     "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
@@ -340,10 +343,10 @@
                         "value": "[variables('adSubnetName')]"
                     },
                     "dnsLabelPrefix": {
-                        "value": "[concat(variables('serverRootName'), '-desk')]"
+                        "value": "[variables('adminDesktopVMName')]"
                     },
                     "vmSize": {
-                        "value": "Standard_A2_v2"
+                        "value": "Standard_D2_v2"
                     },
                     "domainToJoin": {
                         "value": "[parameters('domainName')]"
@@ -366,9 +369,38 @@
                     "_artifactsLocation": {
                         "value": "[concat(parameters('_artifactsLocation'), '/new-agent-vm')]"
                     },
+                    "CAMDeploymentBlobSource": {
+                        "value": "[parameters('CAMDeploymentBlobSource')]"
+                    },
+                    "registrationCode": {
+                        "value": "[parameters('registrationCode')]"
+                    },
                     "storageAccountName": {
                         "value": "[variables('storageAccountName')]"
                     }
+                }
+            }
+        },
+        {
+            "name": "[concat(variables('adVMName'),'/FinalizeDeployment')]",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2015-06-15",
+            "dependsOn": [
+                "Microsoft.Resources/deployments/CreateAgentMachine"
+            ],
+            "properties": {
+                "publisher": "Microsoft.Compute",
+                "type": "CustomScriptExtension",
+                "typeHandlerVersion": "1.8",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "fileUris": [
+                        "[concat(parameters('_artifactsLocation'), '/FinalizeDeployment.ps1')]"
+                    ]
+                },
+                "protectedSettings": {
+                    "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File FinalizeDeployment.ps1 -domainUserUPN ',parameters('domainAdminUsername'),'@',parameters('domainName'),' -domainPassword ',parameters('domainAdminPassword'),' -machineToJoin ',variables('adminDesktopVMName'),' -groupToJoin ',variables('ADGroupToJoin'))]"
                 }
             }
         },
@@ -396,7 +428,7 @@
                         "value": "[concat(variables('serverRootName'), '-au')]"
                     },
                     "vmSize": {
-                        "value": "Standard_A2_v2"
+                        "value": "Standard_D1_v2"
                     },
                     "privateIP": {
                         "value": "[variables('auPrivateIP')]"
@@ -448,9 +480,6 @@
                     "dnsLabelPrefix": {
                         "value": "[concat(variables('serverRootName'), '-au')]"
                     },
-                    "vmSize": {
-                        "value": "Standard_A2_v2"
-                    },
                     "domainToJoin": {
                         "value": "[parameters('domainName')]"
                     },
@@ -475,6 +504,9 @@
                     "vmAdminPassword": {
                         "value": "[parameters('domainAdminPassword')]"
                     },
+                    "registrationCode": {
+                        "value": "[parameters('registrationCode')]"
+                    },
                     "domainControllerName": {
                         "value": "[variables('adVMName')]"
                     },
@@ -485,7 +517,7 @@
                         "value": "[variables('storageAccountName')]"
                     },
                     "_artifactsLocation": {
-                        "value": "[concat(parameters('_artifactsLocation'), '/new-admin-vm')]"
+                        "value": "[concat(parameters('_artifactsLocation'), '/new-agent-vm')]"
                     }
                 }
             }
@@ -514,7 +546,7 @@
                         "value": "[concat(variables('serverRootName'), '-br')]"
                     },
                     "vmSize": {
-                        "value": "Standard_A2_v2"
+                        "value": "Standard_D1_v2"
                     },
                     "privateIP": {
                         "value": "[variables('brPrivateIP')]"
@@ -565,9 +597,6 @@
                     },
                     "dnsLabelPrefix": {
                         "value": "[concat(variables('serverRootName'), '-br')]"
-                    },
-                    "vmSize": {
-                        "value": "Standard_A2_v2"
                     },
                     "domainToJoin": {
                         "value": "[parameters('domainName')]"
@@ -627,7 +656,7 @@
                         "value": "[concat(variables('serverRootName'), '-cm')]"
                     },
                     "vmSize": {
-                        "value": "Standard_A2_v2"
+                        "value": "Standard_D2_v2"
                     },
                     "vmAdminUsername": {
                         "value": "[parameters('domainAdminUsername')]"
@@ -640,9 +669,6 @@
                     },
                     "privateIP": {
                         "value": "[variables('cmPrivateIP')]"
-                    },
-                    "activationCode": {
-                        "value": "[parameters('activationCode')]"
                     },
                     "storageAccountName": {
                         "value": "[variables('storageAccountName')]"
