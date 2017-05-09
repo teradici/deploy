@@ -75,4 +75,4 @@ $parameters.Add(“backendIpAddressForPathRule1”, "$backendIpAddressForPathRul
 $parameters.Add(“certData”, "$fileContentEncoded")
 $parameters.Add(“certPassword”, "$certPwd")
 
-New-AzureRmResourceGroupDeployment -Mode Incremental -Name myTestDeployment $deploymentName -ResourceGroupName $rgName -TemplateUri $templateUri -TemplateParameterObject $parameters
+New-AzureRmResourceGroupDeployment -Mode Incremental -Name  $deploymentName -ResourceGroupName $rgName -TemplateUri $templateUri -TemplateParameterObject $parameters
