@@ -86,21 +86,10 @@
     "adminDesktopVMName": "[concat(variables('serverRootName'), '-desk')]",
     "ADGroupToJoin": "\"Cloud Access Application Servers\"",
     "dcnsgName": "dcNSG",
-    "cmnsgName": "cmNSG"
+    "cmnsgName": "cmNSG",
+    "kvName": "[concat('CAM-', uniqueString(deployment().name, resourceGroup().id, resourceGroup().location), '-KV')]"
   },
   "resources": [
-    {
-      "type": "Microsoft.Resources/deployments",
-      "name": "deployKV",
-      "apiVersion": "2016-02-01",
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/cert_keyvault.json', parameters('_artifactsLocationSasToken'))]",
-          "contentVersion": "1.0.0.0"
-        }
-      }
-    },
     {
       "type": "Microsoft.Storage/storageAccounts",
       "name": "[variables('storageAccountName')]",
@@ -399,8 +388,7 @@
       "location": "[resourceGroup().location]",
       "apiVersion": "2015-06-15",
       "dependsOn": [
-        "Microsoft.Resources/deployments/CreateAgentMachine",
-        "deployKV"
+        "Microsoft.Resources/deployments/CreateAgentMachine"
       ],
       "properties": {
         "publisher": "Microsoft.Compute",
@@ -413,7 +401,7 @@
           ]
         },
         "protectedSettings": {
-          "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File FinalizeDeployment.ps1 -domainUserUPN ',parameters('domainAdminUsername'),'@',parameters('domainName'),' -domainPassword ',parameters('domainAdminPassword'),' -machineToJoin ',variables('adminDesktopVMName'),' -groupToJoin ',variables('ADGroupToJoin'),' -azureUserName ', parameters('AzureAdminUsername'), ' -azurePassword ', parameters('AzureAdminPassword'), ' -keyVaultName ', reference('deployKV').outputs.keyVaultName.value)]"
+          "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File FinalizeDeployment.ps1 -domainUserUPN ', parameters('domainAdminUsername'),'@',parameters('domainName'),' -domainPassword ',parameters('domainAdminPassword'),' -machineToJoin ',variables('adminDesktopVMName'),' -groupToJoin ',variables('ADGroupToJoin'),' -azureUserName ', parameters('AzureAdminUsername'), ' -azurePassword ', parameters('AzureAdminPassword'), ' -rgName ', resourceGroup().name, ' -backendIpAddressDefault ', variables('auPrivateIP'), ' -backendIpAddressForPathRule1 ', variables('cmPrivateIP'), ' -subnetRef ', concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')),'/subnets/',variables('gatewaySubnetName')), ' -templateUri ', concat(parameters('_artifactsLocation'), '/new-app-gateway/azuredeploy.json', parameters('_artifactsLocationSasToken')) )]"
         }
       }
     },
@@ -691,59 +679,6 @@
           },
           "_artifactsLocationSasToken": {
             "value": "[parameters('_artifactsLocationSasToken')]"
-          }
-        }
-      }
-    },
-    {
-      "type": "Microsoft.Resources/deployments",
-      "name": "CreateAppGateway",
-      "apiVersion": "2016-02-01",
-      "dependsOn": [
-        "[resourceId('Microsoft.Compute/virtualMachines', variables('adVMName'))]",
-        "[resourceId('Microsoft.Compute/virtualMachines/extensions', variables('adVMName') ,'FinalizeDeployment')]"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/new-app-gateway/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-
-          "subnetRef": {
-            "value": "[concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')),'/subnets/',variables('gatewaySubnetName'))]"
-          },
-          "skuName": {
-            "value": "Standard_Small"
-          },
-          "capacity": {
-            "value": 1
-          },
-          "backendIpAddressDefault": {
-            "value": "[variables('auPrivateIP')]"
-          },
-          "backendIpAddressForPathRule1": {
-            "value": "[variables('cmPrivateIP')]"
-          },
-          "pathMatch1": {
-            "value": "/pcoip-broker/*"
-          },
-          "certData": {
-            "reference": {
-              "keyVault": {
-                "id": "[reference('deployKV').outputs.keyVaultId.value]"
-              },
-              "secretName": "certData"
-            }
-          },
-          "certPassword": {
-            "reference": {
-              "keyVault": {
-                "id": "[reference('deployKV').outputs.keyVaultId.value]"
-              },
-              "secretName": "certPassword"
-            }
           }
         }
       }

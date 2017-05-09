@@ -1,5 +1,4 @@
 ﻿Param(
-  [string]$deploymentName,
   [string]$rgName,
   [string]$domainUserUPN,
   [string]$domainPassword,
@@ -7,7 +6,6 @@
   [string]$groupToJoin,
   [string]$azureUserName, 
   [string]$azurePassword, 
-  #[string]$keyVaultName,
   [string]$subnetRef,
   [string]$backendIpAddressDefault,
   [string]$backendIpAddressForPathRule1,
@@ -39,33 +37,23 @@ Invoke-Command -Session $psSession -ScriptBlock {
 $certLoc = 'cert:Localmachine\My'
 $cert = New-SelfSignedCertificate -certstorelocation $certLoc -dnsname local.teradici.com
 
+#generate pfx file
 $certPath = $certLoc + '\' + $cert.Thumbprint
 $certPfx = 'C:\WindowsAzure\mySelfSignedCert.pfx'
 $randomPswd = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
 $certPwd = ConvertTo-SecureString -String $randomPswd -AsPlainText -Force
-
-#generate pfx file
 Export-PfxCertificate -Cert $certPath -FilePath $certPfx -Password $certPwd
 
 #read from pfx file and generate 64base encoded string
 $fileContentBytes = get-content $certPfx -Encoding Byte
 $fileContentEncoded = [System.Convert]::ToBase64String($fileContentBytes)
-$certData = ConvertTo-SecureString -String $fileContentEncoded -AsPlainText -Force
 
 # Login to azure
 $azurePwd = ConvertTo-SecureString $azurePassword -AsPlainText -Force
-$cred = New-Object -TypeName pscredential –ArgumentList $azureUserName, $azurePwd
-Login-AzureRmAccount -Credential $cred
+$azureloginCred = New-Object -TypeName pscredential –ArgumentList $azureUserName, $azurePwd
+Login-AzureRmAccount -Credential $azureloginCred
 
-#set keyvault policy
-#$rgObj = Get-AzureRmResourceGroup -ResourceGroupName $rgName
-#New-AzureRmKeyVault -VaultName $keyVaultName -ResourceGroupName $rgName -Location $rgObj.Location -EnabledForTemplateDeployment -EnabledForDeployment
-#Set-AzureRmKeyVaultAccessPolicy -VaultName $keyVaultName -UserPrincipalName $azureUserName -PermissionsToSecrets all
-
-#put into keyvault
-#Set-AzureKeyVaultSecret -VaultName $keyVaultName -Name 'certData' -SecretValue $certData
-#Set-AzureKeyVaultSecret -VaultName $keyVaultName -Name 'certPassword' -SecretValue $certPwd
-
+# deploy application gateway
 $parameters = @{}
 $parameters.Add(“subnetRef”, $subnetRef)
 $parameters.Add(“skuName”, "Standard_Small")
@@ -76,6 +64,6 @@ $parameters.Add(“pathMatch1”, "/pcoip-broker/*")
 $parameters.Add(“certData”, "$fileContentEncoded")
 $parameters.Add(“certPassword”, "$randomPswd")
 
-$randomName = -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})
+$deployName = -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})
 
-New-AzureRmResourceGroupDeployment -Mode Incremental -Name $randomName -ResourceGroupName $rgName -TemplateUri $templateUri -TemplateParameterObject $parameters
+New-AzureRmResourceGroupDeployment -Mode Incremental -Name $deployName -ResourceGroupName $rgName -TemplateUri $templateUri -TemplateParameterObject $parameters
