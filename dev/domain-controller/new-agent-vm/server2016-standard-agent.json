@@ -240,9 +240,7 @@
               },
               "privacy": {
                 "DataCollection": "Disable"
-              },
-              "gitLocation": "[parameters('_artifactsLocation')]",
-              "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId)]"
+              }
             },
             "protectedSettings": {
               "configurationArguments": {
