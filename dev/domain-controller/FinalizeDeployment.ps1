@@ -76,4 +76,6 @@ $parameters.Add(“pathMatch1”, "/pcoip-broker/*")
 $parameters.Add(“certData”, "$fileContentEncoded")
 $parameters.Add(“certPassword”, "$certPwd")
 
-New-AzureRmResourceGroupDeployment -Mode Incremental -Name $deploymentName -ResourceGroupName $rgName -TemplateUri $templateUri -TemplateParameterObject $parameters
+$randomName = -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})
+
+New-AzureRmResourceGroupDeployment -Mode Incremental -Name $randomName -ResourceGroupName $rgName -TemplateUri $templateUri -TemplateParameterObject $parameters
