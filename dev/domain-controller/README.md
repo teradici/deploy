@@ -44,7 +44,7 @@ You must have an Azure account and subscription that does not require multi-fact
 
 The following steps outline the procedure for performing a deployment of CAM using Microsoft Azure: 
 
- 1. Click the Deploy Azure button to  begin.
+ Click the Deploy Azure button to  begin.
 
 <a target="_blank" href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fteradici%2Fdeploy%2Fmaster%2Fdev%2Fdomain-controller%2Fazuredeploy.json">
     <img src="http://azuredeploy.net/deploybutton.png"/>
@@ -66,14 +66,14 @@ The following steps outline the procedure for performing a deployment of CAM usi
 * Do not use passwords with the '%' symbol as it is currently not supported.
 * The current certificate that is deployed is expired so PCoIP clients must be configured for security_mode=0 (verification is not required) in order to connect. See here for instructions: http://www.teradici.com/web-help/TWAS_UG22_HTML5/08_AppA_Security.htm
 * Occasionally the Azure Application Gateway can fail with an 'internal error.' If this happens, you can quickly redeploy the application gateway to recover.
-  1. In the Azure Portal select the resource group you created.
-  1. Go to Deployments -> CreateAppGateway
-  1. Click <b>Redeploy</b>. This will bring you to the custom deployment screen.
-  1. Click <b>use existing</b> and select the resource gorup you are using.
-  1. Leave all the other parameters the same.
-  1. Accept the terms and conditions.
-  1. Click <b>Purchase</b>.
-  1. The Application gateway should deploy successfully.
+ 1. In the Azure Portal select the resource group you created.
+ 1. Go to Deployments -> CreateAppGateway
+ 1. Click <b>Redeploy</b>. This will bring you to the custom deployment screen.
+ 1. Click <b>use existing</b> and select the resource group you are using.
+ 1. Leave all the other parameters the same.
+ 1. Accept the terms and conditions.
+ 1. Click <b>Purchase</b>.
+ 1. The Application gateway should deploy successfully.
 * Occasionally other failures can happen such as 'timeout' or 'can't start WinRM service.' Start a new deployment from scratch in a new resource group and attempt to re-deploy.
 * A common deployment failure is when the quota is reached for the subscription. In this case you have to either remove or deallocate virtual machines from the subscription, or request a core quota increase from Microsoft to alleviate the problem.
 
