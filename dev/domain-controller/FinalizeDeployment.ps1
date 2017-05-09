@@ -74,7 +74,7 @@ $parameters.Add(“backendIpAddressDefault”, "$backendIpAddressDefault")
 $parameters.Add(“backendIpAddressForPathRule1”, "$backendIpAddressForPathRule1")
 $parameters.Add(“pathMatch1”, "/pcoip-broker/*")
 $parameters.Add(“certData”, "$fileContentEncoded")
-$parameters.Add(“certPassword”, "$certPwd")
+$parameters.Add(“certPassword”, "$randomPswd")
 
 $randomName = -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})
 
