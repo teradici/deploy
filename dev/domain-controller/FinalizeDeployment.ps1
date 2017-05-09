@@ -72,6 +72,7 @@ $parameters.Add(“skuName”, "Standard_Small")
 $parameters.Add(“capacity”, 1)
 $parameters.Add(“backendIpAddressDefault”, "$backendIpAddressDefault")
 $parameters.Add(“backendIpAddressForPathRule1”, "$backendIpAddressForPathRule1")
+$parameters.Add(“pathMatch1”, "/pcoip-broker/*")
 $parameters.Add(“certData”, "$fileContentEncoded")
 $parameters.Add(“certPassword”, "$certPwd")
 
