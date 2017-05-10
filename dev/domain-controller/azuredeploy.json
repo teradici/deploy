@@ -518,6 +518,9 @@
                     },
                     "_artifactsLocation": {
                         "value": "[concat(parameters('_artifactsLocation'), '/new-admin-vm')]"
+                    },
+                    "_agentArtifactsLocation": {
+                        "value": "[concat(parameters('_artifactsLocation'), '/new-agent-vm')]"
                     }
                 }
             }
