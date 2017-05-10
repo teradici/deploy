@@ -86,8 +86,7 @@
     "adminDesktopVMName": "[concat(variables('serverRootName'), '-desk')]",
     "ADGroupToJoin": "\"Cloud Access Application Servers\"",
     "dcnsgName": "dcNSG",
-    "cmnsgName": "cmNSG",
-    "kvName": "[concat('CAM-', uniqueString(deployment().name, resourceGroup().id, resourceGroup().location), '-KV')]"
+    "cmnsgName": "cmNSG"
   },
   "resources": [
     {
