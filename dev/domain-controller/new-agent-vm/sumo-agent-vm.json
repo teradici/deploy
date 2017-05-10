@@ -38,7 +38,7 @@
         "alive":  false
     },
     {
-        "name":"VDI Event Logs",
+        "name":"CAMPOC_Windows_Events",
         "category":"CAMPOC/Teradici/Windows/Events",
         "automaticDateParsing":true,
         "multilineProcessingEnabled":true,
@@ -56,7 +56,7 @@
         "sourceType":"LocalWindowsEventLog"
     },
     {
-        "name":"VDI Performance Logs",
+        "name":"CAMPOC_Windows_Performance_Logs",
         "category":"CAMPOC/Teradici/Performance/Windows",
         "automaticDateParsing":false,
         "multilineProcessingEnabled":false,
