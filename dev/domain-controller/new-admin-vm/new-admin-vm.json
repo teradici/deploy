@@ -145,6 +145,7 @@
                         "domainFQDN":  "[parameters('domainToJoin')]",
                         "sourceURI": "[parameters('blobSource')]",
 						"templateURI": "[parameters('_artifactsLocation')]",
+						"templateAgentURI": "[concat(parameters('_artifactsLocation'),'/new-agent-vm')]",
                         "VMAdminCreds": {
                             "UserName": "[parameters('vmAdminUsername')]",
                             "Password": "PrivateSettingsRef:vmAdminPassword"

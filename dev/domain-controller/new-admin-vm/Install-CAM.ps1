@@ -30,6 +30,9 @@ Configuration InstallCAM
 		[String]$templateURI,
 
         [Parameter(Mandatory)]
+		[String]$templateAgentURI,
+
+        [Parameter(Mandatory)]
 		[System.Management.Automation.PSCredential]$registrationCodeAsCred,
 
         [string]
@@ -124,13 +127,13 @@ Configuration InstallCAM
 
 		xRemoteFile Download_Agent_ARM
 		{
-			Uri = "$templateURI/$agentARM"
+			Uri = "$templateAgentURI/$agentARM"
 			DestinationPath = "$LocalDLPath\$agentARM"
 		}
 
 		xRemoteFile Download_Ga_Agent_ARM
 		{
-			Uri = "$templateURI/$gaAgentARM"
+			Uri = "$templateAgentURI/$gaAgentARM"
 			DestinationPath = "$LocalDLPath\$gaAgentARM"
 		}		
 
