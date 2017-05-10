@@ -36,6 +36,56 @@
                       ],
         "sourceType":  "LocalFile",
         "alive":  false
-    }
+    },
+    {
+        "name":"VDI Event Logs",
+        "category":"CAMPOC/Teradici/Windows/Events",
+        "automaticDateParsing":true,
+        "multilineProcessingEnabled":true,
+        "useAutolineMatching":false,
+        "manualPrefixRegexp":"",
+        "forceTimeZone":false,
+        "defaultDateFormat":"dd/MMM/yyyy HH:mm:ss",
+        "timeZone":"Etc/UTC",
+        "filters":[],
+        "cutoffTimestamp":0,
+        "encoding":"UTF-8",
+        "logNames":["Security","Application"],
+        "renderMessages":true,
+        "sidStyle":2,
+        "sourceType":"LocalWindowsEventLog"
+    },
+    {
+        "name":"VDI Performance Logs",
+        "category":"CAMPOC/Teradici/Performance/Windows",
+        "automaticDateParsing":false,
+        "multilineProcessingEnabled":false,
+        "useAutolineMatching":false,
+        "forceTimeZone":false,
+        "filters":[],
+        "cutoffTimestamp":0,
+        "encoding":"UTF-8",
+        "interval":60000,
+        "wmiQueries":[{
+        "name":"Process",
+        "query":"select * from Win32_PerfFormattedData_PerfProc_Process"
+        },{
+        "name":"CPU",
+        "query":"select * from Win32_PerfFormattedData_PerfOS_Processor"
+        },{
+        "name":"Logical Disk",
+        "query":"select * from Win32_PerfFormattedData_PerfDisk_LogicalDisk"
+        },{
+        "name":"Physical Disk",
+        "query":"select * from Win32_PerfFormattedData_PerfDisk_PhysicalDisk"
+        },{
+        "name":"Memory",
+        "query":"select * from Win32_PerfFormattedData_PerfOS_Memory"
+        },{
+        "name":"Network",
+        "query":"select * from Win32_PerfFormattedData_Tcpip_NetworkInterface"
+        }],
+        "sourceType":"LocalWindowsPerfMon"
+        }
 ]
 }
