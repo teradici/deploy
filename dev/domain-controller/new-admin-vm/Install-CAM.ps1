@@ -68,6 +68,9 @@ Configuration InstallCAM
         [Parameter(Mandatory)]
         [System.Management.Automation.PSCredential]$AzureCreds,
 
+#        [Parameter][string]
+#        $tenantID = "",
+
         [Parameter(Mandatory)]
         [String]$DCVMName, #without the domain suffix
 
@@ -76,6 +79,16 @@ Configuration InstallCAM
 	)
 
 	$dcvmfqdn = "$DCVMName.$domainFQDN"
+
+	#Java locations
+	$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_91"
+	$JavaBinLocation = $JavaRootLocation + "\bin"
+	$JavaLibLocation = $JavaRootLocation + "\jre\lib"
+
+	#Tomcat locations
+	$localtomcatpath = "$env:systemdrive\tomcat"
+	$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
+	$CatalinaBinLocation = $CatalinaHomeLocation + "\bin"
 
 	Import-DscResource -ModuleName xPSDesiredStateConfiguration
 
@@ -136,10 +149,8 @@ Configuration InstallCAM
             GetScript  = { @{ Result = "Install_Java" } }
 
             #TODO: Just check for a directory being present? What to do when Java version changes? (Can also check registry key as in SetScript.)
-            TestScript = { 
-				$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_91"
-		       	$JavaBinLocation = $JavaRootLocation + "\bin"
-				if ( Get-Item -path "$JavaBinLocation" -ErrorAction SilentlyContinue )
+            TestScript = {
+				if ( Get-Item -path "$using:JavaBinLocation" -ErrorAction SilentlyContinue )
                             {return $true}
                             else {return $false}
 			}
@@ -180,9 +191,6 @@ Configuration InstallCAM
 
 				Write-Host "Setting up Java paths and environment"
 
-				$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_91"
-				$JavaBinLocation = $JavaRootLocation + "\bin"
-				$JavaLibLocation = $JavaRootLocation + "\jre\lib"
 				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
 
 				#set path. Don't add strings that are already there...
@@ -190,19 +198,19 @@ Configuration InstallCAM
 				$NewPath = (Get-ItemProperty -Path "$Reg" -Name PATH).Path
 
 				#put java path in front of the oracle defined path
-				if ($NewPath -notlike "*"+$JavaBinLocation+"*")
+				if ($NewPath -notlike "*"+$using:JavaBinLocation+"*")
 				{
-				  $NewPath= $JavaBinLocation + ’;’ + $NewPath
+				  $NewPath= $using:JavaBinLocation + ’;’ + $NewPath
 				}
 
 				Set-ItemProperty -Path "$Reg" -Name PATH –Value $NewPath
-				Set-ItemProperty -Path "$Reg" -Name JAVA_HOME –Value $JavaRootLocation
-				Set-ItemProperty -Path "$Reg" -Name classpath –Value $JavaLibLocation
+				Set-ItemProperty -Path "$Reg" -Name JAVA_HOME –Value $using:JavaRootLocation
+				Set-ItemProperty -Path "$Reg" -Name classpath –Value $using:JavaLibLocation
 
 
 
 				Write-Host "Waiting for JVM.dll"
-				$JREHome = $JavaRootLocation + "\jre"
+				$JREHome = $using:JavaRootLocation + "\jre"
 				$JVMServerdll = $JREHome + "\bin\server\jvm.dll"
 
 				$retrycount = 1800
@@ -259,11 +267,12 @@ Configuration InstallCAM
                 #(but perhaps unfairly so since it might have been affected by some Java install issues I had previously as well.)
 
 		        $LocalDLPath = $using:LocalDLPath
-		        $tomcatInstaller = "apache-tomcat-8.0.39-windows-x64.zip"
-				$localtomcatpath = "$env:systemdrive\tomcat"
-				$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
-				$CatalinaBinLocation = $CatalinaHomeLocation + "\bin"
+		        $tomcatInstaller = $using:tomcatInstaller
+				$localtomcatpath = $using:localtomcatpath
+				$CatalinaHomeLocation = $using:CatalinaHomeLocation
+				$CatalinaBinLocation = $using:CatalinaBinLocation
 				$ServerXMLFile = $CatalinaHomeLocation + '\conf\server.xml'
+				$OrigServerXMLFile =$ServerXMLFile + '.orig'
 
 				#make sure we get a clean install
 				Remove-Item $localtomcatpath -Force -Recurse -ErrorAction SilentlyContinue
@@ -297,17 +306,17 @@ Configuration InstallCAM
 				Write-Host "Configuring Tomcat"
 
 				# back up server.xml file if not done in a previous round
-				if( -not ( Get-Item ($CatalinaHomeLocation + '\conf\server.xml.orig') -ErrorAction SilentlyContinue ) )
+				if( -not ( Get-Item ($OrigServerXMLFile) -ErrorAction SilentlyContinue ) )
 				{
 					Copy-Item -Path ($ServerXMLFile) `
-						-Destination ($CatalinaHomeLocation + '\conf\server.xml.orig')
+						-Destination ($OrigServerXMLFile)
 				}
 
 				#
 				# update server.xml file
 				#
 
-				$xml = [xml](Get-Content ($CatalinaHomeLocation + '\conf\server.xml.orig'))
+				$xml = [xml](Get-Content ($OrigServerXMLFile))
 
 				# port 8080 unencrypted connector 
 
@@ -360,7 +369,7 @@ Configuration InstallCAM
 				Write-Host "Starting Tomcat Service"
 				Set-Service Tomcat8 -startuptype "automatic"
 
-				# Reboot machine - seems to need to happen to get Tomcat to run reliably or is there a big delay required? reboot for now :)
+				# Reboot machine - seems to need to happen to get Tomcat to run reliably.
 				$global:DSCMachineStatus = 1
 	        }
         }
@@ -375,8 +384,8 @@ Configuration InstallCAM
             GetScript  = { @{ Result = "Install_AUI" } }
 
             TestScript = {
-				$localtomcatpath = "$env:systemdrive\tomcat"
-				$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
+				$localtomcatpath = $using:localtomcatpath
+				$CatalinaHomeLocation = $using:CatalinaHomeLocation
 				$adminWAR = $using:adminWAR
 				$WARPath = $CatalinaHomeLocation + "\webapps" + $adminWAR
  
@@ -389,8 +398,8 @@ Configuration InstallCAM
 				$adminWAR = $using:adminWAR
                 $agentARM = $using:agentARM
                 $gaAgentARM = $using:gaAgentARM
-				$localtomcatpath = "$env:systemdrive\tomcat"
-				$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
+				$localtomcatpath = $using:localtomcatpath
+				$CatalinaHomeLocation = $using:CatalinaHomeLocation
 
                 Write-Verbose "Install Nuget and AzureRM packages"
 
@@ -438,12 +447,6 @@ Configuration InstallCAM
 				$domainroot = $domainsplit[1]  # get the second part of the domain name
 				$date = Get-Date
 				$domainControllerFQDN = $using:dcvmfqdn
-
-				$localAzureCreds = $using:AzureCreds
-
-				$AzureUsernameLocal = $localAzureCreds.GetNetworkCredential().Username
-				$AzurePasswordLocal = $localAzureCreds.GetNetworkCredential().Password
-
 				$RGNameLocal        = $using:RGName
 
 				$auProperties = @"
@@ -454,6 +457,7 @@ dcDomain = $domainleaf
 dc=$domainroot
 adServerHostAddress=$domainControllerFQDN
 resourceGroupName=$RGNameLocal
+CAMSessionTimeoutMinutes=480
 "@
 
 				$targetDir = "$env:CATALINA_HOME\adminproperty"
@@ -509,6 +513,7 @@ resourceGroupName=$RGNameLocal
 				Set-Content $indexFileName $redirectString -Force
 
 
+
 		        Write-Host "Pulling in Agent machine deployment script."
 
 				$templateLoc = "$CatalinaHomeLocation\ARMtemplateFiles"
@@ -524,6 +529,24 @@ resourceGroupName=$RGNameLocal
 				copy "$LocalDLPath\$agentARM" $templateLoc
 				copy "$LocalDLPath\$gaAgentARM" $templateLoc
 
+			}
+		}
+
+        Script Install_Auth_file
+        {
+            DependsOn  = @("[Script]Install_AUI")
+
+            GetScript  = { @{ Result = "Install_Auth_file" } }
+
+            TestScript = {
+				$targetDir = "$env:CATALINA_HOME\adminproperty"
+				$authFilePath = "$targetDir\authfile.txt"
+ 
+				if ( Get-Item $authFilePath -ErrorAction SilentlyContinue )
+                            {return $true}
+                            else {return $false}
+			}
+            SetScript  = {
 
 
 				Write-Host "Creating SP and writing auth file."
@@ -558,6 +581,9 @@ resourceGroupName=$RGNameLocal
 
 					}
 				}
+
+				$localAzureCreds = $using:AzureCreds
+				$RGNameLocal        = $using:RGName
 
 				Login-AzureRmAccountWithBetterReporting -Credential $localAzureCreds
 
@@ -661,18 +687,19 @@ $authFilePath = "$targetDir\authfile.txt"
 
 
 
-				Write-Host "Creating Azure KeyVault"
-
 				#Keyvault names must be globally (or at least regionally) unique, so make a unique string
 				$generatedKVID = -join ((65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
 
 				$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGNameLocal
 				$kvName = "CAM-$generatedKVID"
+
+				Write-Host "Creating Azure KeyVault $kvName"
+
 				New-AzureRmKeyVault -VaultName $kvName -ResourceGroupName $RGNameLocal -Location $rg.Location -EnabledForTemplateDeployment -EnabledForDeployment
 
 				Set-AzureRmKeyVaultAccessPolicy -VaultName $kvName -ServicePrincipalName $app.ApplicationId -PermissionsToSecrets get
 
-				Write-Host "Populating Azure KeyVault"
+				Write-Host "Populating Azure KeyVault $kvName"
 				
 				$rcCred = $using:registrationCodeAsCred
 				$registrationCode = $rcCred.Password
@@ -748,11 +775,11 @@ $authFilePath = "$targetDir\authfile.txt"
 
 "@
 
-				#now make the default parameters file - same root name but different suffix
+				#now make the default parameters filenames - same root name but different suffix as the templates
 				$agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
 				$gaAgentARMparam = ($gaAgentARM.split('.')[0]) + ".customparameters.json"
 
-				$ParamTargetDir = "$CatalinaHomeLocation\ARMParametertemplateFiles"
+				$ParamTargetDir = "$using:CatalinaHomeLocation\ARMParametertemplateFiles"
 				$ParamTargetFilePath = "$ParamTargetDir\$agentARMparam"
 				$GaParamTargetFilePath = "$ParamTargetDir\$gaAgentARMparam"
 
