@@ -400,7 +400,7 @@
                     ]
                 },
                 "protectedSettings": {
-                    "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File FinalizeDeployment.ps1 -domainUserUPN ',parameters('domainAdminUsername'),'@',parameters('domainName'),' -domainPassword ',parameters('domainAdminPassword'),' -machineToJoin ',variables('adminDesktopVMName'),' -groupToJoin ',variables('ADGroupToJoin'))]"
+          "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File FinalizeDeployment.ps1 -domainUserUPN ', parameters('domainAdminUsername'),'@',parameters('domainName'),' -domainPassword ',parameters('domainAdminPassword'),' -machineToJoin ',variables('adminDesktopVMName'),' -groupToJoin ',variables('ADGroupToJoin'),' -azureUserName ', parameters('AzureAdminUsername'), ' -azurePassword ', parameters('AzureAdminPassword'), ' -rgName ', resourceGroup().name, ' -backendIpAddressDefault ', variables('auPrivateIP'), ' -backendIpAddressForPathRule1 ', variables('cmPrivateIP'), ' -subnetRef ', concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')),'/subnets/',variables('gatewaySubnetName')), ' -templateUri ', concat(parameters('_artifactsLocation'), '/new-app-gateway/azuredeploy.json', parameters('_artifactsLocationSasToken')) )]"
                 }
             }
         },
@@ -684,42 +684,6 @@
                     }
                 }
             }
-        },
-        {
-            "type": "Microsoft.Resources/deployments",
-            "name": "CreateAppGateway",
-            "apiVersion": "2016-02-01",
-            "dependsOn": [
-                "[resourceId('Microsoft.Compute/virtualMachines', variables('adVMName'))]"
-            ],
-            "properties": {
-                "mode": "Incremental",
-                "templateLink": {
-                    "uri": "[concat(parameters('_artifactsLocation'), '/new-app-gateway/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
-                    "contentVersion": "1.0.0.0"
-                },
-                "parameters": {
-
-                    "subnetRef": {
-                        "value": "[concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')),'/subnets/',variables('gatewaySubnetName'))]"
-                        },
-                    "skuName": {
-                        "value": "Standard_Small"
-                    },
-                    "capacity": {
-                        "value": 1
-                    },
-                    "backendIpAddressDefault": {
-                        "value": "[variables('auPrivateIP')]"
-                    },
-                    "backendIpAddressForPathRule1": {
-                        "value": "[variables('cmPrivateIP')]"
-                    },
-                    "pathMatch1": {
-                        "value": "/pcoip-broker/*"
                     }
-                }
-            }
-        }
     ]
 }
