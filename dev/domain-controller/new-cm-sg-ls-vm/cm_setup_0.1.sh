@@ -6,7 +6,6 @@
 
 #get the install zip files
 wget https://teradeploy.blob.core.windows.net/binaries/P-CM-1.6_SG-1.12.zip -P /tmp/
-wget https://teradeploy.blob.core.windows.net/binaries/P-LS_1.1.0.zip -P /tmp/
 wget https://teradeploy.blob.core.windows.net/binaries/SC_1.0.zip -P /tmp/
 
 #Install and setup the Sumo Collector
