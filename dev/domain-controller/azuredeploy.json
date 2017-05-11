@@ -38,7 +38,6 @@
     "registrationCode": {
       "type": "securestring",
       "minLength": 21,
-      "defaultValue": "xxxxxxxxxxxx@nnnn-nnnn-nnnn-nnnn",
       "metadata": {
         "description": "PCoIP Agent License Registration Code."
       }
