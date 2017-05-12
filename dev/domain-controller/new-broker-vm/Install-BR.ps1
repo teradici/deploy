@@ -117,7 +117,10 @@ Configuration InstallBR
             DependsOn  = "[File]Sumo_Directory"
             GetScript  = { @{ Result = "Install_SumoCollector" } }
 
-            TestScript = { return $false }
+            TestScript = { 
+                return Test-Path "C:\sumo\sumo.conf" -PathType leaf
+                }
+
             SetScript  = {
                 Write-Verbose "Install_SumoCollector"
                 #$sumo_package = "$CAMDeploymentBlobSource/SumoCollector_windows-x64_19_182-25.exe"
