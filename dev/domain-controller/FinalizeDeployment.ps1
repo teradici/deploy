@@ -44,9 +44,8 @@ $randomPswd = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 16 | % 
 $certPwd = ConvertTo-SecureString -String $randomPswd -AsPlainText -Force
 Export-PfxCertificate -Cert $certPath -FilePath $certPfx -Password $certPwd
 
-#read from pfx file and generate 64base encoded string
-$fileContentBytes = get-content $certPfx -Encoding Byte
-$fileContentEncoded = [System.Convert]::ToBase64String($fileContentBytes)
+#read from pfx file and convert to base64 string
+$fileContentEncoded = [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes($certPfx))
 
 # Login to azure
 $azurePwd = ConvertTo-SecureString $azurePassword -AsPlainText -Force
