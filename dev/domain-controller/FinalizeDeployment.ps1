@@ -36,7 +36,7 @@ Invoke-Command -Session $psSession -ScriptBlock {
 # create self signed certificate
 $certLoc = 'cert:Localmachine\My'
 $startDate = [DateTime]::Now.AddDays(-1)
-$cert = New-SelfSignedCertificate -certstorelocation $certLoc -Subject "CN=PCoIP-APP-GateWay.teradici.local,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"  -KeyLength 2048 -FriendlyName "PCoIP Application Gateway" -NotBefore $startDate 
+$cert = New-SelfSignedCertificate -certstorelocation $certLoc -DnsName "teradici.local" -Subject "CN=localhost,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"  -KeyLength 3072 -FriendlyName "PCoIP Application Gateway" -NotBefore $startDate -TextExtension @("2.5.29.19 ={text}ca=1&pathlength=0") -HashAlgorithm SHA384
 
 #generate pfx file
 $certPath = $certLoc + '\' + $cert.Thumbprint
