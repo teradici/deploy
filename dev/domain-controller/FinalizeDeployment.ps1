@@ -36,7 +36,7 @@ Invoke-Command -Session $psSession -ScriptBlock {
 # create self signed certificate
 $certLoc = 'cert:Localmachine\My'
 $startDate = [DateTime]::Now.AddDays(-1)
-$cert = New-SelfSignedCertificate -certstorelocation $certLoc -DnsName "teradici.local" -Subject "CN=localhost,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"  -KeyLength 3072 -FriendlyName "PCoIP Application Gateway" -NotBefore $startDate -TextExtension @("2.5.29.19 ={text}ca=1&pathlength=0") -HashAlgorithm SHA384
+$cert = New-SelfSignedCertificate -certstorelocation $certLoc -DnsName "cloudapp.net" -Subject "CN=localhost,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"  -KeyLength 3072 -FriendlyName "PCoIP Application Gateway" -NotBefore $startDate -TextExtension @("2.5.29.19 ={text}ca=1&pathlength=0") -HashAlgorithm SHA384
 
 #generate pfx file
 $certPath = $certLoc + '\' + $cert.Thumbprint
@@ -67,6 +67,4 @@ $parameters.Add(“pathMatch1”, "/pcoip-broker/*")
 $parameters.Add(“certData”, "$fileContentEncoded")
 $parameters.Add(“certPassword”, "$randomPswd")
 
-$deployName = -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})
-
-New-AzureRmResourceGroupDeployment -Mode Incremental -Name $deployName -ResourceGroupName $rgName -TemplateUri $templateUri -TemplateParameterObject $parameters
+New-AzureRmResourceGroupDeployment -Mode Incremental -Name "DeployAppGateway" -ResourceGroupName $rgName -TemplateUri $templateUri -TemplateParameterObject $parameters
