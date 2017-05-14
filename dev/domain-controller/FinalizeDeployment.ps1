@@ -34,9 +34,9 @@ Invoke-Command -Session $psSession -ScriptBlock {
 
 
 # create self signed certificate
+
 $certLoc = 'cert:Localmachine\My'
-$startDate = [DateTime]::Now.AddDays(-1)
-$cert = New-SelfSignedCertificate -certstorelocation $certLoc -DnsName "cloudapp.net" -Subject "CN=localhost,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"  -KeyLength 3072 -FriendlyName "PCoIP Application Gateway" -NotBefore $startDate -TextExtension @("2.5.29.19 ={text}ca=1&pathlength=0") -HashAlgorithm SHA384
+$cert = New-SelfSignedCertificate -certstorelocation $certLoc -DnsName "pcoip-gateway.cloudapp.net" 
 
 #generate pfx file
 $certPath = $certLoc + '\' + $cert.Thumbprint
@@ -74,7 +74,7 @@ $fqdn = (Get-AzureRmPublicIpAddress -ResourceGroupName $rgName -Name publicip1).
 $certLoc = 'cert:Localmachine\My'
 $startDate = [DateTime]::Now.AddDays(-1)
 
-$subject = $fqdn + ",O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"
+$subject = "cn=" + $fqdn + ",O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"
 
 $cert = New-SelfSignedCertificate -certstorelocation $certLoc -Subject $subject -KeyLength 3072 -FriendlyName "PCoIP Application Gateway" -NotBefore $startDate -TextExtension @("2.5.29.19={critical}{text}ca=1") -HashAlgorithm SHA384 -KeyUsage DigitalSignature, CertSign,  CRLSign, KeyEncipherment
 
