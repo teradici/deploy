@@ -690,11 +690,10 @@ $authFilePath = "$targetDir\authfile.txt"
 				$generatedKVID = -join ((65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
 				$kvName = "CAM-$generatedKVID"
 
-
-				$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGNameLocal
-
 				Write-Host "Creating Azure KeyVault $kvName"
 
+
+				$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGNameLocal
 				New-AzureRmKeyVault -VaultName $kvName -ResourceGroupName $RGNameLocal -Location $rg.Location -EnabledForTemplateDeployment -EnabledForDeployment
 
 				Set-AzureRmKeyVaultAccessPolicy -VaultName $kvName -ServicePrincipalName $app.ApplicationId -PermissionsToSecrets get
