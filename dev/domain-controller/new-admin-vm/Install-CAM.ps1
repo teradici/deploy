@@ -641,7 +641,7 @@ CAMSessionTimeoutMinutes=480
 
 
 				$sub = Get-AzureRmSubscription
-				$subID = $sub.SubscriptionId
+				$subID = $sub.Id
 				$tenantID = $sub.TenantId
 				$clientID = $app.ApplicationId
 
@@ -686,12 +686,12 @@ $authFilePath = "$targetDir\authfile.txt"
 
 
 
-
-				#Keyvault names must be globally (or at least regionally) unique, so make a unique string
+				#KeyVault names must be globally (or at least regionally) unique, so make a unique string
 				$generatedKVID = -join ((65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
+				$kvName = "CAM-$generatedKVID"
+
 
 				$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGNameLocal
-				$kvName = "CAM-$generatedKVID"
 
 				Write-Host "Creating Azure KeyVault $kvName"
 
@@ -705,13 +705,39 @@ $authFilePath = "$targetDir\authfile.txt"
 				$registrationCode = $rcCred.Password
 
 				$rcSecretName = 'cloudAccessRegistrationCode'
-				$rcSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $rcSecretName -SecretValue $registrationCode
+				$djSecretName = 'domainJoinPassword'
+
+				$rcSecret = $null
+				$djSecret = $null
+
+				#keyvault populate retry is to catch the case where the DNS has not been updated
+				#from the keyvault creation by the time we get here
+				$keyVaultPopulateRetry = 120
+				while($keyVaultPopulateRetry -ne 0)
+				{
+					$keyVaultPopulateRetry--
+
+					try
+					{
+						$rcSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $rcSecretName -SecretValue $registrationCode -ErrorAction stop
+						$djSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $djSecretName -SecretValue $localDomainAdminCreds.Password -ErrorAction stop
+						break
+					}
+					catch
+					{
+						Write-Host "Waiting for key vault $keyVaultPopulateRetry"
+						if ( $keyVaultPopulateRetry -eq 0)
+						{
+							#re-throw whatever the original exception was
+							throw
+						}
+						Start-sleep -Seconds 5
+					}
+				}
+
 				$rcSecretVersionedURL = $rcSecret.Id
 				$rcSecretURL = $rcSecretVersionedURL.Substring(0, $rcSecretVersionedURL.lastIndexOf('/'))
 
-
-				$djSecretName = 'domainJoinPassword'
-				$djSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $djSecretName -SecretValue $localDomainAdminCreds.Password
 				$djSecretVersionedURL = $djSecret.Id
 				$djSecretURL = $djSecretVersionedURL.Substring(0, $djSecretVersionedURL.lastIndexOf('/'))
 
