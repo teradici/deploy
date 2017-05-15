@@ -39,7 +39,9 @@ Login-AzureRmAccount -Credential $azureloginCred
 
 # create self signed certificate
 $certLoc = 'cert:Localmachine\My'
-$cert = New-SelfSignedCertificate -certstorelocation $certLoc -DnsName "pcoip-gateway.cloudapp.net" 
+$startDate = [DateTime]::Now.AddDays(-1)
+$subject = "CN=localhost,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"
+$cert = New-SelfSignedCertificate -certstorelocation $certLoc -DnsName "*.cloudapp.net" -Subject $subject -KeyLength 3072 -FriendlyName "PCoIP Application Gateway" -NotBefore $startDate -TextExtension @("2.5.29.19={critical}{text}ca=1") -HashAlgorithm SHA384 -KeyUsage DigitalSignature, CertSign, CRLSign, KeyEncipherment
 
 #generate pfx file from certificate
 $certPath = $certLoc + '\' + $cert.Thumbprint
@@ -72,27 +74,3 @@ $parameters.Add(“certData”, "$fileContentEncoded")
 $parameters.Add(“certPassword”, "$certPswd")
 
 New-AzureRmResourceGroupDeployment -Mode Incremental -Name "DeployAppGateway" -ResourceGroupName $rgName -TemplateUri $templateUri -TemplateParameterObject $parameters
-
-#regenerate cert with the fqdn
-$startDate = [DateTime]::Now.AddDays(-1)
-$fqdn = (Get-AzureRmPublicIpAddress -ResourceGroupName $rgName -Name publicip1).DnsSettings.Fqdn
-$subject = "cn=" + $fqdn + ",O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"
-$cert = New-SelfSignedCertificate -certstorelocation $certLoc -Subject $subject -KeyLength 3072 -FriendlyName "PCoIP Application Gateway" -NotBefore $startDate -TextExtension @("2.5.29.19={critical}{text}ca=1") -HashAlgorithm SHA384 -KeyUsage DigitalSignature, CertSign,  CRLSign, KeyEncipherment
-
-$certPath = $certLoc + '\' + $cert.Thumbprint
-
-#remove old pfx file
-Remove-Item $certPfx
-
-Export-PfxCertificate -Cert $certPath -FilePath $certPfx -Password $secureCertPswd
-
-$appGwObj = Get-AzureRmApplicationGateway -ResourceGroupName $rgName -Name applicationGateway1
-
-#remove old certificate
-Remove-AzureRmApplicationGatewaySslCertificate -ApplicationGateway $appGwObj -Name appGatewaySslCert
-
-#add new certificate
-Add-AzureRmApplicationGatewaySslCertificate -ApplicationGateway $appGwObj -Name appGatewaySslCert -CertificateFile $certPfx -Password $certPswd
-
-#apply to app gateway, it takes time to effect changes
-Set-AzureRmApplicationGateway -ApplicationGateway $appGwObj
