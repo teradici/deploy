@@ -32,6 +32,11 @@ Invoke-Command -Session $psSession -ScriptBlock {
 	Add-ADGroupMember -Identity $using:groupToJoin -Members $machineToJoin
 }
 
+# Login to azure
+$azurePwd = ConvertTo-SecureString $azurePassword -AsPlainText -Force
+$azureloginCred = New-Object -TypeName pscredential –ArgumentList $azureUserName, $azurePwd
+Login-AzureRmAccount -Credential $azureloginCred
+
 $rgObj = Get-AzureRmResourceGroup -Name $rgName
 
 # create self signed certificate
@@ -57,10 +62,6 @@ Export-PfxCertificate -Cert $certPath -FilePath $certPfx -Password $secureCertPs
 #read from pfx file and convert to base64 string
 $fileContentEncoded = [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes($certPfx))
 
-# Login to azure
-$azurePwd = ConvertTo-SecureString $azurePassword -AsPlainText -Force
-$azureloginCred = New-Object -TypeName pscredential –ArgumentList $azureUserName, $azurePwd
-Login-AzureRmAccount -Credential $azureloginCred
 
 # deploy application gateway
 $parameters = @{}
