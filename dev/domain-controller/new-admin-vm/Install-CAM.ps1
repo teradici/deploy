@@ -754,7 +754,7 @@ $authFilePath = "$targetDir\authfile.txt"
 
 
 
-				Write-Host "Creating default template parameters file"
+				Write-Host "Creating default template parameters file data"
 
 
 				$armParamContent = @"
@@ -779,7 +779,7 @@ $authFilePath = "$targetDir\authfile.txt"
 				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
 			  },
 			  "secretName": "$rcSecretName"
-			}		
+			}
 		},
         "dnsLabelPrefix": { "value": "tbd-vmname" },
         "existingVNETName": { "value": "$using:existingVNETName" },
@@ -800,7 +800,12 @@ $authFilePath = "$targetDir\authfile.txt"
 
 "@
 
+				Write-Host "Creating default template parameters files"
+
 				#now make the default parameters filenames - same root name but different suffix as the templates
+                $agentARM = $using:agentARM
+                $gaAgentARM = $using:gaAgentARM
+
 				$agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
 				$gaAgentARMparam = ($gaAgentARM.split('.')[0]) + ".customparameters.json"
 
