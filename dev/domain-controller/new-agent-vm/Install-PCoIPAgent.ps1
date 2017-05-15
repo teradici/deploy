@@ -65,7 +65,9 @@ Configuration InstallPCoIPAgent
             DependsOn  = "[File]Sumo_Download_Directory"
             GetScript  = { @{ Result = "Install_SumoCollector" } }
 
-            TestScript = { return $false }
+            TestScript = { 
+                return Test-Path "C:\sumo\sumo.conf" -PathType leaf
+                }
 
             SetScript  = {
                 Write-Verbose "Install_SumoCollector"
