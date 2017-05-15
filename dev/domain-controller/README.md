@@ -44,21 +44,29 @@ You must have an Azure account and subscription that does not require multi-fact
 
 The following steps outline the procedure for performing a deployment of CAM using Microsoft Azure: 
 
- Click the Deploy Azure button to  begin.
+ Click the <b> Deploy Azure </b> button to  begin.
 
 <a target="_blank" href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fteradici%2Fdeploy%2Fmaster%2Fdev%2Fdomain-controller%2Fazuredeploy.json">
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
- 1. Enter your Microsoft Azure account details.
- 1. On the left information pane of the Microsoft Azure GUI click the <b>Resource Groups</b> icon.
- 1. Click <b>Add</b> to create a new resource group within Azure.
- 1. Enter a name for your new resource, click <b>Create</b> and return to the custom deployment screen.
- 1. Under the Basics heading click <b>Use exisiting</b> and select the resource group you just created.
- 1. Enter the Domain Admin Password and Azure Admin Password under the Settings heading. 
- 1. Read the terms and conditions and when you are ready click <b>Purchase</b>.
- 
- The deployment will now begin to run. You can track it through the Notifications icon on the top pane of the Microsoft Azure GUI.
+1. Select the Microsoft Azure account you want to access.
+1. Enter your Password and click <b>Sign in</b>
+1. ON the Customized Template page create a new Resource group by selecting the <b>Create New</b> icon and entering a name for the group.
+* You can also select a pre-defined Resource group by selecting the <b>Use Existing</b> icon and clicking on one of the groups from the dropdown menu.
+
+4. Select a location from the dropdown menu.
+5. Enter a Username for the <b>Domain Admin Username</b>.
+6. Enter a password for the <b>Domain Admin Password</b>.
+7. Enter a <b>Domain Name</b> and ensure it finishes in <b>.com</b>.
+8. Enter your <b>Azure Admin Username</b>. This must be the same account you logged into from step 1.
+9. Enter your <b>Azure Admin Password</b>. This must be the same password you used to log in from step 2.
+10. Enter the CAS license registration code for the <b>Registration Code</b>. If you do not have a registration code contact a member of the Cloud BU team.
+11. Use the default addresses that are pre-entered for the <b>CAM Deployment Blob Source</b> and <b>_artifacts Location</b>. 
+12. Read the Terms and Conditions and once you are satisified with the information you have entered click the <b> I Agree</b> icon.
+13. Click <b>Purchase</b> to begin deployment.
+
+The deployment will now begin to run. You can track it through the notifications icon or for a more detailed view of your deployment click the <b>Resource Groups </b> icon located on the left hand side of the page and click on your resource group.
 
 ## Known Issues with Deploying the Solution
 
