@@ -58,12 +58,6 @@
       "metadata": {
         "description": "Password for .pfx certificate"
       }
-    },
-    "domainNameLabel": {
-      "type": "string",
-      "metadata": {
-        "description": "Application Gateway domain name label"
-      }
     }
   },
   "variables": {
@@ -81,10 +75,7 @@
       "name": "[variables('publicIPAddressName')]",
       "location": "[resourceGroup().location]",
       "properties": {
-        "publicIPAllocationMethod": "Dynamic",
-        "dnsSettings": {
-          "domainNameLabel": "[parameters('domainNameLabel')]"
-        }
+        "publicIPAllocationMethod": "Dynamic"
       }
     },
     {
