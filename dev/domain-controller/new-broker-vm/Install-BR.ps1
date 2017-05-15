@@ -42,7 +42,13 @@ Configuration InstallBR
         [System.Management.Automation.PSCredential]$Admincreds,
 
         [Parameter(Mandatory)]
-        [String]$DCVMName #without the domain suffix
+        [String]$DCVMName, #without the domain suffix
+
+        [Parameter(Mandatory)]
+        [String]$gitLocation,
+
+        [Parameter(Mandatory)]
+        [String]$sumoCollectorID
     )
 
 	$dcvmfqdn = "$DCVMName.$DomainName"
@@ -98,6 +104,46 @@ Configuration InstallBR
 			DestinationPath = "$LocalDLPath\$brokerWAR"
 		}
 
+        File Sumo_Directory 
+        {
+            Ensure          = "Present"
+            Type            = "Directory"
+            DestinationPath = "C:\sumo"
+        }
+
+        # Aim to install the collector first and start the log collection before any 
+        # other applications are installed.
+        Script Install_SumoCollector
+        {
+            DependsOn  = "[File]Sumo_Directory"
+            GetScript  = { @{ Result = "Install_SumoCollector" } }
+
+            TestScript = { 
+                return Test-Path "C:\sumo\sumo.conf" -PathType leaf
+                }
+
+            SetScript  = {
+                Write-Verbose "Install_SumoCollector"
+                #$sumo_package = "$CAMDeploymentBlobSource/SumoCollector_windows-x64_19_182-25.exe"
+                $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/SumoCollector_windows-x64_19_182-25.exe"
+                $sumo_config = "$using:gitLocation/sumo.conf"
+                $sumo_collector_json = "$using:gitLocation/sumo-broker-vm.json"
+                $dest = "C:\sumo"
+                Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile "$dest\sumo.conf"
+                Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile "$dest\sumo-broker-vm.json"
+                #
+                #Insert unique ID
+                $collectorID = "$using:sumoCollectorID"
+                (Get-Content -Path "$dest\sumo.conf").Replace("collectorID", $collectorID) | Set-Content -Path "$dest\sumo.conf"
+                
+                $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
+                Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
+                
+                #install the collector
+                $command = "$dest\$installerFileName -console -q"
+                Invoke-Expression $command
+            }
+        }
 
 		# One day can split this to 'install java' and 'configure java environemnt' and use 'package' dsc like here:
 		# http://stackoverflow.com/questions/31562451/installing-jre-using-powershell-dsc-hangs

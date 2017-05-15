@@ -6,7 +6,19 @@
 
 #get the install zip files
 wget https://teradeploy.blob.core.windows.net/binaries/P-CM-1.6_SG-1.12.zip -P /tmp/
-#wget https://teradeploy.blob.core.windows.net/binaries/P-LS_1.1.0.zip -P /tmp/
+wget https://teradeploy.blob.core.windows.net/binaries/SC_1.0.zip -P /tmp/
+
+#Install and setup the Sumo Collector
+unzip -o /tmp/SC_1.0.zip
+rpm -i sumo/SumoCollector-19.182-25.x86_64.rpm
+cp sumo/user.properties /opt/SumoCollector/config/
+cp sumo/sumo_cm_vm.json /opt/SumoCollector/config/
+echo "Attemtping to set sumo collector ID to: " $2
+sed -i s/collectorID/$2/ /opt/SumoCollector/config/user.properties
+# service collector install - configures the collector to start at boot time
+service collector install
+service collector restart
+service collector status
 
 
 unzip -o /tmp/P-CM-1.6_SG-1.12.zip

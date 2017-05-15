@@ -1,0 +1,77 @@
+{
+"api.version": "v1",
+"sources": [
+    {
+        "name":  "CAMPOC_Teradici_CM_Logs",
+        "category":  "CAMPOC/Teradici/CM/Logs",
+        "automaticDateParsing":  true,
+        "multilineProcessingEnabled":  false,
+        "useAutolineMatching":  false,
+        "forceTimeZone":  false,
+        "timeZone":  "Etc/UTC",
+        "filters":  [
+                    ],
+        "cutoffTimestamp":  0,
+        "encoding":  "UTF-8",
+        "pathExpression":  "/var/log/Teradici/ConnectionManager/*.log",
+        "blacklist":  [
+                      ],
+        "sourceType":  "LocalFile",
+        "alive":  false
+    },
+    {
+        "name":  "CAMPOC_Teradici_SG_Logs",
+        "category":  "CAMPOC/Teradici/SG/Logs",
+        "automaticDateParsing":  true,
+        "multilineProcessingEnabled":  false,
+        "useAutolineMatching":  false,
+        "forceTimeZone":  false,
+        "timeZone":  "Etc/UTC",
+        "filters":  [
+                    ],
+        "cutoffTimestamp":  0,
+        "encoding":  "UTF-8",
+        "pathExpression":  "/var/log/Teradici/SecurityGateway/*.log",
+        "blacklist":  [
+                      ],
+        "sourceType":  "LocalFile",
+        "alive":  false
+    },
+    {
+        "name":  "CAMPOC_Teradici_CM_Deployment_Logs",
+        "category":  "CAMPOC/Teradici/Azure/Logs",
+        "automaticDateParsing":  true,
+        "multilineProcessingEnabled":  false,
+        "useAutolineMatching":  false,
+        "forceTimeZone":  false,
+        "timeZone":  "Etc/UTC",
+        "filters":  [
+                    ],
+        "cutoffTimestamp":  0,
+        "encoding":  "UTF-8",
+        "pathExpression": "/var/lib/waagent/Microsoft.OSTCExtensions.CustomScriptForLinux-1.5.2.1/download/0/*out",
+        "blacklist":  [
+                      ],
+        "sourceType":  "LocalFile",
+        "alive":  false
+    },
+    {
+        "name":  "CAMPOC_Teradici_CM_Azure_Logs",
+        "category":  "CAMPOC/Teradici/Azure/Logs",
+        "automaticDateParsing":  true,
+        "multilineProcessingEnabled":  false,
+        "useAutolineMatching":  false,
+        "forceTimeZone":  false,
+        "timeZone":  "Etc/UTC",
+        "filters":  [
+                    ],
+        "cutoffTimestamp":  0,
+        "encoding":  "UTF-8",
+        "pathExpression": "/var/log/azure/Microsoft.OSTCExtensions.CustomScriptForLinux/1.5.2.1/*.log",
+        "blacklist":  [
+                      ],
+        "sourceType":  "LocalFile",
+        "alive":  false
+    }
+]
+}

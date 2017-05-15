@@ -1,0 +1,91 @@
+{
+"api.version": "v1",
+"sources": [
+    {
+        "name":  "CAMPOC_Teradici_Agent_Logs",
+        "category":  "CAMPOC/Teradici/Agent/Logs",
+        "automaticDateParsing":  true,
+        "multilineProcessingEnabled":  false,
+        "useAutolineMatching":  false,
+        "forceTimeZone":  false,
+        "timeZone":  "Etc/UTC",
+        "filters":  [
+                    ],
+        "cutoffTimestamp":  0,
+        "encoding":  "UTF-8",
+        "pathExpression":  "C:\\ProgramData\\Teradici\\PCoIPAgent\\logs\\*.txt",
+        "blacklist":  [
+                      ],
+        "sourceType":  "LocalFile",
+        "alive":  false
+    },
+    {
+        "name":  "CAMPOC_Teradici_Agent_Azure_Logs",
+        "category":  "CAMPOC/Teradici/Azure/Logs",
+        "automaticDateParsing":  true,
+        "multilineProcessingEnabled":  false,
+        "useAutolineMatching":  false,
+        "forceTimeZone":  false,
+        "timeZone":  "Etc/UTC",
+        "filters":  [
+                    ],
+        "cutoffTimestamp":  0,
+        "encoding":  "UTF-8",
+        "pathExpression":  "C:\\WindowsAzure\\**\\*.log",
+        "blacklist":  [
+                      ],
+        "sourceType":  "LocalFile",
+        "alive":  false
+    },
+    {
+        "name":"CAMPOC_Windows_Events",
+        "category":"CAMPOC/Teradici/Windows/Events",
+        "automaticDateParsing":true,
+        "multilineProcessingEnabled":true,
+        "useAutolineMatching":false,
+        "manualPrefixRegexp":"",
+        "forceTimeZone":false,
+        "defaultDateFormat":"dd/MMM/yyyy HH:mm:ss",
+        "timeZone":"Etc/UTC",
+        "filters":[],
+        "cutoffTimestamp":0,
+        "encoding":"UTF-8",
+        "logNames":["Security","Application"],
+        "renderMessages":true,
+        "sidStyle":2,
+        "sourceType":"LocalWindowsEventLog"
+    },
+    {
+        "name":"CAMPOC_Windows_Performance_Logs",
+        "category":"CAMPOC/Teradici/Performance/Windows",
+        "automaticDateParsing":false,
+        "multilineProcessingEnabled":false,
+        "useAutolineMatching":false,
+        "forceTimeZone":false,
+        "filters":[],
+        "cutoffTimestamp":0,
+        "encoding":"UTF-8",
+        "interval":60000,
+        "wmiQueries":[{
+        "name":"Process",
+        "query":"select * from Win32_PerfFormattedData_PerfProc_Process"
+        },{
+        "name":"CPU",
+        "query":"select * from Win32_PerfFormattedData_PerfOS_Processor"
+        },{
+        "name":"Logical Disk",
+        "query":"select * from Win32_PerfFormattedData_PerfDisk_LogicalDisk"
+        },{
+        "name":"Physical Disk",
+        "query":"select * from Win32_PerfFormattedData_PerfDisk_PhysicalDisk"
+        },{
+        "name":"Memory",
+        "query":"select * from Win32_PerfFormattedData_PerfOS_Memory"
+        },{
+        "name":"Network",
+        "query":"select * from Win32_PerfFormattedData_Tcpip_NetworkInterface"
+        }],
+        "sourceType":"LocalWindowsPerfMon"
+        }
+]
+}

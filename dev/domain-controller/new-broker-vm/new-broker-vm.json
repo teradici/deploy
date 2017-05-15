@@ -123,7 +123,9 @@
                             "UserName": "[parameters('vmAdminUsername')]",
                             "Password": "PrivateSettingsRef:AdminPassword"
                         },
-                        "DCVMName": "[parameters('domainControllerName')]"
+                        "DCVMName": "[parameters('domainControllerName')]",
+                        "gitLocation": "[parameters('_artifactsLocation')]",
+                        "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Broker-',subscription().subscriptionId)]"
                     }
                 },
                 "protectedSettings": {
