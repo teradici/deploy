@@ -41,7 +41,7 @@ $rgObj = Get-AzureRmResourceGroup -Name $rgName
 
 # create self signed certificate
 $certLoc = 'cert:Localmachine\My'
-$domainNameLabel = 'pcoipappgw' + (-join ((48..57) + (65..90) + (97..122) | Get-Random -Count 8 | % {[char]$_}))
+$domainNameLabel = 'pcoipappgw' + (-join ((48..57) + (97..122) | Get-Random -Count 6 | % {[char]$_}))
 $fqdn = $domainNameLabel + "." + $rgObj.location + ".cloudapp.azure.com"
 $startDate = [DateTime]::Now.AddDays(-1)
 $cert = New-SelfSignedCertificate -certstorelocation $certLoc -DnsName $fqdn  -KeyLength 3072 -FriendlyName "PCoIP Application Gateway" -NotBefore $startDate -TextExtension @("2.5.29.19={critical}{text}ca=1") -HashAlgorithm SHA384 -KeyUsage DigitalSignature, CertSign,  CRLSign, KeyEncipherment
