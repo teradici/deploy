@@ -32,26 +32,35 @@ Invoke-Command -Session $psSession -ScriptBlock {
 	Add-ADGroupMember -Identity $using:groupToJoin -Members $machineToJoin
 }
 
-
-# create self signed certificate
-$certLoc = 'cert:Localmachine\My'
-$cert = New-SelfSignedCertificate -certstorelocation $certLoc -dnsname local.teradici.com
-
-#generate pfx file
-$certPath = $certLoc + '\' + $cert.Thumbprint
-$certPfx = 'C:\WindowsAzure\mySelfSignedCert.pfx'
-$randomPswd = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
-$certPwd = ConvertTo-SecureString -String $randomPswd -AsPlainText -Force
-Export-PfxCertificate -Cert $certPath -FilePath $certPfx -Password $certPwd
-
-#read from pfx file and generate 64base encoded string
-$fileContentBytes = get-content $certPfx -Encoding Byte
-$fileContentEncoded = [System.Convert]::ToBase64String($fileContentBytes)
-
 # Login to azure
 $azurePwd = ConvertTo-SecureString $azurePassword -AsPlainText -Force
 $azureloginCred = New-Object -TypeName pscredential –ArgumentList $azureUserName, $azurePwd
 Login-AzureRmAccount -Credential $azureloginCred
+
+# create self signed certificate
+$certLoc = 'cert:Localmachine\My'
+$startDate = [DateTime]::Now.AddDays(-1)
+$subject = "CN=localhost,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"
+$cert = New-SelfSignedCertificate -certstorelocation $certLoc -DnsName "*.cloudapp.net" -Subject $subject -KeyLength 3072 -FriendlyName "PCoIP Application Gateway" -NotBefore $startDate -TextExtension @("2.5.29.19={critical}{text}ca=1") -HashAlgorithm SHA384 -KeyUsage DigitalSignature, CertSign, CRLSign, KeyEncipherment
+
+#generate pfx file from certificate
+$certPath = $certLoc + '\' + $cert.Thumbprint
+
+$pfxPath = 'C:\WindowsAzure'
+if (!(Test-Path -Path $pfxPath)) {
+	New-Item $pfxPath -type directory
+}
+$certPfx = $pfxPath + '\mySelfSignedCert.pfx'
+
+#generate password for pfx file
+$certPswd = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
+$secureCertPswd = ConvertTo-SecureString -String $certPswd -AsPlainText -Force
+
+#export pfx file
+Export-PfxCertificate -Cert $certPath -FilePath $certPfx -Password $secureCertPswd
+
+#read from pfx file and convert to base64 string
+$fileContentEncoded = [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes($certPfx))
 
 # deploy application gateway
 $parameters = @{}
@@ -62,8 +71,6 @@ $parameters.Add(“backendIpAddressDefault”, "$backendIpAddressDefault")
 $parameters.Add(“backendIpAddressForPathRule1”, "$backendIpAddressForPathRule1")
 $parameters.Add(“pathMatch1”, "/pcoip-broker/*")
 $parameters.Add(“certData”, "$fileContentEncoded")
-$parameters.Add(“certPassword”, "$randomPswd")
+$parameters.Add(“certPassword”, "$certPswd")
 
-$deployName = -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})
-
-New-AzureRmResourceGroupDeployment -Mode Incremental -Name $deployName -ResourceGroupName $rgName -TemplateUri $templateUri -TemplateParameterObject $parameters
+New-AzureRmResourceGroupDeployment -Mode Incremental -Name "DeployAppGateway" -ResourceGroupName $rgName -TemplateUri $templateUri -TemplateParameterObject $parameters

@@ -1,73 +1,73 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
-        "subnetRef": {
-            "type": "string",
-            "metadata": {
-                "description": "Subnet resource reference in the form of (vnet resourceId/subnets/(subnetname))"
-            }
-        },
-        "skuName": {
-            "type": "string",
-            "allowedValues": [
-                "Standard_Small",
-                "Standard_Medium",
-                "Standard_Large"
-            ],
-            "defaultValue": "Standard_Medium",
-            "metadata": {
-                "description": "Sku Name"
-            }
-        },
-        "capacity": {
-            "type": "int",
-            "minValue": 1,
-            "maxValue": 10,
-            "defaultValue": 2,
-            "metadata": {
-                "description": "Number of instances"
-            }
-        },
-        "backendIpAddressDefault": {
-            "type": "string",
-            "metadata": {
-                "description": "IP Address of Default Backend Server"
-            }
-        },
-        "backendIpAddressForPathRule1": {
-            "type": "string",
-            "metadata": {
-                "description": "IP Address of Backend Server for Path Rule 1 match"
-            }
-        },
-        "pathMatch1": {
-            "type": "string",
-            "metadata": {
-                "description": "Path match string for Path Rule 1"
-            }
-        },
-        "certData": {
-            "type": "string",
-            "metadata": {
-                "description": "Base-64 encoded form of the .pfx file"
-            }
-        },
-        "certPassword": {
-            "type": "securestring",
-            "metadata": {
-                "description": "Password for .pfx certificate"
-            }
-        }
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "subnetRef": {
+      "type": "string",
+      "metadata": {
+        "description": "Subnet resource reference in the form of (vnet resourceId/subnets/(subnetname))"
+      }
     },
-    "variables": {
-        "applicationGatewayName": "applicationGateway1",
-        "publicIPAddressName": "publicIp1",
-        "virtualNetworkName": "virtualNetwork1",
-        "publicIPRef": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]",
-        "applicationGatewayID": "[resourceId('Microsoft.Network/applicationGateways',variables('applicationGatewayName'))]",
+    "skuName": {
+      "type": "string",
+      "allowedValues": [
+        "Standard_Small",
+        "Standard_Medium",
+        "Standard_Large"
+      ],
+      "defaultValue": "Standard_Medium",
+      "metadata": {
+        "description": "Sku Name"
+      }
+    },
+    "capacity": {
+      "type": "int",
+      "minValue": 1,
+      "maxValue": 10,
+      "defaultValue": 2,
+      "metadata": {
+        "description": "Number of instances"
+      }
+    },
+    "backendIpAddressDefault": {
+      "type": "string",
+      "metadata": {
+        "description": "IP Address of Default Backend Server"
+      }
+    },
+    "backendIpAddressForPathRule1": {
+      "type": "string",
+      "metadata": {
+        "description": "IP Address of Backend Server for Path Rule 1 match"
+      }
+    },
+    "pathMatch1": {
+      "type": "string",
+      "metadata": {
+        "description": "Path match string for Path Rule 1"
+      }
+    },
+    "certData": {
+      "type": "string",
+      "metadata": {
+        "description": "Base-64 encoded form of the .pfx file"
+      }
+    },
+    "certPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password for .pfx certificate"
+      }
+    }
+  },
+  "variables": {
+    "applicationGatewayName": "applicationGateway1",
+    "publicIPAddressName": "publicIp1",
+    "virtualNetworkName": "virtualNetwork1",
+    "publicIPRef": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]",
+    "applicationGatewayID": "[resourceId('Microsoft.Network/applicationGateways',variables('applicationGatewayName'))]",
     "apiVersion": "2015-06-15"
-    },
+  },
   "resources": [
     {
       "apiVersion": "[variables('apiVersion')]",
@@ -139,8 +139,8 @@
                 }
               ]
             }
-        },
-        {
+          },
+          {
             "name": "appGatewayBackendPool1",
             "properties": {
               "BackendAddresses": [
@@ -174,7 +174,8 @@
               "Protocol": "Https",
               "SslCertificate": {
                 "Id": "[concat(variables('applicationGatewayID'), '/sslCertificates/appGatewaySslCert')]"
-              }            }
+              }
+            }
           }
         ],
         "urlPathMaps": [
@@ -189,18 +190,18 @@
               },
               "pathRules": [
                 {
-                    "name": "pathRule1",
-                    "properties": {
-                        "paths": [
-                            "[parameters('pathMatch1')]"
-                        ],
-                        "backendAddressPool": {
-                            "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/appGatewayBackendPool1')]"
-                        },
-                        "backendHttpSettings": {
-                            "id": "[concat(variables('applicationGatewayID'), '/backendHttpSettingsCollection/appGatewayBackendHttpSettings')]"
-                        }
+                  "name": "pathRule1",
+                  "properties": {
+                    "paths": [
+                      "[parameters('pathMatch1')]"
+                    ],
+                    "backendAddressPool": {
+                      "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/appGatewayBackendPool1')]"
+                    },
+                    "backendHttpSettings": {
+                      "id": "[concat(variables('applicationGatewayID'), '/backendHttpSettingsCollection/appGatewayBackendHttpSettings')]"
                     }
+                  }
                 }
               ]
             }
