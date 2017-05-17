@@ -1,5 +1,5 @@
  ## What is Cloud Access Manager?
- Teradici Cloud Access Manager (CAM) is a one click deployment solution that provides a level of brokering on top of existing CAS deployments. CAM will enable you to assign and revoke virtual machines to users as well as creating and destroying virtual workstations. The CAM solution consists of the following components:
+ Teradici Cloud Access Manager (CAM) is a one click deployment solution that provides a level of brokering on top of existing CAS deployments. CAM will enable you to assign and revoke virtual machines to users as well as create and destroy virtual workstations. The CAM solution consists of the following components:
  * Deployment Cloud Server
  * Domain Controller
  * Connection Broker
@@ -11,6 +11,10 @@
  * ARM Templates
  * External data stores
  
+The following image gives an outline of the CAM POC Architecture:
+
+![Image](https://confluence.teradici.com/display/TSW/CAM+POC+Architecture?preview=/20551837/20552077/CAM%20POC%20Diagram.png)
+
  ## Account Requirements
 In order to successfully deploy CAM you are required to have the following external data stores:
 * Private Deployment Metadata
@@ -19,17 +23,20 @@ In order to successfully deploy CAM you are required to have the following exter
 
 NOTE: For customised deployments the Customer Deployment and DSC package and binaries store will need to be available.
 
-You must have an Azure account and subscription that does not require multi-factor authentication. You must have a valid activation code for PCoIP Standard Agent to be able successfully connect and deploy CAM.  
+You must have an Azure account and subscription that does not require multi-factor authentication. You must have a valid registration code for PCoIP Standard Agent to be able successfully connect and deploy CAM.  
 
 ## Deployment Parameters
 * domainAdminUsername: The name of the administrator account to be created for the domain.
   * This username must be short form and not UPN. The name cannot be 'admin.'For example 'uname' is allowed and 'uname@example.com' is not allowed.
-  * This accounts username and password also becomes the local admin account for each created machine.
+  * You are creating this new account prior to deploying CAM. It is not a real Domain Account.  
+  * This account's username and password also becomes the local admin account for each created machine.
 * domainAdminPassword: The password for the administrator account of the new VM's and domain.
+   * You are creating this password prior to deploying CAM. It is not a real password.
 * domainName: The FQDN of the Active Directory Domain to be created. **Must have a '.' like example.com or domain.local.**
   * The domain name does not need to be unique to get the system operational so if you're testing an isolated system you can use the same name for your deployments like 'mydomain.com.'
 * AzureAdminUsername: The UPN name of the Azure account with **owner** access to the subscription. This account cannot require MFA, or be a Service Principal, for example: uname@example.com.
   * This account is only required to deploy the system. During deployment it will create an application in the Azure Active Directory account associated with the current Azure subscription. The application name is 'CAM-\<resourceGroupName\>'. It will also create a Service Principal account as part of this application which has contributor access to the resource group it is being deployed to. After deployment, only the Service Principal account is used for interaction with Azure API's.
+  * You must have a real Azure Admin Account with the correct rights to deploy CAM.
 * AzureAdminPassword: The password of the Azure account with **owner** access to the subscription.
 * registrationCode: The license registration code for the PCoIP CAS licenses.
 * adminVMBlobSource: The location of the blobs for admin GUI machine installation. Use the default unless you are specifically deploying with modified binaries.
@@ -52,12 +59,12 @@ The following steps outline the procedure for performing a deployment of CAM usi
 
 1. Select the Microsoft Azure account you want to access.
 1. Enter your Password and click <b>Sign in</b>
-1. ON the Customized Template page create a new Resource group by selecting the <b>Create New</b> icon and entering a name for the group.
+1. On the Customized Template page create a new Resource group by selecting the <b>Create New</b> icon and entering a name for the group. The Resource Group should be empty when you access the page.
 * You can also select a pre-defined Resource group by selecting the <b>Use Existing</b> icon and clicking on one of the groups from the dropdown menu.
 
 4. Select a location from the dropdown menu.
-5. Enter a Username for the <b>Domain Admin Username</b>.
-6. Enter a password for the <b>Domain Admin Password</b>.
+5. Enter a Username for the <b>Domain Admin Username</b>. This is a new account.
+6. Enter a password for the <b>Domain Admin Password</b>. This is a new password.
 7. Enter a <b>Domain Name</b> and ensure it finishes in <b>.com</b>.
 8. Enter your <b>Azure Admin Username</b>. This must be the same account you logged into from step 1.
 9. Enter your <b>Azure Admin Password</b>. This must be the same password you used to log in from step 2.
