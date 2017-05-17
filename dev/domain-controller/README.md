@@ -13,7 +13,9 @@
  
 The following image gives an outline of the CAM POC Architecture:
 
-![Image](https://confluence.teradici.com/display/TSW/CAM+POC+Architecture?preview=/20551837/20552077/CAM%20POC%20Diagram.png)
+<b>CAM POC Architecture</b>
+
+![Img](http://www.teradici.com/web-help/CAM/CAMPOCDiagram.png)
 
  ## Account Requirements
 In order to successfully deploy CAM you are required to have the following external data stores:
