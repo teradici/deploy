@@ -746,8 +746,6 @@ $authFilePath = "$targetDir\authfile.txt"
 				$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGNameLocal
 				New-AzureRmKeyVault -VaultName $kvName -ResourceGroupName $RGNameLocal -Location $rg.Location -EnabledForTemplateDeployment -EnabledForDeployment
 
-				Set-AzureRmKeyVaultAccessPolicy -VaultName $kvName -ServicePrincipalName $app.ApplicationId -PermissionsToSecrets get
-
 				Write-Host "Populating Azure KeyVault $kvName"
 				
 				$rcCred = $using:registrationCodeAsCred
@@ -768,6 +766,8 @@ $authFilePath = "$targetDir\authfile.txt"
 
 					try
 					{
+						Set-AzureRmKeyVaultAccessPolicy -VaultName $kvName -ServicePrincipalName $app.ApplicationId -PermissionsToSecrets get -ErrorAction stop
+
 						$rcSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $rcSecretName -SecretValue $registrationCode -ErrorAction stop
 						$djSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $djSecretName -SecretValue $localDomainAdminCreds.Password -ErrorAction stop
 						break
