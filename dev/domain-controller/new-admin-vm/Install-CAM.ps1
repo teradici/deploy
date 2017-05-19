@@ -71,8 +71,8 @@ Configuration InstallCAM
         [Parameter(Mandatory)]
         [System.Management.Automation.PSCredential]$AzureCreds,
 
-#        [Parameter][string]
-#        $tenantID = "",
+        [Parameter(Mandatory=$false)]
+		[String]$tenantID,
 
         [Parameter(Mandatory)]
         [String]$DCVMName, #without the domain suffix
@@ -599,7 +599,7 @@ CAMSessionTimeoutMinutes=480
             SetScript  = {
 
 
-				Write-Host "Creating SP and writing auth file."
+				Write-Host "Creating SP if needed, creating keyvault, and writing auth file."
 
 # create SP and write to credential file
 # as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
@@ -633,72 +633,97 @@ CAMSessionTimeoutMinutes=480
 				}
 
 				$localAzureCreds = $using:AzureCreds
-				$RGNameLocal        = $using:RGName
+				$RGNameLocal     = $using:RGName
+				$tenantID        = $using:tenantID
 
-				Login-AzureRmAccountWithBetterReporting -Credential $localAzureCreds
-
-				#Application name
-				$appName = "CAM-$RGNameLocal"
-				# 16 letter password
-				$generatedPassword = -join ((65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
-				$generatedID = -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})
-                $appURI = "https://www.$generatedID.com"
-
-
-				Write-Host "Purge any registered app's with the same name."
-
-				#first make sure if there is an app there (or more than one) that they're deleted.
-                $appArray = Get-AzureRmADApplication -DisplayName $appName
-                foreach($app in $appArray)
+				if (-not $tenantID)
 				{
-                    $aoID = $app.ObjectId
-					Write-Host "Removing previous SP application $appName  $aoID"
-					Remove-AzureRmADApplication -ObjectId $aoID -Force
+				    Write-Host "No tenant ID entered. Calling Azure Active Directory to make an app and a service principal."
+
+					Login-AzureRmAccountWithBetterReporting -Credential $localAzureCreds
+
+					#Application name
+					$appName = "CAM-$RGNameLocal"
+					# 16 letter password
+					$generatedPassword = -join ((65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
+					$generatedID = -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})
+					$appURI = "https://www.$generatedID.com"
+
+
+					Write-Host "Purge any registered app's with the same name."
+
+					# first make sure if there is an app there (or more than one) that they're deleted.
+					$appArray = Get-AzureRmADApplication -DisplayName $appName
+					foreach($app in $appArray)
+					{
+						$aoID = $app.ObjectId
+						Write-Host "Removing previous SP application $appName  $aoID"
+						Remove-AzureRmADApplication -ObjectId $aoID -Force
+					}
+
+					$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword
+					$sp  = New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId
+
+					# retry required since it can take a few seconds for the app registration to percolate through Azure.
+					# (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
+					$rollAssignmentRetry = 120
+					while($rollAssignmentRetry -ne 0)
+					{
+						$rollAssignmentRetry--
+
+						try
+						{
+							New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $RGNameLocal -ServicePrincipalName $app.ApplicationId -ErrorAction Stop
+							break
+						}
+						catch
+						{
+							$exceptionCode = $_.Exception.Error.Code
+							If ($exceptionCode -eq "PrincipalNotFound")
+							{
+								Write-Host "Waiting for service principal $rollAssignmentRetry"
+								Start-sleep -Seconds 1
+							}
+							else
+							{
+								#re-throw whatever the original exception was
+								throw
+							}
+						}
+					}
+
+					# get SP credentials
+					$spPass = ConvertTo-SecureString $generatedPassword -AsPlainText -Force
+					$spCreds = New-Object -TypeName pscredential –ArgumentList  $sp.ApplicationId, $spPass
+
+					# get tenant ID for this subscription
+					$subForTenantID = Get-AzureRmSubscription
+					$tenantID = $subForTenantID.TenantId
+				}
+				else
+				{
+    				Write-Host "Tenant ID was provided."
+
+					$spCreds = $localAzureCreds
 				}
 
-				$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword
-				$sp  = New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId
+				$spName = $spCreds.UserName
+  				Write-Host "Logging in SP $spName with tenantID $tenantID"
 
-				#retry required since it can take a few seconds for the app registration to percolate through Azure.
-				#(Online recommendation was sleep 15 seconds - this is both faster and more conservative)
-				$rollAssignmentRetry = 120
-				while($rollAssignmentRetry -ne 0)
-				{
-					$rollAssignmentRetry--
+				Login-AzureRmAccount -ServicePrincipal -Credential $spCreds –TenantId $tenantID
 
-					try
-					{
-						New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $RGNameLocal -ServicePrincipalName $app.ApplicationId -ErrorAction Stop
-						break
-					}
-					catch
-					{
-						$exceptionCode = $_.Exception.Error.Code
-						If ($exceptionCode -eq "PrincipalNotFound")
-						{
-							Write-Host "Waiting for service principal $rollAssignmentRetry"
-							Start-sleep -Seconds 1
-						}
-						else
-						{
-							#re-throw whatever the original exception was
-							throw
-						}
-					}
-				}
 
 				Write-Host "Create auth file."
-
-
+				
 				$sub = Get-AzureRmSubscription
 				$subID = $sub.Id
-				$tenantID = $sub.TenantId
-				$clientID = $app.ApplicationId
+				$spPassword = $spCreds.GetNetworkCredential().Password
+
 
 				$authFileContent = @"
 subscription=$subID
-client=$clientID
-key=$generatedPassword
+client=$spName
+key=$spPassword
 tenant=$tenantID
 managementURI=https\://management.core.windows.net/
 baseURL=https\://management.azure.com/
@@ -766,7 +791,8 @@ $authFilePath = "$targetDir\authfile.txt"
 
 					try
 					{
-						Set-AzureRmKeyVaultAccessPolicy -VaultName $kvName -ServicePrincipalName $app.ApplicationId -PermissionsToSecrets get -ErrorAction stop
+						# Don't set permissions since the SP is now creating the keyvault
+						# Set-AzureRmKeyVaultAccessPolicy -VaultName $kvName -ServicePrincipalName $app.ApplicationId -PermissionsToSecrets get -ErrorAction stop
 
 						$rcSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $rcSecretName -SecretValue $registrationCode -ErrorAction stop
 						$djSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $djSecretName -SecretValue $localDomainAdminCreds.Password -ErrorAction stop
