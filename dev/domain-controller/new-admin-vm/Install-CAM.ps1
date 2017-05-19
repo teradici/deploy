@@ -148,7 +148,7 @@ Configuration InstallCAM
 		{
 			Uri = "$templateAgentURI/$gaAgentARM"
 			DestinationPath = "$LocalDLPath\$gaAgentARM"
-		}		
+		}
 
         File Sumo_Directory 
         {
@@ -188,6 +188,32 @@ Configuration InstallCAM
                 #install the collector
                 $command = "$dest\$installerFileName -console -q"
                 Invoke-Expression $command
+
+				# Wait for collector to be installed before exiting this configuration.
+				#### Note if we change binary versions we will need to change registry path - 7857-4527-9352-4688 will change ####
+				$retrycount = 1800
+				while ($retryCount -gt 0)
+				{
+					$readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\7857-4527-9352-4688"  -ErrorAction SilentlyContinue )
+
+					if ($readyToConfigure)
+					{
+						break   #success
+					}
+					else
+					{
+						Start-Sleep -s 1;
+						$retrycount = $retrycount - 1;
+						if ( $retrycount -eq 0)
+						{
+							throw "Sumo collector not installed in time."
+						}
+						else
+						{
+							Write-Host "Waiting for Sumo collector to be installed"
+						}
+					}
+				}
             }
         }
         #
