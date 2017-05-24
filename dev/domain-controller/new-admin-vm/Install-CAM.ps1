@@ -99,7 +99,7 @@ Configuration InstallCAM
 	$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
 	$CatalinaBinLocation = $CatalinaHomeLocation + "\bin"
 
-	Import-DscResource -ModuleName xPSDesiredStateConfiguration
+	Import-DscResource -Module xPSDesiredStateConfiguration
 
     Node "localhost"
     {
@@ -460,34 +460,10 @@ Configuration InstallCAM
 
 				copy "$LocalDLPath\$adminWAR" ($CatalinaHomeLocation + "\webapps")
 
-				#Make sure the properties file exists - as enough proof that the .war file has been processed
-
-
-		        #----- Update/overwrite the the file with configuration information -----
-				# (Tomcat needs to be running for this to happen... Just kick it again in case.)
 				$svc = get-service Tomcat8
-				if ($svc.Status -eq "Stopped") {$svc.start()}
-				elseIf ($svc.status -eq "Running") {Write-Host $svc.name "is running"}
+				if ($svc.Status -ne "Stopped") {$svc.stop()}
 
-				$auPropertiesFile = $catalinaHomeLocation + "\webapps\CloudAccessManager\WEB-INF\classes\config.properties"
-
-				$exists = $null
-				$loopCountRemaining = 600
-				#loop until it's created
-				while($exists -eq $null)
-				{
-					Write-Host "Waiting for CAM properties file. Seconds remaining: $loopCountRemaining"
-					Start-Sleep -Seconds 1
-					$exists = Get-Content $auPropertiesFile -ErrorAction SilentlyContinue
-					$loopCountRemaining = $loopCountRemaining - 1
-					if ($loopCountRemaining -eq 0)
-					{
-						throw "No properties file!"
-					}
-				}
-				Write-Host "Got CAM configuration file. Re-generating."
-
-				Stop-Service Tomcat8
+				Write-Host "Re-generating CAM configuration file."
 
 				#Now create the new output file.
 				#TODO - really only a couple parameters are used and set properly now. Needs cleanup.
@@ -523,28 +499,10 @@ CAMSessionTimeoutMinutes=480
 					New-Item $configFileName -type file
 				}
 
-				# write to $configFileName with retry in case another process still has a lock
-				$loopCountRemaining = 600
-				#loop until it's created
-				while($loopCountRemaining-- -gt 0)
-				{
-					try
-					{
-						Set-Content $configFileName $auProperties -Force -ErrorAction Stop
-						break # success exit while loop
-					}
-					catch
-					{
-						Write-Host "Writing CAM configuration file. Seconds remaining: $loopCountRemaining"
-						Start-Sleep -Seconds 1
-						if($loopCountRemaining -eq 0)
-						{
-							throw
-						}
-					}
-				}
-		        Write-Host "Redirecting ROOT to Cloud Access Manager."
+				Set-Content $configFileName $auProperties -Force
+				Write-Host "CAM configuration file re-generated."
 
+		        Write-Host "Redirecting ROOT to Cloud Access Manager."
 
                 $redirectString = '<%response.sendRedirect("CloudAccessManager/login.jsp");%>'
 				$targetDir = "$env:CATALINA_HOME\webapps\ROOT"
