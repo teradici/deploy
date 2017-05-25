@@ -662,14 +662,14 @@ CAMSessionTimeoutMinutes=480
 
 						try
 						{
-							$sp  = New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId
+							$sp  = New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId -ErrorAction Stop
 							break
 						}
 						catch
 						{
-							$appID = $app.ObjectId
+							$appIDForPrint = $app.ObjectId
 
-							Write-Host "Waiting for app $SPCreateRetry : $appID"
+							Write-Host "Waiting for app $SPCreateRetry : $appIDForPrint"
 							Start-sleep -Seconds 1
 							if ($SPCreateRetry -eq 0)
 							{
@@ -725,7 +725,29 @@ CAMSessionTimeoutMinutes=480
 				$spName = $spCreds.UserName
   				Write-Host "Logging in SP $spName with tenantID $tenantID"
 
-				Login-AzureRmAccount -ServicePrincipal -Credential $spCreds –TenantId $tenantID
+				# retry required since it can take a few seconds for the app registration to percolate through Azure (and different to different endpoints... sigh).
+				$LoginSPRetry = 120
+				while($LoginSPRetry -ne 0)
+				{
+					$LoginSPRetry--
+
+					try
+					{
+						Login-AzureRmAccount -ServicePrincipal -Credential $spCreds –TenantId $tenantID -ErrorAction Stop
+						break
+					}
+					catch
+					{
+						Write-Host "Retrying SP login $LoginSPRetry : SPName=$spName TenantID=$tenantID"
+						Start-sleep -Seconds 1
+						if ($LoginSPRetry -eq 0)
+						{
+							#re-throw whatever the original exception was
+							throw
+						}
+					}
+				}
+				
 
 
 				Write-Host "Create auth file."
