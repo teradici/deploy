@@ -77,6 +77,36 @@ The following steps outline the procedure for performing a deployment of CAM usi
 
 The deployment will now begin to run. You can track it through the notifications icon or for a more detailed view of your deployment click the <b>Resource Groups </b> icon located on the left hand side of the page and click on your resource group.
 
+  <h3>Deploying Cloud Access Manager using Microsoft PowerShell</h3>
+        <p>The following section outlines the procedure for performing a deployment of CAM&#160;using Microsoft PowerShell.</p>
+        <div class="note" style="page-break-before: avoid;">
+            <table class="note-important">
+                <col />
+                <col />
+                <tbody>
+                    <tr>
+                        <td class="note-icon" rowspan="2">&#160;</td>
+                        <td class="note-title">Important: Deployment prerequisites </td>
+                    </tr>
+                    <tr>
+                        <td class="note-body">
+                            <p>Ensure that you have AzureRM and NuGet installed:</p><pre>Install-packageProvider -Name NuGet -Force</pre><pre>Install-Module -Name AzureRM -Force</pre>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <ol>
+                <li>Run Microsoft Powershell.</li>
+                <li>Clone the CAM&#160;deployment script with <code>GIT.cd</code> to the directory: <samp>deploy/dev/domain-controller</samp>.</li>
+                <li>Copy the <samp>azuredeploy.parameters.json</samp> file to <samp>my.azuredeploy.parameters.json</samp>.</li>
+                <li>Modify <samp>my.azuredeploy.parameters.json</samp> to include the nescessary deployment parameters, see <MadCap:xref href="Deployment Parameters.htm"><i>Deployment Parameters</i> on page 1</MadCap:xref> for the list of deployment parameters.</li>
+                <li>Run the following script:</li>
+            </ol><pre>$spUsername = "&lt;username&gt;@test.teradici.com"</pre><pre>$spPass = ConvertTo-SecureString "&lt;password&gt;" -AsPlainText -Force</pre><pre>&#160;</pre><pre>$cred = New-Object -TypeName pscredential -ArgumentList $spUsername, $spPass</pre><pre>Login-AzureRMAccount -Credential $cred</pre><pre>&#160;</pre><pre>$azureRGName = "&lt;rgname&gt;"</pre><pre>New-AzureRMResourceGroup -Name $azureRGName -Location "East US"</pre><pre>New-AzureRMResourcesGroupDeployment -DeploymentName "ad1" -ResourceGroupName $azureRGName -TemplateFIle "azuredeploy.json" -TemplateParameterFile</pre><pre>"my.azuredeploy.parameters.json"</pre>
+            <p>Insert your username and password and the resource group. If you do not want credentials in the file just go directily to <samp>Login-AzureAccount</samp> without the <samp>-Credential</samp> parameter and it will give you a prompt.</p>
+        </div>
+    </body>
+</html>
+
 ## Known Issues with Deploying the Solution
 
 * This solution will only deploy machines in one region. If you wish to use NV series virtual machines for GPU accelerated graphics, then you must deploy the complete solution into one of the supported regions for NV series instance types. Currently this is limited to the following locations: EAST US, NORTH CENTRAL US, SOUTH CENTRAL US, SOUTH EAST ASIA and WEST EUROPE.
