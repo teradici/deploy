@@ -11,8 +11,8 @@
         "domainName": {
             "value": "mydomain.com"
         },
-        "activationCode": {
-            "value": "xxxx-xxxx-xxxx-xxxx"
+        "registrationCode": {
+            "value": "xxxxxxxxxxxx@nnnn-nnnn-nnnn-nnnn"
         },
         "AzureAdminUsername": {
             "value": "username@example.com"
