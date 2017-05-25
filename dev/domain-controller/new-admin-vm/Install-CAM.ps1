@@ -636,6 +636,8 @@ CAMSessionTimeoutMinutes=480
 					{
 						$userName = $Credential.userName
 						Login-AzureRmAccount -Credential $Credential @args -ErrorAction stop
+
+						Write-Host "Successfully Logged in $userName"
 					}
 					catch
 					{
@@ -687,9 +689,38 @@ CAMSessionTimeoutMinutes=480
 						Remove-AzureRmADApplication -ObjectId $aoID -Force
 					}
 
-					$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword
-					$sp  = New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId
+					Write-Host "Purge complete."
 
+					$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword
+
+
+
+					# retry required since it can take a few seconds for the app registration to percolate through Azure.
+					# (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
+					$SPCreateRetry = 120
+					while($SPCreateRetry -ne 0)
+					{
+						$SPCreateRetry--
+
+						try
+						{
+							$sp  = New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId
+							break
+						}
+						catch
+						{
+							$appID = $app.ObjectId
+
+							Write-Host "Waiting for app $SPCreateRetry : $appID"
+							Start-sleep -Seconds 1
+							if ($SPCreateRetry -eq 0)
+							{
+								#re-throw whatever the original exception was
+								throw
+							}
+						}
+					}
+					
 					# retry required since it can take a few seconds for the app registration to percolate through Azure.
 					# (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
 					$rollAssignmentRetry = 120
