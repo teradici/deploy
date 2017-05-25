@@ -86,12 +86,6 @@ Configuration InstallBR
 			DestinationPath = "$LocalDLPath\$tomcatInstaller"
 		}
 
-		xRemoteFile Download_Firefox
-		{
-			Uri = "$sourceURI/Firefox Setup Stub 49.0.1.exe"
-			DestinationPath = "$LocalDLPath\Firefox Setup Stub 49.0.1.exe"
-		}
-
 		xRemoteFile Download_Keystore
 		{
 			Uri = "$sourceURI/.keystore"
