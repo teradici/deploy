@@ -5,7 +5,7 @@
         "name":  "CAMPOC_Teradici_Broker_Azure_Logs",
         "category":  "CAMPOC/Teradici/Azure/Logs",
         "automaticDateParsing":  true,
-        "multilineProcessingEnabled":  false,
+        "multilineProcessingEnabled":  true,
         "useAutolineMatching":  false,
         "forceTimeZone":  false,
         "timeZone":  "Etc/UTC",
