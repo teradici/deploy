@@ -99,7 +99,7 @@ Configuration InstallCAM
 	$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
 	$CatalinaBinLocation = $CatalinaHomeLocation + "\bin"
 
-	Import-DscResource -ModuleName xPSDesiredStateConfiguration
+	Import-DscResource -Module xPSDesiredStateConfiguration
 
     Node "localhost"
     {
@@ -486,34 +486,10 @@ Configuration InstallCAM
 
 				copy "$LocalDLPath\$adminWAR" ($CatalinaHomeLocation + "\webapps")
 
-				#Make sure the properties file exists - as enough proof that the .war file has been processed
-
-
-		        #----- Update/overwrite the the file with configuration information -----
-				# (Tomcat needs to be running for this to happen... Just kick it again in case.)
 				$svc = get-service Tomcat8
-				if ($svc.Status -eq "Stopped") {$svc.start()}
-				elseIf ($svc.status -eq "Running") {Write-Host $svc.name "is running"}
+				if ($svc.Status -ne "Stopped") {$svc.stop()}
 
-				$auPropertiesFile = $catalinaHomeLocation + "\webapps\CloudAccessManager\WEB-INF\classes\config.properties"
-
-				$exists = $null
-				$loopCountRemaining = 600
-				#loop until it's created
-				while($exists -eq $null)
-				{
-					Write-Host "Waiting for CAM properties file. Seconds remaining: $loopCountRemaining"
-					Start-Sleep -Seconds 1
-					$exists = Get-Content $auPropertiesFile -ErrorAction SilentlyContinue
-					$loopCountRemaining = $loopCountRemaining - 1
-					if ($loopCountRemaining -eq 0)
-					{
-						throw "No properties file!"
-					}
-				}
-				Write-Host "Got CAM configuration file. Re-generating."
-
-				Stop-Service Tomcat8
+				Write-Host "Re-generating CAM configuration file."
 
 				#Now create the new output file.
 				#TODO - really only a couple parameters are used and set properly now. Needs cleanup.
@@ -549,28 +525,10 @@ CAMSessionTimeoutMinutes=480
 					New-Item $configFileName -type file
 				}
 
-				# write to $configFileName with retry in case another process still has a lock
-				$loopCountRemaining = 600
-				#loop until it's created
-				while($loopCountRemaining-- -gt 0)
-				{
-					try
-					{
-						Set-Content $configFileName $auProperties -Force -ErrorAction Stop
-						break # success exit while loop
-					}
-					catch
-					{
-						Write-Host "Writing CAM configuration file. Seconds remaining: $loopCountRemaining"
-						Start-Sleep -Seconds 1
-						if($loopCountRemaining -eq 0)
-						{
-							throw
-						}
-					}
-				}
-		        Write-Host "Redirecting ROOT to Cloud Access Manager."
+				Set-Content $configFileName $auProperties -Force
+				Write-Host "CAM configuration file re-generated."
 
+		        Write-Host "Redirecting ROOT to Cloud Access Manager."
 
                 $redirectString = '<%response.sendRedirect("CloudAccessManager/login.jsp");%>'
 				$targetDir = "$env:CATALINA_HOME\webapps\ROOT"
@@ -636,6 +594,8 @@ CAMSessionTimeoutMinutes=480
 					{
 						$userName = $Credential.userName
 						Login-AzureRmAccount -Credential $Credential @args -ErrorAction stop
+
+						Write-Host "Successfully Logged in $userName"
 					}
 					catch
 					{
@@ -687,9 +647,38 @@ CAMSessionTimeoutMinutes=480
 						Remove-AzureRmADApplication -ObjectId $aoID -Force
 					}
 
-					$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword
-					$sp  = New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId
+					Write-Host "Purge complete."
 
+					$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword
+
+
+
+					# retry required since it can take a few seconds for the app registration to percolate through Azure.
+					# (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
+					$SPCreateRetry = 120
+					while($SPCreateRetry -ne 0)
+					{
+						$SPCreateRetry--
+
+						try
+						{
+							$sp  = New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId -ErrorAction Stop
+							break
+						}
+						catch
+						{
+							$appIDForPrint = $app.ObjectId
+
+							Write-Host "Waiting for app $SPCreateRetry : $appIDForPrint"
+							Start-sleep -Seconds 1
+							if ($SPCreateRetry -eq 0)
+							{
+								#re-throw whatever the original exception was
+								throw
+							}
+						}
+					}
+					
 					# retry required since it can take a few seconds for the app registration to percolate through Azure.
 					# (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
 					$rollAssignmentRetry = 120
@@ -736,7 +725,29 @@ CAMSessionTimeoutMinutes=480
 				$spName = $spCreds.UserName
   				Write-Host "Logging in SP $spName with tenantID $tenantID"
 
-				Login-AzureRmAccount -ServicePrincipal -Credential $spCreds –TenantId $tenantID
+				# retry required since it can take a few seconds for the app registration to percolate through Azure (and different to different endpoints... sigh).
+				$LoginSPRetry = 120
+				while($LoginSPRetry -ne 0)
+				{
+					$LoginSPRetry--
+
+					try
+					{
+						Login-AzureRmAccount -ServicePrincipal -Credential $spCreds –TenantId $tenantID -ErrorAction Stop
+						break
+					}
+					catch
+					{
+						Write-Host "Retrying SP login $LoginSPRetry : SPName=$spName TenantID=$tenantID"
+						Start-sleep -Seconds 1
+						if ($LoginSPRetry -eq 0)
+						{
+							#re-throw whatever the original exception was
+							throw
+						}
+					}
+				}
+				
 
 
 				Write-Host "Create auth file."

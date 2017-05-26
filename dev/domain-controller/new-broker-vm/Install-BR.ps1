@@ -86,12 +86,6 @@ Configuration InstallBR
 			DestinationPath = "$LocalDLPath\$tomcatInstaller"
 		}
 
-		xRemoteFile Download_Firefox
-		{
-			Uri = "$sourceURI/Firefox Setup Stub 49.0.1.exe"
-			DestinationPath = "$LocalDLPath\Firefox Setup Stub 49.0.1.exe"
-		}
-
 		xRemoteFile Download_Keystore
 		{
 			Uri = "$sourceURI/.keystore"
@@ -401,35 +395,22 @@ Configuration InstallBR
 
 				copy $using:LocalDLPath\$using:brokerWAR ($using:CatalinaHomeLocation + "\webapps")
 
-				#Make sure the properties file exists - as enough proof that the .war file has been processed
-
-
-
-		        #----- Update/overwrite the the file with configuration information -----
-				# (Tomcat needs to be running for this to happen... Just kick it again in case.)
 				$svc = get-service Tomcat8
-				if ($svc.Status -eq "Stopped") {$svc.start()}
-				elseIf ($svc.status -eq "Running") {Write-Host $svc.name "is running"}
+				if ($svc.Status -ne "Stopped") {$svc.stop()}
 
-				$cbPropertiesFile = $using:catalinaHomeLocation + "\webapps\pcoip-broker\WEB-INF\classes\connectionbroker.properties"
+				Write-Host "Generating broker configuration file."
+				$targetDir = $using:catalinaHomeLocation + "\brokerproperty"
+				$cbPropertiesFile = "$targetDir\connectionbroker.properties"
 
-				$exists = $null
-				$loopCountRemaining = 600
-				#loop until it's created
-				while($exists -eq $null)
+				if(-not (Test-Path $targetDir))
 				{
-					Write-Host "Waiting for broker properties file. Seconds remaining: $loopCountRemaining"
-					Start-Sleep -Seconds 1
-					$exists = Get-Content $cbPropertiesFile -ErrorAction SilentlyContinue
-					$loopCountRemaining = $loopCountRemaining - 1
-					if ($loopCountRemaining -eq 0)
-					{
-						throw "No properties file!"
-					}
+					New-Item $targetDir -type directory
 				}
-				Write-Host "Got broker configuration file. Updating."
 
-				Stop-Service Tomcat8
+				if(-not (Test-Path $cbPropertiesFile))
+				{
+					New-Item $cbPropertiesFile -type file
+				}
 
 				$firstIPv4IP = Get-NetIPAddress | Where-Object {$_.AddressFamily -eq "IPv4"} | select -First 1
 				$ipaddressString = $firstIPv4IP.IPAddress
@@ -453,6 +434,7 @@ brokerLocale=en_US
 "@
 
 				Set-Content $cbPropertiesFile $cbProperties
+				Write-Host "Broker configuration file generated."
 
 				$backupPropertiesFile = New-Item "c:\backupCBProperties.txt" -type file
 				Set-Content $backupPropertiesFile $cbProperties

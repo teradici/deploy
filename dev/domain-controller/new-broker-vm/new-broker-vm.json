@@ -118,6 +118,7 @@
                     },
                     "configurationFunction": "Install-BR.ps1\\InstallBR",
                     "Properties": {
+                        "sourceURI": "[parameters('blobSource')]",
                         "DomainName": "[parameters('domainToJoin')]",
                         "AdminCreds": {
                             "UserName": "[parameters('vmAdminUsername')]",
