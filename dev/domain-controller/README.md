@@ -1,15 +1,14 @@
  ## What is Cloud Access Manager?
  Teradici Cloud Access Manager (CAM) is a one click deployment solution that provides a level of brokering on top of existing CAS deployments. CAM will enable you to assign and revoke virtual machines to users as well as create and destroy virtual workstations. The CAM solution consists of the following components:
  * Deployment Cloud Server
- * Domain Controller
+ * Domain Controller (This will contain an active directory)
  * Connection Broker
  * Security Gateway
  * Publicly available binaries
- * Licensing information
- * An Active Directory
  * One or more virtual workstations
  * ARM Templates
- * External data stores
+ * External data stores (CAM provides a data storage account for all virtual hardrives)
+ * Keyvault
  
 The following image gives an outline of the CAM POC Architecture:
 
@@ -18,10 +17,8 @@ The following image gives an outline of the CAM POC Architecture:
 ![Img](http://www.teradici.com/web-help/CAM/CAMPOCDiagram.png)
 
  ## Account Requirements
-In order to successfully deploy CAM you are required to have the following external data stores:
+In order to successfully deploy CAM you are required to have the following external data store:
 * Private Deployment Metadata
-* Standard Deployment ARM Templates
-* Standard Deployment DSC packages and binaries
 
 NOTE: For customised deployments the Customer Deployment and DSC package and binaries store will need to be available.
 
@@ -50,6 +47,8 @@ You must have an Azure account and subscription that does not require multi-fact
  This template will deploy 5 virtual machines (along with a new VNet, Storage Account, Load Balancer, Azure KeyVault, and Gateway).
 
  To administer the deployment through the Cloud Access Manager GUI, https: to the public IP of the applicationGateway1 Application Gateway. To connect to the pre-created Agent virtual machine, point the PCoIP client to the public IP of the applicationGateway1 Application gateway and login with the administrator credentials. To manage the Active Directory Domain, RDP to the public IP address of vm-dc (the domain controller).
+ 
+ <h3> Deploying Cloud Access Manager using Microsoft Azure </h3>
 
 The following steps outline the procedure for performing a deployment of CAM using Microsoft Azure: 
 
@@ -78,34 +77,36 @@ The following steps outline the procedure for performing a deployment of CAM usi
 The deployment will now begin to run. You can track it through the notifications icon or for a more detailed view of your deployment click the <b>Resource Groups </b> icon located on the left hand side of the page and click on your resource group.
 
   <h3>Deploying Cloud Access Manager using Microsoft PowerShell</h3>
-        <p>The following section outlines the procedure for performing a deployment of CAM&#160;using Microsoft PowerShell.</p>
-        <div class="note" style="page-break-before: avoid;">
-            <table class="note-important">
-                <col />
-                <col />
-                <tbody>
-                    <tr>
-                        <td class="note-icon" rowspan="2">&#160;</td>
-                        <td class="note-title">Important: Deployment prerequisites </td>
-                    </tr>
-                    <tr>
-                        <td class="note-body">
-                            <p>Ensure that you have AzureRM and NuGet installed:</p><pre>Install-packageProvider -Name NuGet -Force</pre><pre>Install-Module -Name AzureRM -Force</pre>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-            <ol>
+        <p>The following section outlines the procedure for performing a deployment of CAM using Microsoft PowerShell.</p>
+        <p><b>Prerequisites</p></b>  
+        <p> Ensure that you have AzureRM and NuGet installed:
+        
+```
+Install-packageProvider -Name NuGet -Force 
+Install-Module -Name AzureRM -Force
+```
+</p>
+<ol>
                 <li>Run Microsoft Powershell.</li>
                 <li>Clone the CAM&#160;deployment script with <code>GIT.cd</code> to the directory: <samp>deploy/dev/domain-controller</samp>.</li>
                 <li>Copy the <samp>azuredeploy.parameters.json</samp> file to <samp>my.azuredeploy.parameters.json</samp>.</li>
                 <li>Modify <samp>my.azuredeploy.parameters.json</samp> to include the nescessary deployment parameters, see <MadCap:xref href="Deployment Parameters.htm"><i>Deployment Parameters</i> on page 1</MadCap:xref> for the list of deployment parameters.</li>
-                <li>Run the following script:</li>
-            </ol><pre>$spUsername = "&lt;username&gt;@test.teradici.com"</pre><pre>$spPass = ConvertTo-SecureString "&lt;password&gt;" -AsPlainText -Force</pre><pre>&#160;</pre><pre>$cred = New-Object -TypeName pscredential -ArgumentList $spUsername, $spPass</pre><pre>Login-AzureRMAccount -Credential $cred</pre><pre>&#160;</pre><pre>$azureRGName = "&lt;rgname&gt;"</pre><pre>New-AzureRMResourceGroup -Name $azureRGName -Location "East US"</pre><pre>New-AzureRMResourcesGroupDeployment -DeploymentName "ad1" -ResourceGroupName $azureRGName -TemplateFIle "azuredeploy.json" -TemplateParameterFile</pre><pre>"my.azuredeploy.parameters.json"</pre>
-            <p>Insert your username and password and the resource group. If you do not want credentials in the file just go directily to <samp>Login-AzureAccount</samp> without the <samp>-Credential</samp> parameter and it will give you a prompt.</p>
-        </div>
-    </body>
-</html>
+                <li>Run the following script:
+                
+```
+$spUsername = "<username>@test.teradici.com"
+$spPass = ConvertTo-SecureString "<password>" -AsPlainText -Force
+$cred = New-Object -TypeName pscredential -ArgumentList $spUsername, $spPass
+Login-AzureRMAcccount -Credential $cred
+
+$azureRGName = "<rgname>"
+New-AzureRMResourceGroup -Name $azureRGName -Location "East US"
+New-AzureRMResourceGroupDeployment -DeploymentName "ad1" -ResourceGroupName $azureRGName -TemplateFile "azuredeploy.json" -TemplateParameterFile "my.azuredeploy.parameters.json"
+
+```
+</li>
+</ol>
+<p>Insert your username and password and the resource group. If you do not want credentials in the file just go directly to <samp>Login-AzureAccount</samp> without the <samp>-Credential</samp> parameter and it will give you a prompt.
 
 ## Known Issues with Deploying the Solution
 
