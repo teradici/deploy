@@ -35,6 +35,13 @@
         "description": "The password of the Azure account/service principal with contributor access to the subscription. This account cannot require MFA."
       }
     },
+    "tenantID": {
+        "type": "string",
+        "defaultValue": "",
+        "metadata": {
+            "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave blank if a non SP account is being used."
+        }
+    },
     "registrationCode": {
       "type": "securestring",
       "minLength": 21,
@@ -493,6 +500,9 @@
           },
           "AzureAdminPassword": {
             "value": "[parameters('AzureAdminPassword')]"
+          },
+          "tenantID": {
+            "value": "[parameters('tenantID')]"
           },
           "domainJoinOptions": {
             "value": 3

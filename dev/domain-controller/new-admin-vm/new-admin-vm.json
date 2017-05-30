@@ -57,6 +57,12 @@
                 "description": "Password of the Azure admin or service principal account"
             }
         },
+        "tenantID": {
+            "type": "string",
+            "metadata": {
+                "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave blank if a non SP account is being used."
+            }
+        },
         "domainJoinOptions": {
             "defaultValue": 3,
             "type": "int",
@@ -173,6 +179,7 @@
                         "existingVNETName": "[parameters('existingVNETName')]",
                         "existingSubnetName": "[parameters('existingSubnetName')]",
                         "storageAccountName": "[parameters('storageAccountName')]",
+                        "tenantID": "[parameters('tenantID')]",
                         "gitLocation": "[parameters('_artifactsLocation')]",
                         "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-AdminUI-',subscription().subscriptionId)]"
                     }
