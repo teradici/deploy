@@ -1,6 +1,6 @@
- ## What is Cloud Access Manager?
+ # What is Cloud Access Manager?
  Teradici Cloud Access Manager (CAM) is a one click deployment solution that provides a level of brokering on top of existing CAS deployments. CAM will enable you to assign and revoke virtual machines to users as well as create and destroy virtual workstations. The CAM solution consists of the following components:
- * Deployment Cloud Server which serves up the administration GUI
+ * Deployment Cloud Server (This creates the administration GUI)
  * Domain Controller (This will contain an active directory)
  * Connection Broker
  * Security Gateway
@@ -8,7 +8,7 @@
  * One or more virtual workstations
  * ARM Templates
  * External data stores (CAM provides a data storage account for all virtual hardrives)
- * Keyvault for required credentials
+ * Keyvault (This contains the required  authentication credentials)
  
 The following image gives an outline of the CAM POC Architecture:
 
@@ -16,11 +16,13 @@ The following image gives an outline of the CAM POC Architecture:
 
 ![Img](http://www.teradici.com/web-help/CAM/CAMPOCDiagram.png)
 
-(Introduce template for deployment)
+# Provisioning Template
+
+The following template outlines the account requirements, deployment parameters, deployment procedures and post-deployment capabilites that the solution provides. 
 
  ## Account Requirements
 
-You must have an Azure account and subscription that does not require multi-factor authentication. You must have a valid registration code for Teradici Cloud Access Software to be able successfully connect to and deploy CAM.  
+You must have an Azure account and subscription that does not require multi-factor authentication. You must have a valid registration code for Teradici Cloud Access Software to be able successfully connect to, and deploy, CAM.  
 
 ## Deployment Parameters
 * domainAdminUsername: The name of the administrator account to be created for the domain.
@@ -39,19 +41,8 @@ You must have an Azure account and subscription that does not require multi-fact
 * adminVMBlobSource: The location of the blobs for admin GUI machine installation. Use the default unless you are specifically deploying with modified binaries.
 * \_artifactsLocation: The location of resources, such as templates and DSC modules, that the template depends on. Use the default unless you are specifically deploying with modified templates or binaries.
 * \_artifactsLocationSasToken: - an auto-generated token to access _artifactsLocation. If _artifactsLocation does not need an access token (which is the default) then this can be blank.
-
-# After Deployment (fix)
-
-You can do certain things:
-* administer the solution
-* connect to the pre-created desktop VM for the domain administrator
-* connect to user provisioned machines
-* manage the domain
-
-To administer the deployment through the Cloud Access Manager GUI, https: to the public IP of the applicationGateway1 Application Gateway and login with the domain administrator credentials. To connect to the pre-created Agent virtual machine, point the PCoIP client to the public IP of the applicationGateway1 Application gateway and login with the domain administrator credentials. To manage the Active Directory Domain, RDP to the public IP address of vm-dc (the domain controller).
- After new users have been created in the domain and machines have been provisioned for them, users can login to their PCoIP sessions by pointing the PCoIP client to the public IP of the applicationGateway1 Application gateway and login with the user credentials. 
  
-# Deploying Cloud Access Manager using Microsoft Azure
+## Deploying Cloud Access Manager using Microsoft Azure
 
 The following steps outline the procedure for performing a deployment of CAM using Microsoft Azure: 
 
@@ -77,11 +68,40 @@ Click the <b> Deploy Azure </b> button to  begin.
 12. Read the Terms and Conditions and once you are satisified with the information you have entered click the <b> I Agree</b> icon.
 13. Click <b>Purchase</b> to begin deployment.
 
-The deployment will now begin to run. You can track it through the notifications icon or for a more detailed view of your deployment click the <b>Resource Groups </b> icon located on the left hand side of the page and click on your resource group.
+The deployment will now begin to run. 
+<b>NOTE:</b> In general it takes over an hour to complete deployment.
+You can track it through the notifications icon or for a more detailed view of your deployment click the <b>Resource Groups </b> icon located on the left hand side of the page and click on your resource group.
 
-(Note that it takes in general over and hour to complete)
 
-  <h3>Deploying Cloud Access Manager using Microsoft PowerShell</h3>
+## Known Issues with Deploying the Solution
+
+* This solution will only deploy machines in one region. If you wish to use NV series virtual machines for GPU accelerated graphics, then you must deploy the complete solution into one of the supported regions for NV series instance types. Currently this is limited to the following locations: EAST US, NORTH CENTRAL US, SOUTH CENTRAL US, SOUTH EAST ASIA and WEST EUROPE.
+* Do not use passwords with the '%' symbol as it is currently not supported.
+* The current certificate that is deployed is expired so PCoIP clients must be configured for security_mode=0 (verification is not required) in order to connect. See here for instructions: http://www.teradici.com/web-help/TWAS_UG22_HTML5/08_AppA_Security.htm
+* Occasionally the Azure Application Gateway can fail with an 'internal error.' If this happens, you can quickly redeploy the application gateway to recover.
+ 1. In the Azure Portal select the resource group you created.
+ 1. Go to Deployments -> CreateAppGateway
+ 1. Click <b>Redeploy</b>. This will bring you to the custom deployment screen.
+ 1. Click <b>use existing</b> and select the resource group you are using.
+ 1. Leave all the other parameters the same.
+ 1. Accept the terms and conditions.
+ 1. Click <b>Purchase</b>.
+ 1. The Application gateway should deploy successfully.
+* Occasionally other failures can happen such as 'timeout' or 'can't start WinRM service.' Start a new deployment from scratch in a new resource group and attempt to re-deploy.
+* A common deployment failure is when the quota is reached for the subscription. In this case you have to either remove or deallocate virtual machines from the subscription, or request a core quota increase from Microsoft to alleviate the problem.
+
+## Post-Deployment Capabilities
+Following successfull deployment of the CAM solution you can perform the following functions:
+* <b>Administer the solution-</b>
+To administer the deployment through the Cloud Access Manager GUI, https: to the public IP of the applicationGateway1 Application Gateway and login with the domain administrator credentials.
+* <b>Connect to the pre-created desktop VM for the domain administrator-</b>
+To connect to the pre-created Agent virtual machine, point the PCoIP client to the public IP of the applicationGateway1 Application gateway and login with the domain administrator credentials.
+* <b>Connect to user provisioned machines-</b>
+After new users have been created in the domain and machines have been provisioned for them, users can login to their PCoIP sessions by pointing the PCoIP client to the public IP of the applicationGateway1 Application gateway and login with the user credentials. 
+* <b>Manage the domain-</b>
+To manage the Active Directory Domain, RDP to the public IP address of vm-dc (the domain controller).
+ 
+<h3>Deploying Cloud Access Manager using Microsoft PowerShell</h3>
         <p>The following section outlines the procedure for performing a deployment of CAM using Microsoft PowerShell.</p>
         <p><b>Prerequisites</p></b>  
         <p> Ensure that you have AzureRM and NuGet installed:
@@ -112,24 +132,6 @@ New-AzureRMResourceGroupDeployment -DeploymentName "ad1" -ResourceGroupName $azu
 </li>
 </ol>
 <p>Insert your username and password and the resource group. If you do not want credentials in the file just go directly to <samp>Login-AzureAccount</samp> without the <samp>-Credential</samp> parameter and it will give you a prompt.
-
-## Known Issues with Deploying the Solution
-
-* This solution will only deploy machines in one region. If you wish to use NV series virtual machines for GPU accelerated graphics, then you must deploy the complete solution into one of the supported regions for NV series instance types. Currently this is limited to the following locations: EAST US, NORTH CENTRAL US, SOUTH CENTRAL US, SOUTH EAST ASIA and WEST EUROPE.
-* Do not use passwords with the '%' symbol as it is currently not supported.
-* The current certificate that is deployed is expired so PCoIP clients must be configured for security_mode=0 (verification is not required) in order to connect. See here for instructions: http://www.teradici.com/web-help/TWAS_UG22_HTML5/08_AppA_Security.htm
-* Occasionally the Azure Application Gateway can fail with an 'internal error.' If this happens, you can quickly redeploy the application gateway to recover.
- 1. In the Azure Portal select the resource group you created.
- 1. Go to Deployments -> CreateAppGateway
- 1. Click <b>Redeploy</b>. This will bring you to the custom deployment screen.
- 1. Click <b>use existing</b> and select the resource group you are using.
- 1. Leave all the other parameters the same.
- 1. Accept the terms and conditions.
- 1. Click <b>Purchase</b>.
- 1. The Application gateway should deploy successfully.
-* Occasionally other failures can happen such as 'timeout' or 'can't start WinRM service.' Start a new deployment from scratch in a new resource group and attempt to re-deploy.
-* A common deployment failure is when the quota is reached for the subscription. In this case you have to either remove or deallocate virtual machines from the subscription, or request a core quota increase from Microsoft to alleviate the problem.
-
 
 Copyright 2017 Teradici Corporation. All Rights Reserved.
 
