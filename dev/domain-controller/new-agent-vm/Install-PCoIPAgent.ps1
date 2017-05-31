@@ -27,7 +27,10 @@ Configuration InstallPCoIPAgent
 			   Else {
 					"HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\PCoIP Graphics Agent"
 			   }
-	
+	$retryCount = 3
+	$delay = 10 # seconds
+	$orderNumArray = @('1st', '2nd', '3rd')
+
     Node "localhost"
     {
         VmUsability TheVmUsability
@@ -46,7 +49,7 @@ Configuration InstallPCoIPAgent
 
         File Nvidia_Download_Directory 
         {
-            Ensure          = "Present"
+            Ensure          = If ($isSA) {"Absent"} Else {"Present"} 
             Type            = "Directory"
             DestinationPath = "C:\WindowsAzure\NvidiaInstaller"
         }
@@ -66,13 +69,12 @@ Configuration InstallPCoIPAgent
             GetScript  = { @{ Result = "Install_SumoCollector" } }
 
             TestScript = { 
-                return Test-Path "C:\sumo\sumo.conf" -PathType leaf
+                return (Test-Path "C:\sumo\sumo.conf" -PathType leaf) -or (!$using:sumoCollectorID)
                 }
 
             SetScript  = {
                 Write-Verbose "Install_SumoCollector"
 
-                $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
                 $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/SumoCollector_windows-x64_19_182-25.exe"
                 $sumo_config = "$using:gitLocation/sumo.conf"
                 $sumo_collector_json = "$using:gitLocation/sumo-agent-vm.json"
@@ -84,11 +86,38 @@ Configuration InstallPCoIPAgent
                 $collectorID = "$using:sumoCollectorID"
                 (Get-Content -Path "$dest\sumo.conf").Replace("collectorID", $collectorID) | Set-Content -Path "$dest\sumo.conf"
                 
+                $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
                 Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
                 
                 #install the collector
                 $command = "$dest\$installerFileName -console -q"
                 Invoke-Expression $command
+
+				# Wait for collector to be installed before exiting this configuration.
+				#### Note if we change binary versions we will need to change registry path - 7857-4527-9352-4688 will change ####
+				$retrycount = 1800
+				while ($retryCount -gt 0)
+				{
+					$readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\7857-4527-9352-4688"  -ErrorAction SilentlyContinue )
+
+					if ($readyToConfigure)
+					{
+						break   #success
+					}
+					else
+					{
+    					Start-Sleep -s 1;
+						$retrycount = $retrycount - 1;
+						if ( $retrycount -eq 0)
+						{
+							throw "Sumo collector not installed in time."
+						}
+						else
+						{
+							Write-Host "Waiting for Sumo collector to be installed"
+						}
+					}
+				}
             }
         }
 
@@ -113,24 +142,48 @@ Configuration InstallPCoIPAgent
                 $videoDriverUrl = $using:videoDriverUrl
                 $installerFileName = [System.IO.Path]::GetFileName($videoDriverUrl)
                 $destFile = "c:\WindowsAzure\NvidiaInstaller\" + $installerFileName
-                Invoke-WebRequest $videoDriverUrl -OutFile $destFile
 
-                Write-Verbose "Installing Nvidia driver"
-                $ret = Start-Process -FilePath $destFile -ArgumentList "/s /noeula /noreboot" -PassThru -Wait
-                Write-Verbose ("Nvidia driver exit code: "  + $ret.ExitCode)
+				$orderNumArray = $using:orderNumArray
+				$retryCount = $using:retryCount
 
-                # treat returned code 0 and 1 as success
-				if (($ret.ExitCode -ne 0) -and ($ret.ExitCode -ne 1)) {
-					$errMsg = "Failed to install nvidia driver."
-					Write-Verbose $errMsg
-					throw $errMsg
-				} else {
-					Write-Verbose "Request reboot machine after Installing Video Driver."
-					# Setting the global:DSCMachineStatus = 1 tells DSC that a reboot is required
-					$global:DSCMachineStatus = 1
+				for ($idx = 1; $idx -le $retryCount; $idx++) {
+					Write-Verbose ('It is the {0} try downloading video driver from {1} ...' -f $orderNumArray[$idx -1], $videoDriverUrl)
+					Try{
+						Invoke-WebRequest $videoDriverUrl -OutFile $destFile -UseBasicParsing -PassThru  -ErrorAction Stop
+						break
+					}Catch{
+						$errMsg = "Attempt {0} of {1} to download video driver failed. Error Infomation: {2} " -f $idx, $retryCount, $_.Exception.Message 
+						Write-Verbose $errMsg
+						if ($idx -ne $retryCount) {
+							Start-Sleep -s $using:delay
+						} else {
+							throw $errMsg
+						}
+					}
 				}
 
-                Write-Verbose "Finished Nvidia driver Installation"
+				for ($idx = 1; $idx -le $retryCount; $idx++) {
+					Write-Verbose ('It is the {0} try installing Nvidia driver...' -f $orderNumArray[$idx -1])
+
+	                $ret = Start-Process -FilePath $destFile -ArgumentList "/s /noeula /noreboot" -PassThru -Wait
+					
+					# treat exit code 0 or 1 as success
+					if (($ret.ExitCode -eq 0) -or ($ret.ExitCode -eq 1)) {
+						Write-Verbose "Request reboot machine after Installing Video Driver."
+						# Setting the global:DSCMachineStatus = 1 tells DSC that a reboot is required
+						$global:DSCMachineStatus = 1
+						Write-Verbose "Finished Nvidia driver Installation"
+						break
+					} else {
+						$errMsg = "Attempt {0} of {1} to install nvidia driver failed. Exit Code: {2} ." -f  $idx, $retryCount,  $ret.ExitCode
+						Write-Verbose $errMsg
+						if ($idx -ne $retryCount) {
+							Start-Sleep -s $using:delay
+						} else {
+							throw $errMsg
+						}
+					}
+				}
             }
         }
 
@@ -158,29 +211,50 @@ Configuration InstallPCoIPAgent
                 $pcoipAgentInstallerUrl = $using:pcoipAgentInstallerUrl
                 $installerFileName = [System.IO.Path]::GetFileName($pcoipAgentInstallerUrl)
                 $destFile = "C:\WindowsAzure\PCoIPAgentInstaller\" + $installerFileName
-                
-				Write-Verbose "Downloading PCoIP Agent"
-                Invoke-WebRequest $pcoipAgentInstallerUrl -OutFile $destFile
 
-                #install the agent
-				Write-Verbose "Installing PCoIP Agent"
-                $ret = Start-Process -FilePath $destFile -ArgumentList "/S /nopostreboot" -PassThru -Wait
+				$orderNumArray = $using:orderNumArray
+				$retryCount = $using:retryCount
 
-				# Check installer return code
-				if ($ret.ExitCode -ne 0) {
-					#exit code 1641 means requiring reboot machine after intallation is done, other non zere exit code means installation has some error
-					if ($ret.ExitCode -eq $EXIT_CODE_REBOOT) {
-						Write-Verbose "Request reboot machine after Installing pcoip agent."
-						# Setting the global:DSCMachineStatus = 1 tells DSC that a reboot is required
-						$global:DSCMachineStatus = 1
-					} else {
-						$errMsg = "Failed to install PCoIP Agent. Exit Code: " + $ret.ExitCode
+				for ($idx = 1; $idx -le $retryCount; $idx++) {
+					Write-Verbose ('It is the {0} try downloading PCoIP Agent installer from {1} ...' -f $orderNumArray[$idx -1], $pcoipAgentInstallerUrl)
+					Try{
+						Invoke-WebRequest $pcoipAgentInstallerUrl -OutFile $destFile -UseBasicParsing -PassThru -ErrorAction Stop
+						break
+					} Catch {
+						$errMsg = "Attempt {0} of {1} to download PCoIP Agent installer failed. Error Infomation: {2} " -f $idx, $retryCount, $_.Exception.Message 
 						Write-Verbose $errMsg
-						throw $errMsg
+						if ($idx -ne $retryCount) {
+							Start-Sleep -s $using:delay
+						} else {
+							throw $errMsg
+						}
 					}
 				}
-				
-	            Write-Verbose "Finished PCoIP Agent Installation"
+
+                #install the agent
+				for ($idx = 1; $idx -le $retryCount; $idx++) {
+					Write-Verbose ('It is the {0} try intalling PCoIP Agent...' -f $orderNumArray[$idx -1])
+
+					$ret = Start-Process -FilePath $destFile -ArgumentList "/S /nopostreboot" -PassThru -Wait
+
+					if (($ret.ExitCode -eq 0) -or ($ret.ExitCode -eq $EXIT_CODE_REBOOT)) {
+						if ($ret.ExitCode -eq $EXIT_CODE_REBOOT) {
+							Write-Verbose "Request reboot machine after Installing pcoip agent."
+							# Setting the global:DSCMachineStatus = 1 tells DSC that a reboot is required
+							$global:DSCMachineStatus = 1
+						}
+						Write-Verbose "Finished PCoIP Agent Installation"
+						break
+					} else {
+						$errMsg = "Attempt {0} of [1} to install PCoIP Agent failed. Exit Code: {2}." -f $idx, $retryCount, $ret.ExitCode
+						Write-Verbose $errMsg
+						if ($idx -ne $retryCount) {
+							Start-Sleep -s $using:delay
+						} else {
+							throw $errMsg
+						}
+					}
+				}
             }
         }
 
@@ -202,54 +276,89 @@ Configuration InstallPCoIPAgent
                 #register code is stored at the password property of PSCredential object
                 $registrationCode = ($using:registrationCodeCredential).GetNetworkCredential().password
                 if ($registrationCode) {
+					# Insert a delay before activating license
 	                cd "C:\Program Files (x86)\Teradici\PCoIP Agent"
 
-					Write-Verbose "Activating License Code"               
- 	                $ret = & .\pcoip-register-host.ps1 -RegistrationCode $registrationCode
-					$isExeSucc = $?
+					$retryCount = $using:retryCount
+					$orderNumArray = $using:orderNumArray
 
-					if ($isExeSucc) {
-						Write-Verbose "Succeeded to activate License Code." 
-					} else {
-						$retMsg = $ret | Out-String
-						$errMsg = "Failed to activate License Code because " + $retMsg
-						Write-Verbose  $errMsg              
-						throw $errMsg
+					for ($idx = 1; $idx -le $retryCount; $idx++) {
+						Write-Verbose ('It is the {0} try activating license code.' -f $orderNumArray[$idx -1])
+						& .\pcoip-register-host.ps1 -RegistrationCode $registrationCode
+
+						Write-Verbose ('It is the {0} try validating license code.' -f $orderNumArray[$idx -1])
+	 	                $ret = & .\pcoip-validate-license.ps1
+						$isExeSucc = $?
+
+						if ($isExeSucc) {
+							Write-Verbose "Succeeded to activate License Code." 
+							break
+						} else {
+							$retMsg = $ret | Out-String
+							$errMsg = "Attempt {0} of {1} to validate license code failed. Error Message: {2} " -f $idx, $retryCount, $retMsg
+							Write-Verbose  $errMsg     
+
+							if ($idx -ne $retryCount) {
+								Start-Sleep -s $using:delay
+							} else {
+								throw $errMsg
+							}
+						}
 					}
+                }              
+            }
+        }
 
-					Write-Verbose "Validating License"               
- 	                $ret = & .\pcoip-validate-license.ps1
-					$isExeSucc = $?
+        Script StartPcoIPService
+        {
+            DependsOn  = @("[Script]Register")
 
-					if ($isExeSucc) {
-						Write-Verbose "License validation was successful."
-					} else {
-						$retMsg = $ret | Out-String
-						$errMsg = "Failed to validate license because " + $retMsg
-						Write-Verbose  $errMsg              
-						throw $errMsg
-					}
-                }
-               
-				#start service if it is not started
+            GetScript  = { return 'Start PcoIP Service'}
+
+            TestScript = { 
+				$serviceName = "PCoIPAgent"
+
+				$svc = Get-Service -Name $serviceName   
+            
+				return $svc.Status -eq "Running"
+            }
+
+            SetScript  = {
 				$serviceName = "PCoIPAgent"
 				$svc = Get-Service -Name $serviceName   
 
-				if ($svc.StartType -eq "Disabled") {
+				if ($svc.StartType -ne "Automatic") {
+					$msg = "try setting {0} Service start type to automatic." -f $serviceName
+					Write-Verbose $msg
+
 					Set-Service -name  $serviceName -StartupType Automatic
+
+					$status = If ($?) {"succeeded"} Else {"failed"}
+					$msg = "{0} to change start type of {1} service to Automatic." -f $status, $serviceName
+					Write-Verbose $msg
 				}
 					
 				if ($svc.status -eq "Paused") {
-					$svc.Continue()
+					Write-Verbose "try resuming PCoIPAgent Service ."
+					try{
+						$svc.Continue()
+						Write-Verbose "succeeded to resume PCoIPAgent service."
+					}catch{
+						throw "failed to resume PCoIP Agent Service."
+					}
 				}
 
 				if ( $svc.status -eq "Stopped" )	{
-					Write-Verbose "Starting PCoIP Agent Service because it is at stopped status."
-					$svc.Start()
-					$svc.WaitForStatus("Running", 120)
+					Write-Verbose "Starting PCoIP Agent Service ..."
+					try{
+						$svc.Start()
+						$svc.WaitForStatus("Running", 120)
+					}catch{
+						throw "failed to start PCoIP Agent Service"
+					}
 				}
-            }
-        }
+			}
+		}
     }
 }
 
@@ -259,6 +368,7 @@ Configuration VmUsability
     {
         DisableServerManager TheDisableServerManager
         InstallFirefox TheInstallFirefox
+        AudioService TheAudioService
     }
 }
 
@@ -279,13 +389,111 @@ Configuration DisableServerManager
 
 Configuration InstallFirefox
 {
-    Import-DscResource -module xFirefox
+    param
+    (
+        [string]$VersionNumber = "latest",
+        [string]$Language = "en-US",
+	    [string]$OS = "win",
+        [string]$MachineBits = "x86",
+	    [string]$LocalPath = "$env:SystemDrive\Windows\DtlDownloads\Firefox Setup " + $versionNumber +".exe"
+    )
+    Import-DscResource -ModuleName xPSDesiredStateConfiguration
 
-    Node "localhost"
+    xRemoteFile Downloader
     {
-        MSFT_xFirefox InstallFirefox
-        {
-            #install the latest firefox browser
+        Uri = "http://download.mozilla.org/?product=firefox-" + $VersionNumber +"&os="+$OS+"&lang=" + $Language 
+	    DestinationPath = $LocalPath
+    }
+	 
+    Script Install_Firefox
+    {
+        DependsOn = "[xRemoteFile]Downloader"
+        GetScript  = { @{ Result = "Install_Firefox" } }
+
+        TestScript = {
+            $regPath = "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Mozilla Firefox*"
+
+			if ( Test-Path -path $regPath)  {
+				return $true
+			} else {
+				return $false
+			} 
+		}
+
+        SetScript  = {
+            Write-Verbose "Will install firefox"
+            $destFile = $using:LocalPath
+
+			$retryCount = 3
+			$delay = 10
+			$orderNumArray = @('1st', '2nd', '3rd')
+
+			for ($idx = 1; $idx -le $retryCount; $idx++) {
+				Write-Verbose ('It is the {0} try installing firefox ...' -f $orderNumArray[$idx -1])
+
+	            $ret = Start-Process -FilePath $destFile -ArgumentList "/SilentMode" -PassThru -Wait
+
+				if ($ret.ExitCode -eq 0) {
+                    Write-Verbose "Finished firefox Installation."
+					break
+				} else {
+				    $errMsg = "Attempt {0} of {1} to install firefox failed. Exit Code: {2}" -f $idx, $retryCount, $ret.ExitCode
+				    Write-Verbose $errMsg
+					if ($idx -ne $retryCount) {
+						Start-Sleep -s $delay
+					}
+				}
+			}
         }
     }
+}
+
+Configuration AudioService
+{
+    Node "localhost"
+    {
+		$serviceName = "Audiosrv"
+
+        Script SetAudioServiceAutomaticAndRunning
+        {
+            GetScript  = { @{ Result = "Audio_Service" } }
+
+            TestScript = {
+				$serviceName = $using:serviceName 
+				$svc = Get-Service -Name $serviceName   
+
+				return $svc.Status -eq "Running"
+			}
+
+            SetScript  = {
+				$serviceName = $using:serviceName 
+				$svc = Get-Service -Name $serviceName   
+
+				if ($svc.StartType -ne "Automatic") {
+					$msg = "start type of " + $servicename + " is: " + $svc.StartType
+					Write-Verbose $msg
+					Set-Service -name  $serviceName -StartupType Automatic
+					if ($?) {
+						$msg = "changed start type of " + $servicename + " to: Automatic"
+					} else {
+						$msg = "falied to change start type of " + $servicename + " to: Automatic"
+					}
+					Write-Verbose $msg
+				}
+					
+				if ($svc.status -ne "Running") {
+					$msg = "status of " + $servicename + " is: " + $svc.status
+					Write-Verbose $msg
+					Set-Service -Name $serviceName -Status Running
+					if ($?) {
+						$msg = "changed status of " + $servicename + " to: Running"
+					} else {
+						$msg = "falied to change status of " + $servicename + " to: Running"
+					}
+
+					Write-Verbose $msg
+				}
+            }
+		}
+	}
 }
