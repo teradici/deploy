@@ -655,7 +655,7 @@ CAMSessionTimeoutMinutes=480
 
 					# retry required since it can take a few seconds for the app registration to percolate through Azure.
 					# (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
-					$SPCreateRetry = 120
+					$SPCreateRetry = 1800
 					while($SPCreateRetry -ne 0)
 					{
 						$SPCreateRetry--
@@ -681,7 +681,7 @@ CAMSessionTimeoutMinutes=480
 					
 					# retry required since it can take a few seconds for the app registration to percolate through Azure.
 					# (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
-					$rollAssignmentRetry = 120
+					$rollAssignmentRetry = 1800
 					while($rollAssignmentRetry -ne 0)
 					{
 						$rollAssignmentRetry--
@@ -726,7 +726,7 @@ CAMSessionTimeoutMinutes=480
   				Write-Host "Logging in SP $spName with tenantID $tenantID"
 
 				# retry required since it can take a few seconds for the app registration to percolate through Azure (and different to different endpoints... sigh).
-				$LoginSPRetry = 120
+				$LoginSPRetry = 1800
 				while($LoginSPRetry -ne 0)
 				{
 					$LoginSPRetry--
@@ -821,7 +821,7 @@ $authFilePath = "$targetDir\authfile.txt"
 
 				#keyvault populate retry is to catch the case where the DNS has not been updated
 				#from the keyvault creation by the time we get here
-				$keyVaultPopulateRetry = 120
+				$keyVaultPopulateRetry = 360 # so ~30 minutes with a sleep of 5 seconds.
 				while($keyVaultPopulateRetry -ne 0)
 				{
 					$keyVaultPopulateRetry--
@@ -902,7 +902,7 @@ $authFilePath = "$targetDir\authfile.txt"
 				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
 			  },
 			  "secretName": "$laSecretName"
-			}		
+			}
 		},
         "domainToJoin": { "value": "$using:domainFQDN" },
         "storageAccountName": { "value": "$using:storageAccountName" },
