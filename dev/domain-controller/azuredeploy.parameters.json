@@ -20,6 +20,9 @@
         "AzureAdminPassword": {
             "value": "GEN-PASSWORD"
         },
+        "tenantID": {
+            "value": ""
+        },
         "CAMDeploymentBlobSource": {
             "value": "https://teradeploy.blob.core.windows.net/binaries"
         },
