@@ -1,11 +1,26 @@
 ﻿Param(
+  [Parameter(Mandatory=$true)]
   [string]$rgName,
+
+  [Parameter(Mandatory=$true)]
   [string]$azureUserName, 
+
+  [Parameter(Mandatory=$true)]
   [string]$azurePassword,
+
+  [Parameter(Mandatory=$false)]
   [string]$tenantID,
+
+  [Parameter(Mandatory=$true)]
   [string]$subnetRef,
+
+  [Parameter(Mandatory=$true)]
   [string]$backendIpAddressDefault,
+
+  [Parameter(Mandatory=$true)]
   [string]$backendIpAddressForPathRule1,
+
+  [Parameter(Mandatory=$true)]
   [string]$templateUri
 )
 
