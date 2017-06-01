@@ -21,7 +21,7 @@
             "value": "GEN-PASSWORD"
         },
         "tenantID": {
-            "value": ""
+            "value": "null"
         },
         "CAMDeploymentBlobSource": {
             "value": "https://teradeploy.blob.core.windows.net/binaries"

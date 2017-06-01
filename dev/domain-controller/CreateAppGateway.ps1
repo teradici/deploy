@@ -34,9 +34,9 @@ Install-Module AzureRM -Force
 # Login to Azure
 $azurePwd = ConvertTo-SecureString $azurePassword -AsPlainText -Force
 $azureloginCred = New-Object -TypeName pscredential –ArgumentList $azureUserName, $azurePwd
-if($tenantID)
+if($tenantID -and $tenantID -ne "null")
 {
-	Write-Host "Logging in $azureUserName in tenant $tenantID."
+	Write-Host "Logging in SP $azureUserName in tenant $tenantID."
 	Login-AzureRmAccount -ServicePrincipal -Credential $azureloginCred –TenantId $tenantID
 }
 else

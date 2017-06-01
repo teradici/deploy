@@ -622,7 +622,7 @@ CAMSessionTimeoutMinutes=480
 				$RGNameLocal     = $using:RGName
 				$tenantID        = $using:tenantID
 
-				if (-not $tenantID)
+				if ((-not $tenantID) -or ($tenantID -eq "null"))
 				{
 				    Write-Host "No tenant ID entered. Calling Azure Active Directory to make an app and a service principal."
 

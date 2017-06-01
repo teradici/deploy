@@ -37,9 +37,9 @@
     },
     "tenantID": {
         "type": "string",
-        "defaultValue": "",
+        "defaultValue": "null",
         "metadata": {
-            "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave blank if a non SP account is being used."
+            "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave as 'null' if a standard user (non-SP) account is being used."
         }
     },
     "registrationCode": {
