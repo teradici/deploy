@@ -60,7 +60,7 @@
         "tenantID": {
             "type": "string",
             "metadata": {
-                "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave blank if a non SP account is being used."
+                "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave blank or 'null' if a non SP account is being used."
             }
         },
         "domainJoinOptions": {
