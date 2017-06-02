@@ -5,10 +5,10 @@
  * Connection Broker
  * Security Gateway
  * Publicly available binaries
- * One or more virtual workstations
+ * One or more user applications
  * ARM Templates
  * External data stores (CAM provides a data storage account for all virtual hardrives)
- * Keyvault (This contains the required authentication credentials)
+ * Keyvault (This contains the required authentication credentials securely)
  
 The following image gives an outline of the CAM POC Architecture:
 
@@ -22,15 +22,15 @@ The following template outlines the account requirements, deployment parameters,
 
  ## Account Requirements
 
-You must have an Azure account and subscription that does not require multi-factor authentication. You must have a valid registration code for Teradici Cloud Access Software to be able successfully connect to, and deploy, CAM.  
+You must have an Azure account and subscription that does not require multi-factor authentication. You must have a valid registration code for Teradici Cloud Access Software (CAS) to be able successfully connect to, and deploy, CAM. To purchase a CAS license or for more information on the solution visit [Teradici Cloud Access Software.](http://www.teradici.com/products/cloud-access/cloud-access-software)   
 
 ## Deployment Parameters
 * domainAdminUsername: The name of the administrator account to be created for the domain.
-  * This username must be short form and not UPN. The name cannot be 'admin.'For example 'uname' is allowed and 'uname@example.com' is not allowed.
-  * You are creating this new account prior to deploying CAM. It is not a real Domain Account.  
+  * This username must be short form and not a User Principal Name (UPN). The name cannot be 'admin.'For example 'uname' is allowed and 'uname@example.com' is not allowed.
+  * You are creating this new account prior to deploying CAM. It is not an existing domain account.  
   * This account's username and password also becomes the local admin account for each created machine.
 * domainAdminPassword: The password for the administrator account of the new VM's and domain.
-   * You are creating this password prior to deploying CAM. It is not a real password.
+   * You are creating this password prior to deploying CAM. It is not an existing password.
 * domainName: The FQDN of the Active Directory Domain to be created. **Must have a '.' like example.com or domain.local.**
   * The domain name does not need to be unique to get the system operational so if you're testing an isolated system you can use the same name for your deployments like 'mydomain.com.'
 * AzureAdminUsername: The UPN name of the Azure account with **owner** access to the subscription. This account cannot require MFA, or be a Service Principal, for example: uname@example.com.
@@ -44,10 +44,11 @@ You must have an Azure account and subscription that does not require multi-fact
 * \_artifactsLocationSasToken: - an auto-generated token to access _artifactsLocation. If _artifactsLocation does not need an access token (which is the default) then this can be blank.
  
 ## Deploying Cloud Access Manager using Microsoft Azure
-
 The following steps outline the procedure for performing a deployment of CAM using Microsoft Azure: 
 
 Click the **Deploy Azure** button to  begin.
+
+**NOTE:** Once you click the **Deploy Azure** button you will be taken to the Microsoft Azure account login page. It is important to read these steps to the end prior to clicking deploy or re-opening this file afterwards.
 
 <a target="_blank" href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fteradici%2Fdeploy%2Fmaster%2Fdev%2Fdomain-controller%2Fazuredeploy.json">
     <img src="http://azuredeploy.net/deploybutton.png"/>
@@ -64,7 +65,7 @@ Click the **Deploy Azure** button to  begin.
 7. Enter a **Domain Name** and ensure it finishes in **.com**.
 8. Enter your **Azure Admin Username**. This must be the same account you logged into from step 1.
 9. Enter your **Azure Admin Password**. This must be the same password you used to log in from step 2.
-10. Enter the CAS license registration code for the **Registration Code**. If you do not have a registration code contact a member of the Cloud BU team.
+10. Enter the CAS license registration code for the **Registration Code**. 
 11. Use the default addresses that are pre-entered for the **CAM Deployment Blob Source** and **_artifacts Location**. 
 12. Read the Terms and Conditions and once you are satisified with the information you have entered click the **I Agree** icon.
 13. Click **Purchase** to begin deployment.
