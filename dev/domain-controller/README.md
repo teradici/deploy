@@ -7,8 +7,8 @@
  * Publicly available binaries
  * One or more user applications
  * ARM Templates
- * External data stores (CAM provides a data storage account for all virtual hardrives)
- * Keyvault (This contains the required authentication credentials securely)
+ * External data stores (CAM creates a data storage account for all virtual hardrives.)
+ * Keyvault (This securely contains the required authentication credentials.)
  
 The following image gives an outline of the CAM POC Architecture:
 
@@ -29,8 +29,8 @@ You must have an Azure account and subscription that does not require multi-fact
 
 ## Deployment Parameters
 * domainAdminUsername: The name of the administrator account to be created for the domain.
-  * This username must be short form and not a User Principal Name (UPN). For example 'uname' is allowed and 'uname@example.com' is not allowed. The name cannot be 'admin' for example.
-  * You create this new domain account prior to deploying CAM. It is not an existing domain account.  
+  * This username must be short form and not a User Principal Name (UPN). For example 'uname' is allowed and 'uname@example.com' is not allowed. There are certain names such as 'administrator' which are also not allowed. See [FAQs about Windows Virtual Machines.](https://docs.microsoft.com/en-us/azure/virtual-machines/windows/faq)
+  * You create this new domain account prior to deploying CAM. It is not an existing domain account.
   * This account's username and password also becomes the local admin account for each created machine.
 * domainAdminPassword: The password for the administrator account of the new VM's and domain.
    * You create this new password for your unique domain account account prior to deploying CAM. It is not an existing password.
@@ -69,7 +69,7 @@ Click the **Deploy Azure** button to  begin.
 7. Enter a **Domain Name** and ensure it finishes in **.com**.
 8. Enter your **Azure Admin Username**. This must be the same account you logged into from step 1.
 9. Enter your **Azure Admin Password**. This must be the same password you used to log in from step 2.
-10. Enter the CAS license registration code for the **Registration Code**. 
+10. Enter the CAS license registration code for the **Registration Code**.
 11. Use the default addresses that are pre-entered for the **CAM Deployment Blob Source** and **_artifacts Location**. 
 12. Read the Terms and Conditions and once you are satisified with the information you have entered click the **I Agree** icon.
 13. Click **Purchase** to begin deployment.
@@ -82,7 +82,7 @@ You can track it through the notifications icon or for a more detailed view of y
 ## Known Issues with Deploying the Solution
 
 * This solution will only deploy machines in one region. If you wish to use NV series virtual machines for GPU accelerated graphics, then you must deploy the complete solution into one of the supported regions for NV series instance types. Currently this is limited to the following locations: EAST US, NORTH CENTRAL US, SOUTH CENTRAL US, SOUTH EAST ASIA and WEST EUROPE.
-* Do not use passwords with the '%' symbol as it is currently not supported. For more information on Azure virtual machine username and password requirements see [FAQs about Windows Virtual Machines.](https://docs.microsoft.com/en-us/azure/virtual-machines/windows/faq)
+* Do not use passwords with the '%' symbol as it is currently not supported. In addition Microsoft Azure enforces further limitations on passwords. For more information on Azure virtual machine username and password requirements see [FAQs about Windows Virtual Machines.](https://docs.microsoft.com/en-us/azure/virtual-machines/windows/faq)
 * Occasionally the Azure Application Gateway can fail with an 'internal error.' If this happens, you can quickly redeploy the application gateway to recover.
  1. In the Azure Portal select the resource group you created.
  1. Go to Deployments -> CreateAppGateway.
@@ -94,7 +94,7 @@ You can track it through the notifications icon or for a more detailed view of y
  1. The Application gateway should deploy successfully.
 * Occasionally other failures can happen such as 'timeout' or 'can't start WinRM service.' Start a new deployment from scratch in a new resource group and attempt to re-deploy.
 * A common deployment failure is when the quota is reached for the subscription. In this case you have to either remove or deallocate virtual machines from the subscription, or request a core quota increase from Microsoft to alleviate the problem.
-* If deployment fails with an error message stating 'Cannot find resource group < name >' this often occurs because the administrator is associated with a different Microsoft Azure subscription than the subscription in which CAM is being deployed. Ensure that the same Azure subscription, with the correct credentials, is being used for the deployment. 
+* If deployment fails with an error message stating 'Cannot find resource group < name >,' then this often occurs because the AzureAdminUsername account is associated with a different Microsoft Azure subscription than the subscription in which CAM is being deployed. Ensure that the AzureAdminUsername account manages the same Azure subscription that is being used for the deployment.
 
 ## Post-Deployment Capabilities
 Following successfull deployment of the CAM solution you can perform the following functions:
