@@ -1,5 +1,5 @@
  # What is Cloud Access Manager?
- Teradici Cloud Access Manager (CAM) is a one click deployment solution that provides a level of brokering on top of existing CAS deployments. CAM will enable you to assign and revoke virtual machines to users as well as create and destroy virtual workstations. The CAM solution consists of the following components:
+ Teradici Cloud Access Manager (CAM) is a one click deployment solution that provides a level of brokering on top of new CAS deployments. CAM will enable you to assign and revoke virtual machines to users as well as create and destroy virtual workstations. The CAM solution consists of the following components:
  * Deployment Cloud Server (This creates the administration GUI)
  * Domain Controller (This will contain an active directory)
  * Connection Broker
@@ -22,22 +22,25 @@ The following template outlines the account requirements, deployment parameters,
 
  ## Account Requirements
 
-You must have an Azure account and subscription that does not require multi-factor authentication. You must have a valid registration code for Teradici Cloud Access Software (CAS) to be able successfully connect to, and deploy, CAM. To purchase a CAS license or for more information on the solution visit [Teradici Cloud Access Software.](http://www.teradici.com/products/cloud-access/cloud-access-software)   
+You must have an Azure account and subscription that does not require multi-factor authentication. You must have a valid registration code for Teradici Cloud Access Software (CAS) to be able successfully connect to, and deploy, CAM. To purchase a CAS license or for more information on the solution visit [Teradici Cloud Access Software.](http://www.teradici.com/products/cloud-access/cloud-access-software)
+
+
+**NOTE:** To learn how to deploy CAS on Microsoft Azure go to [Deploy Teradici Cloud Access Software on Azure.](https://github.com/teradici/pcoip-agent-azure-templates/blob/master/README.md)
 
 ## Deployment Parameters
 * domainAdminUsername: The name of the administrator account to be created for the domain.
   * This username must be short form and not a User Principal Name (UPN). For example 'uname' is allowed and 'uname@example.com' is not allowed. The name cannot be 'admin' for example.
-  * You are creating this new account prior to deploying CAM. It is not an existing domain account.  
+  * You create this new domain account prior to deploying CAM. It is not an existing domain account.  
   * This account's username and password also becomes the local admin account for each created machine.
 * domainAdminPassword: The password for the administrator account of the new VM's and domain.
-   * You are creating this password prior to deploying CAM. It is not an existing password.
+   * You create this new password for your unique domain account account prior to deploying CAM. It is not an existing password.
 * domainName: The FQDN of the Active Directory Domain to be created. **Must have a '.' like example.com or domain.local.**
   * The domain name does not need to be unique to get the system operational so if you're testing an isolated system you can use the same name for your deployments like 'mydomain.com.'
 * AzureAdminUsername: The UPN name of the Azure account with **owner** access to the subscription. This account cannot require MFA, or be a Service Principal, for example: uname@example.com.
   * This account is only required to deploy the system. During deployment it will create an application in the Azure Active Directory account associated with the current Azure subscription. The application name is 'CAM-\<resourceGroupName\>'. It will also create a Service Principal account as part of this application which has contributor access to the resource group it is being deployed to. After deployment, only the Service Principal account is used for interaction with Azure API's.
   * You must have a real Azure Admin Account with the correct rights to deploy CAM.
 * AzureAdminPassword: The password of the Azure account with **owner** access to the subscription.
-* tenantID: **Leave this as 'null' unless you have pre-created a Service Principal account to manage the subscription.** The Azure Active Directory TenantID for the directory that manages the Azure subscription.
+* tenantID: The Azure Active Directory TenantID for the directory that manages the Azure subscription. Leave this as **null** unless you have pre-created a Service Principal account to manage the subscription.
 * registrationCode: The license registration code for the PCoIP CAS licenses.
 * adminVMBlobSource: The location of the blobs for admin GUI machine installation. Use the default unless you are specifically deploying with modified binaries.
 * \_artifactsLocation: The location of resources, such as templates and DSC modules, that the template depends on. Use the default unless you are specifically deploying with modified templates or binaries.
@@ -49,6 +52,8 @@ The following steps outline the procedure for performing a deployment of CAM usi
 Click the **Deploy Azure** button to  begin.
 
 **NOTE:** Once you click the **Deploy Azure** button you will be taken to the Microsoft Azure account login page. It is important to read these steps to the end prior to clicking deploy or re-opening this file afterwards.
+
+**NOTE:** In general it takes over an hour for the deployment to complete.
 
 <a target="_blank" href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fteradici%2Fdeploy%2Fmaster%2Fdev%2Fdomain-controller%2Fazuredeploy.json">
     <img src="http://azuredeploy.net/deploybutton.png"/>
@@ -70,14 +75,14 @@ Click the **Deploy Azure** button to  begin.
 13. Click **Purchase** to begin deployment.
 
 The deployment will now begin to run. 
-**NOTE:** In general it takes over an hour for the deployment to complete.
+
 You can track it through the notifications icon or for a more detailed view of your deployment click the **Resource Groups** icon in the Azure portal and click on your resource group.
 
 
 ## Known Issues with Deploying the Solution
 
 * This solution will only deploy machines in one region. If you wish to use NV series virtual machines for GPU accelerated graphics, then you must deploy the complete solution into one of the supported regions for NV series instance types. Currently this is limited to the following locations: EAST US, NORTH CENTRAL US, SOUTH CENTRAL US, SOUTH EAST ASIA and WEST EUROPE.
-* Do not use passwords with the '%' symbol as it is currently not supported.
+* Do not use passwords with the '%' symbol as it is currently not supported. For more information on Azure virtual machine username and password requirements see [FAQs about Windows Virtual Machines.](https://docs.microsoft.com/en-us/azure/virtual-machines/windows/faq)
 * Occasionally the Azure Application Gateway can fail with an 'internal error.' If this happens, you can quickly redeploy the application gateway to recover.
  1. In the Azure Portal select the resource group you created.
  1. Go to Deployments -> CreateAppGateway.
@@ -89,6 +94,7 @@ You can track it through the notifications icon or for a more detailed view of y
  1. The Application gateway should deploy successfully.
 * Occasionally other failures can happen such as 'timeout' or 'can't start WinRM service.' Start a new deployment from scratch in a new resource group and attempt to re-deploy.
 * A common deployment failure is when the quota is reached for the subscription. In this case you have to either remove or deallocate virtual machines from the subscription, or request a core quota increase from Microsoft to alleviate the problem.
+* If deployment fails with an error message stating 'Cannot find resource group < name >' this often occurs because the administrator is associated with a different Microsoft Azure subscription than the subscription in which CAM is being deployed. Ensure that the same Azure subscription, with the correct credentials, is being used for the deployment. 
 
 ## Post-Deployment Capabilities
 Following successfull deployment of the CAM solution you can perform the following functions:
@@ -126,7 +132,7 @@ Install-Module -Name AzureRM -Force
 $spUsername = "<username>@<example>.com"
 $spPass = ConvertTo-SecureString "<password>" -AsPlainText -Force
 $cred = New-Object -TypeName pscredential -ArgumentList $spUsername, $spPass
-Login-AzureRMAcccount -Credential $cred
+Login-AzureRMAccount -Credential $cred
 
 $azureRGName = "<rgname>"
 New-AzureRMResourceGroup -Name $azureRGName -Location "East US"
