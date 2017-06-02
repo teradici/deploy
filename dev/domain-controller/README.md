@@ -26,7 +26,7 @@ You must have an Azure account and subscription that does not require multi-fact
 
 ## Deployment Parameters
 * domainAdminUsername: The name of the administrator account to be created for the domain.
-  * This username must be short form and not a User Principal Name (UPN). The name cannot be 'admin.'For example 'uname' is allowed and 'uname@example.com' is not allowed.
+  * This username must be short form and not a User Principal Name (UPN). For example 'uname' is allowed and 'uname@example.com' is not allowed. The name cannot be 'admin' for example.
   * You are creating this new account prior to deploying CAM. It is not an existing domain account.  
   * This account's username and password also becomes the local admin account for each created machine.
 * domainAdminPassword: The password for the administrator account of the new VM's and domain.
@@ -37,7 +37,7 @@ You must have an Azure account and subscription that does not require multi-fact
   * This account is only required to deploy the system. During deployment it will create an application in the Azure Active Directory account associated with the current Azure subscription. The application name is 'CAM-\<resourceGroupName\>'. It will also create a Service Principal account as part of this application which has contributor access to the resource group it is being deployed to. After deployment, only the Service Principal account is used for interaction with Azure API's.
   * You must have a real Azure Admin Account with the correct rights to deploy CAM.
 * AzureAdminPassword: The password of the Azure account with **owner** access to the subscription.
-* tenantID: **Leave this as 'null' unless you have pre-created a Service Principal account to manage the subscription** The Azure Active Directory TenantID for the directory that manages the Azure subscription.
+* tenantID: **Leave this as 'null' unless you have pre-created a Service Principal account to manage the subscription.** The Azure Active Directory TenantID for the directory that manages the Azure subscription.
 * registrationCode: The license registration code for the PCoIP CAS licenses.
 * adminVMBlobSource: The location of the blobs for admin GUI machine installation. Use the default unless you are specifically deploying with modified binaries.
 * \_artifactsLocation: The location of resources, such as templates and DSC modules, that the template depends on. Use the default unless you are specifically deploying with modified templates or binaries.
@@ -70,7 +70,7 @@ Click the **Deploy Azure** button to  begin.
 13. Click **Purchase** to begin deployment.
 
 The deployment will now begin to run. 
-_**NOTE:**_ In general it takes over an hour for the deployment to complete.
+**NOTE:** In general it takes over an hour for the deployment to complete.
 You can track it through the notifications icon or for a more detailed view of your deployment click the **Resource Groups** icon in the Azure portal and click on your resource group.
 
 
@@ -80,7 +80,7 @@ You can track it through the notifications icon or for a more detailed view of y
 * Do not use passwords with the '%' symbol as it is currently not supported.
 * Occasionally the Azure Application Gateway can fail with an 'internal error.' If this happens, you can quickly redeploy the application gateway to recover.
  1. In the Azure Portal select the resource group you created.
- 1. Go to Deployments -> CreateAppGateway
+ 1. Go to Deployments -> CreateAppGateway.
  1. Click **Redeploy**. This will bring you to the custom deployment screen.
  1. Click **use existing** and select the resource group you are using.
  1. Leave all the other parameters the same.
@@ -119,7 +119,7 @@ Install-Module -Name AzureRM -Force
    ```
    Invoke-Webrequest -Uri "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller/azuredeploy.parameters.json" -OutFile "my.azuredeploy.parameters.json"
    ```
- 3. Modify <samp>my.azuredeploy.parameters.json</samp> to include the necessary deployment parameters, see <MadCap:xref href="Deployment Parameters.htm"><i>Deployment Parameters</i> on page 1</MadCap:xref> for the list of deployment parameters.
+ 3. Modify <samp>my.azuredeploy.parameters.json</samp> to include the necessary deployment parameters.
  1. Run the following script, substituting username, password, resource group name, and desired region:
                 
 ```
