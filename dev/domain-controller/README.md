@@ -37,7 +37,7 @@ You must have an Azure account and subscription that does not require multi-fact
   * This account is only required to deploy the system. During deployment it will create an application in the Azure Active Directory account associated with the current Azure subscription. The application name is 'CAM-\<resourceGroupName\>'. It will also create a Service Principal account as part of this application which has contributor access to the resource group it is being deployed to. After deployment, only the Service Principal account is used for interaction with Azure API's.
   * You must have a real Azure Admin Account with the correct rights to deploy CAM.
 * AzureAdminPassword: The password of the Azure account with **owner** access to the subscription.
-* tenantID: **Leave this blank unless you have pre-created a Service Principal account to manage the subscription** The Azure Active Directory TenantID for the directory that manages the Azure subscription.
+* tenantID: **Leave this as 'null' unless you have pre-created a Service Principal account to manage the subscription** The Azure Active Directory TenantID for the directory that manages the Azure subscription.
 * registrationCode: The license registration code for the PCoIP CAS licenses.
 * adminVMBlobSource: The location of the blobs for admin GUI machine installation. Use the default unless you are specifically deploying with modified binaries.
 * \_artifactsLocation: The location of resources, such as templates and DSC modules, that the template depends on. Use the default unless you are specifically deploying with modified templates or binaries.
@@ -56,8 +56,7 @@ Click the **Deploy Azure** button to  begin.
 1. Select the Microsoft Azure account you want to access.
 1. Enter your Password and click **Sign in.**
 1. On the Customized Template page create a new Resource group by selecting the **Create New** icon and entering a name for the group. The Resource Group should be empty when you access the page.
-* You can also select a pre-defined Resource group by selecting the **Use Existing** icon and clicking on one of the groups from the dropdown menu.
-
+    * You can also select a pre-defined Resource group by selecting the **Use Existing** icon and clicking on one of the groups from the dropdown menu.
 4. Select a location from the dropdown menu.
 5. Enter a Username for the **Domain Admin Username**. This is a new account.
 6. Enter a password for the **Domain Admin Password**. This is a new password.
@@ -70,7 +69,7 @@ Click the **Deploy Azure** button to  begin.
 13. Click **Purchase** to begin deployment.
 
 The deployment will now begin to run. 
-_**NOTE:**_ In general it takes over an hour to complete deployment.
+_**NOTE:**_ In general it takes over an hour for the deployment to complete.
 You can track it through the notifications icon or for a more detailed view of your deployment click the **Resource Groups** icon in the Azure portal and click on your resource group.
 
 
@@ -93,45 +92,48 @@ You can track it through the notifications icon or for a more detailed view of y
 ## Post-Deployment Capabilities
 Following successfull deployment of the CAM solution you can perform the following functions:
 * **Administer the solution-**
-To administer the deployment through the Cloud Access Manager GUI, https: to the public IP of the applicationGateway1 Application Gateway and login with the domain administrator credentials.
+  * To administer the deployment through the Cloud Access Manager GUI, https: to the public IP of the applicationGateway1 Application Gateway and login with the domain administrator credentials.
 * **Connect to the pre-created desktop VM for the domain administrator-**
-To connect to the pre-created Agent virtual machine, point the PCoIP client to the public IP of the applicationGateway1 Application gateway and login with the domain administrator credentials.
+  * To connect to the pre-created Agent virtual machine, point the PCoIP client to the public IP of the applicationGateway1 Application gateway and login with the domain administrator credentials.
 * **Connect to user provisioned machines-**
-After new users have been created in the domain and machines have been provisioned for them, users can login to their PCoIP sessions by pointing the PCoIP client to the public IP of the applicationGateway1 Application gateway and login with the user credentials. 
+  * After new users have been created in the domain and machines have been provisioned for them, users can login to their PCoIP sessions by pointing the PCoIP client to the public IP of the applicationGateway1 Application gateway and login with the user credentials. 
 * **Manage the domain-**
-To manage the Active Directory Domain, RDP to the public IP address of vm-dc (the domain controller).
+  * To manage the Active Directory Domain, RDP to the public IP address of vm-dc (the domain controller).
  
-<h3>Deploying Cloud Access Manager using Microsoft PowerShell</h3>
-        <p>The following section outlines the procedure for performing a deployment of CAM using Microsoft PowerShell.</p>
-        <p><b>Prerequisites</p></b>  
-        <p> Ensure that you have AzureRM and NuGet installed:
+### Deploying Cloud Access Manager using Microsoft PowerShell
+
+The following section outlines the procedure for performing a deployment of CAM using Microsoft PowerShell.
+
+**Prerequisites**
+
+Ensure that you have AzureRM and NuGet installed:
         
 ```
 Install-packageProvider -Name NuGet -Force 
 Install-Module -Name AzureRM -Force
 ```
-</p>
-<ol>
-                <li>Run Microsoft Powershell.</li>
-                <li>Clone the CAM&#160;deployment script with <code>GIT.cd</code> to the directory: <samp>deploy/dev/domain-controller</samp>.</li>
-                <li>Copy the <samp>azuredeploy.parameters.json</samp> file to <samp>my.azuredeploy.parameters.json</samp>.</li>
-                <li>Modify <samp>my.azuredeploy.parameters.json</samp> to include the nescessary deployment parameters, see <MadCap:xref href="Deployment Parameters.htm"><i>Deployment Parameters</i> on page 1</MadCap:xref> for the list of deployment parameters.</li>
-                <li>Run the following script:
+
+ 1. Run Microsoft Powershell.
+ 1. Create the local parameters file by calling
+   ```
+   Invoke-Webrequest -Uri "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller/azuredeploy.parameters.json" -OutFile "my.azuredeploy.parameters.json"
+   ```
+ 3. Modify <samp>my.azuredeploy.parameters.json</samp> to include the necessary deployment parameters, see <MadCap:xref href="Deployment Parameters.htm"><i>Deployment Parameters</i> on page 1</MadCap:xref> for the list of deployment parameters.
+ 1. Run the following script, substituting username, password, resource group name, and desired region:
                 
 ```
-$spUsername = "<username>@test.teradici.com"
+$spUsername = "<username>@<example>.com"
 $spPass = ConvertTo-SecureString "<password>" -AsPlainText -Force
 $cred = New-Object -TypeName pscredential -ArgumentList $spUsername, $spPass
 Login-AzureRMAcccount -Credential $cred
 
 $azureRGName = "<rgname>"
 New-AzureRMResourceGroup -Name $azureRGName -Location "East US"
-New-AzureRMResourceGroupDeployment -DeploymentName "ad1" -ResourceGroupName $azureRGName -TemplateFile "azuredeploy.json" -TemplateParameterFile "my.azuredeploy.parameters.json"
+New-AzureRMResourceGroupDeployment -DeploymentName "ad1" -ResourceGroupName $azureRGName -TemplateFile "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller/azuredeploy.json" -TemplateParameterFile "my.azuredeploy.parameters.json"
 
 ```
-</li>
-</ol>
-<p>Insert your username and password and the resource group. If you do not want credentials in the file just go directly to <samp>Login-AzureAccount</samp> without the <samp>-Credential</samp> parameter and it will give you a prompt.
+
+If you do not want credentials in the file just go directly to <samp>Login-AzureAccount</samp> without the <samp>-Credential</samp> parameter and it will give you a prompt.
 
 Copyright 2017 Teradici Corporation. All Rights Reserved.
 
