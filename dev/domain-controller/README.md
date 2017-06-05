@@ -1,20 +1,14 @@
  # What is Cloud Access Manager?
- Teradici Cloud Access Manager (CAM) is a one click deployment solution that provides a level of brokering on top of new CAS deployments. CAM will enable you to assign and revoke virtual machines to users as well as create and destroy virtual workstations. The CAM solution consists of the following components:
- * Deployment Cloud Server (This creates the administration GUI)
- * Domain Controller (This will contain an active directory)
- * Connection Broker
- * Security Gateway
- * Publicly available binaries
- * One or more user applications
- * ARM Templates
- * External data stores (CAM creates a data storage account for all virtual hardrives.)
- * Keyvault (This securely contains the required authentication credentials.)
+ Teradici Cloud Access Manager (CAM) is a one click deployment solution that provides a level of brokering on top of new Cloud Access Software (CAS) deployments. CAM will enable you to assign and revoke virtual machines to users, turn virtual machines on or off, as well as create and destroy virtual machines. 
+ 
+The CAM solution is deployed on your Microsoft Azure account with an ARM template provided by Teradici. Once you have completed the template form on Microsoft Azure you can start deployment. Information on deploying CAM, as well as additional information on the solutions architecture and deployment parameters are outlined in the following sections.
  
 The following image gives an outline of the CAM POC Architecture:
 
-**CAM POC Architecture**
+**CAM Architecture**
 
 ![Img](http://www.teradici.com/web-help/CAM/CAMPOCDiagram.png)
+
 
 # Provisioning Template
 
@@ -28,6 +22,7 @@ You must have an Azure account and subscription that does not require multi-fact
 **NOTE:** To learn how to deploy CAS on Microsoft Azure go to [Deploy Teradici Cloud Access Software on Azure.](https://github.com/teradici/pcoip-agent-azure-templates/blob/master/README.md)
 
 ## Deployment Parameters
+The following parameters are the form fields you are required to fill in on the template in Microsoft Azure to begin deploying CAM:
 * domainAdminUsername: The name of the administrator account to be created for the domain.
   * This username must be short form and not a User Principal Name (UPN). For example 'uname' is allowed and 'uname@example.com' is not allowed. There are certain names such as 'administrator' which are also not allowed. See [FAQs about Windows Virtual Machines.](https://docs.microsoft.com/en-us/azure/virtual-machines/windows/faq)
   * You create this new domain account prior to deploying CAM. It is not an existing domain account.
@@ -41,12 +36,22 @@ You must have an Azure account and subscription that does not require multi-fact
   * You must have a real Azure Admin Account with the correct rights to deploy CAM.
 * AzureAdminPassword: The password of the Azure account with **owner** access to the subscription.
 * tenantID: The Azure Active Directory TenantID for the directory that manages the Azure subscription. Leave this as **null** unless you have pre-created a Service Principal account to manage the subscription.
-* registrationCode: The license registration code for the PCoIP CAS licenses.
+* registrationCode: The license registration code for the PCoIP CAS licenses. The CAS registration code is sent to you in an email once you have purchased a CAS license.
 * adminVMBlobSource: The location of the blobs for admin GUI machine installation. Use the default unless you are specifically deploying with modified binaries.
 * \_artifactsLocation: The location of resources, such as templates and DSC modules, that the template depends on. Use the default unless you are specifically deploying with modified templates or binaries.
 * \_artifactsLocationSasToken: - an auto-generated token to access _artifactsLocation. If _artifactsLocation does not need an access token (which is the default) then this can be blank.
  
 ## Deploying Cloud Access Manager using Microsoft Azure
+The CAM solution consists of the following components:
+ * Deployment Cloud Server (This creates the administration GUI)
+ * Domain Controller (This will contain an active directory)
+ * Connection Broker
+ * Security Gateway
+ * One or more user applications
+ * ARM Templates
+ * External data stores (CAM creates a data storage account for all virtual hardrives.)
+ * Keyvault (This securely contains the required authentication credentials.)
+
 The following steps outline the procedure for performing a deployment of CAM using Microsoft Azure: 
 
 Click the **Deploy Azure** button to  begin.
@@ -64,13 +69,13 @@ Click the **Deploy Azure** button to  begin.
 1. On the Customized Template page create a new Resource group by selecting the **Create New** icon and entering a name for the group. The Resource Group should be empty when you access the page.
     * You can also select a pre-defined Resource group by selecting the **Use Existing** icon and clicking on one of the groups from the dropdown menu.
 4. Select a location from the dropdown menu.
-5. Enter a Username for the **Domain Admin Username**. This is a new account.
-6. Enter a password for the **Domain Admin Password**. This is a new password.
-7. Enter a **Domain Name** and ensure it finishes in **.com**.
-8. Enter your **Azure Admin Username**. This must be the same account you logged into from step 1.
-9. Enter your **Azure Admin Password**. This must be the same password you used to log in from step 2.
-10. Enter the CAS license registration code for the **Registration Code**.
-11. Use the default addresses that are pre-entered for the **CAM Deployment Blob Source** and **_artifacts Location**. 
+5. Enter a Username for the **domainAdminUsername**. This is a new account.
+6. Enter a password for the **domainAdminPassword**. This is a new password.
+7. Enter a **domainName** and ensure it finishes in **.com**.
+8. Enter your **AzureAdminUsername**. This must be the same account you logged into from step 1.
+9. Enter your **AzureAdminPassword**. This must be the same password you used to log in from step 2.
+10. Enter the CAS license registration code for the **registrationCode**.
+11. Use the default addresses that are pre-entered for the **adminVMBlobSource** and **_artifactsLocation**. 
 12. Read the Terms and Conditions and once you are satisified with the information you have entered click the **I Agree** icon.
 13. Click **Purchase** to begin deployment.
 
@@ -101,7 +106,7 @@ Following successfull deployment of the CAM solution you can perform the followi
 * **Administer the solution-**
   * To administer the deployment through the Cloud Access Manager GUI, https: to the public IP of the applicationGateway1 Application Gateway and login with the domain administrator credentials.
 * **Connect to the pre-created desktop VM for the domain administrator-**
-  * To connect to the pre-created Agent virtual machine, point the PCoIP client to the public IP of the applicationGateway1 Application gateway and login with the domain administrator credentials.
+  * To connect to the pre-created Agent virtual machine, point the PCoIP client to the public IP of the applicationGateway1 Application gateway and login with the domain administrator credentials. To download the PCoIP client visit [PCoIP Client Downloads.](http://www.teradici.com/product-finder/client-downloads)
 * **Connect to user provisioned machines-**
   * After new users have been created in the domain and machines have been provisioned for them, users can login to their PCoIP sessions by pointing the PCoIP client to the public IP of the applicationGateway1 Application gateway and login with the user credentials. 
 * **Manage the domain-**
