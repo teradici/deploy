@@ -3,7 +3,7 @@
  
 The CAM solution is deployed on your Microsoft Azure account with an ARM template provided by Teradici. Once you have completed the template form on Microsoft Azure you can start deployment. Information on deploying CAM, as well as additional information on the solutions architecture and deployment parameters are outlined in the following sections.
  
-The following image gives an outline of the CAM POC Architecture:
+The following image gives an outline of the CAM Technical Preview Architecture:
 
 **CAM Architecture**
 
@@ -38,7 +38,7 @@ The following parameters are the form fields you are required to fill in on the 
 * tenantID: The Azure Active Directory TenantID for the directory that manages the Azure subscription. Leave this as **null** unless you have pre-created a Service Principal account to manage the subscription.
 * registrationCode: The license registration code for the PCoIP CAS licenses. The CAS registration code is sent to you in an email once you have purchased a CAS license.
 * adminVMBlobSource: The location of the blobs for admin GUI machine installation. Use the default unless you are specifically deploying with modified binaries.
-* \_artifactsLocation: The location of resources, such as templates and DSC modules, that the template depends on. Use the default unless you are specifically deploying with modified templates or binaries.
+* \_artifactsLocation: The location of resources that the template depends on. Use the default unless you are specifically deploying with modified templates or binaries.
 * \_artifactsLocationSasToken: - an auto-generated token to access _artifactsLocation. If _artifactsLocation does not need an access token (which is the default) then this can be blank.
  
 ## Deploying Cloud Access Manager using Microsoft Azure
