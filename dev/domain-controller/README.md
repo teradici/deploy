@@ -1,7 +1,7 @@
  # What is Cloud Access Manager?
  Teradici Cloud Access Manager (CAM) is a one click deployment solution that provides a level of brokering on top of new Cloud Access Software (CAS) deployments. CAM will enable you to assign and revoke virtual machines to users, turn virtual machines on or off, as well as create and destroy virtual machines. 
  
-The CAM solution is deployed on your Microsoft Azure account with an ARM template provided by Teradici. Once you have completed the template form on Microsoft Azure you can start deployment. Information on deploying CAM, as well as additional information on the solutions architecture and deployment parameters are outlined in the following sections.
+The CAM solution is deployed in your Microsoft Azure subscription with an ARM template provided by Teradici. Once you have completed the template form on the Microsoft Azure Portal, you can start deployment. Information on deploying CAM, as well as additional information on the solutions architecture and deployment parameters are in the following sections.
  
 The following image gives an outline of the CAM Technical Preview Architecture:
 
@@ -22,7 +22,7 @@ You must have an Azure account and subscription that does not require multi-fact
 **NOTE:** To learn how to deploy CAS on Microsoft Azure go to [Deploy Teradici Cloud Access Software on Azure.](https://github.com/teradici/pcoip-agent-azure-templates/blob/master/README.md)
 
 ## Deployment Parameters
-The following parameters are the form fields you are required to fill in on the template in Microsoft Azure to begin deploying CAM:
+The following parameters are the form fields you are required to fill in on the template in the Microsoft Azure Portal to begin deploying CAM:
 * domainAdminUsername: The name of the administrator account to be created for the domain.
   * This username must be short form and not a User Principal Name (UPN). For example 'uname' is allowed and 'uname@example.com' is not allowed. There are certain names such as 'administrator' which are also not allowed. See [FAQs about Windows Virtual Machines.](https://docs.microsoft.com/en-us/azure/virtual-machines/windows/faq)
   * You create this new domain account prior to deploying CAM. It is not an existing domain account.
@@ -43,7 +43,7 @@ The following parameters are the form fields you are required to fill in on the 
  
 ## Deploying Cloud Access Manager using Microsoft Azure
 The CAM solution consists of the following components:
- * Deployment Cloud Server (This creates the administration GUI)
+ * Deployment Cloud Server (This provides the administration GUI)
  * Domain Controller (This will contain an active directory)
  * Connection Broker
  * Security Gateway
@@ -114,12 +114,12 @@ Following successfull deployment of the CAM solution you can perform the followi
  
 ### Deploying Cloud Access Manager using Microsoft PowerShell
 
-The following section outlines the procedure for performing a deployment of CAM using Microsoft PowerShell.
+The following section outlines the procedure for performing a deployment of CAM using Microsoft PowerShell as an alternate method to using the Microsoft Azure Portal.
 
 **Prerequisites**
 
 Ensure that you have AzureRM and NuGet installed:
-        
+
 ```
 Install-packageProvider -Name NuGet -Force 
 Install-Module -Name AzureRM -Force
@@ -132,7 +132,7 @@ Install-Module -Name AzureRM -Force
    ```
  3. Modify <samp>my.azuredeploy.parameters.json</samp> to include the necessary deployment parameters.
  1. Run the following script, substituting username, password, resource group name, and desired region:
-                
+
 ```
 $spUsername = "<username>@<example>.com"
 $spPass = ConvertTo-SecureString "<password>" -AsPlainText -Force
