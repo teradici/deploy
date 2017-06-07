@@ -228,7 +228,7 @@
             "autoUpgradeMinorVersion": "true",
             "settings": {
               "configuration": {
-                "url": "[concat(parameters('_artifactsLocation'), '/Install-PCoIPAgent.zip')]",
+                "url": "[concat(parameters('CAMDeploymentBlobSource'), '/Install-PCoIPAgent.zip')]",
                 "script": "Install-PCoIPAgent.ps1",
                 "function": "InstallPCoIPAgent"
               },

@@ -11,12 +11,17 @@ Configuration InstallPCoIPAgent
      	[Parameter(Mandatory=$true)]
      	[PSCredential] $registrationCodeCredential,
 
-        [Parameter(Mandatory)]
+        [Parameter(Mandatory=$false)]
         [String]$gitLocation,
 
-        [Parameter(Mandatory)]
-        [String]$sumoCollectorID
+        [Parameter(Mandatory=$false)]
+        [String]$sumoCollectorID,
 
+        [Parameter(Mandatory=$false)]
+     	[PSCredential] $domainJoinCredential,
+
+        [Parameter(Mandatory=$false)]
+		[string]$domainGroupToJoin
 	)
     
     $isSA = [string]::IsNullOrWhiteSpace($videoDriverUrl)
@@ -31,6 +36,8 @@ Configuration InstallPCoIPAgent
 	$delay = 10 # seconds
 	$orderNumArray = @('1st', '2nd', '3rd')
 
+	$agentInstallerDLDirectory = "C:\WindowsAzure\PCoIPAgentInstaller"
+
     Node "localhost"
     {
         VmUsability TheVmUsability
@@ -44,7 +51,7 @@ Configuration InstallPCoIPAgent
         {
             Ensure          = "Present"
             Type            = "Directory"
-            DestinationPath = "C:\WindowsAzure\PCoIPAgentInstaller"
+            DestinationPath = $agentInstallerDLDirectory
         }
 
         File Nvidia_Download_Directory 
@@ -210,7 +217,7 @@ Configuration InstallPCoIPAgent
 
                 $pcoipAgentInstallerUrl = $using:pcoipAgentInstallerUrl
                 $installerFileName = [System.IO.Path]::GetFileName($pcoipAgentInstallerUrl)
-                $destFile = "C:\WindowsAzure\PCoIPAgentInstaller\" + $installerFileName
+                $destFile = $using:agentInstallerDLDirectory + $installerFileName
 
 				$orderNumArray = $using:orderNumArray
 				$retryCount = $using:retryCount
@@ -276,26 +283,30 @@ Configuration InstallPCoIPAgent
                 #register code is stored at the password property of PSCredential object
                 $registrationCode = ($using:registrationCodeCredential).GetNetworkCredential().password
                 if ($registrationCode) {
-					# Insert a delay before activating license
+					# Insert a delay before registering license code
 	                cd "C:\Program Files (x86)\Teradici\PCoIP Agent"
 
 					$retryCount = $using:retryCount
 					$orderNumArray = $using:orderNumArray
 
 					for ($idx = 1; $idx -le $retryCount; $idx++) {
-						Write-Verbose ('It is the {0} try activating license code.' -f $orderNumArray[$idx -1])
-						& .\pcoip-register-host.ps1 -RegistrationCode $registrationCode
-
-						Write-Verbose ('It is the {0} try validating license code.' -f $orderNumArray[$idx -1])
-	 	                $ret = & .\pcoip-validate-license.ps1
+						Write-Verbose ('It is the {0} try registering license code.' -f $orderNumArray[$idx -1])
+						$ret = & .\pcoip-register-host.ps1 -RegistrationCode $registrationCode
 						$isExeSucc = $?
+						
+						if ($isExeSucc) {
+							#only do validation when command pcoip-register-host.ps1 passed
+							Write-Verbose ('It is the {0} try registering license code.' -f $orderNumArray[$idx -1])
+		 	                $ret = & .\pcoip-validate-license.ps1
+							$isExeSucc = $?
+						}
 
 						if ($isExeSucc) {
-							Write-Verbose "Succeeded to activate License Code." 
+							Write-Verbose "Succeeded to register license code." 
 							break
 						} else {
 							$retMsg = $ret | Out-String
-							$errMsg = "Attempt {0} of {1} to validate license code failed. Error Message: {2} " -f $idx, $retryCount, $retMsg
+							$errMsg = "Attempt {0} of {1} to register license code failed. Error Message: {2} " -f $idx, $retryCount, $retMsg
 							Write-Verbose  $errMsg     
 
 							if ($idx -ne $retryCount) {
@@ -305,7 +316,7 @@ Configuration InstallPCoIPAgent
 							}
 						}
 					}
-                }              
+                }
             }
         }
 
@@ -357,6 +368,44 @@ Configuration InstallPCoIPAgent
 						throw "failed to start PCoIP Agent Service"
 					}
 				}
+			}
+		}
+
+
+        Script JoinDomainGroup
+        {
+            DependsOn  = @("[File]Agent_Download_Directory")
+
+            GetScript  = { return 'Join a Domain Group'}
+
+            TestScript = { 
+				if( -not $using:domainGroupToJoin )
+				{
+					Write-Host "No Domain group to join."
+					return $true
+				}
+				Test-Path "$using:agentInstallerDLDirectory\domainGroupJoinFile.txt"
+            }
+
+            SetScript  = {
+				#TODO: Handle OU's and GroupScope like in this article: https://gallery.technet.microsoft.com/scriptcenter/PowerShell-Bulk-AD-Group-4d873f35
+				$psSession = New-PSSession -Credential $using:domainJoinCredential
+				$domainGroupToJoin = $using:domainGroupToJoin
+				$machineToJoin = $env:computername
+
+				Invoke-Command -Session $psSession -ScriptBlock {
+					# Make the AD group for machines if needed
+					$exists = Get-ADGroup $using:domainGroupToJoin
+					if(-not $exists)
+					{
+						New-ADGroup -name $using:domainGroupToJoin -GroupScope Global
+					}
+
+					Add-ADGroupMember -Identity $using:domainGroupToJoin -Members $using:machineToJoin
+				}
+					
+				#make placeholder file so this is only run once
+				New-Item "$using:agentInstallerDLDirectory\domainGroupJoinFile.txt" -type file
 			}
 		}
     }
