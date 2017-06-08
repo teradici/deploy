@@ -225,10 +225,10 @@
             "publisher": "Microsoft.Powershell",
             "type": "DSC",
             "typeHandlerVersion": "2.9",
-            "autoUpgradeMinorVersion": "true",
+            "autoUpgradeMinorVersion": true,
             "settings": {
               "configuration": {
-                "url": "[concat(parameters('CAMDeploymentBlobSource'), '/Install-PCoIPAgent.zip')]",
+                "url": "[concat(parameters('CAMDeploymentBlobSource'), '/Install-PCoIPAgent.ps1.zip')]",
                 "script": "Install-PCoIPAgent.ps1",
                 "function": "InstallPCoIPAgent"
               },
@@ -236,7 +236,8 @@
                 "pcoipAgentInstallerUrl": "[variables('pcoipAgentInstallerUrl')]",
                 "videoDriverUrl": "[variables('videoDriverUrl')]",
                 "gitLocation": "[parameters('_artifactsLocation')]",
-                "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId)]"
+                "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId)]",
+                "domainGroupToJoin": "Cloud Access Application Servers"
               },
               "privacy": {
                 "DataCollection": "Disable"
@@ -247,6 +248,10 @@
                 "registrationCodeCredential": {
                   "userName": "dummyUser",
                   "password": "[variables('registrationCode')]"
+                },
+                "domainJoinCredential": {
+                    "UserName": "[concat(parameters('domainToJoin'), '\\', parameters('domainUsername'))]",
+                    "Password": "[parameters('domainPassword')]"
                 }
               }
             }
