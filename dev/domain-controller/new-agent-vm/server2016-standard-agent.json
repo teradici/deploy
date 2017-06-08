@@ -237,7 +237,7 @@
                 "videoDriverUrl": "[variables('videoDriverUrl')]",
                 "gitLocation": "[parameters('_artifactsLocation')]",
                 "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId)]",
-                "domainGroupToJoin": "\"Cloud Access Application Servers\""
+                "domainGroupToJoin": "Cloud Access Application Servers"
               },
               "privacy": {
                 "DataCollection": "Disable"
