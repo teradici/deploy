@@ -389,19 +389,43 @@ Configuration InstallPCoIPAgent
 
             SetScript  = {
 				#TODO: Handle OU's and GroupScope like in this article: https://gallery.technet.microsoft.com/scriptcenter/PowerShell-Bulk-AD-Group-4d873f35
-				$psSession = New-PSSession -Credential $using:domainJoinCredential
+
 				$domainGroupToJoin = $using:domainGroupToJoin
 				$machineToJoin = $env:computername
 
-				Invoke-Command -Session $psSession -ScriptBlock {
-					# Make the AD group for machines if needed
-					$exists = Get-ADGroup $using:domainGroupToJoin
-					if(-not $exists)
-					{
-						New-ADGroup -name $using:domainGroupToJoin -GroupScope Global
-					}
+				if( -not ((gwmi win32_computersystem).partofdomain))
+				{
+					Write-Host "$machineToJoin is not part of a domain so is not joining domain group $domainGroupToJoin."
+				}
+				else
+				{
+					$domain = (gwmi win32_computersystem).domain
+					$domainInfo = (Get-WMIObject Win32_NTDomain) | Where-Object {$_.DnsForestName -eq $domain} | Select -First 1
+					$dcname = ($domainInfo.DomainControllerName -replace “\\”, “”)
 
-					Add-ADGroupMember -Identity $using:domainGroupToJoin -Members $using:machineToJoin
+					#create a PSSession with the domain controller that we used to login
+					$psSession = New-PSSession -ComputerName $dcname -Credential $using:domainJoinCredential
+
+					Invoke-Command -Session $psSession -ArgumentList $domainGroupToJoin, $machineToJoin `
+					-ScriptBlock {
+						$domainGroupToJoin = $args[0]
+						$machineToJoin = $args[1]
+
+						# Make the AD group for machines if needed
+						try
+                        {
+                            Get-ADGroup $domainGroupToJoin -ErrorAction Stop
+                        }
+                        catch
+                        {
+                            Write-Host "Domain Group `"$domainGroupToJoin`" not found. Creating."
+
+							New-ADGroup -name $domainGroupToJoin -GroupScope Global
+						}
+
+						# Add-ADGroupMember uses the SAM account name for the computer which has a trailing '$'
+						Add-ADGroupMember -Identity $domainGroupToJoin -Members ($machineToJoin + "$")
+					}
 				}
 					
 				#make placeholder file so this is only run once
