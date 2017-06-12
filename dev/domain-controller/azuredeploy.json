@@ -91,7 +91,8 @@
     "serverRootName": "vm",
     "adminDesktopVMName": "[concat(variables('serverRootName'), '-desk')]",
     "dcnsgName": "dcNSG",
-    "cmnsgName": "cmNSG"
+    "cmnsgName": "cmNSG",
+    "domainGroupAppServersJoin": "Cloud Access Application Servers"
   },
   "resources": [
     {
@@ -371,6 +372,9 @@
           "vmAdminPassword": {
             "value": "[parameters('domainAdminPassword')]"
           },
+          "domainGroupToJoin": {
+            "value": "[variables('domainGroupAppServersJoin')]"
+          },
           "_artifactsLocation": {
             "value": "[concat(parameters('_artifactsLocation'), '/new-agent-vm')]"
           },
@@ -440,6 +444,9 @@
           },
           "domainToJoin": {
             "value": "[parameters('domainName')]"
+          },
+          "domainGroupAppServersJoin": {
+            "value": "[variables('domainGroupAppServersJoin')]"
           },
           "domainUsername": {
             "value": "[parameters('domainAdminUsername')]"

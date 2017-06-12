@@ -54,6 +54,9 @@ Configuration InstallCAM
         [String]$domainFQDN,
 
         [Parameter(Mandatory)]
+        [String]$domainGroupAppServersJoin,
+
+        [Parameter(Mandatory)]
         [String]$existingVNETName,
 
         [Parameter(Mandatory)]
@@ -510,6 +513,7 @@ dc=$domainroot
 adServerHostAddress=$domainControllerFQDN
 resourceGroupName=$RGNameLocal
 CAMSessionTimeoutMinutes=480
+domainGroupAppServersJoin="$domainGroupAppServersJoin"
 "@
 
 				$targetDir = "$env:CATALINA_HOME\adminproperty"
@@ -905,6 +909,7 @@ $authFilePath = "$targetDir\authfile.txt"
 			}
 		},
         "domainToJoin": { "value": "$using:domainFQDN" },
+        "domainGroupAppServersJoin": { "value": "$using:domainGroupAppServersJoin" },
         "storageAccountName": { "value": "$using:storageAccountName" },
         "_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller/new-agent-vm" }
     }

@@ -33,6 +33,12 @@
                 "description": "The FQDN of the AD domain"
             }
         },
+        "domainGroupAppServersJoin": {
+            "type": "string",
+            "metadata": {
+                "description": "The domain group the applicaiton servers should join"
+            }
+        },
         "domainUsername": {
             "type": "string",
             "metadata": {
@@ -155,6 +161,7 @@
                     "configurationFunction": "Install-CAM.ps1\\InstallCAM",
                     "Properties": {
                         "domainFQDN":  "[parameters('domainToJoin')]",
+                        "domainGroupAppServersJoin": "[parameters('domainGroupAppServersJoin')]",
                         "sourceURI": "[parameters('blobSource')]",
 						"templateURI": "[parameters('_artifactsLocation')]",
 						"templateAgentURI": "[parameters('_agentArtifactsLocation')]",
