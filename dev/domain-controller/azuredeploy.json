@@ -445,9 +445,6 @@
           "domainToJoin": {
             "value": "[parameters('domainName')]"
           },
-          "domainGroupAppServersJoin": {
-            "value": "[variables('domainGroupAppServersJoin')]"
-          },
           "domainUsername": {
             "value": "[parameters('domainAdminUsername')]"
           },
@@ -494,6 +491,9 @@
           },
           "domainToJoin": {
             "value": "[parameters('domainName')]"
+          },
+          "domainGroupAppServersJoin": {
+            "value": "[variables('domainGroupAppServersJoin')]"
           },
           "domainUsername": {
             "value": "[parameters('domainAdminUsername')]"
