@@ -33,6 +33,9 @@
                 "description": "The FQDN of the AD domain"
             }
         },
+        "domainGroupToJoin": {
+            "type": "string"
+        },
         "domainUsername": {
             "type": "string",
             "metadata": {
@@ -237,7 +240,7 @@
                 "videoDriverUrl": "[variables('videoDriverUrl')]",
                 "gitLocation": "[parameters('_artifactsLocation')]",
                 "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId)]",
-                "domainGroupToJoin": "Cloud Access Application Servers"
+                "domainGroupToJoin": "[parameters('domainGroupToJoin')]"
               },
               "privacy": {
                 "DataCollection": "Disable"

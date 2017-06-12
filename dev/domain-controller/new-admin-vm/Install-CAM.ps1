@@ -909,7 +909,7 @@ $authFilePath = "$targetDir\authfile.txt"
 			}
 		},
         "domainToJoin": { "value": "$using:domainFQDN" },
-        "domainGroupAppServersJoin": { "value": "$using:domainGroupAppServersJoin" },
+        "domainGroupToJoin": { "value": "$using:domainGroupAppServersJoin" },
         "storageAccountName": { "value": "$using:storageAccountName" },
         "_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller/new-agent-vm" }
     }
