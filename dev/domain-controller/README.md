@@ -21,14 +21,18 @@ You must have an Azure account and subscription that does not require multi-fact
 
 **NOTE:** To learn how to deploy CAS on Microsoft Azure go to [Deploy Teradici Cloud Access Software on Azure.](https://github.com/teradici/pcoip-agent-azure-templates/blob/master/README.md)
 
-The default method is for a service principal account to be created during deployment. In order to achieve this the Azure administrator must have owner access to the subscription. The administrator must be able to locally login from one of the deployed machines. In some instances this flow will not work, for example accounts with access restrictions or other policies, this requires the service principal account to be manually created. There are multiple ways to manually create a service principal account. See [Creating a Service Principal Account](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-create-service-principal-portal) for instructions on how to do it from the Azure portal. Once the service principal account has been created complete the following steps to integrate it with CAM:
+The default method is for a service principal account to be created during deployment. This account will be used by the CAM deployment scripts to sign in. In order to achieve this the Azure administrator must have owner access to the subscription. The administrator must be able to locally login from one of the deployed machines. 
+
+In some instances this flow will not work, for example accounts with access restrictions or other policies, this requires the service principal account to be manually created by the administrator. Once a service principal account has been created the CAM deployment scripts will use the account to sign in.
+
+There are multiple ways to manually create a service principal account. See [Creating a Service Principal Account](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-create-service-principal-portal) for instructions on how to do it from the Azure portal. Once the service principal account has been created, complete the following steps so that CAM can use the account to sign in:
 1. Give the service principal contributor access to a new resource group.
 1. Deploy CAM into that resource group.
 1. Enter the service principal name for **AzureAdminUsername.**
 1. Enter the service principal secret for **AzureAdminPassword.**
 1. Enter the service principal tenant ID for **Tenant ID** instead of null.
 
-The CAM deployment will use the service principal created to interact with Azure, instead of an administrative account with enough rights to make a service principal.
+The CAM deployment will use the created service principal account to interact with Azure, instead of an administrative account with enough rights to make a service principal.
 
 
 ## Deployment Parameters
