@@ -34,6 +34,8 @@ There are multiple ways to manually create a service principal account. See [Cre
 
 The CAM deployment will use the created service principal account to interact with Azure, instead of an administrative account with enough rights to make a service principal.
 
+In some instances you are required to register the keyvault policy for the subscription prior to deployment. Visit [Common Deployment Errors](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-manager-common-deployment-errors#noregisteredproviderfound) for instructions on how to do this.
+
 
 ## Deployment Parameters
 The following parameters are the form fields you are required to fill in on the template in the Microsoft Azure Portal to begin deploying CAM:
@@ -114,6 +116,7 @@ You can track it through the notifications icon or for a more detailed view of y
 * Occasionally other failures can happen such as 'timeout' or 'can't start WinRM service.' Start a new deployment from scratch in a new resource group and attempt to re-deploy.
 * A common deployment failure is when the quota is reached for the subscription. In this case you have to either remove or deallocate virtual machines from the subscription, or request a core quota increase from Microsoft to alleviate the problem.
 * If deployment fails with an error message stating 'Cannot find resource group < name >,' then this often occurs because the AzureAdminUsername account is associated with a different Microsoft Azure subscription than the subscription in which CAM is being deployed. Ensure that the AzureAdminUsername account manages the same Azure subscription that is being used for the deployment.
+* If deployment fails with a message relating to a 'Keyvault error' then you may need to register Microsoft.Keyvault for the subscription and then re-deploy.
 
 ## Post-Deployment Capabilities
 Following successfull deployment of the CAM solution you can perform the following functions:
