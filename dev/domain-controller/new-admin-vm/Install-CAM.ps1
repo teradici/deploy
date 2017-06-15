@@ -513,7 +513,7 @@ dc=$domainroot
 adServerHostAddress=$domainControllerFQDN
 resourceGroupName=$RGNameLocal
 CAMSessionTimeoutMinutes=480
-domainGroupAppServersJoin="$domainGroupAppServersJoin"
+domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 "@
 
 				$targetDir = "$env:CATALINA_HOME\adminproperty"
