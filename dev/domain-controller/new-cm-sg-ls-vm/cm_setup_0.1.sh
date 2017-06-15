@@ -1,6 +1,6 @@
 ﻿#!/bin/bash
 #
-# There must be three arguments passed to this script.
+# There must be one argument passed to this script.
 # first argument is the FQDN of the broker.
 
 
