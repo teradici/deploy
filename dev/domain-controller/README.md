@@ -21,10 +21,10 @@ You must have an Azure account and subscription. You must have a valid registrat
 **NOTE:** To learn how to deploy CAS on Microsoft Azure go to [Deploy Teradici Cloud Access Software on Azure.](https://github.com/teradici/pcoip-agent-azure-templates/blob/master/README.md)
 
 By default, the CAM deployment scripts will create a service principal account for CAM to use after deployment. In order for the CAM deployment scripts to create this service principal, you must pass an account to the **AzureAdminUsername** parameter which meets the following criteria:
-1. the account must have owner access to the subscription (to be able to set access policies)
-1. the account must be able to be programatically logged in without user interaction. This means:
-   1. it must be an organizational account, not a Microsoft account.
-   1. it must not require multi-factor authentication.
+1. The account must have owner access to the subscription (to be able to set access policies)
+1. The account must be able to be programatically logged in without user interaction. This means:
+   1. It must be an organizational account, not a Microsoft account.
+   1. It must not require multi-factor authentication.
 
 If you are not in posession of an account which meets the criteria, you must create a service principal account before deploying CAM.
 
