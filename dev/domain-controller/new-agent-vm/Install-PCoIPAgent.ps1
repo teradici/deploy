@@ -83,6 +83,7 @@ Configuration InstallPCoIPAgent
                 Write-Verbose "Install_SumoCollector"
 
                 $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
+                $uninstallerRegistryID = "7857-4527-9352-4688"  # This will need to change for every installer version change!
 
                 $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/$installerFileName"
                 $sumo_config = "$using:gitLocation/sumo.conf"
@@ -102,11 +103,10 @@ Configuration InstallPCoIPAgent
                 Invoke-Expression $command
 
 				# Wait for collector to be installed before exiting this configuration.
-				#### Note if we change binary versions we will need to change registry path - 7857-4527-9352-4688 will change ####
 				$retryCount = 1800
 				while ($retryCount -gt 0)
 				{
-					$readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\7857-4527-9352-4688"  -ErrorAction SilentlyContinue )
+					$readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$uninstallerRegistryID"  -ErrorAction SilentlyContinue )
 
 					if ($readyToConfigure)
 					{
