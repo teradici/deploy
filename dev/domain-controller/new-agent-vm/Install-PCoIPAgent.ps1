@@ -82,7 +82,9 @@ Configuration InstallPCoIPAgent
             SetScript  = {
                 Write-Verbose "Install_SumoCollector"
 
-                $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/SumoCollector_windows-x64_19_182-25.exe"
+                $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
+
+                $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/$installerFileName"
                 $sumo_config = "$using:gitLocation/sumo.conf"
                 $sumo_collector_json = "$using:gitLocation/sumo-agent-vm.json"
                 $dest = "C:\sumo"
@@ -93,7 +95,6 @@ Configuration InstallPCoIPAgent
                 $collectorID = "$using:sumoCollectorID"
                 (Get-Content -Path "$dest\sumo.conf").Replace("collectorID", $collectorID) | Set-Content -Path "$dest\sumo.conf"
                 
-                $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
                 Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
                 
                 #install the collector
@@ -102,7 +103,7 @@ Configuration InstallPCoIPAgent
 
 				# Wait for collector to be installed before exiting this configuration.
 				#### Note if we change binary versions we will need to change registry path - 7857-4527-9352-4688 will change ####
-				$retrycount = 1800
+				$retryCount = 1800
 				while ($retryCount -gt 0)
 				{
 					$readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\7857-4527-9352-4688"  -ErrorAction SilentlyContinue )
@@ -114,8 +115,8 @@ Configuration InstallPCoIPAgent
 					else
 					{
     					Start-Sleep -s 1;
-						$retrycount = $retrycount - 1;
-						if ( $retrycount -eq 0)
+						$retryCount = $retryCount - 1;
+						if ( $retryCount -eq 0)
 						{
 							throw "Sumo collector not installed in time."
 						}
@@ -217,7 +218,7 @@ Configuration InstallPCoIPAgent
 
                 $pcoipAgentInstallerUrl = $using:pcoipAgentInstallerUrl
                 $installerFileName = [System.IO.Path]::GetFileName($pcoipAgentInstallerUrl)
-                $destFile = $using:agentInstallerDLDirectory + $installerFileName
+                $destFile = $using:agentInstallerDLDirectory + '\' + $installerFileName
 
 				$orderNumArray = $using:orderNumArray
 				$retryCount = $using:retryCount
@@ -283,30 +284,30 @@ Configuration InstallPCoIPAgent
                 #register code is stored at the password property of PSCredential object
                 $registrationCode = ($using:registrationCodeCredential).GetNetworkCredential().password
                 if ($registrationCode) {
-					# Insert a delay before registering license code
+					# Insert a delay before registering
 	                cd "C:\Program Files (x86)\Teradici\PCoIP Agent"
 
 					$retryCount = $using:retryCount
 					$orderNumArray = $using:orderNumArray
 
 					for ($idx = 1; $idx -le $retryCount; $idx++) {
-						Write-Verbose ('It is the {0} try registering license code.' -f $orderNumArray[$idx -1])
+						Write-Verbose ('It is the {0} try registering the registration code.' -f $orderNumArray[$idx -1])
 						$ret = & .\pcoip-register-host.ps1 -RegistrationCode $registrationCode
 						$isExeSucc = $?
 						
 						if ($isExeSucc) {
 							#only do validation when command pcoip-register-host.ps1 passed
-							Write-Verbose ('It is the {0} try registering license code.' -f $orderNumArray[$idx -1])
+							Write-Verbose ('It is the {0} try registering the registration code.' -f $orderNumArray[$idx -1])
 		 	                $ret = & .\pcoip-validate-license.ps1
 							$isExeSucc = $?
 						}
 
 						if ($isExeSucc) {
-							Write-Verbose "Succeeded to register license code." 
+							Write-Verbose "Succeeded to register the registration code." 
 							break
 						} else {
 							$retMsg = $ret | Out-String
-							$errMsg = "Attempt {0} of {1} to register license code failed. Error Message: {2} " -f $idx, $retryCount, $retMsg
+							$errMsg = "Attempt {0} of {1} to register the registration code failed. Error Message: {2} " -f $idx, $retryCount, $retMsg
 							Write-Verbose  $errMsg     
 
 							if ($idx -ne $retryCount) {
@@ -401,7 +402,7 @@ Configuration InstallPCoIPAgent
 				{
 					$domain = (gwmi win32_computersystem).domain
 					$domainInfo = (Get-WMIObject Win32_NTDomain) | Where-Object {$_.DnsForestName -eq $domain} | Select -First 1
-					$dcname = ($domainInfo.DomainControllerName -replace “\\”, “”)
+					$dcname = ($domainInfo.DomainControllerName -replace "\\", "")
 
 					#create a PSSession with the domain controller that we used to login
 					$psSession = New-PSSession -ComputerName $dcname -Credential $using:domainJoinCredential
