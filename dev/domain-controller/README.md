@@ -88,15 +88,6 @@ You can track it through the notifications icon or for a more detailed view of y
 
 * This solution will only deploy machines in one region. If you wish to use NV series virtual machines for GPU accelerated graphics, then you must deploy the complete solution into one of the supported regions for NV series instance types. Currently this is limited to the following locations: EAST US, NORTH CENTRAL US, SOUTH CENTRAL US, SOUTH EAST ASIA and WEST EUROPE.
 * Do not use passwords with the '%' symbol as it is currently not supported. In addition Microsoft Azure enforces further limitations on passwords. For more information on Azure virtual machine username and password requirements see [FAQs about Windows Virtual Machines.](https://docs.microsoft.com/en-us/azure/virtual-machines/windows/faq)
-* Occasionally the Azure Application Gateway can fail with an 'internal error.' If this happens, you can quickly redeploy the application gateway to recover.
- 1. In the Azure Portal select the resource group you created.
- 1. Go to Deployments -> CreateAppGateway.
- 1. Click **Redeploy**. This will bring you to the custom deployment screen.
- 1. Click **use existing** and select the resource group you are using.
- 1. Leave all the other parameters the same.
- 1. Accept the terms and conditions.
- 1. Click **Purchase**.
- 1. The Application gateway should deploy successfully.
 * Occasionally other failures can happen such as 'timeout' or 'can't start WinRM service.' Start a new deployment from scratch in a new resource group and attempt to re-deploy.
 * A common deployment failure is when the quota is reached for the subscription. In this case you have to either remove or deallocate virtual machines from the subscription, or request a core quota increase from Microsoft to alleviate the problem.
 * If deployment fails with an error message stating 'Cannot find resource group < name >,' then this often occurs because the AzureAdminUsername account is associated with a different Microsoft Azure subscription than the subscription in which CAM is being deployed. Ensure that the AzureAdminUsername account manages the same Azure subscription that is being used for the deployment.
