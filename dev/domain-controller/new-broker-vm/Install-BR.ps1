@@ -357,12 +357,6 @@ Configuration InstallBR
 				#open port in firewall
 				netsh advfirewall firewall add rule name="Open Port 8443" dir=in action=allow protocol=TCP localport=8443
 
-				####### Is this really needed? I don't think so. or, TODO: Make this a parameter and what to do about DC HA? Names? ############
-				#Set-Item wsman:\localhost\client\trustedhosts 10.0.0.10 -Force
-
-				# Reboot machine
-				# $global:DSCMachineStatus = 1
-
 				# Install and start service for new config
 
 				& "$using:CatalinaBinLocation\service.bat" install
