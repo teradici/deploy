@@ -100,7 +100,7 @@
             "apiVersion": "[variables('apiVersion')]",
             "location": "[resourceGroup().location]",
             "properties": {
-                "publicIPAllocationMethod": "Dynamic"
+                "publicIPAllocationMethod": "Static"
             }
         },
         {
