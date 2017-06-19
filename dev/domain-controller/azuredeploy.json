@@ -208,7 +208,7 @@
       ],
       "properties": {
         "hardwareProfile": {
-          "vmSize": "Standard_D1_v2"
+          "vmSize": "Standard_A1_v2"
         },
         "osProfile": {
           "computerName": "[variables('adVMName')]",
@@ -352,7 +352,7 @@
             "value": "[variables('adminDesktopVMName')]"
           },
           "vmSize": {
-            "value": "Standard_D2_v2"
+            "value": "Standard_D2_v2_Promo"
           },
           "domainToJoin": {
             "value": "[parameters('domainName')]"
@@ -437,7 +437,7 @@
             "value": "[concat(variables('serverRootName'), '-au')]"
           },
           "vmSize": {
-            "value": "Standard_D1_v2"
+            "value": "Standard_A1_v2"
           },
           "privateIP": {
             "value": "[variables('auPrivateIP')]"
@@ -564,7 +564,7 @@
             "value": "[concat(variables('serverRootName'), '-br')]"
           },
           "vmSize": {
-            "value": "Standard_D1_v2"
+            "value": "Standard_A1_v2"
           },
           "privateIP": {
             "value": "[variables('brPrivateIP')]"
@@ -674,7 +674,7 @@
             "value": "[concat(variables('serverRootName'), '-cm')]"
           },
           "vmSize": {
-            "value": "Standard_D2_v2"
+            "value": "Standard_A1_v2"
           },
           "vmAdminUsername": {
             "value": "[parameters('domainAdminUsername')]"
