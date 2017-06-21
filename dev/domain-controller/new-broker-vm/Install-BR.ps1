@@ -65,6 +65,8 @@ Configuration InstallBR
 	$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
 	$CatalinaBinLocation = $CatalinaHomeLocation + "\bin"
 
+	$brokerServiceName = "CAMBroker"
+
 	Import-DscResource -ModuleName xPSDesiredStateConfiguration
 
     Node "localhost"
@@ -270,7 +272,7 @@ Configuration InstallBR
 
             TestScript = { 
 				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
-				$CatalinaPath = (Get-ItemProperty -Path "$Reg" -Name CATALINA_BASE -ErrorAction SilentlyContinue)
+				$CatalinaPath = (Get-ItemProperty -Path "$Reg" -Name CATALINA_HOME -ErrorAction SilentlyContinue)
 				if ( $CatalinaPath )
                 {
 					return $true
@@ -309,25 +311,50 @@ Configuration InstallBR
 				}
 
 				Set-ItemProperty -Path "$Reg" -Name PATH –Value $NewPath
-				Set-ItemProperty -Path "$Reg" -Name CATALINA_BASE –Value $using:CatalinaHomeLocation
 				Set-ItemProperty -Path "$Reg" -Name CATALINA_HOME –Value $using:CatalinaHomeLocation
 
-				#set the current environment CATALINE_HOME as well since the service installer will need that
-				$env:CATALINA_BASE = $using:CatalinaHomeLocation
+				# set the current environment CATALINE_HOME as well since the service installer will need that
 				$env:CATALINA_HOME = $using:CatalinaHomeLocation
+	        }
+        }
 
+		Script Setup_Broker_Service
+        {
+            DependsOn = @("[Script]Install_Tomcat", "[xRemoteFile]Download_Keystore")
+            GetScript  = { @{ Result = "Setup_Broker_Service" } }
 
-				Write-Host "Configuring Tomcat"
+            TestScript = {
+				return !!(Get-Service $using:brokerServiceName -ErrorAction SilentlyContinue)
+			}
+            SetScript  = {
+				Write-Host "Configuring Tomcat for $using:brokerServiceName service"
 
-				#back up server.xml file if not done in a previous round
-				if( -not ( Get-Item ($using:CatalinaHomeLocation + '\conf\server.xml.orig') -ErrorAction SilentlyContinue ) )
+				$catalineHome = $using:CatalinaHomeLocation
+				$catalinaBase = "$catalineHome\$using:brokerServiceName"
+				# I don't think we need to set the registry
+				# Set-ItemProperty -Path "$Reg" -Name CATALINA_BASE –Value $using:CatalinaHomeLocation
+				$env:CATALINA_BASE = $catalinaBase
+
+				# make new broker instance location - copying the directories specified
+				# here: https://tomcat.apache.org/tomcat-8.0-doc/windows-service-howto.html
+
+				# clear out any old cruft first
+				Remove-Item "$catalinaBase" -Force -Recurse -ErrorAction SilentlyContinue
+				Copy-Item "$catalinaHome\conf" "$catalinaBase\conf" -Recurse -ErrorAction SilentlyContinue
+				Copy-Item "$catalinaHome\logs" "$catalinaBase\logs" -Recurse -ErrorAction SilentlyContinue
+				Copy-Item "$catalinaHome\temp" "$catalinaBase\temp" -Recurse -ErrorAction SilentlyContinue
+				Copy-Item "$catalinaHome\webapps" "$catalinaBase\webapps" -Recurse -ErrorAction SilentlyContinue
+				Copy-Item "$catalinaHome\work" "$catalinaBase\work" -Recurse -ErrorAction SilentlyContinue
+
+				# back up server.xml file if not done in a previous round
+				if( -not ( Get-Item ($catalinaBase + '\conf\server.xml.orig') -ErrorAction SilentlyContinue ) )
 				{
 					Copy-Item -Path ($ServerXMLFile) `
-						-Destination ($using:CatalinaHomeLocation + '\conf\server.xml.orig')
+						-Destination ($catalinaBase + '\conf\server.xml.orig')
 				}
 
 				#update server.xml file
-				$xml = [xml](Get-Content ($using:CatalinaHomeLocation + '\conf\server.xml.orig'))
+				$xml = [xml](Get-Content ($catalinaBase + '\conf\server.xml.orig'))
 
 				$NewConnector = [xml] ('<Connector
 					port="8443"
@@ -359,26 +386,25 @@ Configuration InstallBR
 
 				# Install and start service for new config
 
-				& "$using:CatalinaBinLocation\service.bat" install
+				& "$using:CatalinaBinLocation\service.bat" install $using:brokerServiceName
 				Write-Host "Tomcat Installer exit code: $LASTEXITCODE"
 				Start-Sleep -s 10  #TODO: Is this sleep ACTUALLY needed?
 
-				Write-Host "Starting Tomcat Service"
-				Set-Service Tomcat8 -startuptype "automatic"
+				Write-Host "Starting Tomcat Service for $using:brokerServiceName"
+				Set-Service $using:brokerServiceName -startuptype "automatic"
 
 				# Reboot machine - seems to need to happen to get Tomcat to run reliably or is there a big delay required? reboot for now :)
 				$global:DSCMachineStatus = 1
 	        }
         }
-
-        Script Install_Broker
+		
+		Script Install_Broker
         {
-            DependsOn  = @("[xRemoteFile]Download_Broker_WAR", "[Script]Install_Tomcat")
+            DependsOn  = @("[xRemoteFile]Download_Broker_WAR", "[Script]Setup_Broker_Service")
             GetScript  = { @{ Result = "Install_Broker" } }
 
-            #TODO: Check for other agent types as well?
             TestScript = {
-				$WARPath = $using:CatalinaHomeLocation + "\webapps" + $using:brokerWAR
+				$WARPath = "$using:CatalinaHomeLocation\$using:brokerServiceName\webapps\$using:brokerWAR"
  
 				if ( Get-Item $WARPath -ErrorAction SilentlyContinue )
                             {return $true}
@@ -387,13 +413,16 @@ Configuration InstallBR
             SetScript  = {
                 Write-Verbose "Install_Broker"
 
-				copy $using:LocalDLPath\$using:brokerWAR ($using:CatalinaHomeLocation + "\webapps")
+				$catalineHome = $using:CatalinaHomeLocation
+				$catalinaBase = "$catalineHome\$using:brokerServiceName"
 
-				$svc = get-service Tomcat8
+				copy $using:LocalDLPath\$using:brokerWAR ($catalinaBase + "\webapps")
+
+				$svc = get-service $using:brokerServiceName
 				if ($svc.Status -ne "Stopped") {$svc.stop()}
 
 				Write-Host "Generating broker configuration file."
-				$targetDir = $using:catalinaHomeLocation + "\brokerproperty"
+				$targetDir = $catalinaBase + "\brokerproperty"
 				$cbPropertiesFile = "$targetDir\connectionbroker.properties"
 
 				if(-not (Test-Path $targetDir))
@@ -429,9 +458,6 @@ brokerLocale=en_US
 
 				Set-Content $cbPropertiesFile $cbProperties
 				Write-Host "Broker configuration file generated."
-
-				$backupPropertiesFile = New-Item "c:\backupCBProperties.txt" -type file
-				Set-Content $backupPropertiesFile $cbProperties
 
 				#----- setup security trust for LDAP certificate from DC -----
 
@@ -522,9 +548,9 @@ brokerLocale=en_US
 
 		        Copy-Item "$env:systemdrive\ldapcertkeystore.jks" -Destination ($env:classpath + "\security")
 
-		        Write-Host "Finished! Restarting Tomcat."
+		        Write-Host "Finished! Restarting Tomcat service for $using:brokerServiceName."
 
-				Restart-Service Tomcat8
+				Restart-Service $using:brokerServiceName
             }
         }
     }
