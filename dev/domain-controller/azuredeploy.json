@@ -81,6 +81,7 @@
     "cmPrivateIP": "10.0.0.10",
     "auPrivateIP": "10.0.0.11",
     "brPrivateIP": "10.0.0.12",
+    "brokerPort":  "8444",
     "adVMName": "vm-dc",
     "adSubnetName": "Subnet-CloudAccessManager",
     "adSubnetAddressPrefix": "10.0.0.0/24",
@@ -634,9 +635,12 @@
           "vmAdminPassword": {
             "value": "[parameters('domainAdminPassword')]"
           },
-          "domainControllerName": {
-            "value": "[variables('adVMName')]"
-          },
+            "domainControllerName": {
+                "value": "[variables('adVMName')]"
+            },
+            "brokerPort": {
+                "value": "[variables('brokerPort')]"
+            },
           "blobSource": {
             "value": "[parameters('CAMDeploymentBlobSource')]"
           },
@@ -683,7 +687,7 @@
             "value": "[parameters('domainAdminPassword')]"
           },
           "brokerFQDN": {
-            "value": "[concat(variables('serverRootName'), '-br','.',parameters('domainName'),':8443')]"
+            "value": "[concat(variables('serverRootName'), '-br','.',parameters('domainName'),':',variables('brokerPort'))]"
           },
           "privateIP": {
             "value": "[variables('cmPrivateIP')]"

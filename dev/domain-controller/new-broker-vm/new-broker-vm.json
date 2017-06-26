@@ -70,6 +70,12 @@
                 "description": "The password for the administrator account of the new VM and the domain"
             }
         },
+        "brokerPort": {
+            "type": "string",
+            "metadata": {
+                "description": "The port number the broker listens on"
+            }
+        },
         "blobSource": {
             "type": "string",
             "metadata": {
@@ -125,6 +131,7 @@
                             "Password": "PrivateSettingsRef:AdminPassword"
                         },
                         "DCVMName": "[parameters('domainControllerName')]",
+                        "brokerPort": "[parameters('brokerPort')]",
                         "gitLocation": "[parameters('_artifactsLocation')]",
                         "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Broker-',subscription().subscriptionId)]"
                     }

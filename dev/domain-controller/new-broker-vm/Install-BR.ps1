@@ -48,7 +48,10 @@ Configuration InstallBR
         [String]$gitLocation,
 
         [Parameter(Mandatory)]
-        [String]$sumoCollectorID
+        [String]$sumoCollectorID,
+
+        [Parameter(Mandatory)]
+        [String]$brokerPort
     )
 
 	$dcvmfqdn = "$DCVMName.$DomainName"
@@ -288,8 +291,6 @@ Configuration InstallBR
 				#just going 'manual' now since installer has been a massive PITA
                 #(but perhaps unfairly so since it might have been affected by some Java install issues I had previously as well.)
 
-				$ServerXMLFile = $CatalinaHomeLocation + '\conf\server.xml'
-
 				#make sure we get a clean install
 				Remove-Item $using:localtomcatpath -Force -Recurse -ErrorAction SilentlyContinue
 
@@ -329,8 +330,8 @@ Configuration InstallBR
             SetScript  = {
 				Write-Host "Configuring Tomcat for $using:brokerServiceName service"
 
-				$catalineHome = $using:CatalinaHomeLocation
-				$catalinaBase = "$catalineHome\$using:brokerServiceName"
+				$catalinaHome = $using:CatalinaHomeLocation
+				$catalinaBase = "$catalinaHome\$using:brokerServiceName"
 				# I don't think we need to set the registry
 				# Set-ItemProperty -Path "$Reg" -Name CATALINA_BASE –Value $using:CatalinaHomeLocation
 				$env:CATALINA_BASE = $catalinaBase
@@ -346,18 +347,21 @@ Configuration InstallBR
 				Copy-Item "$catalinaHome\webapps" "$catalinaBase\webapps" -Recurse -ErrorAction SilentlyContinue
 				Copy-Item "$catalinaHome\work" "$catalinaBase\work" -Recurse -ErrorAction SilentlyContinue
 
+				$serverXMLFile = $catalinaBase + '\conf\server.xml'
+				$origServerXMLFile = $catalinaBase + '\conf\server.xml.orig'
+
 				# back up server.xml file if not done in a previous round
-				if( -not ( Get-Item ($catalinaBase + '\conf\server.xml.orig') -ErrorAction SilentlyContinue ) )
+				if( -not ( Get-Item ($origServerXMLFile) -ErrorAction SilentlyContinue ) )
 				{
-					Copy-Item -Path ($ServerXMLFile) `
-						-Destination ($catalinaBase + '\conf\server.xml.orig')
+					Copy-Item -Path ($serverXMLFile) `
+						-Destination ($origServerXMLFile)
 				}
 
 				#update server.xml file
-				$xml = [xml](Get-Content ($catalinaBase + '\conf\server.xml.orig'))
+				$xml = [xml](Get-Content ($origServerXMLFile))
 
 				$NewConnector = [xml] ('<Connector
-					port="8443"
+					port="'+$using:brokerPort+'"
 					protocol="org.apache.coyote.http11.Http11NioProtocol"
 					SSLEnabled="true"
 					keystoreFile="'+$using:LocalDLPath+'\.keystore"
@@ -375,14 +379,14 @@ Configuration InstallBR
 					#ref child
 					$xml.Server.Service.Engine )
 
-				$xml.save($ServerXMLFile)
+				$xml.save($serverXMLFile)
 
 
 
-				Write-Host "Opening port 8443"
+				Write-Host "Opening port $using:brokerPort"
 
 				#open port in firewall
-				netsh advfirewall firewall add rule name="Open Port 8443" dir=in action=allow protocol=TCP localport=8443
+				netsh advfirewall firewall add rule name="Open Port $using:brokerPort" dir=in action=allow protocol=TCP localport=$using:brokerPort
 
 				# Install and start service for new config
 
@@ -413,10 +417,10 @@ Configuration InstallBR
             SetScript  = {
                 Write-Verbose "Install_Broker"
 
-				$catalineHome = $using:CatalinaHomeLocation
-				$catalinaBase = "$catalineHome\$using:brokerServiceName"
+				$catalinaHome = $using:CatalinaHomeLocation
+				$catalinaBase = "$catalinaHome\$using:brokerServiceName"
 
-				copy $using:LocalDLPath\$using:brokerWAR ($catalinaBase + "\webapps")
+				copy "$using:LocalDLPath\$using:brokerWAR" ($catalinaBase + "\webapps")
 
 				$svc = get-service $using:brokerServiceName
 				if ($svc.Status -ne "Stopped") {$svc.stop()}
@@ -434,6 +438,22 @@ Configuration InstallBR
 				{
 					New-Item $cbPropertiesFile -type file
 				}
+
+				#making another copy in catalinaHome until the paths are figured out...
+				Write-Host "Generating broker configuration file in CatalinaHome."
+				$targetDir = $catalinaHome + "\brokerproperty"
+				$cbHomePropertiesFile = "$targetDir\connectionbroker.properties"
+
+				if(-not (Test-Path $targetDir))
+				{
+					New-Item $targetDir -type directory
+				}
+
+				if(-not (Test-Path $cbHomePropertiesFile))
+				{
+					New-Item $cbHomePropertiesFile -type file
+				}
+
 
 				$firstIPv4IP = Get-NetIPAddress | Where-Object {$_.AddressFamily -eq "IPv4"} | select -First 1
 				$ipaddressString = $firstIPv4IP.IPAddress
@@ -457,6 +477,7 @@ brokerLocale=en_US
 "@
 
 				Set-Content $cbPropertiesFile $cbProperties
+				Set-Content $cbHomePropertiesFile $cbProperties
 				Write-Host "Broker configuration file generated."
 
 				#----- setup security trust for LDAP certificate from DC -----
