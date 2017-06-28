@@ -1,5 +1,5 @@
- # What is Cloud Access Manager?
- Teradici Cloud Access Manager (CAM) is a one click deployment solution that provides a level of brokering on top of new Cloud Access Software (CAS) deployments. CAM will enable you to assign and revoke virtual machines to users, turn virtual machines on or off, as well as create and destroy virtual machines. 
+# What is Cloud Access Manager?
+Teradici Cloud Access Manager (CAM) is a one click deployment solution that provides a level of brokering on top of new Cloud Access Software (CAS) deployments. CAM will enable you to assign and revoke virtual machines to users, turn virtual machines on or off, as well as create and destroy virtual machines. 
  
 The CAM solution is deployed in your Microsoft Azure subscription with an ARM template provided by Teradici. Once you have completed the template form on the Microsoft Azure Portal, you can start deployment. Information on deploying CAM, as well as additional information on the solutions architecture and deployment parameters are in the following sections.
  
@@ -14,12 +14,31 @@ The following image gives an outline of the CAM Technical Preview Architecture:
 
 The following template outlines the account requirements, deployment parameters, deployment procedures and post-deployment capabilities that the solution provides. 
 
- ## Account Requirements
+## Deployment Prerequisites
 
-You must have an Azure account and subscription that does not require multi-factor authentication. You must have a valid registration code for Teradici Cloud Access Software (CAS) to be able successfully connect to, and deploy, CAM. To purchase a CAS license or for more information on the solution visit [Teradici Cloud Access Software.](http://www.teradici.com/products/cloud-access/cloud-access-software)
-
+You must have an Azure account and subscription. You must have a valid registration code for Teradici Cloud Access Software (CAS) to be able successfully connect to, and deploy, CAM. To purchase a CAS license or for more information on the solution visit [Teradici Cloud Access Software.](http://www.teradici.com/products/cloud-access/cloud-access-software)
 
 **NOTE:** To learn how to deploy CAS on Microsoft Azure go to [Deploy Teradici Cloud Access Software on Azure.](https://github.com/teradici/pcoip-agent-azure-templates/blob/master/README.md)
+
+By default, the CAM deployment scripts will create a service principal account for CAM to use after deployment. In order for the CAM deployment scripts to create this service principal, you must pass an account to the **AzureAdminUsername** parameter which meets the following criteria:
+1. The account must have owner access to the subscription (to be able to set access policies)
+1. The account must be able to be programatically logged in without user interaction. This means:
+   1. It must be an organizational account, not a Microsoft account.
+   1. It must not require multi-factor authentication.
+
+If you are not in posession of an account which meets the criteria, you must create a service principal account before deploying CAM.
+
+There are multiple ways to manually create a service principal account. See [Creating a Service Principal Account](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-create-service-principal-portal) for instructions on how to do it from the Azure portal. Once the service principal account has been created, complete the following steps so that CAM can use the account to sign in:
+1. Give the service principal contributor access to a new resource group.
+1. Deploy CAM into that resource group.
+1. Enter the service principal name for **AzureAdminUsername.**
+1. Enter the service principal secret for **AzureAdminPassword.**
+1. Enter the service principal tenant ID for **Tenant ID** instead of null.
+
+The CAM deployment will use the created service principal account to interact with Azure.
+
+In some instances you are required to register the keyvault policy for the subscription prior to deployment. Visit [Common Deployment Errors](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-manager-common-deployment-errors#noregisteredproviderfound) for instructions on how to do this.
+
 
 ## Deployment Parameters
 The following parameters are the form fields you are required to fill in on the template in the Microsoft Azure Portal to begin deploying CAM:
@@ -91,6 +110,7 @@ You can track it through the notifications icon or for a more detailed view of y
 * Occasionally other failures can happen such as 'timeout' or 'can't start WinRM service.' Start a new deployment from scratch in a new resource group and attempt to re-deploy.
 * A common deployment failure is when the quota is reached for the subscription. In this case you have to either remove or deallocate virtual machines from the subscription, or request a core quota increase from Microsoft to alleviate the problem.
 * If deployment fails with an error message stating 'Cannot find resource group < name >,' then this often occurs because the AzureAdminUsername account is associated with a different Microsoft Azure subscription than the subscription in which CAM is being deployed. Ensure that the AzureAdminUsername account manages the same Azure subscription that is being used for the deployment.
+* If deployment fails with a message relating to a 'Keyvault error' then you may need to register Microsoft.Keyvault for the subscription and then re-deploy.
 
 ## Post-Deployment Capabilities
 Following successfull deployment of the CAM solution you can perform the following functions:
