@@ -90,6 +90,9 @@ Configuration InstallCAM
         [String]$sumoCollectorID
 	)
 
+	$standardVMSize = "Standard_D2_v2_Promo"
+	$graphicsVMSize = "Standard_NV6"
+
 	$dcvmfqdn = "$DCVMName.$domainFQDN"
 
 	#Java locations
@@ -878,6 +881,7 @@ $authFilePath = "$targetDir\authfile.txt"
     "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+		"vmSize": { "value": "%vmSize%" },
         "CAMDeploymentBlobSource": { "value": "https://teradeploy.blob.core.windows.net/binaries" },
         "existingSubnetName": { "value": "$using:existingSubnetName" },
         "domainUsername": { "value": "$DomainAdminUsername" },
@@ -917,6 +921,10 @@ $authFilePath = "$targetDir\authfile.txt"
 
 "@
 
+
+				$standardArmParamContent = $armParamContent -replace "%vmSize%",$using:standardVMSize
+				$graphicsArmParamContent = $armParamContent -replace "%vmSize%",$using:graphicsVMSize
+
 				Write-Host "Creating default template parameters files"
 
 				#now make the default parameters filenames - same root name but different suffix as the templates
@@ -944,7 +952,7 @@ $authFilePath = "$targetDir\authfile.txt"
 					New-Item $ParamTargetFilePath -type file
 				}
 
-				Set-Content $ParamTargetFilePath $armParamContent -Force
+				Set-Content $ParamTargetFilePath $standardArmParamContent -Force
 
 
 				# Graphics Agent Parameter file
@@ -953,7 +961,7 @@ $authFilePath = "$targetDir\authfile.txt"
 					New-Item $GaParamTargetFilePath -type file
 				}
 
-				Set-Content $GaParamTargetFilePath $armParamContent -Force
+				Set-Content $GaParamTargetFilePath $graphicsArmParamContent -Force
 
 
 		        Write-Host "Finished! Restarting Tomcat."
