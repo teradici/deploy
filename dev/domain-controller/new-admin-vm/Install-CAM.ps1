@@ -42,6 +42,9 @@ Configuration InstallCAM
         $tomcatInstaller = "apache-tomcat-8.0.39-windows-x64.zip",
 
         [string]
+        $brokerWAR = "pcoip-broker.war",
+
+        [string]
         $adminWAR = "CloudAccessManager.war",
 
         [string]
@@ -49,7 +52,7 @@ Configuration InstallCAM
 
         [string]
         $gaAgentARM = "server2016-graphics-agent.json",
-		
+
         [Parameter(Mandatory)]
         [String]$domainFQDN,
 
@@ -87,13 +90,17 @@ Configuration InstallCAM
         [String]$gitLocation,
 
         [Parameter(Mandatory)]
-        [String]$sumoCollectorID
-	)
+        [String]$sumoCollectorID,
+
+        [String]$brokerPort = "8444"
+    )
 
 	$standardVMSize = "Standard_D2_v2_Promo"
 	$graphicsVMSize = "Standard_NV6"
 
 	$dcvmfqdn = "$DCVMName.$domainFQDN"
+	$pbvmfqdn = "$env:computername.$domainFQDN"
+	$family   = "Windows Server 2016"
 
 	#Java locations
 	$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_91"
@@ -105,7 +112,10 @@ Configuration InstallCAM
 	$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
 	$CatalinaBinLocation = $CatalinaHomeLocation + "\bin"
 
-	Import-DscResource -Module xPSDesiredStateConfiguration
+	$brokerServiceName = "CAMBroker"
+	$AUIServiceName = "CAMAUI"
+
+	Import-DscResource -ModuleName xPSDesiredStateConfiguration
 
     Node "localhost"
     {
@@ -126,16 +136,16 @@ Configuration InstallCAM
 			DestinationPath = "$LocalDLPath\$tomcatInstaller"
 		}
 
-		xRemoteFile Download_Firefox
-		{
-			Uri = "$sourceURI/Firefox Setup Stub 49.0.1.exe"
-			DestinationPath = "$LocalDLPath\Firefox Setup Stub 49.0.1.exe"
-		}
-
 		xRemoteFile Download_Keystore
 		{
 			Uri = "$sourceURI/.keystore"
 			DestinationPath = "$LocalDLPath\.keystore"
+		}
+
+		xRemoteFile Download_Broker_WAR
+		{
+			Uri = "$sourceURI/$brokerWAR"
+			DestinationPath = "$LocalDLPath\$brokerWAR"
 		}
 
 		xRemoteFile Download_Admin_WAR
@@ -178,7 +188,7 @@ Configuration InstallCAM
                 Write-Verbose "Install_SumoCollector"
 
                 $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
-                $sumo_package = "$using:sourceURI/SumoCollector_windows-x64_19_182-25.exe"
+                $sumo_package = "$using:sourceURI/$installerFileName"
                 $sumo_config = "$using:gitLocation/sumo.conf"
                 $sumo_collector_json = "$using:gitLocation/sumo-admin-vm.json"
                 $dest = "C:\sumo"
@@ -239,12 +249,9 @@ Configuration InstallCAM
             SetScript  = {
                 Write-Verbose "Install_Java"
 
-		        $LocalDLPath = $using:LocalDLPath
-		        $javaInstaller = "jdk-8u91-windows-x64.exe"
-
 				# Run the installer. Start-Process does not work due to permissions issue however '&' calling will not wait so looks for registry key as 'completion.'
 				# Start-Process $LocalDLPath\$javaInstaller -ArgumentList '/s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"' -Wait
-				& "$LocalDLPath\$javaInstaller" /s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"
+				& "$using:LocalDLPath\$using:javaInstaller" /s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"
 
 				$retrycount = 1800
 				while ($retryCount -gt 0)
@@ -332,7 +339,7 @@ Configuration InstallCAM
 
             TestScript = { 
 				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
-				$CatalinaPath = (Get-ItemProperty -Path "$Reg" -Name CATALINA_BASE -ErrorAction SilentlyContinue)
+				$CatalinaPath = (Get-ItemProperty -Path "$Reg" -Name CATALINA_HOME -ErrorAction SilentlyContinue)
 				if ( $CatalinaPath )
                 {
 					return $true
@@ -377,31 +384,313 @@ Configuration InstallCAM
 				}
 
 				Set-ItemProperty -Path "$Reg" -Name PATH –Value $NewPath
-				Set-ItemProperty -Path "$Reg" -Name CATALINA_BASE –Value $CatalinaHomeLocation
 				Set-ItemProperty -Path "$Reg" -Name CATALINA_HOME –Value $CatalinaHomeLocation
 
-				#set the local CATALINE_HOME as well since the service installer will need that
-				$env:CATALINA_BASE = $CatalinaHomeLocation
+				# set the current environment CATALINE_HOME as well since the service installer will need that
 				$env:CATALINA_HOME = $CatalinaHomeLocation
+	        }
+        }
 
+		Script Setup_Broker_Service
+        {
+            DependsOn = @("[Script]Install_Tomcat", "[xRemoteFile]Download_Keystore")
+            GetScript  = { @{ Result = "Setup_Broker_Service" } }
 
-				Write-Host "Configuring Tomcat"
+            TestScript = {
+				return !!(Get-Service $using:brokerServiceName -ErrorAction SilentlyContinue)
+			}
+            SetScript  = {
+				Write-Host "Configuring Tomcat for $using:brokerServiceName service"
+
+				$catalinaHome = $using:CatalinaHomeLocation
+				$catalinaBase = "$catalinaHome\$using:brokerServiceName"
+				# I don't think we need to set the registry
+				# Set-ItemProperty -Path "$Reg" -Name CATALINA_BASE –Value $using:CatalinaHomeLocation
+				$env:CATALINA_BASE = $catalinaBase
+
+				# make new broker instance location - copying the directories specified
+				# here: https://tomcat.apache.org/tomcat-8.0-doc/windows-service-howto.html
+
+				# clear out any old cruft first
+				Remove-Item "$catalinaBase" -Force -Recurse -ErrorAction SilentlyContinue
+				Copy-Item "$catalinaHome\conf" "$catalinaBase\conf" -Recurse -ErrorAction SilentlyContinue
+				Copy-Item "$catalinaHome\logs" "$catalinaBase\logs" -Recurse -ErrorAction SilentlyContinue
+				Copy-Item "$catalinaHome\temp" "$catalinaBase\temp" -Recurse -ErrorAction SilentlyContinue
+				Copy-Item "$catalinaHome\webapps" "$catalinaBase\webapps" -Recurse -ErrorAction SilentlyContinue
+				Copy-Item "$catalinaHome\work" "$catalinaBase\work" -Recurse -ErrorAction SilentlyContinue
+
+				$serverXMLFile = $catalinaBase + '\conf\server.xml'
+				$origServerXMLFile = $catalinaBase + '\conf\server.xml.orig'
 
 				# back up server.xml file if not done in a previous round
-				if( -not ( Get-Item ($OrigServerXMLFile) -ErrorAction SilentlyContinue ) )
+				if( -not ( Get-Item ($origServerXMLFile) -ErrorAction SilentlyContinue ) )
 				{
-					Copy-Item -Path ($ServerXMLFile) `
-						-Destination ($OrigServerXMLFile)
+					Copy-Item -Path ($serverXMLFile) `
+						-Destination ($origServerXMLFile)
 				}
 
-				#
-				# update server.xml file
-				#
+				#update server.xml file
+				$xml = [xml](Get-Content ($origServerXMLFile))
 
-				$xml = [xml](Get-Content ($OrigServerXMLFile))
+				$NewConnector = [xml] ('<Connector
+					port="'+$using:brokerPort+'"
+					protocol="org.apache.coyote.http11.Http11NioProtocol"
+					SSLEnabled="true"
+					keystoreFile="'+$using:LocalDLPath+'\.keystore"
+					maxThreads="2000" scheme="https" secure="true"
+					clientAuth="false" sslProtocol="TLS"
+					SSLEngine="on" keystorePass="changeit"
+					SSLPassword="changeit"
+					sslEnabledProtocols="TLSv1.0,TLSv1.1,TLSv1.2"
+					ciphers="TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_CBC_SHA"
+					/>')
+
+				$xml.Server.Service.InsertBefore(
+					# new child
+					$xml.ImportNode($NewConnector.Connector,$true),
+					#ref child
+					$xml.Server.Service.Engine )
+
+				$xml.save($serverXMLFile)
+
+
+
+				Write-Host "Opening port $using:brokerPort"
+
+				#open port in firewall
+				netsh advfirewall firewall add rule name="Open Port $using:brokerPort" dir=in action=allow protocol=TCP localport=$using:brokerPort
+
+				# Install and start service for new config
+
+				& "$using:CatalinaBinLocation\service.bat" install $using:brokerServiceName
+				Write-Host "Tomcat Installer exit code: $LASTEXITCODE"
+				Start-Sleep -s 10  #TODO: Is this sleep ACTUALLY needed?
+
+				Write-Host "Starting Tomcat Service for $using:brokerServiceName"
+				Set-Service $using:brokerServiceName -startuptype "automatic"
+
+				# Reboot machine - seems to need to happen to get Tomcat to run reliably or is there a big delay required? reboot for now :)
+				$global:DSCMachineStatus = 1
+	        }
+        }
+		
+		Script Install_Broker
+        {
+            DependsOn  = @("[xRemoteFile]Download_Broker_WAR", "[Script]Setup_Broker_Service")
+            GetScript  = { @{ Result = "Install_Broker" } }
+
+            TestScript = {
+				$WARPath = "$using:CatalinaHomeLocation\$using:brokerServiceName\webapps\$using:brokerWAR"
+ 
+				if ( Get-Item $WARPath -ErrorAction SilentlyContinue )
+                            {return $true}
+                            else {return $false}
+			}
+            SetScript  = {
+                Write-Verbose "Install_Broker"
+
+				$catalinaHome = $using:CatalinaHomeLocation
+				$catalinaBase = "$catalinaHome\$using:brokerServiceName"
+
+				copy "$using:LocalDLPath\$using:brokerWAR" ($catalinaBase + "\webapps")
+
+				$svc = get-service $using:brokerServiceName
+				if ($svc.Status -ne "Stopped") {$svc.stop()}
+
+				Write-Host "Generating broker configuration file."
+				$targetDir = $catalinaBase + "\brokerproperty"
+				$cbPropertiesFile = "$targetDir\connectionbroker.properties"
+
+				if(-not (Test-Path $targetDir))
+				{
+					New-Item $targetDir -type directory
+				}
+
+				if(-not (Test-Path $cbPropertiesFile))
+				{
+					New-Item $cbPropertiesFile -type file
+				}
+
+				#making another copy in catalinaHome until the paths are figured out...
+				Write-Host "Generating broker configuration file in CatalinaHome."
+				$targetDir = $catalinaHome + "\brokerproperty"
+				$cbHomePropertiesFile = "$targetDir\connectionbroker.properties"
+
+				if(-not (Test-Path $targetDir))
+				{
+					New-Item $targetDir -type directory
+				}
+
+				if(-not (Test-Path $cbHomePropertiesFile))
+				{
+					New-Item $cbHomePropertiesFile -type file
+				}
+
+
+				$firstIPv4IP = Get-NetIPAddress | Where-Object {$_.AddressFamily -eq "IPv4"} | select -First 1
+				$ipaddressString = $firstIPv4IP.IPAddress
+
+				$localAdminCreds = $using:DomainAdminCreds
+				$adminUsername = $localAdminCreds.GetNetworkCredential().Username
+				$adminPassword = $localAdminCreds.GetNetworkCredential().Password
+
+
+				$cbProperties = @"
+ldapHost=ldaps://$Using:dcvmfqdn
+ldapAdminUsername=$adminUsername
+ldapAdminPassword=$adminPassword
+ldapDomain=$Using:domainFQDN
+brokerHostName=$Using:pbvmfqdn
+brokerProductName=CAS Connection Broker
+brokerPlatform=$Using:family
+brokerProductVersion=1.0
+brokerIpaddress=$ipaddressString
+brokerLocale=en_US
+"@
+
+				Set-Content $cbPropertiesFile $cbProperties
+				Set-Content $cbHomePropertiesFile $cbProperties
+				Write-Host "Broker configuration file generated."
+
+				#----- setup security trust for LDAP certificate from DC -----
+
+				#first, setup the Java options
+				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
+
+				$jo_string = "-Djavax.net.ssl.trustStore=$using:JavaRootLocation\jre\lib\security\ldapcertkeystore.jks;-Djavax.net.ssl.trustStoreType=JKS;-Djavax.net.ssl.trustStorePassword=changeit"
+				Set-ItemProperty -Path "$Reg" -Name PR_JVMOPTIONS –Value $jo_string
+
+				#second, get the certificate file
+
+				$ldapCertFileName = "ldapcert.cert"
+				$certStoreLocationOnDC = "c:\" + $ldapCertFileName
+
+				$issuerCertFileName = "issuercert.cert"
+				$issuerCertStoreLocationOnDC = "c:\" + $issuerCertFileName
+
+				$certSubject = "CN=$using:dcvmfqdn"
+
+				Write-Host "Looking for cert with $certSubject on $dcvmfqdn"
+
+				$foundCert = $false
+				$loopCountRemaining = 180
+				#loop until it's created
+				while(-not $foundCert)
+				{
+					Write-Host "Waiting for LDAP certificate. Seconds remaining: $loopCountRemaining"
+
+					$DCSession = New-PSSession $using:dcvmfqdn -Credential $using:DomainAdminCreds
+
+					$foundCert = `
+						Invoke-Command -Session $DCSession -ArgumentList $certSubject, $certStoreLocationOnDC, $issuerCertStoreLocationOnDC `
+						  -ScriptBlock {
+								$cs = $args[0]
+								$cloc = $args[1]
+								$icloc = $args[2]
+
+				  				$cert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cs }
+								if(-not $cert)
+								{
+									Write-Host "Did not find LDAP certificate."
+									#maybe a certutil -pulse will help?
+									# NOTE - must redirect stdout to $null otherwise the success return here pollutes the return value of $foundCert
+									& "certutil" -pulse > $null
+									return $false
+								}
+								else
+								{
+									Export-Certificate -Cert $cert -filepath  $cloc -force
+									Write-Host "Exported LDAP certificate."
+
+									#Now export issuer Certificate
+									$issuerCert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cert.Issuer }
+									Export-Certificate -Cert $issuerCert -filepath  $icloc -force
+
+									return $true
+								}
+							}
+
+					if(-not $foundCert)
+					{
+						Start-Sleep -Seconds 10
+						$loopCountRemaining = $loopCountRemaining - 1
+						if ($loopCountRemaining -eq 0)
+						{
+							Remove-PSSession $DCSession
+							throw "No LDAP certificate!"
+						}
+					}
+					else
+					{
+						#found it! copy
+						Write-Host "Copying certs and exiting DC Session"
+						Copy-Item -Path $certStoreLocationOnDC -Destination "$env:systemdrive\$ldapCertFileName" -FromSession $DCSession
+						Copy-Item -Path $issuerCertStoreLocationOnDC -Destination "$env:systemdrive\$issuerCertFileName" -FromSession $DCSession
+					}
+					Remove-PSSession $DCSession
+				}
+
+				# Have the certificate file, add to a keystore 
+		        Remove-Item "$env:systemdrive\ldapcertkeystore.jks" -ErrorAction SilentlyContinue
+
+                # keytool seems to be causing an error but succeeding. Ignore and continue.
+                $eap = $ErrorActionPreference
+                $ErrorActionPreference = 'SilentlyContinue'
+				& "keytool" -import -file "$env:systemdrive\$issuerCertFileName" -keystore "$env:systemdrive\ldapcertkeystore.jks" -storepass changeit -noprompt
+                $ErrorActionPreference = $eap
+
+		        Copy-Item "$env:systemdrive\ldapcertkeystore.jks" -Destination ($env:classpath + "\security")
+
+		        Write-Host "Finished! Restarting Tomcat service for $using:brokerServiceName."
+
+				Restart-Service $using:brokerServiceName
+            }
+        }
+
+		Script Setup_AUI_Service
+        {
+            DependsOn = @("[Script]Install_Tomcat", "[xRemoteFile]Download_Keystore")
+            GetScript  = { @{ Result = "Setup_AUI_Service" } }
+
+            TestScript = {
+				return !!(Get-Service $using:AUIServiceName -ErrorAction SilentlyContinue)
+			}
+
+			SetScript = {
+
+				Write-Host "Configuring Tomcat for $using:AUIServiceName service"
+
+				$catalinaHome = $using:CatalinaHomeLocation
+				$catalinaBase = "$catalinaHome\$using:AUIServiceName"
+				# I don't think we need to set the registry
+				# Set-ItemProperty -Path "$Reg" -Name CATALINA_BASE –Value $using:CatalinaHomeLocation
+				$env:CATALINA_BASE = $catalinaBase
+
+				# make new instance location - copying the directories specified
+				# here: https://tomcat.apache.org/tomcat-8.0-doc/windows-service-howto.html
+
+				# clear out any old cruft first
+				Remove-Item "$catalinaBase" -Force -Recurse -ErrorAction SilentlyContinue
+				Copy-Item "$catalinaHome\conf" "$catalinaBase\conf" -Recurse -ErrorAction SilentlyContinue
+				Copy-Item "$catalinaHome\logs" "$catalinaBase\logs" -Recurse -ErrorAction SilentlyContinue
+				Copy-Item "$catalinaHome\temp" "$catalinaBase\temp" -Recurse -ErrorAction SilentlyContinue
+				Copy-Item "$catalinaHome\webapps" "$catalinaBase\webapps" -Recurse -ErrorAction SilentlyContinue
+				Copy-Item "$catalinaHome\work" "$catalinaBase\work" -Recurse -ErrorAction SilentlyContinue
+
+				$serverXMLFile = $catalinaBase + '\conf\server.xml'
+				$origServerXMLFile = $catalinaBase + '\conf\server.xml.orig'
+
+				# back up server.xml file if not done in a previous round
+				if( -not ( Get-Item ($origServerXMLFile) -ErrorAction SilentlyContinue ) )
+				{
+					Copy-Item -Path ($serverXMLFile) `
+						-Destination ($origServerXMLFile)
+				}
+
+				#update server.xml file
+				$xml = [xml](Get-Content ($origServerXMLFile))
 
 				# port 8080 unencrypted connector 
-
 				$unencConnector = [xml] ('<Connector port="8080" protocol="HTTP/1.1" connectionTimeout="20000" redirectPort="8443" />')
 
 				$xml.Server.Service.InsertBefore(
@@ -414,7 +703,7 @@ Configuration InstallCAM
 					port="8443"
 					protocol="org.apache.coyote.http11.Http11NioProtocol"
 					SSLEnabled="true"
-					keystoreFile="'+$LocalDLPath+'\.keystore"
+					keystoreFile="'+$using:LocalDLPath+'\.keystore"
 					maxThreads="2000" scheme="https" secure="true"
 					clientAuth="false" sslProtocol="TLS"
 					SSLEngine="on" keystorePass="changeit"
@@ -444,12 +733,12 @@ Configuration InstallCAM
 
 				# Install and start service for new config
 
-				& "$CatalinaBinLocation\service.bat" install
+				& "$using:CatalinaBinLocation\service.bat" install $using:AUIServiceName
 				Write-Host "Tomcat Installer exit code: $LASTEXITCODE"
 				Start-Sleep -s 10  #TODO: Is this sleep ACTUALLY needed?
 
-				Write-Host "Starting Tomcat Service"
-				Set-Service Tomcat8 -startuptype "automatic"
+				Write-Host "Starting Tomcat Service for $using:AUIServiceName"
+				Set-Service $using:AUIServiceName -startuptype "automatic"
 
 				# Reboot machine - seems to need to happen to get Tomcat to run reliably.
 				$global:DSCMachineStatus = 1
@@ -460,21 +749,19 @@ Configuration InstallCAM
         {
             DependsOn  = @("[xRemoteFile]Download_Admin_WAR",
 						   "[xRemoteFile]Download_Agent_ARM",
-						   "[Script]Install_Tomcat",
+						   "[Script]Setup_AUI_Service",
 						   "[xRemoteFile]Download_Ga_Agent_ARM")
 
             GetScript  = { @{ Result = "Install_AUI" } }
 
             TestScript = {
-				$localtomcatpath = $using:localtomcatpath
-				$CatalinaHomeLocation = $using:CatalinaHomeLocation
-				$adminWAR = $using:adminWAR
-				$WARPath = $CatalinaHomeLocation + "\webapps" + $adminWAR
+				$WARPath = "$using:CatalinaHomeLocation\$using:AUIServiceName\webapps\$using:adminWAR"
  
 				if ( Get-Item $WARPath -ErrorAction SilentlyContinue )
                             {return $true}
                             else {return $false}
 			}
+
             SetScript  = {
 		        $LocalDLPath = $using:LocalDLPath
 				$adminWAR = $using:adminWAR
@@ -482,6 +769,7 @@ Configuration InstallCAM
                 $gaAgentARM = $using:gaAgentARM
 				$localtomcatpath = $using:localtomcatpath
 				$CatalinaHomeLocation = $using:CatalinaHomeLocation
+				$catalinaBase = "$CatalinaHomeLocation\$using:AUIServiceName"
 
                 Write-Verbose "Install Nuget and AzureRM packages"
 
@@ -490,9 +778,9 @@ Configuration InstallCAM
 
                 Write-Verbose "Install_CAM"
 
-				copy "$LocalDLPath\$adminWAR" ($CatalinaHomeLocation + "\webapps")
+				copy "$LocalDLPath\$adminWAR" ($catalinaBase + "\webapps")
 
-				$svc = get-service Tomcat8
+				$svc = get-service $using:AUIServiceName
 				if ($svc.Status -ne "Stopped") {$svc.stop()}
 
 				Write-Host "Re-generating CAM configuration file."
@@ -519,7 +807,7 @@ CAMSessionTimeoutMinutes=480
 domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 "@
 
-				$targetDir = "$env:CATALINA_HOME\adminproperty"
+				$targetDir = "$CatalinaHomeLocation\adminproperty"
 				$configFileName = "$targetDir\config.properties"
 
 				if(-not (Test-Path $targetDir))
@@ -538,7 +826,7 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 		        Write-Host "Redirecting ROOT to Cloud Access Manager."
 
                 $redirectString = '<%response.sendRedirect("CloudAccessManager/login.jsp");%>'
-				$targetDir = "$env:CATALINA_HOME\webapps\ROOT"
+				$targetDir = "$CatalinaBase\webapps\ROOT"
 				$indexFileName = "$targetDir\index.jsp"
 
 				if(-not (Test-Path $targetDir))
@@ -775,8 +1063,8 @@ authURL=https\://login.windows.net/
 graphURL=https\://graph.windows.net/
 "@
 
-$targetDir = "$env:CATALINA_HOME\adminproperty"
-$authFilePath = "$targetDir\authfile.txt"
+				$targetDir = "$env:CATALINA_HOME\adminproperty"
+				$authFilePath = "$targetDir\authfile.txt"
 
 				if(-not (Test-Path $authFilePath))
 				{
@@ -964,9 +1252,9 @@ $authFilePath = "$targetDir\authfile.txt"
 				Set-Content $GaParamTargetFilePath $graphicsArmParamContent -Force
 
 
-		        Write-Host "Finished! Restarting Tomcat."
+		        Write-Host "Finished! Restarting AUI Tomcat."
 
-				Restart-Service Tomcat8
+				Restart-Service $using:AUIServiceName
             }
         }
     }
