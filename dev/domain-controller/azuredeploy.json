@@ -543,115 +543,6 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "name": "CreateBrokerMachine",
-      "apiVersion": "2016-02-01",
-      "dependsOn": [
-        "Microsoft.Resources/deployments/SetDNSForVNet"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/new-vm-join-domain/new-vm-join-domain.json', parameters('_artifactsLocationSasToken'))]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "existingVNETName": {
-            "value": "[variables('virtualNetworkName')]"
-          },
-          "existingSubnetName": {
-            "value": "[variables('adSubnetName')]"
-          },
-          "dnsLabelPrefix": {
-            "value": "[concat(variables('serverRootName'), '-br')]"
-          },
-          "vmSize": {
-            "value": "Standard_A1_v2"
-          },
-          "privateIP": {
-            "value": "[variables('brPrivateIP')]"
-          },
-          "domainToJoin": {
-            "value": "[parameters('domainName')]"
-          },
-          "domainUsername": {
-            "value": "[parameters('domainAdminUsername')]"
-          },
-          "domainPassword": {
-            "value": "[parameters('domainAdminPassword')]"
-          },
-          "domainJoinOptions": {
-            "value": 3
-          },
-          "vmAdminUsername": {
-            "value": "[parameters('domainAdminUsername')]"
-          },
-          "vmAdminPassword": {
-            "value": "[parameters('domainAdminPassword')]"
-          },
-          "storageAccountName": {
-            "value": "[variables('storageAccountName')]"
-          }
-        }
-      }
-    },
-    {
-      "type": "Microsoft.Resources/deployments",
-      "name": "ConfigureBrokerMachine",
-      "apiVersion": "2016-02-01",
-      "dependsOn": [
-        "Microsoft.Resources/deployments/CreateBrokerMachine"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/new-broker-vm/new-broker-vm.json', parameters('_artifactsLocationSasToken'))]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "existingVNETName": {
-            "value": "[variables('virtualNetworkName')]"
-          },
-          "existingSubnetName": {
-            "value": "[variables('adSubnetName')]"
-          },
-          "dnsLabelPrefix": {
-            "value": "[concat(variables('serverRootName'), '-br')]"
-          },
-          "domainToJoin": {
-            "value": "[parameters('domainName')]"
-          },
-          "domainUsername": {
-            "value": "[parameters('domainAdminUsername')]"
-          },
-          "domainPassword": {
-            "value": "[parameters('domainAdminPassword')]"
-          },
-          "domainJoinOptions": {
-            "value": 3
-          },
-          "vmAdminUsername": {
-            "value": "[parameters('domainAdminUsername')]"
-          },
-          "vmAdminPassword": {
-            "value": "[parameters('domainAdminPassword')]"
-          },
-            "domainControllerName": {
-                "value": "[variables('adVMName')]"
-            },
-            "brokerPort": {
-                "value": "[variables('brokerPort')]"
-            },
-          "blobSource": {
-            "value": "[parameters('CAMDeploymentBlobSource')]"
-          },
-          "_artifactsLocation": {
-            "value": "[concat(parameters('_artifactsLocation'), '/new-broker-vm')]"
-          }
-        }
-      }
-    },
-    {
-      "type": "Microsoft.Resources/deployments",
       "name": "CreateCM",
       "apiVersion": "2016-02-01",
       "dependsOn": [
@@ -687,7 +578,7 @@
             "value": "[parameters('domainAdminPassword')]"
           },
           "brokerFQDN": {
-            "value": "[concat(variables('serverRootName'), '-br','.',parameters('domainName'),':',variables('brokerPort'))]"
+            "value": "[concat(variables('serverRootName'), '-au','.',parameters('domainName'),':',variables('brokerPort'))]"
           },
           "privateIP": {
             "value": "[variables('cmPrivateIP')]"
