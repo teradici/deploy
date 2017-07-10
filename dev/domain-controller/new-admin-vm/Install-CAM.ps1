@@ -662,7 +662,7 @@ brokerLocale=en_US
 				Write-Host "Configuring Tomcat for $using:AUIServiceName service"
 
 				$catalinaHome = $using:CatalinaHomeLocation
-				$catalinaBase = "$catalinaHome\$using:AUIServiceName"
+				$catalinaBase = "$catalinaHome" #\$using:AUIServiceName"
 				# I don't think we need to set the registry
 				# Set-ItemProperty -Path "$Reg" -Name CATALINA_BASE –Value $using:CatalinaHomeLocation
 				$env:CATALINA_BASE = $catalinaBase
@@ -671,12 +671,12 @@ brokerLocale=en_US
 				# here: https://tomcat.apache.org/tomcat-8.0-doc/windows-service-howto.html
 
 				# clear out any old cruft first
-				Remove-Item "$catalinaBase" -Force -Recurse -ErrorAction SilentlyContinue
-				Copy-Item "$catalinaHome\conf" "$catalinaBase\conf" -Recurse -ErrorAction SilentlyContinue
-				Copy-Item "$catalinaHome\logs" "$catalinaBase\logs" -Recurse -ErrorAction SilentlyContinue
-				Copy-Item "$catalinaHome\temp" "$catalinaBase\temp" -Recurse -ErrorAction SilentlyContinue
-				Copy-Item "$catalinaHome\webapps" "$catalinaBase\webapps" -Recurse -ErrorAction SilentlyContinue
-				Copy-Item "$catalinaHome\work" "$catalinaBase\work" -Recurse -ErrorAction SilentlyContinue
+#				Remove-Item "$catalinaBase" -Force -Recurse -ErrorAction SilentlyContinue
+#				Copy-Item "$catalinaHome\conf" "$catalinaBase\conf" -Recurse -ErrorAction SilentlyContinue
+#				Copy-Item "$catalinaHome\logs" "$catalinaBase\logs" -Recurse -ErrorAction SilentlyContinue
+#				Copy-Item "$catalinaHome\temp" "$catalinaBase\temp" -Recurse -ErrorAction SilentlyContinue
+#				Copy-Item "$catalinaHome\webapps" "$catalinaBase\webapps" -Recurse -ErrorAction SilentlyContinue
+#				Copy-Item "$catalinaHome\work" "$catalinaBase\work" -Recurse -ErrorAction SilentlyContinue
 
 				$serverXMLFile = $catalinaBase + '\conf\server.xml'
 				$origServerXMLFile = $catalinaBase + '\conf\server.xml.orig'
@@ -756,7 +756,9 @@ brokerLocale=en_US
             GetScript  = { @{ Result = "Install_AUI" } }
 
             TestScript = {
-				$WARPath = "$using:CatalinaHomeLocation\$using:AUIServiceName\webapps\$using:adminWAR"
+				$CatalinaHomeLocation = $using:CatalinaHomeLocation
+				$catalinaBase = "$CatalinaHomeLocation" # \$using:AUIServiceName"
+				$WARPath = "$catalinaBase\webapps\$using:adminWAR"
  
 				if ( Get-Item $WARPath -ErrorAction SilentlyContinue )
                             {return $true}
@@ -770,7 +772,7 @@ brokerLocale=en_US
                 $gaAgentARM = $using:gaAgentARM
 				$localtomcatpath = $using:localtomcatpath
 				$CatalinaHomeLocation = $using:CatalinaHomeLocation
-				$catalinaBase = "$CatalinaHomeLocation\$using:AUIServiceName"
+				$catalinaBase = "$CatalinaHomeLocation" #\$using:AUIServiceName"
 
                 Write-Verbose "Install Nuget and AzureRM packages"
 
