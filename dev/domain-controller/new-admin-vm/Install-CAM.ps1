@@ -360,8 +360,6 @@ Configuration InstallCAM
 				$localtomcatpath = $using:localtomcatpath
 				$CatalinaHomeLocation = $using:CatalinaHomeLocation
 				$CatalinaBinLocation = $using:CatalinaBinLocation
-				$ServerXMLFile = $CatalinaHomeLocation + '\conf\server.xml'
-				$OrigServerXMLFile =$ServerXMLFile + '.orig'
 
 				#make sure we get a clean install
 				Remove-Item $localtomcatpath -Force -Recurse -ErrorAction SilentlyContinue
@@ -429,8 +427,11 @@ Configuration InstallCAM
 						-Destination ($origServerXMLFile)
 				}
 
-				#update server.xml file
+				# --------- update server.xml file ---------
 				$xml = [xml](Get-Content ($origServerXMLFile))
+
+				# Set the local server control port to something different than the default 8005 to enable the service to start.
+				$xml.server.port = "8006"
 
 				$NewConnector = [xml] ('<Connector
 					port="'+$using:brokerPort+'"
