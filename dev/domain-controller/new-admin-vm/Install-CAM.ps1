@@ -433,6 +433,9 @@ Configuration InstallCAM
 				# Set the local server control port to something different than the default 8005 to enable the service to start.
 				$xml.server.port = "8006"
 
+				#remove unwanted default connectors
+				($xml.Server.Service.Connector) | ForEach-Object { [void]$_.ParentNode.removeChild($_) }
+
 				$NewConnector = [xml] ('<Connector
 					port="'+$using:brokerPort+'"
 					protocol="org.apache.coyote.http11.Http11NioProtocol"
@@ -691,14 +694,14 @@ brokerLocale=en_US
 				#update server.xml file
 				$xml = [xml](Get-Content ($origServerXMLFile))
 
-				# port 8080 unencrypted connector 
-				$unencConnector = [xml] ('<Connector port="8080" protocol="HTTP/1.1" connectionTimeout="20000" redirectPort="8443" />')
+				# port 8080 unencrypted connector - is there by default
+				#$unencConnector = [xml] ('<Connector port="8080" protocol="HTTP/1.1" connectionTimeout="20000" redirectPort="8443" />')
 
-				$xml.Server.Service.InsertBefore(
+				#$xml.Server.Service.InsertBefore(
 					# new child
-					$xml.ImportNode($unencConnector.Connector,$true),
+				#	$xml.ImportNode($unencConnector.Connector,$true),
 					#ref child
-					$xml.Server.Service.Engine )
+			    #	$xml.Server.Service.Engine )
 
 				$NewConnector = [xml] ('<Connector
 					port="8443"
