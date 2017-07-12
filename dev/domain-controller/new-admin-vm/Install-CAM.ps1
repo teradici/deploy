@@ -292,6 +292,7 @@ Configuration InstallCAM
 				  $NewPath= $using:JavaBinLocation + ’;’ + $NewPath
 				}
 
+				#these get added to the environment on next reboot
 				Set-ItemProperty -Path "$Reg" -Name PATH –Value $NewPath
 				Set-ItemProperty -Path "$Reg" -Name JAVA_HOME –Value $using:JavaRootLocation
 				Set-ItemProperty -Path "$Reg" -Name classpath –Value $using:JavaLibLocation
@@ -1175,9 +1176,6 @@ brokerLocale=en_US
 				#first, setup the Java options
 				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
 
-				$jo_string = "-Djavax.net.ssl.trustStore=$using:JavaRootLocation\jre\lib\security\ldapcertkeystore.jks;-Djavax.net.ssl.trustStoreType=JKS;-Djavax.net.ssl.trustStorePassword=changeit"
-				Set-ItemProperty -Path "$Reg" -Name PR_JVMOPTIONS –Value $jo_string
-
 				#second, get the certificate file
 
 				$ldapCertFileName = "ldapcert.cert"
@@ -1248,16 +1246,13 @@ brokerLocale=en_US
 					Remove-PSSession $DCSession
 				}
 
-				# Have the certificate file, add to a keystore 
-		        Remove-Item "$env:systemdrive\ldapcertkeystore.jks" -ErrorAction SilentlyContinue
+				# Have the certificate file, add to keystore
 
                 # keytool seems to be causing an error but succeeding. Ignore and continue.
                 $eap = $ErrorActionPreference
                 $ErrorActionPreference = 'SilentlyContinue'
-				& "keytool" -import -file "$env:systemdrive\$issuerCertFileName" -keystore "$env:systemdrive\ldapcertkeystore.jks" -storepass changeit -noprompt
+				& "keytool" -import -file "$env:systemdrive\$issuerCertFileName" -keystore ($env:classpath + "\security\cacerts") -storepass changeit -noprompt
                 $ErrorActionPreference = $eap
-
-		        Copy-Item "$env:systemdrive\ldapcertkeystore.jks" -Destination ($env:classpath + "\security")
 
 		        Write-Host "Finished! Restarting Tomcat service for $using:brokerServiceName."
 
