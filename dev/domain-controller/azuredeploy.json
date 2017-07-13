@@ -392,29 +392,6 @@
       }
     },
     {
-        "name": "[concat(variables('adVMName'),'/CreateAppGateway')]",
-        "type": "Microsoft.Compute/virtualMachines/extensions",
-        "location": "[resourceGroup().location]",
-        "apiVersion": "2015-06-15",
-        "dependsOn": [
-            "Microsoft.Resources/deployments/SetDNSForVNet"
-        ],
-        "properties": {
-            "publisher": "Microsoft.Compute",
-            "type": "CustomScriptExtension",
-            "typeHandlerVersion": "1.8",
-            "autoUpgradeMinorVersion": true,
-            "settings": {
-                "fileUris": [
-                    "[concat(parameters('_artifactsLocation'), '/CreateAppGateway.ps1')]"
-                ]
-            },
-            "protectedSettings": {
-                "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File CreateAppGateway.ps1 -azureUserName ', parameters('AzureAdminUsername'), ' -azurePassword ', parameters('AzureAdminPassword'), ' -rgName ', resourceGroup().name, ' -tenantID ', parameters('tenantID'),' -backendIpAddressDefault ', variables('auPrivateIP'), ' -backendIpAddressForPathRule1 ', variables('cmPrivateIP'), ' -subnetRef ', concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')),'/subnets/',variables('gatewaySubnetName')), ' -templateUri ', concat(parameters('_artifactsLocation'), '/new-app-gateway/azuredeploy.json', parameters('_artifactsLocationSasToken')) )]"
-            }
-        }
-    },
-    {
       "type": "Microsoft.Resources/deployments",
       "name": "CreateAdminMachine",
       "apiVersion": "2016-02-01",
@@ -536,8 +513,20 @@
             "value": "[concat(parameters('_artifactsLocation'), '/new-admin-vm')]"
           },
           "_agentArtifactsLocation": {
-            "value": "[concat(parameters('_artifactsLocation'), '/new-agent-vm')]"
-          }
+              "value": "[concat(parameters('_artifactsLocation'), '/new-agent-vm')]"
+          },
+            "AGsubnetRef": {
+                "value": "[concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')),'/subnets/',variables('gatewaySubnetName'))]"
+            },
+            "AGbackendIpAddressDefault": {
+                "value": "[variables('auPrivateIP')]"
+            },
+            "AGbackendIpAddressForPathRule1": {
+                "value": "[variables('cmPrivateIP')]"
+            },
+            "AGtemplateUri": {
+            "value": "[concat(parameters('_artifactsLocation'), '/new-app-gateway/azuredeploy.json', parameters('_artifactsLocationSasToken'))]"
+          },
         }
       }
     },

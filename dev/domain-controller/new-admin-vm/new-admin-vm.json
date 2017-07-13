@@ -130,6 +130,30 @@
                 "description": "Auto-generated token to access _artifactsLocation"
             },
             "defaultValue": ""
+        },
+        "AGsubnetRef": {
+            "type": "string",
+            "metadata": {
+                "description": "Reference to the application gateway subnet"
+            }
+        },
+        "AGbackendIpAddressDefault": {
+            "type": "string",
+            "metadata": {
+                "description": "Backend IP the application gateway will use for HTTP requests (for the Admin UI)"
+            }
+        },
+        "AGbackendIpAddressForPathRule1": {
+            "type": "string",
+            "metadata": {
+                "description": "Backend IP the application gateway will use for Broker Protocol HTTP requests"
+            }
+        },
+        "AGtemplateUri": {
+            "type": "securestring",
+            "metadata": {
+                "description": "URI for the application gateway deployment ARM Template"
+            }
         }
     },
     "variables": {
@@ -188,7 +212,14 @@
                         "storageAccountName": "[parameters('storageAccountName')]",
                         "tenantID": "[parameters('tenantID')]",
                         "gitLocation": "[parameters('_artifactsLocation')]",
-                        "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-AdminUI-',subscription().subscriptionId)]"
+                        "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-AdminUI-',subscription().subscriptionId)]",
+                        "AGsubnetRef": "[parameters('AGsubnetRef')]",
+                        "AGbackendIpAddressDefault": "[parameters('AGbackendIpAddressDefault')]",
+                        "AGbackendIpAddressForPathRule1": "[parameters('AGbackendIpAddressForPathRule1')]",
+                        "AGtemplateUri": {
+                            "UserName": "dummy",
+                            "Password": "PrivateSettingsRef:PrivateAGtemplateUri"
+                        }
                     }
                 },
                 "protectedSettings": {
@@ -196,7 +227,8 @@
                         "DomainAdminPassword": "[parameters('domainPassword')]",
                         "vmAdminPassword": "[parameters('vmAdminPassword')]",
                         "AzureAdminPassword": "[parameters('AzureAdminPassword')]",
-                        "registrationCode": "[parameters('registrationCode')]"
+                        "registrationCode": "[parameters('registrationCode')]",
+                        "PrivateAGtemplateUri": "[parameters('AGtemplateUri')]"
                     }
                 }
             }
