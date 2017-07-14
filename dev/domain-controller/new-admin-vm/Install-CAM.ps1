@@ -952,17 +952,17 @@ graphURL=https\://graph.windows.net/
 
 				# deploy application gateway
 				$parameters = @{}
-				$parameters.Add(“subnetRef”, $ADsubnetRef)
+				$parameters.Add(“subnetRef”, $using:AGsubnetRef)
 				$parameters.Add(“skuName”, "Standard_Small")
 				$parameters.Add(“capacity”, 1)
-				$parameters.Add(“backendIpAddressDefault”, "$ADbackendIpAddressDefault")
-				$parameters.Add(“backendIpAddressForPathRule1”, "$ADbackendIpAddressForPathRule1")
+				$parameters.Add(“backendIpAddressDefault”, "$using:AGbackendIpAddressDefault")
+				$parameters.Add(“backendIpAddressForPathRule1”, "$using:AGbackendIpAddressForPathRule1")
 				$parameters.Add(“pathMatch1”, "/pcoip-broker/*")
 				$parameters.Add(“certData”, "$fileContentEncoded")
 				$parameters.Add(“certPassword”, "$certPswd")
 
-				$LocalADtemplateUri = $using:ADtemplateUri
-				$tUri = $LocalADtemplateUri.GetNetworkCredential().Password
+				$LocalAGtemplateUri = $using:AGtemplateUri
+				$tUri = $LocalAGtemplateUri.GetNetworkCredential().Password
 
 				New-AzureRmResourceGroupDeployment -Mode Incremental -Name "DeployAppGateway" -ResourceGroupName $RGNameLocal -TemplateUri $tUri -TemplateParameterObject $parameters
 
