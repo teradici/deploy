@@ -111,6 +111,7 @@ You can track it through the notifications icon or for a more detailed view of y
 * A common deployment failure is when the quota is reached for the subscription. In this case you have to either remove or deallocate virtual machines from the subscription, or request a core quota increase from Microsoft to alleviate the problem.
 * If deployment fails with an error message stating 'Cannot find resource group < name >,' then this often occurs because the AzureAdminUsername account is associated with a different Microsoft Azure subscription than the subscription in which CAM is being deployed. Ensure that the AzureAdminUsername account manages the same Azure subscription that is being used for the deployment.
 * If deployment fails with a message relating to a 'Keyvault error' then you may need to register Microsoft.Keyvault for the subscription and then re-deploy.
+* If deployment fails with MSFT_xRemoteFile errors or issues in relation to the application gateway, then creating a new deployment in a new, empty resource group should correct it. This error is not related to incorrect parameters. 
 
 ## Post-Deployment Capabilities
 Following successfull deployment of the CAM solution you can perform the following functions:
