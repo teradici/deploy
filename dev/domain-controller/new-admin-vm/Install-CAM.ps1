@@ -1370,14 +1370,14 @@ brokerLocale=en_US
 				}
 
 				$camSaasBaseUri = $using:camSaasUri
-				$userRequest = @{
-					username = $client
-					password = $key
-					tenantId = $tenant
-				}
 				$camRegistrationError = ""
 				for($idx = 0; $idx -lt $using:retryCount; $idx++) {
 					try {
+						$userRequest = @{
+							username = $client
+							password = $key
+							tenantId = $tenant
+						}
 						$registerUserResult = ""
 						try {
 							$registerUserResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/users") -Body $userRequest
@@ -1403,7 +1403,7 @@ brokerLocale=en_US
 						} catch {
 							$signInResult = ConvertFrom-Json $_.ErrorDetails.Message
 						}
-						Write-Verbose (ConvertTo-Json $signInResult)
+						Write-Verbose ((ConvertTo-Json $signInResult) -replace "\.*token.*", 'Token": "Sanitized"')
 						# Check if signIn succeded
 						if ($signInResult.code -ne 200) {
 							throw ("Signing in failed. Result was: " + (ConvertTo-Json $signInResult))
@@ -1428,14 +1428,14 @@ brokerLocale=en_US
 						} catch {
 							$registerDeploymentResult = ConvertFrom-Json $_.ErrorDetails.Message
 						}
-						Write-Verbose (ConvertTo-Json $registerDeploymentResult)
+						Write-Verbose ((ConvertTo-Json $registerDeploymentResult) -replace "\.*registrationCode.*", 'registrationCode":"Sanitized"')
 						# Check if registration succeeded
 						if( !( ($registerDeploymentResult.code -eq 201) -or ($registerDeploymentResult.data.reason.ToLower().Contains("already exist")) ) ) {
 							throw ("Registering Deployment failed. Result was: " + (ConvertTo-Json $registerDeploymentResult))
 						}
 						$deploymentId = ""
 						# Get the deploymentId
-						if( ($registerDeploymentResult.code -eq 400) -and ($registerDeploymentResult.data.reason.ToLower().Contains("already exist")) ) {
+						if( ($registerDeploymentResult.code -eq 409) -and ($registerDeploymentResult.data.reason.ToLower().Contains("already exist")) ) {
 							# Deplyoment is already registered so the deplymentId needs to be retrieved
 							$registeredDeployment = ""
 							try {
@@ -1474,6 +1474,7 @@ brokerLocale=en_US
 						break;
 					} catch {
 						$camRegistrationError = $_
+						Write-Verbose ("Attempt $idx of $using:retryCount failed due to Error: $camRegistrationError")
 						Start-Sleep -s $using:delay
 					}
 				}
