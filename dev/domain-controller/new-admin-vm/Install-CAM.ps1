@@ -1364,6 +1364,7 @@ brokerLocale=en_US
 				##
 
 				# Read in Authorization Information
+				# Use this to retrieve client, key, tenant and subscription from the auth file
 				Get-Content "$env:AZURE_AUTH_LOCATION" | Foreach-Object{
 					$var = $_.Split('=', 2)
 					New-Variable -Name $var[0] -Value $var[1]
@@ -1413,8 +1414,7 @@ brokerLocale=en_US
 						}
 						Write-Host "Cloud Access Manager sign in succeeded"
 
-						$rcCred = $using:registrationCodeAsCred
-						$registrationCode = $rcCred.Password
+						$registrationCode = ($using:registrationCodeAsCred).GetNetworkCredential().password
 
 						# Register Deployment
 						$deploymentRequest = @{
