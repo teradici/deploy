@@ -112,6 +112,12 @@
                 "description": "Storage account to use for VM data and VHD's"
             }
         },
+        "adminDesktopVMName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the PCoIP powered desktop created for the admin"
+            }
+        },
         "_artifactsLocation": {
             "type": "string",
             "metadata": {
@@ -164,7 +170,8 @@
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
         "publicIPName": "[concat(parameters('dnsLabelPrefix'),'Pip')]",
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
-        "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]"
+        "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
+        "camSaasUri" : "https://13.64.194.64:11111"
     },
     "resources": [
         {
@@ -205,6 +212,8 @@
                             "UserName": "dummy",
                             "Password": "PrivateSettingsRef:registrationCode"
                         },
+                        "adminDesktopVMName" : "[parameters('adminDesktopVMName')]",
+                        "camSaasUri" : "[variables('camSaasUri')]",
                         "DCVMName": "[parameters('domainControllerName')]",
                         "RGName": "[resourceGroup().name]",
                         "existingVNETName": "[parameters('existingVNETName')]",
