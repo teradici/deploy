@@ -110,7 +110,8 @@
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
         "pcoipAgentInstallerUrl": "[concat(parameters('CAMDeploymentBlobSource'),'/PCoIP_agent_release_installer_2.10.0.7600_standard.exe')]",
         "videoDriverUrl": "",
-        "registrationCode": "[parameters('registrationCode')]"
+        "registrationCode": "[parameters('registrationCode')]",
+        "enableAutoShutdown" : ""
     },
     "resources": [
         {
@@ -240,7 +241,8 @@
                 "videoDriverUrl": "[variables('videoDriverUrl')]",
                 "gitLocation": "[parameters('_artifactsLocation')]",
                 "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId)]",
-                "domainGroupToJoin": "[parameters('domainGroupToJoin')]"
+                "domainGroupToJoin": "[parameters('domainGroupToJoin')]",
+                "enableAutoShutdown": "[variables('enableAutoShutdown')]"
               },
               "privacy": {
                 "DataCollection": "Disable"
