@@ -55,8 +55,8 @@ Configuration InstallCAM
 
         [Parameter(Mandatory)]
         [String]$domainFQDN,
-		
-		[Parameter(Mandatory)]
+
+        [Parameter(Mandatory)]
 		[String]$adminDesktopVMName,
 
         [Parameter(Mandatory)]
@@ -428,9 +428,8 @@ Configuration InstallCAM
 				Write-Host "Configuring Tomcat for $using:AUIServiceName service"
 
 				$catalinaHome = $using:CatalinaHomeLocation
-				$catalinaBase = "$catalinaHome" #\$using:AUIServiceName"
-				# I don't think we need to set the registry
-				# Set-ItemProperty -Path "$Reg" -Name CATALINA_BASE -Value $using:CatalinaHomeLocation
+				$catalinaBase = "$catalinaHome" #\$using:AUIServiceName" <---- don't change this without changing log collector location currently in sumo-admin-vm.json
+
 				$env:CATALINA_BASE = $catalinaBase
 
 				# make new instance location - copying the directories specified
