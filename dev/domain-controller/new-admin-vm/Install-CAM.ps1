@@ -55,8 +55,8 @@ Configuration InstallCAM
 
         [Parameter(Mandatory)]
         [String]$domainFQDN,
-		
-		[Parameter(Mandatory)]
+
+        [Parameter(Mandatory)]
 		[String]$adminDesktopVMName,
 
         [Parameter(Mandatory)]
@@ -304,23 +304,18 @@ Configuration InstallCAM
 
 				Write-Host "Setting up Java paths and environment"
 
-				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
-
 				#set path. Don't add strings that are already there...
 
-				$NewPath = (Get-ItemProperty -Path "$Reg" -Name PATH).Path
-
-				#put java path in front of the oracle defined path
+				$NewPath = $env:Path
 				if ($NewPath -notlike "*"+$using:JavaBinLocation+"*")
 				{
-				  $NewPath= $using:JavaBinLocation + ";" + $NewPath
+    				#put java path in front of the Oracle defined path
+				    $NewPath= $using:JavaBinLocation + ";" + $NewPath
 				}
 
-				#these get added to the environment on next reboot
-				Set-ItemProperty -Path "$Reg" -Name PATH -Value $NewPath
-				Set-ItemProperty -Path "$Reg" -Name JAVA_HOME -Value $using:JavaRootLocation
-				Set-ItemProperty -Path "$Reg" -Name classpath -Value $using:JavaLibLocation
-
+				[System.Environment]::SetEnvironmentVariable("PATH", $NewPath, "Machine")
+				[System.Environment]::SetEnvironmentVariable("JAVA_HOME", $using:JavaRootLocation, "Machine")
+				[System.Environment]::SetEnvironmentVariable("classpath", $using:JavaLibLocation, "Machine")
 
 
 				Write-Host "Waiting for JVM.dll"
@@ -363,9 +358,7 @@ Configuration InstallCAM
             GetScript  = { @{ Result = "Install_Tomcat" } }
 
             TestScript = { 
-				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
-				$CatalinaPath = (Get-ItemProperty -Path "$Reg" -Name CATALINA_HOME -ErrorAction SilentlyContinue)
-				if ( $CatalinaPath )
+				if ( $env:CATALINA_HOME )
                 {
 					return $true
 				}
@@ -394,23 +387,15 @@ Configuration InstallCAM
 
 				Write-Host "Setting Paths and Tomcat environment"
 
-
-
-				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
-
-				$NewPath = (Get-ItemProperty -Path "$Reg" -Name PATH).Path
-
-				#put tomcat path at the end
+				$NewPath = $env:Path
 				if ($NewPath -notlike "*"+$CatalinaBinLocation+"*")
 				{
-				  $NewPath= $NewPath + ";" + $CatalinaBinLocation
+				    #put tomcat path at the end
+				    $NewPath= $NewPath + ";" + $CatalinaBinLocation
 				}
 
-				Set-ItemProperty -Path "$Reg" -Name PATH -Value $NewPath
-				Set-ItemProperty -Path "$Reg" -Name CATALINA_HOME -Value $CatalinaHomeLocation
-
-				# set the current environment CATALINA_HOME as well since the service installer will need that
-				$env:CATALINA_HOME = $CatalinaHomeLocation
+				[System.Environment]::SetEnvironmentVariable("Path", $NewPath, "Machine")
+				[System.Environment]::SetEnvironmentVariable("CATALINA_HOME", $CatalinaHomeLocation, "Machine")
 	        }
         }
 
@@ -428,9 +413,8 @@ Configuration InstallCAM
 				Write-Host "Configuring Tomcat for $using:AUIServiceName service"
 
 				$catalinaHome = $using:CatalinaHomeLocation
-				$catalinaBase = "$catalinaHome" #\$using:AUIServiceName"
-				# I don't think we need to set the registry
-				# Set-ItemProperty -Path "$Reg" -Name CATALINA_BASE -Value $using:CatalinaHomeLocation
+				$catalinaBase = "$catalinaHome" #\$using:AUIServiceName" <---- don't change this without changing log collector location currently in sumo-admin-vm.json
+
 				$env:CATALINA_BASE = $catalinaBase
 
 				# make new instance location - copying the directories specified
@@ -843,12 +827,9 @@ graphURL=https\://graph.windows.net/
 				Set-Content $authFilePath $authFileContent -Force
 
 
-				Write-Host "Update registry so AZURE_AUTH_LOCATION points to auth file."
+				Write-Host "Update environment so AZURE_AUTH_LOCATION points to auth file."
 
-				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
-
-				Set-ItemProperty -Path "$Reg" -Name AZURE_AUTH_LOCATION -Value $authFilePath
-
+				[System.Environment]::SetEnvironmentVariable("AZURE_AUTH_LOCATION", $authFilePath, "Machine")
 
 
 				#Get local version of passed-in credentials
@@ -1089,8 +1070,8 @@ graphURL=https\://graph.windows.net/
 
 				$catalinaHome = $using:CatalinaHomeLocation
 				$catalinaBase = "$catalinaHome\$using:brokerServiceName"
-				# I don't think we need to set the registry
-				# Set-ItemProperty -Path "$Reg" -Name CATALINA_BASE -Value $using:CatalinaHomeLocation
+
+                #set the current (temporary) environment
 				$env:CATALINA_BASE = $catalinaBase
 
 				# make new broker instance location - copying the directories specified
@@ -1244,9 +1225,6 @@ brokerLocale=en_US
 				Write-Host "Broker configuration file generated."
 
 				#----- setup security trust for LDAP certificate from DC -----
-
-				#first, setup the Java options
-				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
 
 				#second, get the certificate file
 
