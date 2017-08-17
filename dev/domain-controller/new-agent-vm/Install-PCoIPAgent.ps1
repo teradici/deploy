@@ -389,7 +389,7 @@ Configuration InstallPCoIPAgent
 				}
 
 				try {
-					$svc = Get-WmiObject -Class Win32_Service -Filter "Name='$ServiceName'"
+					$svc = Get-WmiObject -Class Win32_Service -Filter "Name='$ServiceName'" -ErrorAction Stop
 					return $svc.State -eq "Running"
 				} catch {
 					return $false
