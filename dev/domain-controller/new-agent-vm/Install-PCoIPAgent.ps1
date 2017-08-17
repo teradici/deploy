@@ -24,7 +24,7 @@ Configuration InstallPCoIPAgent
 		[string]$domainGroupToJoin,
 
 		[Parameter(Mandatory=$false)]
-		[String]$enableAutoShutdown
+		[bool]$enableAutoShutdown
 	)
     
     $isSA = [string]::IsNullOrWhiteSpace($videoDriverUrl)
@@ -384,7 +384,7 @@ Configuration InstallPCoIPAgent
             TestScript = { 
 				$serviceName = "CAMIdleShutdown"
 				
-				if ([string]::IsNullOrWhiteSpace($using:enableAutoShutdown)) {
+				if ($using:enableAutoShutdown) {
 					return $true
 				}
 
