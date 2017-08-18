@@ -313,9 +313,12 @@ Configuration InstallCAM
 				    $NewPath= $using:JavaBinLocation + ";" + $NewPath
 				}
 
-				[System.Environment]::SetEnvironmentVariable("PATH", $NewPath, "Machine")
+				[System.Environment]::SetEnvironmentVariable("Path", $NewPath, "Machine")
 				[System.Environment]::SetEnvironmentVariable("JAVA_HOME", $using:JavaRootLocation, "Machine")
 				[System.Environment]::SetEnvironmentVariable("classpath", $using:JavaLibLocation, "Machine")
+				$env:Path = $NewPath
+				$env:JAVA_HOME = $using:JavaRootLocation
+				$env:classpath = $using:JavaLibLocation
 
 
 				Write-Host "Waiting for JVM.dll"
@@ -347,7 +350,7 @@ Configuration InstallCAM
 					}
 				}
 
-				# Reboot machine - seems to need to happen to get Tomcat to install??? Nope!
+				# Reboot machine - seems to need to happen to get Tomcat to install??? Perhaps not after environment fixes. Needs testing.
 				$global:DSCMachineStatus = 1
             }
         }
@@ -396,6 +399,8 @@ Configuration InstallCAM
 
 				[System.Environment]::SetEnvironmentVariable("Path", $NewPath, "Machine")
 				[System.Environment]::SetEnvironmentVariable("CATALINA_HOME", $CatalinaHomeLocation, "Machine")
+				$env:Path = $NewPath
+				$env:CATALINA_HOME = $CatalinaHomeLocation
 	        }
         }
 
@@ -695,11 +700,33 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 						Remove-AzureRmADApplication -ObjectId $aoID -Force
 					}
 
-					Write-Host "Purge complete."
+					Write-Host "Purge complete. Creating new app."
 
-					$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword
+					# retry required on app registration (it seems) if there is a race condition with the deleted application.
+					$newAppCreateRetry = 1800
+					while($newAppCreateRetry -ne 0)
+					{
+						$newAppCreateRetry--
+
+						try
+						{
+							$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword
+							break
+						}
+						catch
+						{
+							Write-Host "Retrying to create app $newAppCreateRetry : $appName"
+							Start-sleep -Seconds 1
+							if ($newAppCreateRetry -eq 0)
+							{
+								#re-throw whatever the original exception was
+								throw
+							}
+						}
+					}
 
 
+					Write-Host "New app creation complete. Creating SP."
 
 					# retry required since it can take a few seconds for the app registration to percolate through Azure.
 					# (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
@@ -727,6 +754,8 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 						}
 					}
 					
+					Write-Host "SP creation complete. Adding role assignment."
+
 					# retry required since it can take a few seconds for the app registration to percolate through Azure.
 					# (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
 					$rollAssignmentRetry = 1800
@@ -749,6 +778,7 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 							}
 							else
 							{
+								Write-Host "Received exception code: $exceptionCode"
 								#re-throw whatever the original exception was
 								throw
 							}
@@ -830,7 +860,7 @@ graphURL=https\://graph.windows.net/
 				Write-Host "Update environment so AZURE_AUTH_LOCATION points to auth file."
 
 				[System.Environment]::SetEnvironmentVariable("AZURE_AUTH_LOCATION", $authFilePath, "Machine")
-
+				$env:AZURE_AUTH_LOCATION = $authFilePath
 
 				#Get local version of passed-in credentials
 				$localVMAdminCreds = $using:VMAdminCreds
@@ -1373,7 +1403,12 @@ brokerLocale=en_US
 						[System.Environment]::SetEnvironmentVariable("CAM_PASSWORD", $userRequest.password, "Machine")
 						[System.Environment]::SetEnvironmentVariable("CAM_TENANTID", $userRequest.tenantId, "Machine")
 						[System.Environment]::SetEnvironmentVariable("CAM_URI", $camSaasBaseUri, "Machine")
-						Write-Host "Cloud Access Manager PoC has been registered succesfully"
+						$env:CAM_USERNAME = $userRequest.username
+						$env:CAM_PASSWORD = $userRequest.password
+						$env:CAM_TENANTID = $userRequest.tenantId
+						$env:CAM_URI = $camSaasBaseUri
+
+						Write-Host "Cloud Access Manager Frontend has been registered succesfully"
 
 						# Get a Sign-in token
 						$signInResult = ""
@@ -1426,7 +1461,11 @@ brokerLocale=en_US
 						} else {
 							$deploymentId = $registerDeploymentResult.data.deploymentId
 						}
+
 						[System.Environment]::SetEnvironmentVariable("CAM_DEPLOYMENTID", $deploymentId, "Machine")
+						$env:CAM_DEPLOYMENTID = $deploymentId
+
+
 						Write-Host "Deployment has been registered succesfully with Cloud Access Manager"
 
 						# Register Agent Machine
