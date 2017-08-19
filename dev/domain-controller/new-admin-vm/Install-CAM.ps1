@@ -1383,7 +1383,11 @@ brokerLocale=en_US
 						try {
 							$registerUserResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/users") -Body $userRequest
 						} catch {
-							$registerUserResult = ConvertFrom-Json $_.ErrorDetails.Message
+							if ($_.ErrorDetails.Message) {
+								$registerUserResult = ConvertFrom-Json $_.ErrorDetails.Message
+							} else {
+								throw $_
+							}	
 						}
 						Write-Verbose (ConvertTo-Json $registerUserResult)
 						# Check if registration succeeded or if it has been registered previously
@@ -1402,7 +1406,11 @@ brokerLocale=en_US
 						try {
 							$signInResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/signin") -Body $userRequest
 						} catch {
-							$signInResult = ConvertFrom-Json $_.ErrorDetails.Message
+							if ($_.ErrorDetails.Message) {
+								$signInResult = ConvertFrom-Json $_.ErrorDetails.Message
+							} else {
+								throw $_
+							}							
 						}
 						Write-Verbose ((ConvertTo-Json $signInResult) -replace "\.*token.*", 'Token": "Sanitized"')
 						# Check if signIn succeded
@@ -1426,7 +1434,11 @@ brokerLocale=en_US
 						try {
 							$registerDeploymentResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/deployments") -Body $deploymentRequest -Headers $tokenHeader
 						} catch {
-							$registerDeploymentResult = ConvertFrom-Json $_.ErrorDetails.Message
+							if ($_.ErrorDetails.Message) {
+								$registerDeploymentResult = ConvertFrom-Json $_.ErrorDetails.Message
+							} else {
+								throw $_
+							}
 						}
 						Write-Verbose ((ConvertTo-Json $registerDeploymentResult) -replace "\.*registrationCode.*", 'registrationCode":"Sanitized"')
 						# Check if registration succeeded
@@ -1442,8 +1454,12 @@ brokerLocale=en_US
 								$registeredDeployment = Invoke-RestMethod -Method Get -Uri ($camSaasBaseUri + "/api/v1/deployments") -Body $deploymentRequest -Headers $tokenHeader
 								$deploymentId = $registeredDeployment.data.deploymentId
 							} catch {
-								$registeredDeployment = ConvertFrom-Json $_.ErrorDetails.Message
-								throw ("Getting Deployment ID failed. Result was: " + (ConvertTo-Json $registeredDeployment))
+								if ($_.ErrorDetails.Message) {
+									$registeredDeployment = ConvertFrom-Json $_.ErrorDetails.Message
+									throw ("Getting Deployment ID failed. Result was: " + (ConvertTo-Json $registeredDeployment))
+								} else {
+									throw $_
+								}								
 							}
 						} else {
 							$deploymentId = $registerDeploymentResult.data.deploymentId
@@ -1462,7 +1478,11 @@ brokerLocale=en_US
 						try {
 							$registerMachineResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/machines") -Body $machineRequest -Headers $tokenHeader
 						} catch {
-							$registerMachineResult = ConvertFrom-Json $_.ErrorDetails.Message
+							if ($_.ErrorDetails.Message) {
+								$registerMachineResult = ConvertFrom-Json $_.ErrorDetails.Message
+							} else {
+								throw $_
+							}
 						}
 						Write-Verbose (ConvertTo-Json $registerMachineResult)
 						# Check if registration succeeded
@@ -1474,7 +1494,7 @@ brokerLocale=en_US
 						break;
 					} catch {
 						$camRegistrationError = $_
-						Write-Verbose ("Attempt $idx of $using:retryCount failed due to Error: $camRegistrationError")
+						Write-Verbose ( "Attempt {0} of $using:retryCount failed due to Error: $camRegistrationError" -f ($idx+1) )
 						Start-Sleep -s $using:delay
 					}
 				}
