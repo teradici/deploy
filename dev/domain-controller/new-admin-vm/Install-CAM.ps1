@@ -770,15 +770,10 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 						}
 						catch
 						{
-							$exceptionCode = $_.Exception.Error.Code
-							If ($exceptionCode -eq "PrincipalNotFound")
+							Write-Host "Waiting for service principal. Remaining: $rollAssignmentRetry"
+							Start-sleep -Seconds 1
+							if ($rollAssignmentRetry -eq 0)
 							{
-								Write-Host "Waiting for service principal $rollAssignmentRetry"
-								Start-sleep -Seconds 1
-							}
-							else
-							{
-								Write-Host "Received exception code: $exceptionCode"
 								#re-throw whatever the original exception was
 								throw
 							}
