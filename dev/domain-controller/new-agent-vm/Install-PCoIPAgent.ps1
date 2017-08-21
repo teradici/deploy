@@ -21,7 +21,10 @@ Configuration InstallPCoIPAgent
      	[PSCredential] $domainJoinCredential,
 
         [Parameter(Mandatory=$false)]
-		[string]$domainGroupToJoin
+		[string]$domainGroupToJoin,
+
+		[Parameter(Mandatory=$false)]
+		[bool]$enableAutoShutdown
 	)
     
     $isSA = [string]::IsNullOrWhiteSpace($videoDriverUrl)
@@ -367,6 +370,74 @@ Configuration InstallPCoIPAgent
 						$svc.WaitForStatus("Running", 120)
 					}catch{
 						throw "failed to start PCoIP Agent Service"
+					}
+				}
+			}
+		}
+
+		Script StartCAMIdleShutdownService
+        {
+            DependsOn  = @("[Script]StartPcoIPService")
+
+            GetScript  = { return 'Start CAM Idle Shutdown Service'}
+
+            TestScript = { 
+				$serviceName = "CAMIdleShutdown"
+				
+				if ($using:enableAutoShutdown) {
+					return $true
+				}
+
+				try {
+					$svc = Get-WmiObject -Class Win32_Service -Filter "Name='$ServiceName'" -ErrorAction Stop
+					return $svc.State -eq "Running"
+				} catch {
+					return $false
+				}
+            }
+
+            SetScript  = {
+				cd "C:\Program Files (x86)\Teradici\PCoIP Agent\bin\"
+				$serviceName = "CAMIdleShutdown"
+
+				$ret = .\IdleShutdownAgent.exe -install
+				# Check for success
+				if( !$? ) {
+					$msg = "Failed to install {0} because: {1}" -f $serviceName, $ret
+					Write-Verbose $msg
+					throw $msg
+				}
+
+				$svc = Get-Service -Name $serviceName   
+
+				if ($svc.StartType -ne "Automatic") {
+					$msg = "try setting {0} Service start type to automatic." -f $serviceName
+					Write-Verbose $msg
+
+					Set-Service -name  $serviceName -StartupType Automatic
+
+					$status = If ($?) {"succeeded"} Else {"failed"}
+					$msg = "{0} to change start type of {1} service to Automatic." -f $status, $serviceName
+					Write-Verbose $msg
+				}
+					
+				if ($svc.status -eq "Paused") {
+					Write-Verbose "try resuming CAMIdleShutdown Service ."
+					try{
+						$svc.Continue()
+						Write-Verbose "succeeded to resume CAMIdleShutdown service."
+					}catch{
+						throw "failed to resume CAMIdleShutdown Service."
+					}
+				}
+
+				if ( $svc.status -eq "Stopped" )	{
+					Write-Verbose "Starting CAMIdleShutdown Service ..."
+					try{
+						$svc.Start()
+						$svc.WaitForStatus("Running", 120)
+					}catch{
+						throw "failed to start CAMIdleShutdown Service"
 					}
 				}
 			}
