@@ -701,11 +701,33 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 						Remove-AzureRmADApplication -ObjectId $aoID -Force
 					}
 
-					Write-Host "Purge complete."
+					Write-Host "Purge complete. Creating new app."
 
-					$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword
+					# retry required on app registration (it seems) if there is a race condition with the deleted application.
+					$newAppCreateRetry = 1800
+					while($newAppCreateRetry -ne 0)
+					{
+						$newAppCreateRetry--
+
+						try
+						{
+							$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword
+							break
+						}
+						catch
+						{
+							Write-Host "Retrying to create app $newAppCreateRetry : $appName"
+							Start-sleep -Seconds 1
+							if ($newAppCreateRetry -eq 0)
+							{
+								#re-throw whatever the original exception was
+								throw
+							}
+						}
+					}
 
 
+					Write-Host "New app creation complete. Creating SP."
 
 					# retry required since it can take a few seconds for the app registration to percolate through Azure.
 					# (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
@@ -733,6 +755,8 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 						}
 					}
 					
+					Write-Host "SP creation complete. Adding role assignment."
+
 					# retry required since it can take a few seconds for the app registration to percolate through Azure.
 					# (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
 					$rollAssignmentRetry = 1800
@@ -747,13 +771,9 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 						}
 						catch
 						{
-							$exceptionCode = $_.Exception.Error.Code
-							If ($exceptionCode -eq "PrincipalNotFound")
-							{
-								Write-Host "Waiting for service principal $rollAssignmentRetry"
-								Start-sleep -Seconds 1
-							}
-							else
+							Write-Host "Waiting for service principal. Remaining: $rollAssignmentRetry"
+							Start-sleep -Seconds 1
+							if ($rollAssignmentRetry -eq 0)
 							{
 								#re-throw whatever the original exception was
 								throw
@@ -763,7 +783,7 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 
 					# get SP credentials
 					$spPass = ConvertTo-SecureString $generatedPassword -AsPlainText -Force
-					$spCreds = New-Object -TypeName pscredential –ArgumentList  $sp.ApplicationId, $spPass
+					$spCreds = New-Object -TypeName pscredential -ArgumentList  $sp.ApplicationId, $spPass
 
 					# get tenant ID for this subscription
 					$subForTenantID = Get-AzureRmSubscription
@@ -787,7 +807,7 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 
 					try
 					{
-						Login-AzureRmAccount -ServicePrincipal -Credential $spCreds –TenantId $tenantID -ErrorAction Stop
+						Login-AzureRmAccount -ServicePrincipal -Credential $spCreds -TenantId $tenantID -ErrorAction Stop
 						break
 					}
 					catch
@@ -833,7 +853,7 @@ graphURL=https\://graph.windows.net/
 				Set-Content $authFilePath $authFileContent -Force
 
 
-				Write-Host "Update registry so AZURE_AUTH_LOCATION points to auth file."
+				Write-Host "Update environment so AZURE_AUTH_LOCATION points to auth file."
 
 				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
 
