@@ -384,7 +384,7 @@ Configuration InstallPCoIPAgent
             TestScript = { 
 				$serviceName = "CAMIdleShutdown"
 				
-				if ($using:enableAutoShutdown) {
+				if (!$using:enableAutoShutdown) {
 					return $true
 				}
 
