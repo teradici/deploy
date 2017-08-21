@@ -55,8 +55,8 @@ Configuration InstallCAM
 
         [Parameter(Mandatory)]
         [String]$domainFQDN,
-		
-		[Parameter(Mandatory)]
+
+        [Parameter(Mandatory)]
 		[String]$adminDesktopVMName,
 
         [Parameter(Mandatory)]
@@ -304,23 +304,21 @@ Configuration InstallCAM
 
 				Write-Host "Setting up Java paths and environment"
 
-				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
-
 				#set path. Don't add strings that are already there...
 
-				$NewPath = (Get-ItemProperty -Path "$Reg" -Name PATH).Path
-
-				#put java path in front of the oracle defined path
+				$NewPath = $env:Path
 				if ($NewPath -notlike "*"+$using:JavaBinLocation+"*")
 				{
-				  $NewPath= $using:JavaBinLocation + ";" + $NewPath
+    				#put java path in front of the Oracle defined path
+				    $NewPath= $using:JavaBinLocation + ";" + $NewPath
 				}
 
-				#these get added to the environment on next reboot
-				Set-ItemProperty -Path "$Reg" -Name PATH -Value $NewPath
-				Set-ItemProperty -Path "$Reg" -Name JAVA_HOME -Value $using:JavaRootLocation
-				Set-ItemProperty -Path "$Reg" -Name classpath -Value $using:JavaLibLocation
-
+				[System.Environment]::SetEnvironmentVariable("Path", $NewPath, "Machine")
+				[System.Environment]::SetEnvironmentVariable("JAVA_HOME", $using:JavaRootLocation, "Machine")
+				[System.Environment]::SetEnvironmentVariable("classpath", $using:JavaLibLocation, "Machine")
+				$env:Path = $NewPath
+				$env:JAVA_HOME = $using:JavaRootLocation
+				$env:classpath = $using:JavaLibLocation
 
 
 				Write-Host "Waiting for JVM.dll"
@@ -352,7 +350,7 @@ Configuration InstallCAM
 					}
 				}
 
-				# Reboot machine - seems to need to happen to get Tomcat to install??? Nope!
+				# Reboot machine - seems to need to happen to get Tomcat to install??? Perhaps not after environment fixes. Needs testing.
 				$global:DSCMachineStatus = 1
             }
         }
@@ -363,9 +361,7 @@ Configuration InstallCAM
             GetScript  = { @{ Result = "Install_Tomcat" } }
 
             TestScript = { 
-				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
-				$CatalinaPath = (Get-ItemProperty -Path "$Reg" -Name CATALINA_HOME -ErrorAction SilentlyContinue)
-				if ( $CatalinaPath )
+				if ( $env:CATALINA_HOME )
                 {
 					return $true
 				}
@@ -394,22 +390,16 @@ Configuration InstallCAM
 
 				Write-Host "Setting Paths and Tomcat environment"
 
-
-
-				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
-
-				$NewPath = (Get-ItemProperty -Path "$Reg" -Name PATH).Path
-
-				#put tomcat path at the end
+				$NewPath = $env:Path
 				if ($NewPath -notlike "*"+$CatalinaBinLocation+"*")
 				{
-				  $NewPath= $NewPath + ";" + $CatalinaBinLocation
+				    #put tomcat path at the end
+				    $NewPath= $NewPath + ";" + $CatalinaBinLocation
 				}
 
-				Set-ItemProperty -Path "$Reg" -Name PATH -Value $NewPath
-				Set-ItemProperty -Path "$Reg" -Name CATALINA_HOME -Value $CatalinaHomeLocation
-
-				# set the current environment CATALINA_HOME as well since the service installer will need that
+				[System.Environment]::SetEnvironmentVariable("Path", $NewPath, "Machine")
+				[System.Environment]::SetEnvironmentVariable("CATALINA_HOME", $CatalinaHomeLocation, "Machine")
+				$env:Path = $NewPath
 				$env:CATALINA_HOME = $CatalinaHomeLocation
 	        }
         }
@@ -428,9 +418,8 @@ Configuration InstallCAM
 				Write-Host "Configuring Tomcat for $using:AUIServiceName service"
 
 				$catalinaHome = $using:CatalinaHomeLocation
-				$catalinaBase = "$catalinaHome" #\$using:AUIServiceName"
-				# I don't think we need to set the registry
-				# Set-ItemProperty -Path "$Reg" -Name CATALINA_BASE -Value $using:CatalinaHomeLocation
+				$catalinaBase = "$catalinaHome" #\$using:AUIServiceName" <---- don't change this without changing log collector location currently in sumo-admin-vm.json
+
 				$env:CATALINA_BASE = $catalinaBase
 
 				# make new instance location - copying the directories specified
@@ -711,11 +700,33 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 						Remove-AzureRmADApplication -ObjectId $aoID -Force
 					}
 
-					Write-Host "Purge complete."
+					Write-Host "Purge complete. Creating new app."
 
-					$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword
+					# retry required on app registration (it seems) if there is a race condition with the deleted application.
+					$newAppCreateRetry = 1800
+					while($newAppCreateRetry -ne 0)
+					{
+						$newAppCreateRetry--
+
+						try
+						{
+							$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword
+							break
+						}
+						catch
+						{
+							Write-Host "Retrying to create app $newAppCreateRetry : $appName"
+							Start-sleep -Seconds 1
+							if ($newAppCreateRetry -eq 0)
+							{
+								#re-throw whatever the original exception was
+								throw
+							}
+						}
+					}
 
 
+					Write-Host "New app creation complete. Creating SP."
 
 					# retry required since it can take a few seconds for the app registration to percolate through Azure.
 					# (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
@@ -743,6 +754,8 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 						}
 					}
 					
+					Write-Host "SP creation complete. Adding role assignment."
+
 					# retry required since it can take a few seconds for the app registration to percolate through Azure.
 					# (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
 					$rollAssignmentRetry = 1800
@@ -757,13 +770,9 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 						}
 						catch
 						{
-							$exceptionCode = $_.Exception.Error.Code
-							If ($exceptionCode -eq "PrincipalNotFound")
-							{
-								Write-Host "Waiting for service principal $rollAssignmentRetry"
-								Start-sleep -Seconds 1
-							}
-							else
+							Write-Host "Waiting for service principal. Remaining: $rollAssignmentRetry"
+							Start-sleep -Seconds 1
+							if ($rollAssignmentRetry -eq 0)
 							{
 								#re-throw whatever the original exception was
 								throw
@@ -843,13 +852,10 @@ graphURL=https\://graph.windows.net/
 				Set-Content $authFilePath $authFileContent -Force
 
 
-				Write-Host "Update registry so AZURE_AUTH_LOCATION points to auth file."
+				Write-Host "Update environment so AZURE_AUTH_LOCATION points to auth file."
 
-				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
-
-				Set-ItemProperty -Path "$Reg" -Name AZURE_AUTH_LOCATION -Value $authFilePath
-
-
+				[System.Environment]::SetEnvironmentVariable("AZURE_AUTH_LOCATION", $authFilePath, "Machine")
+				$env:AZURE_AUTH_LOCATION = $authFilePath
 
 				#Get local version of passed-in credentials
 				$localVMAdminCreds = $using:VMAdminCreds
@@ -1089,8 +1095,8 @@ graphURL=https\://graph.windows.net/
 
 				$catalinaHome = $using:CatalinaHomeLocation
 				$catalinaBase = "$catalinaHome\$using:brokerServiceName"
-				# I don't think we need to set the registry
-				# Set-ItemProperty -Path "$Reg" -Name CATALINA_BASE -Value $using:CatalinaHomeLocation
+
+                #set the current (temporary) environment
 				$env:CATALINA_BASE = $catalinaBase
 
 				# make new broker instance location - copying the directories specified
@@ -1245,9 +1251,6 @@ brokerLocale=en_US
 
 				#----- setup security trust for LDAP certificate from DC -----
 
-				#first, setup the Java options
-				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
-
 				#second, get the certificate file
 
 				$ldapCertFileName = "ldapcert.cert"
@@ -1399,7 +1402,12 @@ brokerLocale=en_US
 						[System.Environment]::SetEnvironmentVariable("CAM_PASSWORD", $userRequest.password, "Machine")
 						[System.Environment]::SetEnvironmentVariable("CAM_TENANTID", $userRequest.tenantId, "Machine")
 						[System.Environment]::SetEnvironmentVariable("CAM_URI", $camSaasBaseUri, "Machine")
-						Write-Host "Cloud Access Manager PoC has been registered succesfully"
+						$env:CAM_USERNAME = $userRequest.username
+						$env:CAM_PASSWORD = $userRequest.password
+						$env:CAM_TENANTID = $userRequest.tenantId
+						$env:CAM_URI = $camSaasBaseUri
+
+						Write-Host "Cloud Access Manager Frontend has been registered succesfully"
 
 						# Get a Sign-in token
 						$signInResult = ""
@@ -1464,7 +1472,11 @@ brokerLocale=en_US
 						} else {
 							$deploymentId = $registerDeploymentResult.data.deploymentId
 						}
+
 						[System.Environment]::SetEnvironmentVariable("CAM_DEPLOYMENTID", $deploymentId, "Machine")
+						$env:CAM_DEPLOYMENTID = $deploymentId
+
+
 						Write-Host "Deployment has been registered succesfully with Cloud Access Manager"
 
 						# Register Agent Machine
