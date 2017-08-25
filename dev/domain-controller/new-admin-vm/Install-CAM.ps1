@@ -526,10 +526,20 @@ Configuration InstallCAM
 				$CatalinaHomeLocation = $using:CatalinaHomeLocation
 				$catalinaBase = "$CatalinaHomeLocation" #\$using:AUIServiceName"
 
-                Write-Verbose "Install Nuget and AzureRM packages"
+                Write-Verbose "Ensure Nuget Package Provider and AzureRM module are installed"
 
-				Install-packageProvider -Name NuGet -Force
-				Install-Module -Name AzureRM -Force
+				If(-not [bool](Get-PackageProvider -ListAvailable | where {$_.Name -eq "NuGet"}))
+				{
+	                Write-Verbose "Installing NuGet"
+					Install-packageProvider -Name NuGet -Force
+				}
+
+				If(-not [bool](Get-InstalledModule | where {$_.Name -eq "AzureRM"}))
+				{
+	                Write-Verbose "Installing AzureRM"
+					Install-Module -Name AzureRM -Force
+				}
+				
 
                 Write-Verbose "Install_CAM"
 
