@@ -160,6 +160,12 @@
             "metadata": {
                 "description": "URI for the application gateway deployment ARM Template"
             }
+        },
+        "camSaasUri": {
+            "type": "string",
+            "metadata": {
+                "description": "URI for the CAM SAAS"
+            }
         }
     },
     "variables": {
@@ -170,8 +176,7 @@
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
         "publicIPName": "[concat(parameters('dnsLabelPrefix'),'Pip')]",
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
-        "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
-        "camSaasUri" : "https://13.64.194.64:11111"
+        "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]"
     },
     "resources": [
         {
@@ -213,7 +218,7 @@
                             "Password": "PrivateSettingsRef:registrationCode"
                         },
                         "adminDesktopVMName" : "[parameters('adminDesktopVMName')]",
-                        "camSaasUri" : "[variables('camSaasUri')]",
+                        "camSaasUri" : "[parameters('camSaasUri')]",
                         "DCVMName": "[parameters('domainControllerName')]",
                         "RGName": "[resourceGroup().name]",
                         "existingVNETName": "[parameters('existingVNETName')]",

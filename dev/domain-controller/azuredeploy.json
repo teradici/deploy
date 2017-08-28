@@ -36,11 +36,11 @@
       }
     },
     "tenantID": {
-        "type": "string",
-        "defaultValue": "null",
-        "metadata": {
-            "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave as 'null' if a standard user (non-SP) account is being used."
-        }
+      "type": "string",
+      "defaultValue": "null",
+      "metadata": {
+        "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave as 'null' if a standard user (non-SP) account is being used."
+      }
     },
     "registrationCode": {
       "type": "securestring",
@@ -69,6 +69,13 @@
         "description": "Auto-generated token to access _artifactsLocation"
       },
       "defaultValue": ""
+    },
+    "camSaasUri": {
+      "type": "string",
+      "metadata": {
+        "description": "URI for the CAM SAAS"
+      },
+      "defaultValue": "https://cam-antar.teradici.com"
     }
   },
   "variables": {
@@ -516,19 +523,22 @@
             "value": "[concat(parameters('_artifactsLocation'), '/new-admin-vm')]"
           },
           "_agentArtifactsLocation": {
-              "value": "[concat(parameters('_artifactsLocation'), '/new-agent-vm')]"
+            "value": "[concat(parameters('_artifactsLocation'), '/new-agent-vm')]"
           },
-            "AGsubnetRef": {
-                "value": "[concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')),'/subnets/',variables('gatewaySubnetName'))]"
-            },
-            "AGbackendIpAddressDefault": {
-                "value": "[variables('auPrivateIP')]"
-            },
-            "AGbackendIpAddressForPathRule1": {
-                "value": "[variables('cmPrivateIP')]"
-            },
-            "AGtemplateUri": {
+          "AGsubnetRef": {
+            "value": "[concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')),'/subnets/',variables('gatewaySubnetName'))]"
+          },
+          "AGbackendIpAddressDefault": {
+            "value": "[variables('auPrivateIP')]"
+          },
+          "AGbackendIpAddressForPathRule1": {
+            "value": "[variables('cmPrivateIP')]"
+          },
+          "AGtemplateUri": {
             "value": "[concat(parameters('_artifactsLocation'), '/new-app-gateway/azuredeploy.json', parameters('_artifactsLocationSasToken'))]"
+          },
+          "camSaasUri": {
+            "value": "[parameters('camSaasUri')]"
           }
         }
       }
