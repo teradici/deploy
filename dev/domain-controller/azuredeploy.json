@@ -75,7 +75,7 @@
       "metadata": {
         "description": "URI for the CAM SAAS"
       },
-      "defaultValue": "https://cam-antar.teradici.com"
+      "defaultValue": "https://cam-staging.teradici.com"
     }
   },
   "variables": {

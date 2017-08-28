@@ -30,7 +30,7 @@
             "value": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller"
         },
         "camSaasUri": {
-            "value": "https://cam-antar.teradici.com"
+            "value": "https://cam-staging.teradici.com"
         }
     }
 }
