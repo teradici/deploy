@@ -487,7 +487,7 @@ Configuration InstallCAM
 				netsh advfirewall firewall add rule name="Tomcat Port 8080" dir=in action=allow protocol=TCP localport=8080
 
 
-				# Install and start service for new config
+				# Install and set service to start automatically
 
 				& "$using:CatalinaBinLocation\service.bat" install $using:AUIServiceName
 				Write-Host "Tomcat Installer exit code: $LASTEXITCODE"
@@ -495,9 +495,6 @@ Configuration InstallCAM
 
 				Write-Host "Starting Tomcat Service for $using:AUIServiceName"
 				Set-Service $using:AUIServiceName -startuptype "automatic"
-
-				# Reboot machine - seems to need to happen to get Tomcat to run reliably.
-				$global:DSCMachineStatus = 1
 	        }
         }
 
@@ -529,10 +526,20 @@ Configuration InstallCAM
 				$CatalinaHomeLocation = $using:CatalinaHomeLocation
 				$catalinaBase = "$CatalinaHomeLocation" #\$using:AUIServiceName"
 
-                Write-Verbose "Install Nuget and AzureRM packages"
+                Write-Verbose "Ensure Nuget Package Provider and AzureRM module are installed"
 
-				Install-packageProvider -Name NuGet -Force
-				Install-Module -Name AzureRM -Force
+				If(-not [bool](Get-PackageProvider -ListAvailable | where {$_.Name -eq "NuGet"}))
+				{
+	                Write-Verbose "Installing NuGet"
+					Install-packageProvider -Name NuGet -Force
+				}
+
+				If(-not [bool](Get-InstalledModule | where {$_.Name -eq "AzureRM"}))
+				{
+	                Write-Verbose "Installing AzureRM"
+					Install-Module -Name AzureRM -Force
+				}
+				
 
                 Write-Verbose "Install_CAM"
 
@@ -1076,9 +1083,7 @@ graphURL=https\://graph.windows.net/
 				Set-Content $GaParamTargetFilePath $graphicsArmParamContent -Force
 
 
-		        Write-Host "Finished! Restarting AUI Tomcat."
-
-				Restart-Service $using:AUIServiceName
+		        Write-Host "Finished Creating default template parameters file data."
             }
 		}
 
@@ -1163,11 +1168,8 @@ graphURL=https\://graph.windows.net/
 				Write-Host "Tomcat Installer exit code: $LASTEXITCODE"
 				Start-Sleep -s 10  #TODO: Is this sleep ACTUALLY needed?
 
-				Write-Host "Starting Tomcat Service for $using:brokerServiceName"
+				Write-Host "Setting Tomcat Service for $using:brokerServiceName to automatically startup."
 				Set-Service $using:brokerServiceName -startuptype "automatic"
-
-				# Reboot machine - seems to need to happen to get Tomcat to run reliably or is there a big delay required? reboot for now :)
-				$global:DSCMachineStatus = 1
 	        }
         }
 
@@ -1191,8 +1193,8 @@ graphURL=https\://graph.windows.net/
 
 				copy "$using:LocalDLPath\$using:brokerWAR" ($catalinaBase + "\webapps")
 
-				$svc = get-service $using:brokerServiceName
-				if ($svc.Status -ne "Stopped") {$svc.stop()}
+				# $svc = get-service $using:brokerServiceName
+				# if ($svc.Status -ne "Stopped") {$svc.stop()}
 
 				Write-Host "Generating broker configuration file."
 				$targetDir = $catalinaBase + "\brokerproperty"
@@ -1329,15 +1331,13 @@ brokerLocale=en_US
 				& "keytool" -import -file "$env:systemdrive\$issuerCertFileName" -keystore ($env:classpath + "\security\cacerts") -storepass changeit -noprompt
                 $ErrorActionPreference = $eap
 
-		        Write-Host "Finished! Restarting Tomcat service for $using:brokerServiceName."
-
-				Restart-Service $using:brokerServiceName
+		        Write-Host "Finished importing LDAP certificate to keystore."
             }
 		}
 		
 		Script RegisterCam
 		{
-			DependsOn  = @("[Script]Install_Auth_file")
+			DependsOn  = @("[Script]Install_Auth_file", "[Script]Install_Broker")  # depends on both services being installed to ensure the reboot at the end will start both services properly.
 			GetScript  = { @{ Result = "RegisterCam" } }
 
             TestScript = { 
@@ -1513,6 +1513,10 @@ brokerLocale=en_US
 				if($camRegistrationError) {
 					throw $camRegistrationError
 				}
+
+
+				# Reboot machine to ensure all changes are picked up by all services.
+				$global:DSCMachineStatus = 1
 			}
 		}
     }
