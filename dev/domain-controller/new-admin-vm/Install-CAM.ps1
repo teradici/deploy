@@ -294,23 +294,21 @@ Configuration InstallCAM
 
 				Write-Host "Setting up Java paths and environment"
 
-				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
-
 				#set path. Don't add strings that are already there...
 
-				$NewPath = (Get-ItemProperty -Path "$Reg" -Name PATH).Path
-
-				#put java path in front of the oracle defined path
+				$NewPath = $env:Path
 				if ($NewPath -notlike "*"+$using:JavaBinLocation+"*")
 				{
-				  $NewPath= $using:JavaBinLocation + ’;’ + $NewPath
+    				#put java path in front of the Oracle defined path
+				    $NewPath= $using:JavaBinLocation + ";" + $NewPath
 				}
 
-				#these get added to the environment on next reboot
-				Set-ItemProperty -Path "$Reg" -Name PATH –Value $NewPath
-				Set-ItemProperty -Path "$Reg" -Name JAVA_HOME –Value $using:JavaRootLocation
-				Set-ItemProperty -Path "$Reg" -Name classpath –Value $using:JavaLibLocation
-
+				[System.Environment]::SetEnvironmentVariable("Path", $NewPath, "Machine")
+				[System.Environment]::SetEnvironmentVariable("JAVA_HOME", $using:JavaRootLocation, "Machine")
+				[System.Environment]::SetEnvironmentVariable("classpath", $using:JavaLibLocation, "Machine")
+				$env:Path = $NewPath
+				$env:JAVA_HOME = $using:JavaRootLocation
+				$env:classpath = $using:JavaLibLocation
 
 
 				Write-Host "Waiting for JVM.dll"
@@ -342,7 +340,7 @@ Configuration InstallCAM
 					}
 				}
 
-				# Reboot machine - seems to need to happen to get Tomcat to install??? Nope!
+				# Reboot machine - seems to need to happen to get Tomcat to install??? Perhaps not after environment fixes. Needs testing.
 				$global:DSCMachineStatus = 1
             }
         }
@@ -353,9 +351,7 @@ Configuration InstallCAM
             GetScript  = { @{ Result = "Install_Tomcat" } }
 
             TestScript = { 
-				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
-				$CatalinaPath = (Get-ItemProperty -Path "$Reg" -Name CATALINA_HOME -ErrorAction SilentlyContinue)
-				if ( $CatalinaPath )
+				if ( $env:CATALINA_HOME )
                 {
 					return $true
 				}
@@ -384,22 +380,16 @@ Configuration InstallCAM
 
 				Write-Host "Setting Paths and Tomcat environment"
 
-
-
-				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
-
-				$NewPath = (Get-ItemProperty -Path "$Reg" -Name PATH).Path
-
-				#put tomcat path at the end
+				$NewPath = $env:Path
 				if ($NewPath -notlike "*"+$CatalinaBinLocation+"*")
 				{
-				  $NewPath= $NewPath + ’;’ + $CatalinaBinLocation
+				    #put tomcat path at the end
+				    $NewPath= $NewPath + ";" + $CatalinaBinLocation
 				}
 
-				Set-ItemProperty -Path "$Reg" -Name PATH –Value $NewPath
-				Set-ItemProperty -Path "$Reg" -Name CATALINA_HOME –Value $CatalinaHomeLocation
-
-				# set the current environment CATALINA_HOME as well since the service installer will need that
+				[System.Environment]::SetEnvironmentVariable("Path", $NewPath, "Machine")
+				[System.Environment]::SetEnvironmentVariable("CATALINA_HOME", $CatalinaHomeLocation, "Machine")
+				$env:Path = $NewPath
 				$env:CATALINA_HOME = $CatalinaHomeLocation
 	        }
         }
@@ -418,9 +408,8 @@ Configuration InstallCAM
 				Write-Host "Configuring Tomcat for $using:AUIServiceName service"
 
 				$catalinaHome = $using:CatalinaHomeLocation
-				$catalinaBase = "$catalinaHome" #\$using:AUIServiceName"
-				# I don't think we need to set the registry
-				# Set-ItemProperty -Path "$Reg" -Name CATALINA_BASE –Value $using:CatalinaHomeLocation
+				$catalinaBase = "$catalinaHome" #\$using:AUIServiceName" <---- don't change this without changing log collector location currently in sumo-admin-vm.json
+
 				$env:CATALINA_BASE = $catalinaBase
 
 				# make new instance location - copying the directories specified
@@ -488,7 +477,7 @@ Configuration InstallCAM
 				netsh advfirewall firewall add rule name="Tomcat Port 8080" dir=in action=allow protocol=TCP localport=8080
 
 
-				# Install and start service for new config
+				# Install and set service to start automatically
 
 				& "$using:CatalinaBinLocation\service.bat" install $using:AUIServiceName
 				Write-Host "Tomcat Installer exit code: $LASTEXITCODE"
@@ -496,9 +485,6 @@ Configuration InstallCAM
 
 				Write-Host "Starting Tomcat Service for $using:AUIServiceName"
 				Set-Service $using:AUIServiceName -startuptype "automatic"
-
-				# Reboot machine - seems to need to happen to get Tomcat to run reliably.
-				$global:DSCMachineStatus = 1
 	        }
         }
 
@@ -530,10 +516,20 @@ Configuration InstallCAM
 				$CatalinaHomeLocation = $using:CatalinaHomeLocation
 				$catalinaBase = "$CatalinaHomeLocation" #\$using:AUIServiceName"
 
-                Write-Verbose "Install Nuget and AzureRM packages"
+                Write-Verbose "Ensure Nuget Package Provider and AzureRM module are installed"
 
-				Install-packageProvider -Name NuGet -Force
-				Install-Module -Name AzureRM -Force
+				If(-not [bool](Get-PackageProvider -ListAvailable | where {$_.Name -eq "NuGet"}))
+				{
+	                Write-Verbose "Installing NuGet"
+					Install-packageProvider -Name NuGet -Force
+				}
+
+				If(-not [bool](Get-InstalledModule | where {$_.Name -eq "AzureRM"}))
+				{
+	                Write-Verbose "Installing AzureRM"
+					Install-Module -Name AzureRM -Force
+				}
+				
 
                 Write-Verbose "Install_CAM"
 
@@ -855,11 +851,8 @@ graphURL=https\://graph.windows.net/
 
 				Write-Host "Update environment so AZURE_AUTH_LOCATION points to auth file."
 
-				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
-
-				Set-ItemProperty -Path "$Reg" -Name AZURE_AUTH_LOCATION –Value $authFilePath
-
-
+				[System.Environment]::SetEnvironmentVariable("AZURE_AUTH_LOCATION", $authFilePath, "Machine")
+				$env:AZURE_AUTH_LOCATION = $authFilePath
 
 				#Get local version of passed-in credentials
 				$localVMAdminCreds = $using:VMAdminCreds
@@ -972,14 +965,14 @@ graphURL=https\://graph.windows.net/
 
 				# deploy application gateway
 				$parameters = @{}
-				$parameters.Add(“subnetRef”, $using:AGsubnetRef)
-				$parameters.Add(“skuName”, "Standard_Small")
-				$parameters.Add(“capacity”, 1)
-				$parameters.Add(“backendIpAddressDefault”, "$using:AGbackendIpAddressDefault")
-				$parameters.Add(“backendIpAddressForPathRule1”, "$using:AGbackendIpAddressForPathRule1")
-				$parameters.Add(“pathMatch1”, "/pcoip-broker/*")
-				$parameters.Add(“certData”, "$fileContentEncoded")
-				$parameters.Add(“certPassword”, "$certPswd")
+				$parameters.Add("subnetRef", $using:AGsubnetRef)
+				$parameters.Add("skuName", "Standard_Small")
+				$parameters.Add("capacity", 1)
+				$parameters.Add("backendIpAddressDefault", "$using:AGbackendIpAddressDefault")
+				$parameters.Add("backendIpAddressForPathRule1", "$using:AGbackendIpAddressForPathRule1")
+				$parameters.Add("pathMatch1", "/pcoip-broker/*")
+				$parameters.Add("certData", "$fileContentEncoded")
+				$parameters.Add("certPassword", "$certPswd")
 
 				$LocalAGtemplateUri = $using:AGtemplateUri
 				$tUri = $LocalAGtemplateUri.GetNetworkCredential().Password
@@ -1080,9 +1073,7 @@ graphURL=https\://graph.windows.net/
 				Set-Content $GaParamTargetFilePath $graphicsArmParamContent -Force
 
 
-		        Write-Host "Finished! Restarting AUI Tomcat."
-
-				Restart-Service $using:AUIServiceName
+		        Write-Host "Finished Creating default template parameters file data."
             }
 		}
 
@@ -1099,8 +1090,8 @@ graphURL=https\://graph.windows.net/
 
 				$catalinaHome = $using:CatalinaHomeLocation
 				$catalinaBase = "$catalinaHome\$using:brokerServiceName"
-				# I don't think we need to set the registry
-				# Set-ItemProperty -Path "$Reg" -Name CATALINA_BASE –Value $using:CatalinaHomeLocation
+
+                #set the current (temporary) environment
 				$env:CATALINA_BASE = $catalinaBase
 
 				# make new broker instance location - copying the directories specified
@@ -1167,11 +1158,8 @@ graphURL=https\://graph.windows.net/
 				Write-Host "Tomcat Installer exit code: $LASTEXITCODE"
 				Start-Sleep -s 10  #TODO: Is this sleep ACTUALLY needed?
 
-				Write-Host "Starting Tomcat Service for $using:brokerServiceName"
+				Write-Host "Setting Tomcat Service for $using:brokerServiceName to automatically startup."
 				Set-Service $using:brokerServiceName -startuptype "automatic"
-
-				# Reboot machine - seems to need to happen to get Tomcat to run reliably or is there a big delay required? reboot for now :)
-				$global:DSCMachineStatus = 1
 	        }
         }
 
@@ -1195,8 +1183,8 @@ graphURL=https\://graph.windows.net/
 
 				copy "$using:LocalDLPath\$using:brokerWAR" ($catalinaBase + "\webapps")
 
-				$svc = get-service $using:brokerServiceName
-				if ($svc.Status -ne "Stopped") {$svc.stop()}
+				# $svc = get-service $using:brokerServiceName
+				# if ($svc.Status -ne "Stopped") {$svc.stop()}
 
 				Write-Host "Generating broker configuration file."
 				$targetDir = $catalinaBase + "\brokerproperty"
@@ -1254,9 +1242,6 @@ brokerLocale=en_US
 				Write-Host "Broker configuration file generated."
 
 				#----- setup security trust for LDAP certificate from DC -----
-
-				#first, setup the Java options
-				$Reg = "Registry::HKLM\System\CurrentControlSet\Control\Session Manager\Environment"
 
 				#second, get the certificate file
 
@@ -1336,11 +1321,35 @@ brokerLocale=en_US
 				& "keytool" -import -file "$env:systemdrive\$issuerCertFileName" -keystore ($env:classpath + "\security\cacerts") -storepass changeit -noprompt
                 $ErrorActionPreference = $eap
 
-		        Write-Host "Finished! Restarting Tomcat service for $using:brokerServiceName."
-
-				Restart-Service $using:brokerServiceName
+		        Write-Host "Finished importing LDAP certificate to keystore."
             }
-        }
+		}
+		
+		Script RegisterCam
+		{
+			DependsOn  = @("[Script]Install_Auth_file", "[Script]Install_Broker")  # depends on both services being installed to ensure the reboot at the end will start both services properly.
+			GetScript  = { @{ Result = "RegisterCam" } }
+
+            TestScript = { 
+				if ( $env:CAM_USERNAME ) # Dummy testscript placeholder until Antar merge.
+				{
+					return $true
+				} else {
+					return $false
+				}
+			}
+
+            SetScript  = {
+
+
+						[System.Environment]::SetEnvironmentVariable("CAM_USERNAME", "testuser", "Machine")
+						$env:CAM_USERNAME = "testuser"
+
+
+				# Reboot machine to ensure all changes are picked up by all services.
+				$global:DSCMachineStatus = 1
+			}
+		}
     }
 }
 
