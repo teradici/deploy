@@ -1001,7 +1001,7 @@ graphURL=https\://graph.windows.net/
     "contentVersion": "1.0.0.0",
     "parameters": {
 		"vmSize": { "value": "%vmSize%" },
-        "CAMDeploymentBlobSource": { "value": "https://teradeploy.blob.core.windows.net/binaries" },
+        "CAMDeploymentBlobSource": { "value": "https://teradeploy.blob.core.windows.net/antarbinaries" },
         "existingSubnetName": { "value": "$using:existingSubnetName" },
         "domainUsername": { "value": "$DomainAdminUsername" },
         "domainPassword": {
