@@ -1,0 +1,33 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+    "parameters": {
+        "domainAdminUsername": {
+            "value": "GEN-USER"
+        },
+        "domainAdminPassword": {
+            "value": "GEN-PASSWORD"
+        },
+        "domainName": {
+            "value": "mydomain.com"
+        },
+        "registrationCode": {
+            "value": "xxxxxxxxxxxx@nnnn-nnnn-nnnn-nnnn"
+        },
+        "AzureAdminUsername": {
+            "value": "username@example.com"
+        },
+        "AzureAdminPassword": {
+            "value": "GEN-PASSWORD"
+        },
+        "tenantID": {
+            "value": "null"
+        },
+        "CAMDeploymentBlobSource": {
+            "value": "https://teradeploy.blob.core.windows.net/binaries"
+        },
+        "_artifactsLocation": {
+            "value": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller"
+        }
+    }
+}
