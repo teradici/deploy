@@ -127,9 +127,6 @@
       "type": "Microsoft.Resources/deployments",
       "name": "CreateAdminMachine",
       "apiVersion": "2016-02-01",
-      "dependsOn": [
-        "Microsoft.Resources/deployments/SetDNSForVNet"
-      ],
       "properties": {
         "mode": "Incremental",
         "templateLink": {
@@ -270,8 +267,7 @@
       "name": "CreateCM",
       "apiVersion": "2016-02-01",
       "dependsOn": [
-        "Microsoft.Resources/deployments/CreateNetworkSGs",
-        "Microsoft.Resources/deployments/SetDNSForVNet"
+        "Microsoft.Resources/deployments/CreateNetworkSGs"
       ],
       "properties": {
         "mode": "Incremental",
