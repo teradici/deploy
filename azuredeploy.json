@@ -97,249 +97,93 @@
   },
   "resources": [
     {
-      "type": "Microsoft.Storage/storageAccounts",
-      "name": "[variables('storageAccountName')]",
-      "apiVersion": "2016-01-01",
-      "location": "[resourceGroup().location]",
-      "sku": {
-        "name": "Standard_LRS"
-      },
-      "kind": "Storage",
-      "properties": {}
-    },
-    {
-      "type": "Microsoft.Network/publicIPAddresses",
-      "name": "[variables('publicIPAddressName')]",
-      "apiVersion": "2016-03-30",
-      "location": "[resourceGroup().location]",
-      "properties": {
-        "publicIPAllocationMethod": "Static"
-      }
-    },
-    {
       "type": "Microsoft.Resources/deployments",
-      "name": "VNet",
+      "name": "Root",
       "apiVersion": "2016-02-01",
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/new-vnet/vnet.json', parameters('_artifactsLocationSasToken'))]",
+          "uri": "[concat(parameters('_artifactsLocation'), '/root/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          "virtualNetworkName": {
-            "value": "[variables('virtualNetworkName')]"
-          },
-          "virtualNetworkAddressRange": {
-            "value": "[variables('virtualNetworkAddressRange')]"
-          },
-          "subnetName": {
-            "value": "[variables('adSubnetName')]"
-          },
-          "subnetRange": {
-            "value": "[variables('adSubnetAddressPrefix')]"
-          },
-          "gatewaySubnetName": {
-            "value": "[variables('gatewaySubnetName')]"
-          },
-          "gatewaySubnetRange": {
-            "value": "[variables('gatewaySubnetAddressPrefix')]"
-          }
-        }
-      }
-    },
-    {
-      "type": "Microsoft.Resources/deployments",
-      "name": "CreateNetworkSGs",
-      "apiVersion": "2016-02-01",
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/new-sg-s/new-sg-s.json', parameters('_artifactsLocationSasToken'))]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "dcnsgName": {
-            "value": "[variables('dcnsgName')]"
-          },
-          "cmnsgName": {
-            "value": "[variables('cmnsgName')]"
-          }
-        }
-      }
-    },
-    {
-      "type": "Microsoft.Network/networkInterfaces",
-      "name": "[variables('adNicName')]",
-      "apiVersion": "2016-03-30",
-      "location": "[resourceGroup().location]",
-      "dependsOn": [
-        "Microsoft.Resources/deployments/VNet",
-        "Microsoft.Resources/deployments/CreateNetworkSGs"
-      ],
-      "properties": {
-        "networkSecurityGroup": {
-          "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('dcnsgName'))]"
-        },
-        "ipConfigurations": [
-          {
-            "name": "ipconfig1",
-            "properties": {
-              "privateIPAllocationMethod": "Static",
-              "privateIPAddress": "[variables('adNicIPAddress')]",
-              "subnet": {
-                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('adSubnetName'))]"
-              },
-              "publicIPAddress": {
-                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
-      "type": "Microsoft.Compute/virtualMachines",
-      "name": "[variables('adVMName')]",
-      "apiVersion": "2015-06-15",
-      "location": "[resourceGroup().location]",
-      "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
-        "[resourceId('Microsoft.Network/networkInterfaces', variables('adNicName'))]"
-      ],
-      "properties": {
-        "hardwareProfile": {
-          "vmSize": "Standard_D1_v2"
-        },
-        "osProfile": {
-          "computerName": "[variables('adVMName')]",
-          "adminUsername": "[parameters('domainAdminUsername')]",
-          "adminPassword": "[parameters('domainAdminPassword')]"
-        },
-        "storageProfile": {
-          "imageReference": {
-            "publisher": "MicrosoftWindowsServer",
-            "offer": "WindowsServer",
-            "sku": "2016-Datacenter",
-            "version": "latest"
-          },
-          "osDisk": {
-            "name": "osdisk",
-            "vhd": {
-              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))).primaryEndpoints.blob, 'vhds/', variables('adVMName'), '-os-disk.vhd')]"
-            },
-            "caching": "ReadWrite",
-            "createOption": "FromImage"
-          },
-          "dataDisks": [
-            {
-              "vhd": {
-                "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))).primaryEndpoints.blob, 'vhds/', variables('adVMName'), '-data-disk.vhd')]"
-              },
-              "name": "[concat(variables('adVMName'), '-data-disk')]",
-              "caching": "None",
-              "createOption": "Empty",
-              "diskSizeGB": "100",
-              "lun": 0
-            }
-          ]
-        },
-        "networkProfile": {
-          "networkInterfaces": [
-            {
-              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('adNicName'))]"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "type": "Microsoft.Resources/deployments",
-      "name": "ConfigureDCandCA",
-      "apiVersion": "2016-02-01",
-      "dependsOn": [
-        "[resourceId('Microsoft.Compute/virtualMachines', variables('adVMName'))]"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/configure-dc-and-ca/configure-dc-and-ca.json', parameters('_artifactsLocationSasToken'))]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "existingVNETName": {
-            "value": "[variables('virtualNetworkName')]"
-          },
-          "domainControllerVMName": {
-            "value": "[variables('adVMName')]"
-          },
           "domainName": {
             "value": "[parameters('domainName')]"
           },
-          "adminUsername": {
+          "domainAdminUsername": {
             "value": "[parameters('domainAdminUsername')]"
           },
-          "adminPassword": {
+          "domainAdminPassword": {
             "value": "[parameters('domainAdminPassword')]"
           },
-          "adminDesktopVMName": {
-            "value": "[variables('adminDesktopVMName')]"
-          },
           "_artifactsLocation": {
-            "value": "[concat(parameters('_artifactsLocation'), '/configure-dc-and-ca')]"
+            "value": "[concat(parameters('_artifactsLocation'), '/root')]"
+          },
+          "_artifactsLocationSasToken": {
+            "value": "[parameters('_artifactsLocationSasToken')]"
           }
         }
       }
     },
+
     {
       "type": "Microsoft.Resources/deployments",
-      "name": "SetDNSForVNet",
+      "name": "Frontend",
       "apiVersion": "2016-02-01",
       "dependsOn": [
-        "Microsoft.Resources/deployments/ConfigureDCandCA"
+        "Microsoft.Resources/deployments/Root"
       ],
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/new-vnet/vnet.json', parameters('_artifactsLocationSasToken'))]",
+          "uri": "[concat(parameters('_artifactsLocation'), '/frontend/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          "virtualNetworkName": {
-            "value": "[variables('virtualNetworkName')]"
+          "domainName": {
+            "value": "[parameters('domainName')]"
           },
-          "virtualNetworkAddressRange": {
-            "value": "[variables('virtualNetworkAddressRange')]"
+          "domainAdminUsername": {
+            "value": "[parameters('domainAdminUsername')]"
           },
-          "subnetName": {
-            "value": "[variables('adSubnetName')]"
+          "domainAdminPassword": {
+            "value": "[parameters('domainAdminPassword')]"
           },
-          "subnetRange": {
-            "value": "[variables('adSubnetAddressPrefix')]"
+          "AzureAdminUsername": {
+            "value": "[parameters('AzureAdminUsername')]"
           },
-          "gatewaySubnetName": {
-            "value": "[variables('gatewaySubnetName')]"
+          "AzureAdminPassword": {
+            "value": "[parameters('AzureAdminPassword')]"
           },
-          "gatewaySubnetRange": {
-            "value": "[variables('gatewaySubnetAddressPrefix')]"
+          "tenantID": {
+            "value": "[parameters('tenantID')]"
           },
-          "DNSServerAddress": {
-            "value": [ "[variables('adNicIPAddress')]" ]
+          "registrationCode": {
+            "value": "[parameters('registrationCode')]"
+          },
+          "CAMDeploymentBlobSource": {
+            "value": "[parameters('CAMDeploymentBlobSource')]"
+          },
+          "_artifactsLocation": {
+            "value": "[concat(parameters('_artifactsLocation'), '/frontend')]"
+          },
+          "_artifactsLocationSasToken": {
+            "value": "[parameters('_artifactsLocationSasToken')]"
           }
         }
       }
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "name": "CreateAgentMachine",
+      "name": "CreateEndUserApplicationMachine",
       "apiVersion": "2016-02-01",
       "dependsOn": [
-        "Microsoft.Resources/deployments/SetDNSForVNet"
+        "Microsoft.Resources/deployments/Root"
       ],
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/new-agent-vm/server2016-standard-agent.json', parameters('_artifactsLocationSasToken'))]",
+          "uri": "[concat(parameters('_artifactsLocation'), '/end-user-application-machines/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
@@ -384,205 +228,6 @@
           },
           "registrationCode": {
             "value": "[parameters('registrationCode')]"
-          },
-          "storageAccountName": {
-            "value": "[variables('storageAccountName')]"
-          }
-        }
-      }
-    },
-    {
-      "type": "Microsoft.Resources/deployments",
-      "name": "CreateAdminMachine",
-      "apiVersion": "2016-02-01",
-      "dependsOn": [
-        "Microsoft.Resources/deployments/SetDNSForVNet"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/new-vm-join-domain/new-vm-join-domain.json', parameters('_artifactsLocationSasToken'))]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "existingVNETName": {
-            "value": "[variables('virtualNetworkName')]"
-          },
-          "existingSubnetName": {
-            "value": "[variables('adSubnetName')]"
-          },
-          "dnsLabelPrefix": {
-            "value": "[concat(variables('serverRootName'), '-au')]"
-          },
-          "vmSize": {
-            "value": "Standard_A1_v2"
-          },
-          "privateIP": {
-            "value": "[variables('auPrivateIP')]"
-          },
-          "domainToJoin": {
-            "value": "[parameters('domainName')]"
-          },
-          "domainUsername": {
-            "value": "[parameters('domainAdminUsername')]"
-          },
-          "domainPassword": {
-            "value": "[parameters('domainAdminPassword')]"
-          },
-          "domainJoinOptions": {
-            "value": 3
-          },
-          "vmAdminUsername": {
-            "value": "[parameters('domainAdminUsername')]"
-          },
-          "vmAdminPassword": {
-            "value": "[parameters('domainAdminPassword')]"
-          },
-          "storageAccountName": {
-            "value": "[variables('storageAccountName')]"
-          }
-        }
-      }
-    },
-    {
-      "type": "Microsoft.Resources/deployments",
-      "name": "ConfigureAdminMachine",
-      "apiVersion": "2016-02-01",
-      "dependsOn": [
-        "Microsoft.Resources/deployments/CreateAdminMachine"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/new-admin-vm/new-admin-vm.json', parameters('_artifactsLocationSasToken'))]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "existingVNETName": {
-            "value": "[variables('virtualNetworkName')]"
-          },
-          "existingSubnetName": {
-            "value": "[variables('adSubnetName')]"
-          },
-          "dnsLabelPrefix": {
-            "value": "[concat(variables('serverRootName'), '-au')]"
-          },
-          "domainToJoin": {
-            "value": "[parameters('domainName')]"
-          },
-          "domainGroupAppServersJoin": {
-            "value": "[variables('domainGroupAppServersJoin')]"
-          },
-          "domainUsername": {
-            "value": "[parameters('domainAdminUsername')]"
-          },
-          "domainPassword": {
-            "value": "[parameters('domainAdminPassword')]"
-          },
-          "AzureAdminUsername": {
-            "value": "[parameters('AzureAdminUsername')]"
-          },
-          "AzureAdminPassword": {
-            "value": "[parameters('AzureAdminPassword')]"
-          },
-          "tenantID": {
-            "value": "[parameters('tenantID')]"
-          },
-          "domainJoinOptions": {
-            "value": 3
-          },
-          "vmAdminUsername": {
-            "value": "[parameters('domainAdminUsername')]"
-          },
-          "vmAdminPassword": {
-            "value": "[parameters('domainAdminPassword')]"
-          },
-          "registrationCode": {
-            "value": "[parameters('registrationCode')]"
-          },
-          "domainControllerName": {
-            "value": "[variables('adVMName')]"
-          },
-          "blobSource": {
-            "value": "[parameters('CAMDeploymentBlobSource')]"
-          },
-          "storageAccountName": {
-            "value": "[variables('storageAccountName')]"
-          },
-          "adminDesktopVMName": {
-            "value": "[variables('adminDesktopVMName')]"
-          },
-          "_artifactsLocation": {
-            "value": "[concat(parameters('_artifactsLocation'), '/new-admin-vm')]"
-          },
-          "_agentArtifactsLocation": {
-              "value": "[concat(parameters('_artifactsLocation'), '/new-agent-vm')]"
-          },
-            "AGsubnetRef": {
-                "value": "[concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')),'/subnets/',variables('gatewaySubnetName'))]"
-            },
-            "AGbackendIpAddressDefault": {
-                "value": "[variables('auPrivateIP')]"
-            },
-            "AGbackendIpAddressForPathRule1": {
-                "value": "[variables('cmPrivateIP')]"
-            },
-            "AGtemplateUri": {
-            "value": "[concat(parameters('_artifactsLocation'), '/new-app-gateway/azuredeploy.json', parameters('_artifactsLocationSasToken'))]"
-          }
-        }
-      }
-    },
-    {
-      "type": "Microsoft.Resources/deployments",
-      "name": "CreateCM",
-      "apiVersion": "2016-02-01",
-      "dependsOn": [
-        "Microsoft.Resources/deployments/CreateNetworkSGs",
-        "Microsoft.Resources/deployments/SetDNSForVNet"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/new-cm-sg-ls-vm/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "existingVNETName": {
-            "value": "[variables('virtualNetworkName')]"
-          },
-          "existingSubnetName": {
-            "value": "[variables('adSubnetName')]"
-          },
-          "cmnsgName": {
-            "value": "[variables('cmnsgName')]"
-          },
-          "dnsLabelPrefix": {
-            "value": "[concat(variables('serverRootName'), '-cm')]"
-          },
-          "vmSize": {
-            "value": "Standard_A1_v2"
-          },
-          "vmAdminUsername": {
-            "value": "[parameters('domainAdminUsername')]"
-          },
-          "vmAdminPassword": {
-            "value": "[parameters('domainAdminPassword')]"
-          },
-          "brokerFQDN": {
-            "value": "[concat(variables('serverRootName'), '-au','.',parameters('domainName'),':',variables('brokerPort'))]"
-          },
-          "privateIP": {
-            "value": "[variables('cmPrivateIP')]"
-          },
-          "storageAccountName": {
-            "value": "[variables('storageAccountName')]"
-          },
-          "_artifactsLocation": {
-            "value": "[concat(parameters('_artifactsLocation'), '/new-cm-sg-ls-vm')]"
-          },
-          "_artifactsLocationSasToken": {
-            "value": "[parameters('_artifactsLocationSasToken')]"
           }
         }
       }
