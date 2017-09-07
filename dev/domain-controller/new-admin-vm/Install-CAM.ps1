@@ -1344,6 +1344,7 @@ brokerLocale=en_US
 			GetScript  = { @{ Result = "RegisterCam" } }
 
             TestScript = { 
+
 				if ( $env:CAM_USERNAME -and $env:CAM_PASSWORD -and $env:CAM_TENANTID -and $env:CAM_URI -and $env:CAM_DEPLOYMENTID)
 				{
 					return $true
