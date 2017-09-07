@@ -21,7 +21,6 @@
             }
         },
         "vmSize": {
-            "defaultValue": "Standard_D2_v2",
             "type": "string",
             "metadata": {
                 "description": "The size of the virtual machines"
@@ -154,19 +153,19 @@
             "value": "[parameters('domainToJoin')]"
           },
           "domainUsername": {
-            "value": "[parameters('domainAdminUsername')]"
+            "value": "[parameters('domainUsername')]"
           },
           "domainPassword": {
-            "value": "[parameters('domainAdminPassword')]"
+            "value": "[parameters('domainPassword')]"
           },
           "domainJoinOptions": {
             "value": 3
           },
           "vmAdminUsername": {
-            "value": "[parameters('domainAdminUsername')]"
+            "value": "[parameters('domainUsername')]"
           },
           "vmAdminPassword": {
-            "value": "[parameters('domainAdminPassword')]"
+            "value": "[parameters('domainPassword')]"
           },
           "domainGroupToJoin": {
             "value": "[parameters('domainGroupToJoin')]"
