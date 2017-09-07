@@ -123,7 +123,7 @@
     },
     "variables": {
 
-        "apiVersion": "2017-06-01",
+        "apiVersion": "2015-06-15",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
@@ -261,7 +261,7 @@
         {
           "type": "Microsoft.Compute/virtualMachines/extensions",
           "name": "[concat(parameters('dnsLabelPrefix'),'/PCoIPAgentDscExtension')]",
-          "apiVersion": "[variables('apiVersion')]",
+          "apiVersion": "2017-03-30",
           "location": "[resourceGroup().location]",
           "dependsOn": [
               "[resourceId('Microsoft.Compute/virtualMachines/extensions',parameters('dnsLabelPrefix'),'joindomain')]"
