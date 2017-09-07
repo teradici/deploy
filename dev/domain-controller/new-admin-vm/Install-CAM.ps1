@@ -112,7 +112,10 @@ Configuration InstallCAM
 		[System.Management.Automation.PSCredential]$AGtemplateUri,
 
 		[Parameter(Mandatory=$true)]
-		[string]$camSaasUri
+		[string]$camSaasUri,
+
+		[Parameter(Mandatory=$false)]
+		[bool]$verifyCAMSaaSCertificate=$true
 	)
 
 	$standardVMSize = "Standard_D2_v2_Promo"
@@ -1351,19 +1354,23 @@ brokerLocale=en_US
 
             SetScript  = {
 				##
-				# Do this so SSL Errors are ignored
-				add-type @"
-	using System.Net;
-	using System.Security.Cryptography.X509Certificates;
-	public class TrustAllCertsPolicy : ICertificatePolicy {
-		public bool CheckValidationResult(
-			ServicePoint srvPoint, X509Certificate certificate,
-			WebRequest request, int certificateProblem) {
-			return true;
-		}
-	}
+				$certificatePolicy = [System.Net.ServicePointManager]::CertificatePolicy
+
+				if (!$using:verifyCAMSaaSCertificate) {
+					# Do this so SSL Errors are ignored
+					add-type @"
+					using System.Net;
+					using System.Security.Cryptography.X509Certificates;
+					public class TrustAllCertsPolicy : ICertificatePolicy {
+						public bool CheckValidationResult(
+							ServicePoint srvPoint, X509Certificate certificate,
+							WebRequest request, int certificateProblem) {
+							return true;
+						}
+					}
 "@
-				[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+					[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+				}
 				##
 
 				# Read in Authorization Information
@@ -1514,6 +1521,8 @@ brokerLocale=en_US
 					throw $camRegistrationError
 				}
 
+				# restore CertificatePolicy 
+				[System.Net.ServicePointManager]::CertificatePolicy = $certificatePolicy
 
 				# Reboot machine to ensure all changes are picked up by all services.
 				$global:DSCMachineStatus = 1
