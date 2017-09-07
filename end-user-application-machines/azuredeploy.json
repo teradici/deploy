@@ -107,7 +107,8 @@
         "videoDriverUrl": "",
         "registrationCode": "[parameters('registrationCode')]",
         "enableAutoShutdown" : false,
-    "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'euam')]"
+        "adSubnetName": "Subnet-CloudAccessManager",
+        "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'euam')]"
   },
   "resources": [
     {
@@ -144,13 +145,13 @@
             "value": "[variables('adSubnetName')]"
           },
           "dnsLabelPrefix": {
-            "value": "[variables('adminDesktopVMName')]"
+            "value": "[parameters('dnsLabelPrefix')]"
           },
           "vmSize": {
-            "value": "Standard_D2_v2_Promo"
+            "value": "Standard_D2_v3"
           },
           "domainToJoin": {
-            "value": "[parameters('domainName')]"
+            "value": "[parameters('domainToJoin')]"
           },
           "domainUsername": {
             "value": "[parameters('domainAdminUsername')]"
@@ -168,7 +169,7 @@
             "value": "[parameters('domainAdminPassword')]"
           },
           "domainGroupToJoin": {
-            "value": "[variables('domainGroupAppServersJoin')]"
+            "value": "[parameters('domainGroupToJoin')]"
           },
           "_artifactsLocation": {
             "value": "[concat(parameters('_artifactsLocation'), '/new-agent-vm')]"

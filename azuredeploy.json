@@ -224,7 +224,7 @@
             "value": "[variables('domainGroupAppServersJoin')]"
           },
           "_artifactsLocation": {
-            "value": "[concat(parameters('_artifactsLocation'), '/new-agent-vm')]"
+            "value": "[concat(parameters('_artifactsLocation'), '/end-user-application-machines')]"
           },
           "CAMDeploymentBlobSource": {
             "value": "[parameters('CAMDeploymentBlobSource')]"
