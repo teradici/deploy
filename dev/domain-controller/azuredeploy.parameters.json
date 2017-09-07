@@ -24,13 +24,13 @@
             "value": "null"
         },
         "CAMDeploymentBlobSource": {
-            "value": "https://teradeploy.blob.core.windows.net/antarbinaries"
+            "value": "https://teradeploy.blob.core.windows.net/binaries"
         },
         "_artifactsLocation": {
-            "value": "https://raw.githubusercontent.com/teradici/deploy/antar/dev/domain-controller"
+            "value": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller"
         },
         "camSaasUri": {
-            "value": "https://cam-staging.teradici.com"
+            "value": "https://cam-antar.teradici.com"
         },
         "verifyCAMSaaSCertificate": {
             "value": true

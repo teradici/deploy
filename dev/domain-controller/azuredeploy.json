@@ -51,7 +51,7 @@
     },
     "CAMDeploymentBlobSource": {
       "type": "string",
-      "defaultValue": "https://teradeploy.blob.core.windows.net/antarbinaries",
+      "defaultValue": "https://teradeploy.blob.core.windows.net/binaries",
       "metadata": {
         "description": "The location of the blobs for admin GUI machine installation"
       }
@@ -61,7 +61,7 @@
       "metadata": {
         "description": "The location of resources, such as templates and DSC modules, that the template depends on"
       },
-      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/antar/dev/domain-controller"
+      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller"
     },
     "_artifactsLocationSasToken": {
       "type": "securestring",
@@ -75,7 +75,7 @@
       "metadata": {
         "description": "URI for the CAM SAAS"
       },
-      "defaultValue": "https://cam-staging.teradici.com"
+      "defaultValue": "https://cam-antar.teradici.com"
     },
     "verifyCAMSaaSCertificate": {
       "type": "bool",
