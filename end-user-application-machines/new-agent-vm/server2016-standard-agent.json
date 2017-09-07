@@ -150,7 +150,7 @@
             "adminUserName": "[parameters('vmAdminUsername')]",
             "adminPassword": "[parameters('vmAdminPassword')]",
             "vmSize": "[parameters('vmSize')]",
-            "nicName": "[parameters('nicName')]",
+            "nicName": "[variables('nicName')]",
             "os": "[variables('osSettings')[parameters('osType')]]"
         },
 
