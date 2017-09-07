@@ -38,6 +38,24 @@
         "alive":  false
     },
     {
+        "name":  "CAMPOC_Teradici_CAMBroker_Tomcat_Logs",
+        "category":  "CAMPOC/Teradici/CAMBroker/Logs",
+        "automaticDateParsing":  true,
+        "multilineProcessingEnabled":  false,
+        "useAutolineMatching":  false,
+        "forceTimeZone":  false,
+        "timeZone":  "Etc/UTC",
+        "filters":  [
+                    ],
+        "cutoffTimestamp": 0,
+        "encoding":  "UTF-8",
+        "pathExpression":  "C:\\tomcat\\apache-tomcat-*\\CAMBroker\\logs\\*.log",
+        "blacklist":  [
+                      ],
+        "sourceType":  "LocalFile",
+        "alive":  false
+    },
+    {
         "name":"CAMPOC_Windows_Events",
         "category":"CAMPOC/Teradici/Windows/Events",
         "automaticDateParsing":true,

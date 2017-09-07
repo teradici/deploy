@@ -112,6 +112,12 @@
                 "description": "Storage account to use for VM data and VHD's"
             }
         },
+        "adminDesktopVMName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the PCoIP powered desktop created for the admin"
+            }
+        },
         "_artifactsLocation": {
             "type": "string",
             "metadata": {
@@ -153,6 +159,18 @@
             "type": "securestring",
             "metadata": {
                 "description": "URI for the application gateway deployment ARM Template"
+            }
+        },
+        "camSaasUri": {
+            "type": "string",
+            "metadata": {
+                "description": "URI for the CAM SAAS"
+            }
+        },
+        "verifyCAMSaaSCertificate": {
+            "type": "bool",
+            "metadata": {
+                "description": "a flag to indicate whether to verify CAM SaaS Server certificate. True means to verify."
             }
         }
     },
@@ -205,6 +223,9 @@
                             "UserName": "dummy",
                             "Password": "PrivateSettingsRef:registrationCode"
                         },
+                        "adminDesktopVMName" : "[parameters('adminDesktopVMName')]",
+                        "camSaasUri" : "[parameters('camSaasUri')]",
+                        "verifyCAMSaaSCertificate": "[parameters('verifyCAMSaaSCertificate')]",
                         "DCVMName": "[parameters('domainControllerName')]",
                         "RGName": "[resourceGroup().name]",
                         "existingVNETName": "[parameters('existingVNETName')]",

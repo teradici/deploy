@@ -57,6 +57,9 @@ Configuration InstallCAM
         [String]$domainFQDN,
 
         [Parameter(Mandatory)]
+		[String]$adminDesktopVMName,
+
+        [Parameter(Mandatory)]
         [String]$domainGroupAppServersJoin,
 
         [Parameter(Mandatory)]
@@ -106,7 +109,13 @@ Configuration InstallCAM
 		[string]$AGbackendIpAddressForPathRule1,
 
 		[Parameter(Mandatory=$true)] #passed as credential to prevent logging of any embedded access keys
-		[System.Management.Automation.PSCredential]$AGtemplateUri
+		[System.Management.Automation.PSCredential]$AGtemplateUri,
+
+		[Parameter(Mandatory=$true)]
+		[string]$camSaasUri,
+
+		[Parameter(Mandatory=$false)]
+		[bool]$verifyCAMSaaSCertificate=$true
 	)
 
 	$standardVMSize = "Standard_D2_v2_Promo"
@@ -128,6 +137,10 @@ Configuration InstallCAM
 
 	$brokerServiceName = "CAMBroker"
 	$AUIServiceName = "CAMAUI"
+
+	# Retry for CAM Registration
+	$retryCount = 3
+	$delay = 10
 
 	Import-DscResource -ModuleName xPSDesiredStateConfiguration
 
@@ -991,7 +1004,7 @@ graphURL=https\://graph.windows.net/
     "contentVersion": "1.0.0.0",
     "parameters": {
 		"vmSize": { "value": "%vmSize%" },
-        "CAMDeploymentBlobSource": { "value": "https://teradeploy.blob.core.windows.net/binaries" },
+        "CAMDeploymentBlobSource": { "value": "https://teradeploy.blob.core.windows.net/antarbinaries" },
         "existingSubnetName": { "value": "$using:existingSubnetName" },
         "domainUsername": { "value": "$DomainAdminUsername" },
         "domainPassword": {
@@ -1331,7 +1344,8 @@ brokerLocale=en_US
 			GetScript  = { @{ Result = "RegisterCam" } }
 
             TestScript = { 
-				if ( $env:CAM_USERNAME ) # Dummy testscript placeholder until Antar merge.
+
+				if ( $env:CAM_USERNAME -and $env:CAM_PASSWORD -and $env:CAM_TENANTID -and $env:CAM_URI -and $env:CAM_DEPLOYMENTID)
 				{
 					return $true
 				} else {
@@ -1340,11 +1354,176 @@ brokerLocale=en_US
 			}
 
             SetScript  = {
+				##
+				$certificatePolicy = [System.Net.ServicePointManager]::CertificatePolicy
+
+				if (!$using:verifyCAMSaaSCertificate) {
+					# Do this so SSL Errors are ignored
+					add-type @"
+					using System.Net;
+					using System.Security.Cryptography.X509Certificates;
+					public class TrustAllCertsPolicy : ICertificatePolicy {
+						public bool CheckValidationResult(
+							ServicePoint srvPoint, X509Certificate certificate,
+							WebRequest request, int certificateProblem) {
+							return true;
+						}
+					}
+"@
+					[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+				}
+				##
+
+				# Read in Authorization Information
+				# Use this to retrieve client, key, tenant and subscription from the auth file
+				Get-Content "$env:AZURE_AUTH_LOCATION" | Foreach-Object{
+					$var = $_.Split('=', 2)
+					New-Variable -Name $var[0] -Value $var[1]
+				}
+
+				$camSaasBaseUri = $using:camSaasUri
+				$camRegistrationError = ""
+				for($idx = 0; $idx -lt $using:retryCount; $idx++) {
+					try {
+						$userRequest = @{
+							username = $client
+							password = $key
+							tenantId = $tenant
+						}
+						$registerUserResult = ""
+						try {
+							$registerUserResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/users") -Body $userRequest
+						} catch {
+							if ($_.ErrorDetails.Message) {
+								$registerUserResult = ConvertFrom-Json $_.ErrorDetails.Message
+							} else {
+								throw $_
+							}	
+						}
+						Write-Verbose (ConvertTo-Json $registerUserResult)
+						# Check if registration succeeded or if it has been registered previously
+						if( !(($registerUserResult.code -eq 201) -or ($registerUserResult.data.reason.ToLower().Contains("already exist"))) ) {
+							throw ("Failed to register with CAM. Result was: " + (ConvertTo-Json $registerUserResult))
+						}
+
+						[System.Environment]::SetEnvironmentVariable("CAM_USERNAME", $userRequest.username, "Machine")
+						[System.Environment]::SetEnvironmentVariable("CAM_PASSWORD", $userRequest.password, "Machine")
+						[System.Environment]::SetEnvironmentVariable("CAM_TENANTID", $userRequest.tenantId, "Machine")
+						[System.Environment]::SetEnvironmentVariable("CAM_URI", $camSaasBaseUri, "Machine")
+						$env:CAM_USERNAME = $userRequest.username
+						$env:CAM_PASSWORD = $userRequest.password
+						$env:CAM_TENANTID = $userRequest.tenantId
+						$env:CAM_URI = $camSaasBaseUri
+
+						Write-Host "Cloud Access Manager Frontend has been registered succesfully"
+
+						# Get a Sign-in token
+						$signInResult = ""
+						try {
+							$signInResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/signin") -Body $userRequest
+						} catch {
+							if ($_.ErrorDetails.Message) {
+								$signInResult = ConvertFrom-Json $_.ErrorDetails.Message
+							} else {
+								throw $_
+							}							
+						}
+						Write-Verbose ((ConvertTo-Json $signInResult) -replace "\.*token.*", 'Token": "Sanitized"')
+						# Check if signIn succeded
+						if ($signInResult.code -ne 200) {
+							throw ("Signing in failed. Result was: " + (ConvertTo-Json $signInResult))
+						}
+						$tokenHeader = @{
+							authorization=$signInResult.data.token
+						}
+						Write-Host "Cloud Access Manager sign in succeeded"
+
+						$registrationCode = ($using:registrationCodeAsCred).GetNetworkCredential().password
+
+						# Register Deployment
+						$deploymentRequest = @{
+							resourceGroup = $using:RGName
+							subscriptionId = $subscription
+							registrationCode = $registrationCode
+						}
+						$registerDeploymentResult = ""
+						try {
+							$registerDeploymentResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/deployments") -Body $deploymentRequest -Headers $tokenHeader
+						} catch {
+							if ($_.ErrorDetails.Message) {
+								$registerDeploymentResult = ConvertFrom-Json $_.ErrorDetails.Message
+							} else {
+								throw $_
+							}
+						}
+						Write-Verbose ((ConvertTo-Json $registerDeploymentResult) -replace "\.*registrationCode.*", 'registrationCode":"Sanitized"')
+						# Check if registration succeeded
+						if( !( ($registerDeploymentResult.code -eq 201) -or ($registerDeploymentResult.data.reason.ToLower().Contains("already exist")) ) ) {
+							throw ("Registering Deployment failed. Result was: " + (ConvertTo-Json $registerDeploymentResult))
+						}
+						$deploymentId = ""
+						# Get the deploymentId
+						if( ($registerDeploymentResult.code -eq 409) -and ($registerDeploymentResult.data.reason.ToLower().Contains("already exist")) ) {
+							# Deplyoment is already registered so the deplymentId needs to be retrieved
+							$registeredDeployment = ""
+							try {
+								$registeredDeployment = Invoke-RestMethod -Method Get -Uri ($camSaasBaseUri + "/api/v1/deployments") -Body $deploymentRequest -Headers $tokenHeader
+								$deploymentId = $registeredDeployment.data.deploymentId
+							} catch {
+								if ($_.ErrorDetails.Message) {
+									$registeredDeployment = ConvertFrom-Json $_.ErrorDetails.Message
+									throw ("Getting Deployment ID failed. Result was: " + (ConvertTo-Json $registeredDeployment))
+								} else {
+									throw $_
+								}								
+							}
+						} else {
+							$deploymentId = $registerDeploymentResult.data.deploymentId
+						}
+
+						[System.Environment]::SetEnvironmentVariable("CAM_DEPLOYMENTID", $deploymentId, "Machine")
+						$env:CAM_DEPLOYMENTID = $deploymentId
 
 
-						[System.Environment]::SetEnvironmentVariable("CAM_USERNAME", "testuser", "Machine")
-						$env:CAM_USERNAME = "testuser"
+						Write-Host "Deployment has been registered succesfully with Cloud Access Manager"
 
+						# Register Agent Machine
+						$machineRequest = @{
+							deploymentId = $deploymentId
+							resourceGroup = $using:RGName
+							machineName = $using:adminDesktopVMName
+							subscriptionId = $subscription
+						}
+						$registerMachineResult = ""
+						try {
+							$registerMachineResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/machines") -Body $machineRequest -Headers $tokenHeader
+						} catch {
+							if ($_.ErrorDetails.Message) {
+								$registerMachineResult = ConvertFrom-Json $_.ErrorDetails.Message
+							} else {
+								throw $_
+							}
+						}
+						Write-Verbose (ConvertTo-Json $registerMachineResult)
+						# Check if registration succeeded
+						if( !(($registerMachineResult.code -eq 201) -or ($registerMachineResult.data.reason.ToLower().Contains("exists")))) {
+							throw ("Registering Machine failed. Result was: " + (ConvertTo-Json $registerMachineResult))
+						}
+						Write-Host "Machine has been registered succesfully with Cloud Access Manager"
+						$camRegistrationError = ""
+						break;
+					} catch {
+						$camRegistrationError = $_
+						Write-Verbose ( "Attempt {0} of $using:retryCount failed due to Error: $camRegistrationError" -f ($idx+1) )
+						Start-Sleep -s $using:delay
+					}
+				}
+				if($camRegistrationError) {
+					throw $camRegistrationError
+				}
+
+				# restore CertificatePolicy 
+				[System.Net.ServicePointManager]::CertificatePolicy = $certificatePolicy
 
 				# Reboot machine to ensure all changes are picked up by all services.
 				$global:DSCMachineStatus = 1
