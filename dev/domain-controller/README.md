@@ -2,6 +2,8 @@
 
 Copyright Teradici Corporation.
 
-All rights reserved
+All rights reserved.
 
-See here for further information: https://github.com/teradici/deploy/tree/master/
+The Cloud Access Manager deployment information has moved!
+
+Please see here for further information: https://github.com/teradici/deploy/tree/master/
