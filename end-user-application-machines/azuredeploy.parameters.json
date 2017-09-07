@@ -14,7 +14,7 @@
         "registrationCode": {
             "value": "xxxxxxxxxxxx@nnnn-nnnn-nnnn-nnnn"
         },
-        "vmSize": { "value": "Standard_D2_v2" },
+        "vmSize": { "value": "Standard_D2_v3" },
         "existingSubnetName": { "value": "subnet1" },
         "dnsLabelPrefix": { "value": "tbd-vmname" },
         "existingVNETName": { "value": "existingVNETName" },

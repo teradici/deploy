@@ -31,6 +31,17 @@
               "description": "Type of OS to use for VM."
             }
         },
+        "agentType": {
+            "type": "string",
+            "defaultValue": "Standard",
+            "allowedValues": [
+              "Standard",
+              "Graphics"
+            ],
+            "metadata": {
+              "description": "PCoIP Agent Type: Standard or Graphics."
+            }
+        },
         "vmSize": {
             "type": "string",
             "metadata": {
@@ -125,23 +136,37 @@
               "sku": "7.3",
               "version": "latest"
             }
-          },
+        },
       
-          "vmSettings": {
-            "vmNamePrefix": "[parameters('vmNamePrefix')]",
+        "vmSettings": {
+            "vmNamePrefix": "[parameters('dnsLabelPrefix')]",
             "adminUserName": "[parameters('userName')]",
             "adminPassword": "[parameters('password')]",
             "vmSize": "[parameters('vmSize')]",
             "nicName": "[parameters('nicName')]",
             "os": "[variables('osSettings')[parameters('osType')]]"
-          },
+        },
+
+        "binaryLocation": "parameters['CAMDeploymentBlobSource']",
+          
+        "extensions": {
+            "Standard": {
+                "pcoipAgentInstallerUrl": "[concat(variables('binaryLocation'), '/PCoIP_agent_release_installer_2.10.0.7600_standard.exe')]",
+                "videoDriverUrl": ""
+            },
+            "Graphics": {
+                "pcoipAgentInstallerUrl": "[concat(variables('binaryLocation'), '/PCoIP_agent_release_installer_2.10.0.7600_graphics.exe')]",
+                "videoDriverUrl": "[concat(variables('binaryLocation'), '/370.12_grid_win10_server2016_64bit_international.exe')]"
+            }
+        },
+          
+        "pcoipAgentInstallerUrl": "[variables('extensions')[parameters('agentType')].pcoipAgentInstallerUrl]",
+        "videoDriverUrl": "[variables('extensions')[parameters('agentType')].videoDriverUrl]",
 
         "apiVersion": "2017-06-01",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
-        "pcoipAgentInstallerUrl": "[concat(parameters('CAMDeploymentBlobSource'),'/PCoIP_agent_release_installer_2.10.0.7600_standard.exe')]",
-        "videoDriverUrl": "",
         "registrationCode": "[parameters('registrationCode')]",
         "enableAutoShutdown" : false
     },
@@ -236,7 +261,7 @@
         {
           "type": "Microsoft.Compute/virtualMachines/extensions",
           "name": "[concat(parameters('dnsLabelPrefix'),'/PCoIPAgentDscExtension')]",
-          "apiVersion": "2017-03-30",
+          "apiVersion": "[variables('apiVersion')]",
           "location": "[resourceGroup().location]",
           "dependsOn": [
               "[resourceId('Microsoft.Compute/virtualMachines/extensions',parameters('dnsLabelPrefix'),'joindomain')]"
