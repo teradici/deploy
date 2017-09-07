@@ -20,6 +20,17 @@
                 "description": "Virtual machine name for both Azure and AD"
             }
         },
+        "osType": {
+            "type": "string",
+            "defaultValue": "Windows Server 2016",
+            "allowedValues": [
+              "Windows Server 2016",
+              "RHEL 7"
+            ],
+            "metadata": {
+              "description": "Type of OS to use for VM."
+            }
+        },
         "vmSize": {
             "defaultValue": "Standard_D2_v2",
             "type": "string",
@@ -101,10 +112,32 @@
         }
     },
     "variables": {
-        "imagePublisher": "MicrosoftWindowsServer",
-        "imageOffer": "WindowsServer",
-        "windowsOSVersion": "2016-Datacenter",
-        "apiVersion": "2015-06-15",
+
+        "osSettings": {
+            "Windows Server 2016": {
+              "publisher": "MicrosoftWindowsServer",
+              "offer": "WindowsServer",
+              "sku": "2016-Datacenter",
+              "version": "latest"
+            },
+            "RHEL 7": {
+              "publisher": "RedHat",
+              "offer": "RHEL",
+              "sku": "7.3",
+              "version": "latest"
+            }
+          },
+      
+          "vmSettings": {
+            "vmNamePrefix": "[parameters('vmNamePrefix')]",
+            "adminUserName": "[parameters('userName')]",
+            "adminPassword": "[parameters('password')]",
+            "vmSize": "[parameters('vmSize')]",
+            "nicName": "[parameters('nicName')]",
+            "os": "[variables('osSettings')[parameters('osType')]]"
+          },
+
+        "apiVersion": "2017-06-01",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
@@ -135,7 +168,7 @@
         },
         {
             "type": "Microsoft.Compute/virtualMachines",
-            "name": "[parameters('dnsLabelPrefix')]",
+            "name": "[variables('vmSettings').vmNamePrefix]",
             "apiVersion": "[variables('apiVersion')]",
             "location": "[resourceGroup().location]",
             "properties": {
@@ -143,37 +176,21 @@
                     "vmSize": "[parameters('vmSize')]"
                 },
                 "osProfile": {
-                    "computerName": "[parameters('dnsLabelPrefix')]",
-                    "adminUsername": "[parameters('vmAdminUsername')]",
-                    "adminPassword": "[parameters('vmAdminPassword')]"
+                    "computerName": "[variables('vmSettings').vmNamePrefix]",
+                    "adminUsername": "[variables('vmSettings').adminUserName]",
+                    "adminPassword": "[variables('vmSettings').adminPassword]"
                 },
                 "storageProfile": {
                     "imageReference": {
-                        "publisher": "[variables('imagePublisher')]",
-                        "offer": "[variables('imageOffer')]",
-                        "sku": "[variables('windowsOSVersion')]",
-                        "version": "latest"
+                        "publisher": "[variables('vmSettings').os.publisher]",
+                        "offer": "[variables('vmSettings').os.offer]",
+                        "sku": "[variables('vmSettings').os.sku]",
+                        "version": "[variables('vmSettings').os.version]"
                     },
                     "osDisk": {
-                        "name": "osdisk",
-                        "vhd": {
-                            "uri": "[concat('http://',parameters('storageAccountName'),'.blob.core.windows.net/vhds/',parameters('dnsLabelPrefix'), 'disk0.vhd')]"
-                        },
                         "caching": "ReadWrite",
                         "createOption": "FromImage"
-                    },
-                    "dataDisks": [
-                        {
-                            "name": "myvm-data-disk1",
-                            "vhd": {
-                                "uri": "[concat('http://',parameters('storageAccountName'),'.blob.core.windows.net/vhds/',parameters('dnsLabelPrefix'), 'disk1.vhd')]"
-                            },
-                            "caching": "None",
-                            "createOption": "Empty",
-                            "diskSizeGB": "100",
-                            "lun": 0
-                        }
-                    ]
+                    }
                 },
                 "networkProfile": {
                     "networkInterfaces": [
