@@ -76,6 +76,13 @@
         "description": "URI for the CAM SAAS"
       },
       "defaultValue": "https://cam-staging.teradici.com"
+    },
+    "verifyCAMSaaSCertificate": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "a flag to indicate whether to verify CAM SaaS Server certificate. True means to verify."
+      }
     }
   },
   "variables": {
@@ -539,6 +546,9 @@
           },
           "camSaasUri": {
             "value": "[parameters('camSaasUri')]"
+          },
+          "verifyCAMSaaSCertificate": {
+            "value": "[parameters('verifyCAMSaaSCertificate')]"
           }
         }
       }

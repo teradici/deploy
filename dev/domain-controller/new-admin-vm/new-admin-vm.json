@@ -166,6 +166,12 @@
             "metadata": {
                 "description": "URI for the CAM SAAS"
             }
+        },
+        "verifyCAMSaaSCertificate": {
+            "type": "bool",
+            "metadata": {
+                "description": "a flag to indicate whether to verify CAM SaaS Server certificate. True means to verify."
+            }
         }
     },
     "variables": {
@@ -219,6 +225,7 @@
                         },
                         "adminDesktopVMName" : "[parameters('adminDesktopVMName')]",
                         "camSaasUri" : "[parameters('camSaasUri')]",
+                        "verifyCAMSaaSCertificate": "[parameters('verifyCAMSaaSCertificate')]",
                         "DCVMName": "[parameters('domainControllerName')]",
                         "RGName": "[resourceGroup().name]",
                         "existingVNETName": "[parameters('existingVNETName')]",
