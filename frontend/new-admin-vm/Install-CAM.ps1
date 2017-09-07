@@ -115,7 +115,7 @@ Configuration InstallCAM
 		[string]$camSaasUri
 	)
 
-	$standardVMSize = "Standard_D2_v2_Promo"
+	$standardVMSize = "Standard_D2_v3"
 	$graphicsVMSize = "Standard_NV6"
 
 	$dcvmfqdn = "$DCVMName.$domainFQDN"
