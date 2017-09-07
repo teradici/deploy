@@ -123,6 +123,13 @@
     },
     "variables": {
 
+        "apiVersion": "2017-06-01",
+        "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
+        "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
+        "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
+        "registrationCode": "[parameters('registrationCode')]",
+        "enableAutoShutdown" : false,
+
         "osSettings": {
             "Windows Server 2016": {
               "publisher": "MicrosoftWindowsServer",
@@ -140,8 +147,8 @@
       
         "vmSettings": {
             "vmNamePrefix": "[parameters('dnsLabelPrefix')]",
-            "adminUserName": "[parameters('userName')]",
-            "adminPassword": "[parameters('password')]",
+            "adminUserName": "[parameters('vmAdminUsername')]",
+            "adminPassword": "[parameters('vmAdminPassword')]",
             "vmSize": "[parameters('vmSize')]",
             "nicName": "[parameters('nicName')]",
             "os": "[variables('osSettings')[parameters('osType')]]"
@@ -161,14 +168,7 @@
         },
           
         "pcoipAgentInstallerUrl": "[variables('extensions')[parameters('agentType')].pcoipAgentInstallerUrl]",
-        "videoDriverUrl": "[variables('extensions')[parameters('agentType')].videoDriverUrl]",
-
-        "apiVersion": "2017-06-01",
-        "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
-        "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
-        "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
-        "registrationCode": "[parameters('registrationCode')]",
-        "enableAutoShutdown" : false
+        "videoDriverUrl": "[variables('extensions')[parameters('agentType')].videoDriverUrl]"
     },
     "resources": [
         {
