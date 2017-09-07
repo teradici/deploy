@@ -164,6 +164,9 @@
           "CAMDeploymentBlobSource": {
             "value": "[parameters('CAMDeploymentBlobSource')]"
           },
+          "_agentArtifactsLocation": {
+            "value": "[concat(parameters('_artifactsLocation'), '/end-user-application-machines/new-agent-vm')]"
+          },
           "_artifactsLocation": {
             "value": "[concat(parameters('_artifactsLocation'), '/frontend')]"
           },

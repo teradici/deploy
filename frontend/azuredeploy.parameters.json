@@ -26,6 +26,9 @@
         "CAMDeploymentBlobSource": {
             "value": "https://teradeploy.blob.core.windows.net/binaries"
         },
+        "_agentArtifactsLocation": {
+            "value": "https://raw.githubusercontent.com/teradici/deploy/bd/end-user-application-machines/new-agent-vm')]"
+        },
         "_artifactsLocation": {
             "value": "https://raw.githubusercontent.com/teradici/deploy/bd/frontend"
         }

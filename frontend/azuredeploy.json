@@ -51,17 +51,21 @@
     },
     "CAMDeploymentBlobSource": {
       "type": "string",
-      "defaultValue": "https://teradeploy.blob.core.windows.net/antarbinaries",
       "metadata": {
         "description": "The location of the blobs for admin GUI machine installation"
+      }
+    },
+    "_agentArtifactsLocation": {
+      "type": "string",
+      "metadata": {
+          "description": "The location of resources, such as templates and DSC modules, specific to the PCoIP Agent"
       }
     },
     "_artifactsLocation": {
       "type": "string",
       "metadata": {
         "description": "The location of resources, such as templates and DSC modules, that the template depends on"
-      },
-      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/antar/dev/domain-controller"
+      }
     },
     "_artifactsLocationSasToken": {
       "type": "securestring",
@@ -245,19 +249,19 @@
             "value": "[concat(parameters('_artifactsLocation'), '/new-admin-vm')]"
           },
           "_agentArtifactsLocation": {
-              "value": "[concat(parameters('_artifactsLocation'), '/new-agent-vm')]"
+              "value": "[parameters('_agentArtifactsLocation')]"
           },
-            "AGsubnetRef": {
-                "value": "[concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')),'/subnets/',variables('gatewaySubnetName'))]"
-            },
-            "AGbackendIpAddressDefault": {
-                "value": "[variables('auPrivateIP')]"
-            },
-            "AGbackendIpAddressForPathRule1": {
-                "value": "[variables('cmPrivateIP')]"
-            },
-            "AGtemplateUri": {
-            "value": "[concat(parameters('_artifactsLocation'), '/new-app-gateway/azuredeploy.json', parameters('_artifactsLocationSasToken'))]"
+          "AGsubnetRef": {
+              "value": "[concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')),'/subnets/',variables('gatewaySubnetName'))]"
+          },
+          "AGbackendIpAddressDefault": {
+              "value": "[variables('auPrivateIP')]"
+          },
+          "AGbackendIpAddressForPathRule1": {
+              "value": "[variables('cmPrivateIP')]"
+          },
+          "AGtemplateUri": {
+              "value": "[concat(parameters('_artifactsLocation'), '/new-app-gateway/azuredeploy.json', parameters('_artifactsLocationSasToken'))]"
           }
         }
       }
