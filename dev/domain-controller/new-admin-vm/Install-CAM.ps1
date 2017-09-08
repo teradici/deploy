@@ -1514,7 +1514,7 @@ brokerLocale=en_US
 						break;
 					} catch {
 						$camRegistrationError = $_
-						Write-Verbose ( "Attempt {0} of $using:retryCount failed due to Error: $camRegistrationError" -f ($idx+1) )
+						Write-Verbose ( "Attempt {0} of $using:retryCount failed due to Error: {1}" -f ($idx+1), $camRegistrationError )
 						Start-Sleep -s $using:delay
 					}
 				}
