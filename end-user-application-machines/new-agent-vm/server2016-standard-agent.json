@@ -154,7 +154,7 @@
             "os": "[variables('osSettings')[parameters('osType')]]"
         },
 
-        "binaryLocation": "parameters['CAMDeploymentBlobSource']",
+        "binaryLocation": "[parameters('CAMDeploymentBlobSource')]",
           
         "extensions": {
             "Standard": {
