@@ -69,6 +69,20 @@
         "description": "Auto-generated token to access _artifactsLocation"
       },
       "defaultValue": ""
+    },
+    "camSaasUri": {
+      "type": "string",
+      "metadata": {
+        "description": "URI for the CAM SAAS"
+      },
+      "defaultValue": "https://cam-antar.teradici.com"
+    },
+    "verifyCAMSaaSCertificate": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "a flag to indicate whether to verify CAM SaaS Server certificate. True means to verify."
+      }
     }
   },
   "variables": {
@@ -160,6 +174,12 @@
           },
           "registrationCode": {
             "value": "[parameters('registrationCode')]"
+          },
+          "camSaasUri": {
+            "value": "[parameters('camSaasUri')]"
+          },
+          "verifyCAMSaaSCertificate": {
+            "value": "[parameters('verifyCAMSaaSCertificate')]"
           },
           "CAMDeploymentBlobSource": {
             "value": "[parameters('CAMDeploymentBlobSource')]"

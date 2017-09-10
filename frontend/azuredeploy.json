@@ -49,6 +49,18 @@
         "description": "PCoIP Agent License Registration Code."
       }
     },
+    "camSaasUri": {
+      "type": "string",
+      "metadata": {
+          "description": "URI for the CAM SAAS"
+      }
+    },
+    "verifyCAMSaaSCertificate": {
+      "type": "bool",
+      "metadata": {
+        "description": "a flag to indicate whether to verify CAM SaaS Server certificate. True means to verify."
+      }
+    },
     "CAMDeploymentBlobSource": {
       "type": "string",
       "metadata": {
@@ -262,6 +274,12 @@
           },
           "AGtemplateUri": {
               "value": "[concat(parameters('_artifactsLocation'), '/new-app-gateway/azuredeploy.json', parameters('_artifactsLocationSasToken'))]"
+          },
+          "camSaasUri": {
+            "value": "[parameters('camSaasUri')]"
+          },
+          "verifyCAMSaaSCertificate": {
+            "value": "[parameters('verifyCAMSaaSCertificate')]"
           }
         }
       }

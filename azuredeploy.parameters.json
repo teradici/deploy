@@ -27,7 +27,7 @@
             "value": "https://teradeploy.blob.core.windows.net/binaries"
         },
         "_artifactsLocation": {
-            "value": "https://raw.githubusercontent.com/teradici/deploy/bd"
+            "value": "https://raw.githubusercontent.com/teradici/deploy/master"
         },
         "camSaasUri": {
             "value": "https://cam-antar.teradici.com"
