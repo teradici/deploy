@@ -269,9 +269,7 @@ Configuration InstallCAM
 
             #TODO: Just check for a directory being present? What to do when Java version changes? (Can also check registry key as in SetScript.)
             TestScript = {
-				if ( Get-Item -path "$using:JavaBinLocation" -ErrorAction SilentlyContinue )
-                            {return $true}
-                            else {return $false}
+                return Test-Path "$using:JavaBinLocation"
 			}
             SetScript  = {
                 Write-Verbose "Install_Java"
@@ -514,10 +512,8 @@ Configuration InstallCAM
 				$CatalinaHomeLocation = $using:CatalinaHomeLocation
 				$catalinaBase = "$CatalinaHomeLocation" # \$using:AUIServiceName"
 				$WARPath = "$catalinaBase\webapps\$using:adminWAR"
- 
-				if ( Get-Item $WARPath -ErrorAction SilentlyContinue )
-                            {return $true}
-                            else {return $false}
+
+                return Test-Path $WARPath -PathType Leaf
 			}
 
             SetScript  = {
@@ -639,9 +635,7 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 				$targetDir = "$env:CATALINA_HOME\adminproperty"
 				$authFilePath = "$targetDir\authfile.txt"
  
-				if ( Get-Item $authFilePath -ErrorAction SilentlyContinue )
-                            {return $true}
-                            else {return $false}
+                return Test-Path $authFilePath -PathType Leaf
 			}
             SetScript  = {
 
@@ -1184,9 +1178,7 @@ graphURL=https\://graph.windows.net/
             TestScript = {
 				$WARPath = "$using:CatalinaHomeLocation\$using:brokerServiceName\webapps\$using:brokerWAR"
  
-				if ( Get-Item $WARPath -ErrorAction SilentlyContinue )
-                            {return $true}
-                            else {return $false}
+                return Test-Path $WARPath -PathType Leaf
 			}
             SetScript  = {
                 Write-Verbose "Install_Broker"
