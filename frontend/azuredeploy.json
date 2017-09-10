@@ -160,7 +160,7 @@
             "value": "[concat(variables('serverRootName'), '-au')]"
           },
           "vmSize": {
-            "value": "Standard_A1_v2"
+            "value": "Standard_A2_v2"
           },
           "privateIP": {
             "value": "[variables('auPrivateIP')]"
