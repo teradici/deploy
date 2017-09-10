@@ -720,7 +720,7 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 
 						try
 						{
-							$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword
+							$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword -ErrorAction stop
 							break
 						}
 						catch
@@ -1464,7 +1464,7 @@ brokerLocale=en_US
 						$deploymentId = ""
 						# Get the deploymentId
 						if( ($registerDeploymentResult.code -eq 409) -and ($registerDeploymentResult.data.reason.ToLower().Contains("already exist")) ) {
-							# Deplyoment is already registered so the deplymentId needs to be retrieved
+							# Deployment is already registered so the deplymentId needs to be retrieved
 							$registeredDeployment = ""
 							try {
 								$registeredDeployment = Invoke-RestMethod -Method Get -Uri ($camSaasBaseUri + "/api/v1/deployments") -Body $deploymentRequest -Headers $tokenHeader
