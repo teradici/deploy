@@ -700,8 +700,20 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 					foreach($app in $appArray)
 					{
 						$aoID = $app.ObjectId
-						Write-Host "Removing previous SP application $appName  $aoID"
-						Remove-AzureRmADApplication -ObjectId $aoID -Force
+						try
+						{
+							Write-Host "Removing previous SP application $appName ObjectId: $aoID"
+							Remove-AzureRmADApplication -ObjectId $aoID -Force -ErrorAction Stop
+						}
+						catch
+						{
+							$exceptionContext = Get-AzureRmContext
+							$exceptionTenantId = $exceptionContext.Tenant.Id
+							Write-Error "Failure to remove application $appName from tenant $exceptionTenantId. Please check your AAD tenant permissions."
+
+							#re-throw whatever the original exception was
+							throw
+						}
 					}
 
 					Write-Host "Purge complete. Creating new app."
@@ -714,16 +726,19 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 
 						try
 						{
-							$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword -ErrorAction stop
+							$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword -ErrorAction Stop
 							break
 						}
 						catch
 						{
-							Write-Host "Retrying to create app $newAppCreateRetry : $appName"
+							Write-Host "Retrying to create app countdown: $newAppCreateRetry appName: $appName"
 							Start-sleep -Seconds 1
 							if ($newAppCreateRetry -eq 0)
 							{
 								#re-throw whatever the original exception was
+								$exceptionContext = Get-AzureRmContext
+								$exceptionTenantId = $exceptionContext.Tenant.Id
+								Write-Error "Failure to add application $appName to tenant $exceptionTenantId. Please check your AAD tenant permissions."
 								throw
 							}
 						}
@@ -753,6 +768,7 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 							if ($SPCreateRetry -eq 0)
 							{
 								#re-throw whatever the original exception was
+								Write-Error "Failure to create SP for $appName."
 								throw
 							}
 						}
@@ -779,6 +795,9 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 							if ($rollAssignmentRetry -eq 0)
 							{
 								#re-throw whatever the original exception was
+								$exceptionContext = Get-AzureRmContext
+								$exceptionSubscriptionId = $exceptionContext.Subscription.Id
+								Write-Error "Failure to create Contributor role for $appName in ResourceGroup: $RGNameLocal Subscription: $exceptionSubscriptionId. Please check your subscription premissions."
 								throw
 							}
 						}
