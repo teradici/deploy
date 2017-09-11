@@ -1481,9 +1481,12 @@ brokerLocale=en_US
 							$deploymentId = $registerDeploymentResult.data.deploymentId
 						}
 
+						if ( !$deploymentId ) {
+							throw ("Failed to get a Deployment ID")
+						}
+
 						[System.Environment]::SetEnvironmentVariable("CAM_DEPLOYMENTID", $deploymentId, "Machine")
 						$env:CAM_DEPLOYMENTID = $deploymentId
-
 
 						Write-Host "Deployment has been registered succesfully with Cloud Access Manager"
 
