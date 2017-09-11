@@ -118,7 +118,7 @@ Configuration InstallCAM
 		[bool]$verifyCAMSaaSCertificate=$true
 	)
 
-	$standardVMSize = "Standard_D2_v2_Promo"
+	$standardVMSize = "Standard_D2_v3"
 	$graphicsVMSize = "Standard_NV6"
 
 	$dcvmfqdn = "$DCVMName.$domainFQDN"
@@ -269,9 +269,7 @@ Configuration InstallCAM
 
             #TODO: Just check for a directory being present? What to do when Java version changes? (Can also check registry key as in SetScript.)
             TestScript = {
-				if ( Get-Item -path "$using:JavaBinLocation" -ErrorAction SilentlyContinue )
-                            {return $true}
-                            else {return $false}
+                return Test-Path "$using:JavaBinLocation"
 			}
             SetScript  = {
                 Write-Verbose "Install_Java"
@@ -514,10 +512,8 @@ Configuration InstallCAM
 				$CatalinaHomeLocation = $using:CatalinaHomeLocation
 				$catalinaBase = "$CatalinaHomeLocation" # \$using:AUIServiceName"
 				$WARPath = "$catalinaBase\webapps\$using:adminWAR"
- 
-				if ( Get-Item $WARPath -ErrorAction SilentlyContinue )
-                            {return $true}
-                            else {return $false}
+
+                return Test-Path $WARPath -PathType Leaf
 			}
 
             SetScript  = {
@@ -639,9 +635,7 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 				$targetDir = "$env:CATALINA_HOME\adminproperty"
 				$authFilePath = "$targetDir\authfile.txt"
  
-				if ( Get-Item $authFilePath -ErrorAction SilentlyContinue )
-                            {return $true}
-                            else {return $false}
+                return Test-Path $authFilePath -PathType Leaf
 			}
             SetScript  = {
 
@@ -706,8 +700,20 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 					foreach($app in $appArray)
 					{
 						$aoID = $app.ObjectId
-						Write-Host "Removing previous SP application $appName  $aoID"
-						Remove-AzureRmADApplication -ObjectId $aoID -Force
+						try
+						{
+							Write-Host "Removing previous SP application $appName ObjectId: $aoID"
+							Remove-AzureRmADApplication -ObjectId $aoID -Force -ErrorAction Stop
+						}
+						catch
+						{
+							$exceptionContext = Get-AzureRmContext
+							$exceptionTenantId = $exceptionContext.Tenant.Id
+							Write-Error "Failure to remove application $appName from tenant $exceptionTenantId. Please check your AAD tenant permissions."
+
+							#re-throw whatever the original exception was
+							throw
+						}
 					}
 
 					Write-Host "Purge complete. Creating new app."
@@ -720,16 +726,19 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 
 						try
 						{
-							$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword
+							$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword -ErrorAction Stop
 							break
 						}
 						catch
 						{
-							Write-Host "Retrying to create app $newAppCreateRetry : $appName"
+							Write-Host "Retrying to create app countdown: $newAppCreateRetry appName: $appName"
 							Start-sleep -Seconds 1
 							if ($newAppCreateRetry -eq 0)
 							{
 								#re-throw whatever the original exception was
+								$exceptionContext = Get-AzureRmContext
+								$exceptionTenantId = $exceptionContext.Tenant.Id
+								Write-Error "Failure to add application $appName to tenant $exceptionTenantId. Please check your AAD tenant permissions."
 								throw
 							}
 						}
@@ -759,6 +768,7 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 							if ($SPCreateRetry -eq 0)
 							{
 								#re-throw whatever the original exception was
+								Write-Error "Failure to create SP for $appName."
 								throw
 							}
 						}
@@ -785,6 +795,9 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 							if ($rollAssignmentRetry -eq 0)
 							{
 								#re-throw whatever the original exception was
+								$exceptionContext = Get-AzureRmContext
+								$exceptionSubscriptionId = $exceptionContext.Subscription.Id
+								Write-Error "Failure to create Contributor role for $appName in ResourceGroup: $RGNameLocal Subscription: $exceptionSubscriptionId. Please check your subscription premissions."
 								throw
 							}
 						}
@@ -1184,9 +1197,7 @@ graphURL=https\://graph.windows.net/
             TestScript = {
 				$WARPath = "$using:CatalinaHomeLocation\$using:brokerServiceName\webapps\$using:brokerWAR"
  
-				if ( Get-Item $WARPath -ErrorAction SilentlyContinue )
-                            {return $true}
-                            else {return $false}
+                return Test-Path $WARPath -PathType Leaf
 			}
             SetScript  = {
                 Write-Verbose "Install_Broker"
@@ -1464,7 +1475,7 @@ brokerLocale=en_US
 						$deploymentId = ""
 						# Get the deploymentId
 						if( ($registerDeploymentResult.code -eq 409) -and ($registerDeploymentResult.data.reason.ToLower().Contains("already exist")) ) {
-							# Deplyoment is already registered so the deplymentId needs to be retrieved
+							# Deployment is already registered so the deplymentId needs to be retrieved
 							$registeredDeployment = ""
 							try {
 								$registeredDeployment = Invoke-RestMethod -Method Get -Uri ($camSaasBaseUri + "/api/v1/deployments") -Body $deploymentRequest -Headers $tokenHeader
