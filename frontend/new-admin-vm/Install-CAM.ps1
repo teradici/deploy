@@ -155,42 +155,49 @@ Configuration InstallCAM
 		{
 			Uri = "$sourceURI/$javaInstaller"
 			DestinationPath = "$LocalDLPath\$javaInstaller"
+			MatchSource = $false
 		}
 
 		xRemoteFile Download_Tomcat_Installer
 		{
 			Uri = "$sourceURI/$tomcatInstaller"
 			DestinationPath = "$LocalDLPath\$tomcatInstaller"
+			MatchSource = $false
 		}
 
 		xRemoteFile Download_Keystore
 		{
 			Uri = "$sourceURI/.keystore"
 			DestinationPath = "$LocalDLPath\.keystore"
+			MatchSource = $false
 		}
 
 		xRemoteFile Download_Broker_WAR
 		{
 			Uri = "$sourceURI/$brokerWAR"
 			DestinationPath = "$LocalDLPath\$brokerWAR"
+			MatchSource = $false
 		}
 
 		xRemoteFile Download_Admin_WAR
 		{
 			Uri = "$sourceURI/$adminWAR"
 			DestinationPath = "$LocalDLPath\$adminWAR"
+			MatchSource = $false
 		}
 
 		xRemoteFile Download_Agent_ARM
 		{
 			Uri = "$templateAgentURI/$agentARM"
 			DestinationPath = "$LocalDLPath\$agentARM"
+			MatchSource = $false
 		}
 
 		xRemoteFile Download_Ga_Agent_ARM
 		{
 			Uri = "$templateAgentURI/$gaAgentARM"
 			DestinationPath = "$LocalDLPath\$gaAgentARM"
+			MatchSource = $false
 		}
 
         File Sumo_Directory 
@@ -1128,8 +1135,10 @@ graphURL=https\://graph.windows.net/
 				Copy-Item "$catalinaHome\conf" "$catalinaBase\conf" -Recurse -ErrorAction SilentlyContinue
 				Copy-Item "$catalinaHome\logs" "$catalinaBase\logs" -Recurse -ErrorAction SilentlyContinue
 				Copy-Item "$catalinaHome\temp" "$catalinaBase\temp" -Recurse -ErrorAction SilentlyContinue
-				Copy-Item "$catalinaHome\webapps" "$catalinaBase\webapps" -Recurse -ErrorAction SilentlyContinue
 				Copy-Item "$catalinaHome\work" "$catalinaBase\work" -Recurse -ErrorAction SilentlyContinue
+
+				# Make empty webapps directory if it does not exist. 
+				New-Item -ItemType Directory -Force -Path "$catalinaBase\webapps"
 
 				$serverXMLFile = $catalinaBase + '\conf\server.xml'
 				$origServerXMLFile = $catalinaBase + '\conf\server.xml.orig'
