@@ -26,8 +26,7 @@
       "type": "string",
       "metadata": {
         "description": "The location of resources, such as templates and DSC modules, that the template depends on"
-      },
-      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/antar/dev/domain-controller"
+      }
     },
     "_artifactsLocationSasToken": {
       "type": "securestring",
