@@ -37,7 +37,6 @@
     }
   },
   "variables": {
-    "configuration-name": "Complete CAM deployment with included Active Directory",
     "virtualNetworkName": "vnet-CloudAccessManager",
     "virtualNetworkAddressRange": "10.0.0.0/16",
     "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'adsa')]",
