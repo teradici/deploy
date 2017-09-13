@@ -26,14 +26,11 @@
         "CAMDeploymentBlobSource": {
             "value": "https://teradeploy.blob.core.windows.net/binaries"
         },
+        "_agentArtifactsLocation": {
+            "value": "https://raw.githubusercontent.com/teradici/deploy/master/end-user-application-machines/new-agent-vm')]"
+        },
         "_artifactsLocation": {
-            "value": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller"
-        },
-        "camSaasUri": {
-            "value": "https://cam-antar.teradici.com"
-        },
-        "verifyCAMSaaSCertificate": {
-            "value": true
+            "value": "https://raw.githubusercontent.com/teradici/deploy/master/frontend"
         }
     }
 }

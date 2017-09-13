@@ -1,0 +1,89 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+    "contentVersion": "1.0.0.0",
+
+    "parameters": {
+        "dcnsgName": {
+            "type": "string",
+            "defaultValue": "dc-nsg",
+            "metadata": {
+                "description": "Name of the network security group.",
+                "minLength": 1,
+                "maxLength": 80
+            }
+        },
+        "cmnsgName": {
+            "type": "string",
+            "defaultValue": "cm-nsg",
+            "metadata": {
+                "description": "Name of the network security group.",
+                "minLength": 1,
+                "maxLength": 80
+            }
+        }
+
+    },
+
+    "variables": {
+        "apiVersion": "2016-12-01"
+    },
+
+    "resources": [
+        {
+            "apiVersion": "[variables('apiVersion')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "[parameters('dcnsgName')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "NSG - Domain Controller"
+            },
+
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "rdp-rule",
+                        "properties": {
+                            "description": "Allow RDP Session",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "3389",
+                            "sourceAddressPrefix": "INTERNET",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 100,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "[variables('apiVersion')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "[parameters('cmnsgName')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "NSG - Connection Manager"
+            },
+
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "pcoip-rule",
+                        "properties": {
+                            "description": "Allow PCoIP Session",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "4172",
+                            "sourceAddressPrefix": "INTERNET",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 100,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}
