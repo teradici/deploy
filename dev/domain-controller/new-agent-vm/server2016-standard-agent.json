@@ -98,6 +98,13 @@
             "metadata": {
                 "description": "Storage account to use for VM data and VHD's"
             }
+        },
+        "enableAutoShutdown": {
+            "type": "bool",
+            "defaultValue": true,
+            "metadata": {
+                "description": "Flag for enabling auto-shutdown on idle for Agents"
+            }
         }
     },
     "variables": {
@@ -111,7 +118,6 @@
         "pcoipAgentInstallerUrl": "[concat(parameters('CAMDeploymentBlobSource'),'/PCoIP_agent_release_installer_2.10.0.7600_standard.exe')]",
         "videoDriverUrl": "",
         "registrationCode": "[parameters('registrationCode')]",
-        "enableAutoShutdown" : false
     },
     "resources": [
         {
@@ -242,7 +248,7 @@
                 "gitLocation": "[parameters('_artifactsLocation')]",
                 "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId)]",
                 "domainGroupToJoin": "[parameters('domainGroupToJoin')]",
-                "enableAutoShutdown": "[variables('enableAutoShutdown')]"
+                "enableAutoShutdown": "[parameters('enableAutoShutdown')]"
               },
               "privacy": {
                 "DataCollection": "Disable"
