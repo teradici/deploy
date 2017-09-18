@@ -117,7 +117,7 @@
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
         "pcoipAgentInstallerUrl": "[concat(parameters('CAMDeploymentBlobSource'),'/PCoIP_agent_release_installer_2.10.0.7600_standard.exe')]",
         "videoDriverUrl": "",
-        "registrationCode": "[parameters('registrationCode')]",
+        "registrationCode": "[parameters('registrationCode')]"
     },
     "resources": [
         {
