@@ -143,7 +143,7 @@ function Register-CAM()
 		$retryDelay = 10,
 
 		[parameter(Mandatory=$true)] 
-		$subscription,
+		$subscriptionId,
 		
 		[parameter(Mandatory=$true)]
 		$client,
@@ -236,7 +236,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 			# Register Deployment
 			$deploymentRequest = @{
 				resourceGroup = $RGName
-				subscriptionId = $subscription
+				subscriptionId = $subscriptionId
 				registrationCode = $registrationCode
 			}
 			$registerDeploymentResult = ""
@@ -390,6 +390,11 @@ function createAndPopulateKeyvault()
 		$laSecretURL = $laSecretVersionedURL.Substring(0, $laSecretVersionedURL.lastIndexOf('/'))
 
 		# create self signed certificate for application gateway. Administrators can override the self signed certificate if desired in future.
+        $currentPrincipal = New-Object Security.Principal.WindowsPrincipal( [Security.Principal.WindowsIdentity]::GetCurrent())
+        $isAdminSession = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+        if(!$isAdminSession) { throw "You must be running as adminsitrator to create the self-signed certificate for the application gateway" }
+
+
 		$certLoc = 'cert:Localmachine\My'
 		$startDate = [DateTime]::Now.AddDays(-1)
 		$subject = "CN=localhost,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"
@@ -436,8 +441,8 @@ function createAndPopulateKeyvault()
 	}
 	finally {
 		#done with files
-		Remove-Item $certPfx -ErrorAction SilentlyContinue
-		Remove-Item $certPath -ErrorAction SilentlyContinue
+		if(Test-Path $certPfx) { Remove-Item $certPfx -ErrorAction SilentlyContinue }
+		if(Test-Path $certPath) { Remove-Item $certPath -ErrorAction SilentlyContinue }
 	}
 	return $secretHash
 }
@@ -672,17 +677,72 @@ function Create-CAMAppSP()
 
 
 
-Create-CAMAppSP
+Login-AzureRmAccount
+#get-azurermsubscription
+$subscriptionID = "523a0eda-0b3e-41a2-bf22-4a095d972aae"
+$registrationCode = "YYZZ9UMBYQBF@CA5E-2E7D-0841-D6A3"
+$camSaasBaseUri = "https://cam-staging.teradici.com"
+
+Select-AzureRmSubscription -SubscriptionId $subscriptionID
 
 
-$azureRGName = "bdallkv1"
+$azureRGName = "bdallkv2"
 
 New-AzureRmResourceGroup -Name $azureRGName -Location "East US"
 
 $spInfo2 = Create-CAMAppSP -RGName $azureRGName
-$spInfo2
 
 createAndPopulateKeyvault -RGName $azureRGName -registrationCodeAsCred $spInfo2.spCreds -DomainJoinCreds $spInfo2.spCreds -spName $spInfo2.spCreds.UserName
+
+$client = $spInfo2.spCreds.UserName
+$key = $spInfo2.spCreds.GetNetworkCredential().Password
+$tenant = $spInfo2.tenantId
+
+$camDeploymenRegInfo = Register-CAM `
+	-SubscriptionId $subscriptionID `
+	-client $client `
+	-key $key `
+	-tenant $tenant `
+	-RGName $azureRGName `
+	-registrationCode $registrationCode `
+	-camSaasBaseUri $camSaasBaseUri
+
+$camDeploymenRegInfoJSON = ConvertTo-JSON $camDeploymenRegInfo -Depth 16 -Compress
+$camDeploymenRegInfoURL = [System.Web.HttpUtility]::UrlEncode($camDeploymenRegInfoJSON)
+
+
+Write-Host "Create auth file information for the CAM frontend."
+
+$authFileContent = @"
+subscription=$subscriptionID
+client=$client
+key=$key
+tenant=$tenant
+managementURI=https\://management.core.windows.net/
+baseURL=https\://management.azure.com/
+authURL=https\://login.windows.net/
+graphURL=https\://graph.windows.net/
+"@
+
+$authFileContentURL = [System.Web.HttpUtility]::UrlEncode($authFileContent) 
+Write-Host "This is the Encoded URL" $authFileContentURL -ForegroundColor Green
+
+$camDeploymenInfo = @{};
+$camDeploymenInfo.Add("registrationInfo",$camDeploymenRegInfo)
+$camDeploymenInfo.Add("AzureAuthFile",$authFileContentURL)
+
+$camDeploymenInfoJSON = ConvertTo-JSON $camDeploymenInfo -Depth 16 -Compress
+$camDeploymenInfoURL = [System.Web.HttpUtility]::UrlEncode($camDeploymenInfoJSON)
+
+$camDeploymenInfoURL
+$camDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($camDeploymenInfoURL)
+$camDeploymenInfoDecoded = ConvertFrom-Json $camDeploymenInfoJSONDecoded
+
+$camDeploymenInfoJSONDecoded
+
+[System.Web.HttpUtility]::UrlDecode($camDeploymenInfoDecoded.AzureAuthFile)
+
+$camDeploymenInfoDecoded.RegistrationInfo
 
 ################## Actual script start here ####################
 
@@ -746,61 +806,3 @@ createAndPopulateKeyvault `
 
 ################################
 
-
-function CreateAppGateway()
-{
-	Write-Host "Creating application gateway"
-
-	$appGWParameterFileContent = @"
-	{
-		"`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
-		"contentVersion": "1.0.0.0",
-		"parameters": {
-			"subnetRef": { "value": "$using:AGsubnetRef" },
-			"skuName": { "value": "Standard_Small" },
-			"capacity": { "value": 1 },
-			"backendIpAddressDefault": { "value":  "$using:AGbackendIpAddressDefault" },
-			"backendIpAddressForPathRule1": { "value":  "$using:AGbackendIpAddressForPathRule1" },
-			"pathMatch1": { "value":  "/pcoip-broker/*" },
-			"certData": {
-				"reference": {
-				"keyVault": {
-					"id": "/subscriptions/$subID/resourceGroups/$RGName/providers/Microsoft.KeyVault/vaults/$kvName"
-				},
-				"secretName": "$FECertSecretName"
-				}		
-			},
-			"certPassword": {
-				"reference": {
-				"keyVault": {
-					"id": "/subscriptions/$subID/resourceGroups/$RGName/providers/Microsoft.KeyVault/vaults/$kvName"
-				},
-				"secretName": "$FECertPasswordSecretName"
-				}
-			}
-		}
-	}
-"@
-
-	$gatewayFileRoot = -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})
-	$gatewayFileName = "$env:temp\$gatewayFileRoot.json"
-
-	Set-Content $gatewayFileName $appGWParameterFileContent
-
-	$LocalAGtemplateUri = $using:AGtemplateUri
-	$tUri = $LocalAGtemplateUri.GetNetworkCredential().Password
-
-		New-AzureRmResourceGroupDeployment
-		    -Mode Incremental `
-			-Name "DeployAppGateway" `
-			-ResourceGroupName $RGName `
-			-TemplateUri $tUri `
-			-TemplateParameterFile $gatewayFileName
-	}
-	finally
-	{
-		Import-AzureRmContext $RMContextFileName
-		Remove-Item $RMContextFileName
-		Remove-Item $gatewayFileName
-	}
-}
