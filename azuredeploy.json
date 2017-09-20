@@ -49,6 +49,38 @@
         "description": "PCoIP Agent License Registration Code."
       }
     },
+    "camSaasUri": {
+      "type": "string",
+      "metadata": {
+        "description": "URI for the CAM SAAS"
+      },
+      "defaultValue": "https://cam-antar.teradici.com"
+    },
+    "verifyCAMSaaSCertificate": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "a flag to indicate whether to verify CAM SaaS Server certificate. True means to verify."
+      }
+    },
+    "certData": {
+      "type": "string",
+      "metadata": {
+        "description": "Base-64 encoded form of the .pfx file for the Application Gateway Certificate"
+      }
+    },
+    "certPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password for .pfx certificate"
+      }
+    },
+    "keyVaultId": {
+      "type": "string",
+      "metadata": {
+          "description": "Id of the keyvault where user credentials for the deployment are stored."
+      }
+    },
     "CAMDeploymentBlobSource": {
       "type": "string",
       "defaultValue": "https://teradeploy.blob.core.windows.net/binaries",
@@ -69,20 +101,6 @@
         "description": "Auto-generated token to access _artifactsLocation"
       },
       "defaultValue": ""
-    },
-    "camSaasUri": {
-      "type": "string",
-      "metadata": {
-        "description": "URI for the CAM SAAS"
-      },
-      "defaultValue": "https://cam-antar.teradici.com"
-    },
-    "verifyCAMSaaSCertificate": {
-      "type": "bool",
-      "defaultValue": true,
-      "metadata": {
-        "description": "a flag to indicate whether to verify CAM SaaS Server certificate. True means to verify."
-      }
     }
   },
   "variables": {
@@ -180,6 +198,15 @@
           },
           "verifyCAMSaaSCertificate": {
             "value": "[parameters('verifyCAMSaaSCertificate')]"
+          },
+          "certData": {
+            "value": "[parameters('certData')]"
+          },
+          "certPassword": {
+            "value": "[parameters('certPassword')]"
+          },
+          "keyVaultId": {
+            "value": "[parameters('keyVaultId')]"
           },
           "CAMDeploymentBlobSource": {
             "value": "[parameters('CAMDeploymentBlobSource')]"

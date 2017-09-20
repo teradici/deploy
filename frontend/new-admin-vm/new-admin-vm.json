@@ -172,6 +172,12 @@
             "metadata": {
                 "description": "a flag to indicate whether to verify CAM SaaS Server certificate. True means to verify."
             }
+        },
+        "keyVaultId": {
+            "type": "string",
+            "metadata": {
+                "description": "Id of the keyvault where user credentials for the deployment are stored."
+            }
         }
     },
     "variables": {
@@ -225,6 +231,7 @@
                         },
                         "adminDesktopVMName" : "[parameters('adminDesktopVMName')]",
                         "camSaasUri" : "[parameters('camSaasUri')]",
+                        "keyVaultId" : "[parameters('keyVaultId')]",
                         "verifyCAMSaaSCertificate": "[parameters('verifyCAMSaaSCertificate')]",
                         "DCVMName": "[parameters('domainControllerName')]",
                         "RGName": "[resourceGroup().name]",

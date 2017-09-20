@@ -67,6 +67,24 @@
         "description": "The location of the blobs for admin GUI machine installation"
       }
     },
+    "certData": {
+      "type": "string",
+      "metadata": {
+        "description": "Base-64 encoded form of the .pfx file for the Application Gateway Certificate"
+      }
+    },
+    "certPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password for .pfx certificate"
+      }
+    },
+    "keyVaultId": {
+      "type": "string",
+      "metadata": {
+          "description": "Id of the keyvault where user credentials for the deployment are stored."
+      }
+    },
     "_agentArtifactsLocation": {
       "type": "string",
       "metadata": {
@@ -280,6 +298,50 @@
           },
           "verifyCAMSaaSCertificate": {
             "value": "[parameters('verifyCAMSaaSCertificate')]"
+          },
+          "keyVaultId": {
+            "value": "[parameters('keyVaultId')]"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "CreateAppGateway",
+      "apiVersion": "2016-02-01",
+      "dependsOn": [
+        "Microsoft.Resources/deployments/CreateNetworkSGs"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('_artifactsLocation'), '/new-app-gateway/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "subnetRef": {
+              "value": "[concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')),'/subnets/',variables('gatewaySubnetName'))]"
+          },
+          "skuName": {
+            "value": "Standard_Small"
+          },
+          "capacity": {
+            "value": 1
+          },
+          "backendIpAddressDefault": {
+              "value": "[variables('auPrivateIP')]"
+          },
+          "backendIpAddressForPathRule1": {
+              "value": "[variables('cmPrivateIP')]"
+          },
+          "pathMatch1": {
+            "value": "/pcoip-broker/*"
+          },
+          "certData": {
+            "value": "[parameters('certData')]"
+          },
+          "certPassword": {
+            "value": "[parameters('certPassword')]"
           }
         }
       }

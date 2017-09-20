@@ -115,7 +115,10 @@ Configuration InstallCAM
 		[string]$camSaasUri,
 
 		[Parameter(Mandatory=$false)]
-		[bool]$verifyCAMSaaSCertificate=$true
+		[bool]$verifyCAMSaaSCertificate=$true,
+
+		[Parameter(Mandatory=$true)]
+		[string]$keyVaultId
 	)
 
 	$standardVMSize = "Standard_D2_v3"
@@ -647,7 +650,7 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
             SetScript  = {
 
 
-				Write-Host "Creating SP if needed, creating keyvault, and writing auth file."
+				Write-Host "Creating SP if needed, and writing auth file."
 
 # create SP and write to credential file
 # as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
@@ -887,130 +890,24 @@ graphURL=https\://graph.windows.net/
 				[System.Environment]::SetEnvironmentVariable("AZURE_AUTH_LOCATION", $authFilePath, "Machine")
 				$env:AZURE_AUTH_LOCATION = $authFilePath
 
+
+
 				#Get local version of passed-in credentials
 				$localVMAdminCreds = $using:VMAdminCreds
 				$VMAdminUsername = $localVMAdminCreds.GetNetworkCredential().Username
-				$VMAdminPassword = $localVMAdminCreds.GetNetworkCredential().Password
 
 				$localDomainAdminCreds = $using:DomainAdminCreds
 				$DomainAdminUsername = $localDomainAdminCreds.GetNetworkCredential().Username
-				$DomainAdminPassword = $localDomainAdminCreds.GetNetworkCredential().Password
 
 
 
-				#KeyVault names must be globally (or at least regionally) unique, so make a unique string
-				$generatedKVID = -join ((65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
-				$kvName = "CAM-$generatedKVID"
-
-				Write-Host "Creating Azure KeyVault $kvName"
-
-
-				$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGNameLocal
-				New-AzureRmKeyVault -VaultName $kvName -ResourceGroupName $RGNameLocal -Location $rg.Location -EnabledForTemplateDeployment -EnabledForDeployment
-
-				Write-Host "Populating Azure KeyVault $kvName"
-				
-				$rcCred = $using:registrationCodeAsCred
-				$registrationCode = $rcCred.Password
+				$kvId = $using:keyVaultId
 
 				$rcSecretName = 'cloudAccessRegistrationCode'
 				$djSecretName = 'domainJoinPassword'
 
-				$rcSecret = $null
-				$djSecret = $null
-
-				#keyvault populate retry is to catch the case where the DNS has not been updated
-				#from the keyvault creation by the time we get here
-				$keyVaultPopulateRetry = 360 # so ~30 minutes with a sleep of 5 seconds.
-				while($keyVaultPopulateRetry -ne 0)
-				{
-					$keyVaultPopulateRetry--
-
-					try
-					{
-						Set-AzureRmKeyVaultAccessPolicy -VaultName $kvName -ServicePrincipalName $spName -PermissionsToSecrets get, set -ErrorAction stop
-
-						$rcSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $rcSecretName -SecretValue $registrationCode -ErrorAction stop
-						$djSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $djSecretName -SecretValue $localDomainAdminCreds.Password -ErrorAction stop
-						break
-					}
-					catch
-					{
-						Write-Host "Waiting for key vault $keyVaultPopulateRetry"
-						if ( $keyVaultPopulateRetry -eq 0)
-						{
-							#re-throw whatever the original exception was
-							throw
-						}
-						Start-sleep -Seconds 5
-					}
-				}
-
-				$rcSecretVersionedURL = $rcSecret.Id
-				$rcSecretURL = $rcSecretVersionedURL.Substring(0, $rcSecretVersionedURL.lastIndexOf('/'))
-
-				$djSecretVersionedURL = $djSecret.Id
-				$djSecretURL = $djSecretVersionedURL.Substring(0, $djSecretVersionedURL.lastIndexOf('/'))
-
-
-				Write-Host "Creating Local Admin Password for new machines"
-
-				$localAdminPasswordStr =  "5!" + (-join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})) # "5!" is to ensure numbers and symbols
-
-				$localAdminPassword = ConvertTo-SecureString $localAdminPasswordStr -AsPlainText -Force
-
 				$laSecretName = 'localAdminPassword'
-				$laSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $laSecretName -SecretValue $localAdminPassword
-				$laSecretVersionedURL = $laSecret.Id
-				$laSecretURL = $laSecretVersionedURL.Substring(0, $laSecretVersionedURL.lastIndexOf('/'))
 
-
-				################################
-				Write-Host "Creating application gateway"
-				# This really should be a different configuration but putting here so it can reuse the same Azure login context, and passing variables between SetScripts seems problematic
-
-				# create self signed certificate
-				$certLoc = 'cert:Localmachine\My'
-				$startDate = [DateTime]::Now.AddDays(-1)
-				$subject = "CN=localhost,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"
-				$cert = New-SelfSignedCertificate -certstorelocation $certLoc -DnsName "*.cloudapp.net" -Subject $subject -KeyLength 3072 `
-				    -FriendlyName "PCoIP Application Gateway" -NotBefore $startDate -TextExtension @("2.5.29.19={critical}{text}ca=1") `
-				    -HashAlgorithm SHA384 -KeyUsage DigitalSignature, CertSign, CRLSign, KeyEncipherment
-
-				#generate pfx file from certificate
-				$certPath = $certLoc + '\' + $cert.Thumbprint
-
-				$pfxPath = 'C:\WindowsAzure'
-				if (!(Test-Path -Path $pfxPath)) {
-					New-Item $pfxPath -type directory
-				}
-				$certPfx = $pfxPath + '\mySelfSignedCert.pfx'
-
-				#generate password for pfx file
-				$certPswd = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
-				$secureCertPswd = ConvertTo-SecureString -String $certPswd -AsPlainText -Force
-
-				#export pfx file
-				Export-PfxCertificate -Cert $certPath -FilePath $certPfx -Password $secureCertPswd
-
-				#read from pfx file and convert to base64 string
-				$fileContentEncoded = [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes($certPfx))
-
-				# deploy application gateway
-				$parameters = @{}
-				$parameters.Add("subnetRef", $using:AGsubnetRef)
-				$parameters.Add("skuName", "Standard_Small")
-				$parameters.Add("capacity", 1)
-				$parameters.Add("backendIpAddressDefault", "$using:AGbackendIpAddressDefault")
-				$parameters.Add("backendIpAddressForPathRule1", "$using:AGbackendIpAddressForPathRule1")
-				$parameters.Add("pathMatch1", "/pcoip-broker/*")
-				$parameters.Add("certData", "$fileContentEncoded")
-				$parameters.Add("certPassword", "$certPswd")
-
-				$LocalAGtemplateUri = $using:AGtemplateUri
-				$tUri = $LocalAGtemplateUri.GetNetworkCredential().Password
-
-				New-AzureRmResourceGroupDeployment -Mode Incremental -Name "DeployAppGateway" -ResourceGroupName $RGNameLocal -TemplateUri $tUri -TemplateParameterObject $parameters
 
 				################################
 
@@ -1030,7 +927,7 @@ graphURL=https\://graph.windows.net/
         "domainPassword": {
 			"reference": {
 			  "keyVault": {
-				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+				"id": "$kvId"
 			  },
 			  "secretName": "$djSecretName"
 			}		
@@ -1038,7 +935,7 @@ graphURL=https\://graph.windows.net/
         "registrationCode": {
 			"reference": {
 			  "keyVault": {
-				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+				"id": "$kvId"
 			  },
 			  "secretName": "$rcSecretName"
 			}
@@ -1049,7 +946,7 @@ graphURL=https\://graph.windows.net/
         "vmAdminPassword": {
 			"reference": {
 			  "keyVault": {
-				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+				"id": "$kvId"
 			  },
 			  "secretName": "$laSecretName"
 			}
