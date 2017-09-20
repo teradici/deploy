@@ -272,7 +272,7 @@
           "domainControllerName": {
             "value": "[variables('adVMName')]"
           },
-          "blobSource": {
+          "CAMDeploymentBlobSource": {
             "value": "[parameters('CAMDeploymentBlobSource')]"
           },
           "storageAccountName": {

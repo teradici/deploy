@@ -100,12 +100,6 @@
                 "description": "The registration code for Cloud Access Software"
             }
         },
-        "blobSource": {
-            "type": "string",
-            "metadata": {
-                "description": "The source location of the required powershell and application installer blobs"
-            }
-        },
         "storageAccountName": {
             "type": "string",
             "metadata": {
@@ -214,7 +208,7 @@
                 "typeHandlerVersion": "2.9",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "modulesUrl": "[concat(parameters('blobSource'),'/Install-CAM.ps1.zip')]",
+                    "modulesUrl": "[concat(parameters('CAMDeploymentBlobSource'),'/Install-CAM.ps1.zip')]",
                     "privacy": {
                         "DataCollection": "Disable"
                     },
@@ -222,7 +216,7 @@
                     "Properties": {
                         "domainFQDN":  "[parameters('domainToJoin')]",
                         "domainGroupAppServersJoin": "[parameters('domainGroupAppServersJoin')]",
-                        "sourceURI": "[parameters('blobSource')]",
+                        "sourceURI": "[parameters('CAMDeploymentBlobSource')]",
 						"templateURI": "[parameters('_artifactsLocation')]",
 						"templateAgentURI": "[parameters('_agentArtifactsLocation')]",
                         "VMAdminCreds": {
