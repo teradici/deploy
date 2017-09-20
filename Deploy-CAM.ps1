@@ -742,7 +742,27 @@ $camDeploymenInfoJSONDecoded
 
 [System.Web.HttpUtility]::UrlDecode($camDeploymenInfoDecoded.AzureAuthFile)
 
-$camDeploymenInfoDecoded.RegistrationInfo
+$regInfo = $camDeploymenInfoDecoded.RegistrationInfo
+
+foreach($var in $reginfo.GetEnumerator()) {
+Write-Host "loop: $var"
+}
+
+
+$regInfo.psobject | get-member -membertype properties | fl *
+
+$regInfo.psobject.properties | Foreach-Object {
+    [System.Environment]::SetEnvironmentVariable($_.Name, $_.Value, "Machine")
+}
+ Write-Host $_.name + " v " + $_.value  }
+
+ | get-member -membertype properties | Select Name | fl *
+
+
+
+$regInfo | get-member -membertype object | Foreach-Object { Write-Host $_ | fl * }
+
+$reginfo.Keys()
 
 ################## Actual script start here ####################
 

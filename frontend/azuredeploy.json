@@ -61,10 +61,10 @@
         "description": "a flag to indicate whether to verify CAM SaaS Server certificate. True means to verify."
       }
     },
-    "CAMDeploymentBlobSource": {
-      "type": "string",
+    "CAMDeploymentInfo": {
+      "type": "securestring",
       "metadata": {
-        "description": "The location of the blobs for admin GUI machine installation"
+          "description": "Encoded blob of authorization and URL information for the CAM Frontend."
       }
     },
     "certData": {
@@ -83,6 +83,12 @@
       "type": "string",
       "metadata": {
           "description": "Id of the keyvault where user credentials for the deployment are stored."
+      }
+    },
+    "CAMDeploymentBlobSource": {
+      "type": "string",
+      "metadata": {
+        "description": "The location of the blobs for admin GUI machine installation"
       }
     },
     "_agentArtifactsLocation": {
@@ -301,6 +307,9 @@
           },
           "keyVaultId": {
             "value": "[parameters('keyVaultId')]"
+          },
+          "CAMDeploymentInfo": {
+            "value": "[parameters('CAMDeploymentInfo')]"
           }
         }
       }

@@ -38,6 +38,9 @@
         "keyVaultId": {
             "value": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
         },
+        "CAMDeploymentInfo": {
+            "value": "This+would+be+a+URI+encoded+string"
+        },
         "CAMDeploymentBlobSource": {
             "value": "https://teradeploy.blob.core.windows.net/binaries"
         },

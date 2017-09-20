@@ -118,25 +118,6 @@
                 "description": "Name of the PCoIP powered desktop created for the admin"
             }
         },
-        "_artifactsLocation": {
-            "type": "string",
-            "metadata": {
-                "description": "The location of resources, such as templates and DSC modules, that the template depends on"
-            }
-        },
-        "_agentArtifactsLocation": {
-            "type": "string",
-            "metadata": {
-                "description": "The location of resources, such as templates and DSC modules, specific to the PCoIP Agent"
-            }
-        },
-        "_artifactsLocationSasToken": {
-            "type": "securestring",
-            "metadata": {
-                "description": "Auto-generated token to access _artifactsLocation"
-            },
-            "defaultValue": ""
-        },
         "AGsubnetRef": {
             "type": "string",
             "metadata": {
@@ -178,6 +159,37 @@
             "metadata": {
                 "description": "Id of the keyvault where user credentials for the deployment are stored."
             }
+        },
+        "CAMDeploymentInfo": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Encoded blob of authorization and URL information for the CAM Frontend."
+            }
+        },
+        "CAMDeploymentBlobSource": {
+            "type": "string",
+            "metadata": {
+              "description": "The location of the blobs for admin GUI machine installation"
+            }
+        },
+        "_artifactsLocation": {
+            "type": "string",
+            "metadata": {
+                "description": "The location of resources, such as templates and DSC modules, that the template depends on"
+            }
+        },
+        "_agentArtifactsLocation": {
+            "type": "string",
+            "metadata": {
+                "description": "The location of resources, such as templates and DSC modules, specific to the PCoIP Agent"
+            }
+        },
+        "_artifactsLocationSasToken": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Auto-generated token to access _artifactsLocation"
+            },
+            "defaultValue": ""
         }
     },
     "variables": {
@@ -229,6 +241,10 @@
                             "UserName": "dummy",
                             "Password": "PrivateSettingsRef:registrationCode"
                         },
+                        "CAMDeploymentInfo": {
+                            "UserName": "dummy",
+                            "Password": "PrivateSettingsRef:CAMDeploymentInfo"
+                        },
                         "adminDesktopVMName" : "[parameters('adminDesktopVMName')]",
                         "camSaasUri" : "[parameters('camSaasUri')]",
                         "keyVaultId" : "[parameters('keyVaultId')]",
@@ -256,7 +272,8 @@
                         "vmAdminPassword": "[parameters('vmAdminPassword')]",
                         "AzureAdminPassword": "[parameters('AzureAdminPassword')]",
                         "registrationCode": "[parameters('registrationCode')]",
-                        "PrivateAGtemplateUri": "[parameters('AGtemplateUri')]"
+                        "PrivateAGtemplateUri": "[parameters('AGtemplateUri')]",
+                        "CAMDeploymentInfo": "[parameters('CAMDeploymentInfo')]"
                     }
                 }
             }

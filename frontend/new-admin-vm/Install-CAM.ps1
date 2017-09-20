@@ -35,6 +35,9 @@ Configuration InstallCAM
         [Parameter(Mandatory)]
 		[System.Management.Automation.PSCredential]$registrationCodeAsCred,
 
+        [Parameter(Mandatory)]
+		[System.Management.Automation.PSCredential]$CAMDeploymentInfo,
+
         [string]
         $javaInstaller = "jdk-8u91-windows-x64.exe",
 
@@ -650,230 +653,24 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
             SetScript  = {
 
 
-				Write-Host "Creating SP if needed, and writing auth file."
+				Write-Host "Writing auth file."
 
-# create SP and write to credential file
-# as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
-
-				function Login-AzureRmAccountWithBetterReporting($Credential)
-				{
-					try
-					{
-						$userName = $Credential.userName
-						Login-AzureRmAccount -Credential $Credential @args -ErrorAction stop
-
-						Write-Host "Successfully Logged in $userName"
-					}
-					catch
-					{
-						$es = "Error authenticating AzureAdminUsername $userName for Azure subscription access.`n"
-						$exceptionMessage = $_.Exception.Message
-						$exceptionMessageErrorCode = $exceptionMessage.split(':')[0]
-
-						switch($exceptionMessageErrorCode)
-						{
-							"AADSTS50076" {$es += "Please ensure your account does not require Multi-Factor Authentication`n"; break}
-							"Federated service at https" {$es += "Unable to perform federated login - Unknown username or password?`n"; break}
-							"unknown_user_type" {$es += "Please ensure your username is in UPN format. e.g., user@example.com`n"; break}
-							"AADSTS50126" {$es += "User not found in directory`n"; break}
-							"AADSTS70002" {$es += "Please check your password`n"; break}
-						}
+# File format as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
 
 
-						throw "$es$exceptionMessage"
-
-					}
-				}
-
-				$localAzureCreds = $using:AzureCreds
-				$RGNameLocal     = $using:RGName
+				$localAzureCreds = $using:AzureCreds   # can delete?
+				$RGNameLocal     = $using:RGName       # can delete?
 				$tenantID        = $using:tenantID
-
-				if ((-not $tenantID) -or ($tenantID -eq "null"))
-				{
-				    Write-Host "No tenant ID entered. Calling Azure Active Directory to make an app and a service principal."
-
-					Login-AzureRmAccountWithBetterReporting -Credential $localAzureCreds
-
-					#Application name
-					$appName = "CAM-$RGNameLocal"
-					# 16 letter password
-					$generatedPassword = -join ((65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
-					$generatedID = -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})
-					$appURI = "https://www.$generatedID.com"
-
-
-					Write-Host "Purge any registered app's with the same name."
-
-					# first make sure if there is an app there (or more than one) that they're deleted.
-					$appArray = Get-AzureRmADApplication -DisplayName $appName
-					foreach($app in $appArray)
-					{
-						$aoID = $app.ObjectId
-						try
-						{
-							Write-Host "Removing previous SP application $appName ObjectId: $aoID"
-							Remove-AzureRmADApplication -ObjectId $aoID -Force -ErrorAction Stop
-						}
-						catch
-						{
-							$exceptionContext = Get-AzureRmContext
-							$exceptionTenantId = $exceptionContext.Tenant.Id
-							Write-Error "Failure to remove application $appName from tenant $exceptionTenantId. Please check your AAD tenant permissions."
-
-							#re-throw whatever the original exception was
-							throw
-						}
-					}
-
-					Write-Host "Purge complete. Creating new app."
-
-					# retry required on app registration (it seems) if there is a race condition with the deleted application.
-					$newAppCreateRetry = 1800
-					while($newAppCreateRetry -ne 0)
-					{
-						$newAppCreateRetry--
-
-						try
-						{
-							$app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword -ErrorAction Stop
-							break
-						}
-						catch
-						{
-							Write-Host "Retrying to create app countdown: $newAppCreateRetry appName: $appName"
-							Start-sleep -Seconds 1
-							if ($newAppCreateRetry -eq 0)
-							{
-								#re-throw whatever the original exception was
-								$exceptionContext = Get-AzureRmContext
-								$exceptionTenantId = $exceptionContext.Tenant.Id
-								Write-Error "Failure to add application $appName to tenant $exceptionTenantId. Please check your AAD tenant permissions."
-								throw
-							}
-						}
-					}
-
-
-					Write-Host "New app creation complete. Creating SP."
-
-					# retry required since it can take a few seconds for the app registration to percolate through Azure.
-					# (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
-					$SPCreateRetry = 1800
-					while($SPCreateRetry -ne 0)
-					{
-						$SPCreateRetry--
-
-						try
-						{
-							$sp  = New-AzureRmADServicePrincipal -ApplicationId $app.ApplicationId -ErrorAction Stop
-							break
-						}
-						catch
-						{
-							$appIDForPrint = $app.ObjectId
-
-							Write-Host "Waiting for app $SPCreateRetry : $appIDForPrint"
-							Start-sleep -Seconds 1
-							if ($SPCreateRetry -eq 0)
-							{
-								#re-throw whatever the original exception was
-								Write-Error "Failure to create SP for $appName."
-								throw
-							}
-						}
-					}
-					
-					Write-Host "SP creation complete. Adding role assignment."
-
-					# retry required since it can take a few seconds for the app registration to percolate through Azure.
-					# (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
-					$rollAssignmentRetry = 1800
-					while($rollAssignmentRetry -ne 0)
-					{
-						$rollAssignmentRetry--
-
-						try
-						{
-							New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $RGNameLocal -ServicePrincipalName $app.ApplicationId -ErrorAction Stop
-							break
-						}
-						catch
-						{
-							Write-Host "Waiting for service principal. Remaining: $rollAssignmentRetry"
-							Start-sleep -Seconds 1
-							if ($rollAssignmentRetry -eq 0)
-							{
-								#re-throw whatever the original exception was
-								$exceptionContext = Get-AzureRmContext
-								$exceptionSubscriptionId = $exceptionContext.Subscription.Id
-								Write-Error "Failure to create Contributor role for $appName in ResourceGroup: $RGNameLocal Subscription: $exceptionSubscriptionId. Please check your subscription premissions."
-								throw
-							}
-						}
-					}
-
-					# get SP credentials
-					$spPass = ConvertTo-SecureString $generatedPassword -AsPlainText -Force
-					$spCreds = New-Object -TypeName pscredential -ArgumentList  $sp.ApplicationId, $spPass
-
-					# get tenant ID for this subscription
-					$subForTenantID = Get-AzureRmSubscription
-					$tenantID = $subForTenantID.TenantId
-				}
-				else
-				{
-    				Write-Host "Tenant ID was provided."
-
-					$spCreds = $localAzureCreds
-				}
-
-				$spName = $spCreds.UserName
-  				Write-Host "Logging in SP $spName with tenantID $tenantID"
-
-				# retry required since it can take a few seconds for the app registration to percolate through Azure (and different to different endpoints... sigh).
-				$LoginSPRetry = 1800
-				while($LoginSPRetry -ne 0)
-				{
-					$LoginSPRetry--
-
-					try
-					{
-						Login-AzureRmAccount -ServicePrincipal -Credential $spCreds -TenantId $tenantID -ErrorAction Stop
-						break
-					}
-					catch
-					{
-						Write-Host "Retrying SP login $LoginSPRetry : SPName=$spName TenantID=$tenantID"
-						Start-sleep -Seconds 1
-						if ($LoginSPRetry -eq 0)
-						{
-							#re-throw whatever the original exception was
-							throw
-						}
-					}
-				}
-				
-
 
 				Write-Host "Create auth file."
 				
-				$sub = Get-AzureRmSubscription
-				$subID = $sub.Id
-				$spPassword = $spCreds.GetNetworkCredential().Password
 
-
-				$authFileContent = @"
-subscription=$subID
-client=$spName
-key=$spPassword
-tenant=$tenantID
-managementURI=https\://management.core.windows.net/
-baseURL=https\://management.azure.com/
-authURL=https\://login.windows.net/
-graphURL=https\://graph.windows.net/
-"@
-
+				$CAMDeploymentInfoCred = $using:CAMDeploymentInfo;
+				$CAMDeploymentInfo = $CAMDeploymentInfoCred.GetNetworkCredential().Password
+				$CAMDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($CAMDeploymentInfo)
+				$CAMDeploymenInfoDecoded = ConvertFrom-Json $CAMDeploymenInfoJSONDecoded
+				$authFileContent = [System.Web.HttpUtility]::UrlDecode($CAMDeploymenInfoDecoded.AzureAuthFile)
+				
 				$targetDir = "$env:CATALINA_HOME\adminproperty"
 				$authFilePath = "$targetDir\authfile.txt"
 
@@ -1272,178 +1069,17 @@ brokerLocale=en_US
 
             SetScript  = {
 				##
-				$certificatePolicy = [System.Net.ServicePointManager]::CertificatePolicy
 
-				if (!$using:verifyCAMSaaSCertificate) {
-					# Do this so SSL Errors are ignored
-					add-type @"
-					using System.Net;
-					using System.Security.Cryptography.X509Certificates;
-					public class TrustAllCertsPolicy : ICertificatePolicy {
-						public bool CheckValidationResult(
-							ServicePoint srvPoint, X509Certificate certificate,
-							WebRequest request, int certificateProblem) {
-							return true;
-						}
-					}
-"@
-					[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+				$CAMDeploymentInfoCred = $using:CAMDeploymentInfo;
+				$CAMDeploymentInfo = $CAMDeploymentInfoCred.GetNetworkCredential().Password
+				$CAMDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($CAMDeploymentInfo)
+				$CAMDeploymenInfoDecoded = ConvertFrom-Json $CAMDeploymenInfoJSONDecoded
+				$regInfo = $camDeploymenInfoDecoded.RegistrationInfo
+
+				# now have an object with key value pairs - set environment to be active after reboot
+				$regInfo.psobject.properties | Foreach-Object {
+					[System.Environment]::SetEnvironmentVariable($_.Name, $_.Value, "Machine")
 				}
-				##
-
-				# Read in Authorization Information
-				# Use this to retrieve client, key, tenant and subscription from the auth file
-				Get-Content "$env:AZURE_AUTH_LOCATION" | Foreach-Object{
-					$var = $_.Split('=', 2)
-					New-Variable -Name $var[0] -Value $var[1]
-				}
-
-				$camSaasBaseUri = $using:camSaasUri
-				$camRegistrationError = ""
-				for($idx = 0; $idx -lt $using:retryCount; $idx++) {
-					try {
-						$userRequest = @{
-							username = $client
-							password = $key
-							tenantId = $tenant
-						}
-						$registerUserResult = ""
-						try {
-							$registerUserResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/users") -Body $userRequest
-						} catch {
-							if ($_.ErrorDetails.Message) {
-								$registerUserResult = ConvertFrom-Json $_.ErrorDetails.Message
-							} else {
-								throw $_
-							}	
-						}
-						Write-Verbose (ConvertTo-Json $registerUserResult)
-						# Check if registration succeeded or if it has been registered previously
-						if( !(($registerUserResult.code -eq 201) -or ($registerUserResult.data.reason.ToLower().Contains("already exist"))) ) {
-							throw ("Failed to register with CAM. Result was: " + (ConvertTo-Json $registerUserResult))
-						}
-
-						[System.Environment]::SetEnvironmentVariable("CAM_USERNAME", $userRequest.username, "Machine")
-						[System.Environment]::SetEnvironmentVariable("CAM_PASSWORD", $userRequest.password, "Machine")
-						[System.Environment]::SetEnvironmentVariable("CAM_TENANTID", $userRequest.tenantId, "Machine")
-						[System.Environment]::SetEnvironmentVariable("CAM_URI", $camSaasBaseUri, "Machine")
-						$env:CAM_USERNAME = $userRequest.username
-						$env:CAM_PASSWORD = $userRequest.password
-						$env:CAM_TENANTID = $userRequest.tenantId
-						$env:CAM_URI = $camSaasBaseUri
-
-						Write-Host "Cloud Access Manager Frontend has been registered succesfully"
-
-						# Get a Sign-in token
-						$signInResult = ""
-						try {
-							$signInResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/signin") -Body $userRequest
-						} catch {
-							if ($_.ErrorDetails.Message) {
-								$signInResult = ConvertFrom-Json $_.ErrorDetails.Message
-							} else {
-								throw $_
-							}							
-						}
-						Write-Verbose ((ConvertTo-Json $signInResult) -replace "\.*token.*", 'Token": "Sanitized"')
-						# Check if signIn succeded
-						if ($signInResult.code -ne 200) {
-							throw ("Signing in failed. Result was: " + (ConvertTo-Json $signInResult))
-						}
-						$tokenHeader = @{
-							authorization=$signInResult.data.token
-						}
-						Write-Host "Cloud Access Manager sign in succeeded"
-
-						$registrationCode = ($using:registrationCodeAsCred).GetNetworkCredential().password
-
-						# Register Deployment
-						$deploymentRequest = @{
-							resourceGroup = $using:RGName
-							subscriptionId = $subscription
-							registrationCode = $registrationCode
-						}
-						$registerDeploymentResult = ""
-						try {
-							$registerDeploymentResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/deployments") -Body $deploymentRequest -Headers $tokenHeader
-						} catch {
-							if ($_.ErrorDetails.Message) {
-								$registerDeploymentResult = ConvertFrom-Json $_.ErrorDetails.Message
-							} else {
-								throw $_
-							}
-						}
-						Write-Verbose ((ConvertTo-Json $registerDeploymentResult) -replace "\.*registrationCode.*", 'registrationCode":"Sanitized"')
-						# Check if registration succeeded
-						if( !( ($registerDeploymentResult.code -eq 201) -or ($registerDeploymentResult.data.reason.ToLower().Contains("already exist")) ) ) {
-							throw ("Registering Deployment failed. Result was: " + (ConvertTo-Json $registerDeploymentResult))
-						}
-						$deploymentId = ""
-						# Get the deploymentId
-						if( ($registerDeploymentResult.code -eq 409) -and ($registerDeploymentResult.data.reason.ToLower().Contains("already exist")) ) {
-							# Deployment is already registered so the deplymentId needs to be retrieved
-							$registeredDeployment = ""
-							try {
-								$registeredDeployment = Invoke-RestMethod -Method Get -Uri ($camSaasBaseUri + "/api/v1/deployments") -Body $deploymentRequest -Headers $tokenHeader
-								$deploymentId = $registeredDeployment.data.deploymentId
-							} catch {
-								if ($_.ErrorDetails.Message) {
-									$registeredDeployment = ConvertFrom-Json $_.ErrorDetails.Message
-									throw ("Getting Deployment ID failed. Result was: " + (ConvertTo-Json $registeredDeployment))
-								} else {
-									throw $_
-								}								
-							}
-						} else {
-							$deploymentId = $registerDeploymentResult.data.deploymentId
-						}
-
-						if ( !$deploymentId ) {
-							throw ("Failed to get a Deployment ID")
-						}
-
-						[System.Environment]::SetEnvironmentVariable("CAM_DEPLOYMENTID", $deploymentId, "Machine")
-						$env:CAM_DEPLOYMENTID = $deploymentId
-
-						Write-Host "Deployment has been registered succesfully with Cloud Access Manager"
-
-						# Register Agent Machine
-						$machineRequest = @{
-							deploymentId = $deploymentId
-							resourceGroup = $using:RGName
-							machineName = $using:adminDesktopVMName
-							subscriptionId = $subscription
-						}
-						$registerMachineResult = ""
-						try {
-							$registerMachineResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/machines") -Body $machineRequest -Headers $tokenHeader
-						} catch {
-							if ($_.ErrorDetails.Message) {
-								$registerMachineResult = ConvertFrom-Json $_.ErrorDetails.Message
-							} else {
-								throw $_
-							}
-						}
-						Write-Verbose (ConvertTo-Json $registerMachineResult)
-						# Check if registration succeeded
-						if( !(($registerMachineResult.code -eq 201) -or ($registerMachineResult.data.reason.ToLower().Contains("exists")))) {
-							throw ("Registering Machine failed. Result was: " + (ConvertTo-Json $registerMachineResult))
-						}
-						Write-Host "Machine has been registered succesfully with Cloud Access Manager"
-						$camRegistrationError = ""
-						break;
-					} catch {
-						$camRegistrationError = $_
-						Write-Verbose ( "Attempt {0} of $using:retryCount failed due to Error: {1}" -f ($idx+1), $camRegistrationError )
-						Start-Sleep -s $using:delay
-					}
-				}
-				if($camRegistrationError) {
-					throw $camRegistrationError
-				}
-
-				# restore CertificatePolicy 
-				[System.Net.ServicePointManager]::CertificatePolicy = $certificatePolicy
 
 				# Reboot machine to ensure all changes are picked up by all services.
 				$global:DSCMachineStatus = 1
