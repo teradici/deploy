@@ -53,6 +53,9 @@ Configuration InstallCAM
         [string]
         $gaAgentARM = "server2016-graphics-agent.json",
 
+        [string]
+        $linuxAgentARM = "rhel-standard-agent.json",
+
         [Parameter(Mandatory)]
         [String]$domainFQDN,
 
@@ -191,6 +194,12 @@ Configuration InstallCAM
 		{
 			Uri = "$templateAgentURI/$gaAgentARM"
 			DestinationPath = "$LocalDLPath\$gaAgentARM"
+		}
+
+		xRemoteFile Download_Linux_Agent_ARM
+		{
+			Uri = "$templateAgentURI/$linuxAgentARM"
+			DestinationPath = "$LocalDLPath\$linuxAgentARM"
 		}
 
         File Sumo_Directory 
@@ -504,7 +513,8 @@ Configuration InstallCAM
             DependsOn  = @("[xRemoteFile]Download_Admin_WAR",
 						   "[xRemoteFile]Download_Agent_ARM",
 						   "[Script]Setup_AUI_Service",
-						   "[xRemoteFile]Download_Ga_Agent_ARM")
+						   "[xRemoteFile]Download_Ga_Agent_ARM",
+						   "[xRemoteFile]Download_Linux_Agent_ARM")
 
             GetScript  = { @{ Result = "Install_AUI" } }
 
@@ -521,6 +531,7 @@ Configuration InstallCAM
 				$adminWAR = $using:adminWAR
                 $agentARM = $using:agentARM
                 $gaAgentARM = $using:gaAgentARM
+				$linuxAgentARM = $using:linuxAgentARM
 				$localtomcatpath = $using:localtomcatpath
 				$CatalinaHomeLocation = $using:CatalinaHomeLocation
 				$catalinaBase = "$CatalinaHomeLocation" #\$using:AUIServiceName"
@@ -621,6 +632,7 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 				
 				copy "$LocalDLPath\$agentARM" $templateLoc
 				copy "$LocalDLPath\$gaAgentARM" $templateLoc
+				copy "$LocalDLPath\$linuxAgentARM" $templateLoc
 
 			}
 		}
@@ -1059,19 +1071,23 @@ graphURL=https\://graph.windows.net/
 
 				$standardArmParamContent = $armParamContent -replace "%vmSize%",$using:standardVMSize
 				$graphicsArmParamContent = $armParamContent -replace "%vmSize%",$using:graphicsVMSize
+				$linuxArmParamContent = $armParamContent -replace "%vmSize%",$using:standardVMSize
 
 				Write-Host "Creating default template parameters files"
 
 				#now make the default parameters filenames - same root name but different suffix as the templates
                 $agentARM = $using:agentARM
                 $gaAgentARM = $using:gaAgentARM
+				$linuxAgentARM = $using:linuxAgentARM
 
 				$agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
 				$gaAgentARMparam = ($gaAgentARM.split('.')[0]) + ".customparameters.json"
+				$linuxAgentARMparam = ($linuxAgentARM.split('.')[0]) + ".customparameters.json"
 
 				$ParamTargetDir = "$using:CatalinaHomeLocation\ARMParametertemplateFiles"
 				$ParamTargetFilePath = "$ParamTargetDir\$agentARMparam"
 				$GaParamTargetFilePath = "$ParamTargetDir\$gaAgentARMparam"
+				$LinuxParamTargetFilePath = "$ParamTargetDir\$linuxAgentARMparam"
 
 				if(-not (Test-Path $ParamTargetDir))
 				{
@@ -1098,6 +1114,13 @@ graphURL=https\://graph.windows.net/
 
 				Set-Content $GaParamTargetFilePath $graphicsArmParamContent -Force
 
+				# Linux Agent Parameter file
+				if(-not (Test-Path $LinuxParamTargetFilePath))
+				{
+					New-Item $LinuxParamTargetFilePath -type file
+				}
+
+				Set-Content $LinuxParamTargetFilePath $linuxArmParamContent -Force
 
 		        Write-Host "Finished Creating default template parameters file data."
             }
