@@ -248,7 +248,7 @@
                 "fileUris": [ "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'))]" ]
                 },
             "protectedSettings": {
-                "commandToExecute": "[concat('bash ', variables('scriptFileName'), ' ', parameters('registrationCode'), ' ', parameters('agentType'), ' ', parameters('domainToJoin'), ' ', parameters('domainUsername'), ' ', parameters('domainPassword'))]"
+                "commandToExecute": "[concat('bash ', variables('scriptFileName'), ' ', parameters('registrationCode'), ' ', parameters('agentType'), ' ', variables('vmSettings').vmNamePrefix, ' ', parameters('domainToJoin'), ' ', parameters('domainUsername'), ' ', parameters('domainPassword'))]"
                 }
               }
             }

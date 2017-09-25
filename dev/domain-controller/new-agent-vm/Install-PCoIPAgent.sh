@@ -56,15 +56,14 @@ EOF
 REGISTRATION_CODE=$1
 # the second argument is the agent type
 AGENT_TYPE=$2
-
-# the third argument is the domain name
-DOMAIN_NAME=$3
-
-# the forth argument is the username
-USERNAME=$4
-
-# the fifth argument is the password
-PASSWORD=$5
+# the third argument is the VM name
+VM_NAME=$3
+# the forth argument is the domain name
+DOMAIN_NAME=$4
+# the fifith argument is the username
+USERNAME=$5
+# the sixth argument is the password
+PASSWORD=$6
 
 # Make sure Linux OS is up to date
 echo "--> Updating Linux OS to latest"
@@ -93,6 +92,10 @@ sudo yum -y install sssd realmd oddjob oddjob-mkhomedir adcli samba-common samba
 
 echo "-->Joining the domain"
 echo $PASSWORD | sudo realm join --user=$USERNAME $DOMAIN_NAME
+
+echo "-->Configuring settings"
+sudo sed -i '$ a\dyndns_update = true\ndyndns_ttl = 3600\ndyndns_refresh_interval = 43200\ndyndns_update_ptr = true' /etc/sssd/sssd.conf
+sudo domainname $VM_NAME.$DOMAIN_NAME
 
 # Install the EPEL repository
 echo "-->Install the EPEL repository"
