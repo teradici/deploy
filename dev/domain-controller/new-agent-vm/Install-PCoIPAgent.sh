@@ -64,6 +64,8 @@ DOMAIN_NAME=$4
 USERNAME=$5
 # the sixth argument is the password
 PASSWORD=$6
+# the seventh argument is the domain group to join
+GROUP=$7
 
 # Make sure Linux OS is up to date
 echo "--> Updating Linux OS to latest"
@@ -89,13 +91,24 @@ esac
 # Join domain
 echo "-->Install required packages to join domain"
 sudo yum -y install sssd realmd oddjob oddjob-mkhomedir adcli samba-common samba-common-tools krb5-workstation openldap-clients policycoreutils-python
+sudo systemctl enable sssd
 
 echo "-->Joining the domain"
 echo $PASSWORD | sudo realm join --user=$USERNAME $DOMAIN_NAME
 
 echo "-->Configuring settings"
-sudo sed -i '$ a\dyndns_update = true\ndyndns_ttl = 3600\ndyndns_refresh_interval = 43200\ndyndns_update_ptr = true' /etc/sssd/sssd.conf
+sudo sed -i '$ a\dyndns_update = True\ndyndns_ttl = 3600\ndyndns_refresh_interval = 43200\ndyndns_update_ptr = True' /etc/sssd/sssd.conf
 sudo domainname $VM_NAME.$DOMAIN_NAME
+echo "%$DOMAIN_NAME\\Domain\ Admins ALL=(ALL) ALL" > /etc/sudoers.d/sudoers
+
+echo "-->Registering with DNS"
+$DOMAIN_UPPER=echo "$DOMAIN_NAME" | tr "[a-z]" "[A-Z]"
+$IP_ADDRES=hostname -I | grep -Eo '10.([0-9]*\.){2}[0-9]*'
+echo $PASSWORD | sudo kinit $USERNAME@$DOMAIN_UPPER
+touch dns_record
+echo "update add $VM_NAME.$DOMAIN_NAME 600 a $IP_ADDRESS" > dns_record
+echo "send" >> dns_record
+sudo nsupdate -g dns_record
 
 # Install the EPEL repository
 echo "-->Install the EPEL repository"
