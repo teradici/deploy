@@ -155,7 +155,7 @@
         },
 
         "binaryLocation": "[parameters('CAMDeploymentBlobSource')]",
-        "scriptFileName": "Install-CAM.sh"
+        "scriptFileName": "Install-PCoIPAgent.sh"
     },
     "resources": [
         {
