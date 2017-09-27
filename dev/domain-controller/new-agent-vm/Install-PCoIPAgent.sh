@@ -99,11 +99,11 @@ echo $PASSWORD | sudo realm join --user=$USERNAME $DOMAIN_NAME
 echo "-->Configuring settings"
 sudo sed -i '$ a\dyndns_update = True\ndyndns_ttl = 3600\ndyndns_refresh_interval = 43200\ndyndns_update_ptr = True' /etc/sssd/sssd.conf
 sudo domainname $VM_NAME.$DOMAIN_NAME
-echo "%$DOMAIN_NAME\\Domain\ Admins ALL=(ALL) ALL" > /etc/sudoers.d/sudoers
+echo "%$DOMAIN_NAME\\\\Domain\\ Admins ALL=(ALL) ALL" > /etc/sudoers.d/sudoers
 
 echo "-->Registering with DNS"
-$DOMAIN_UPPER=echo "$DOMAIN_NAME" | tr "[a-z]" "[A-Z]"
-$IP_ADDRES=hostname -I | grep -Eo '10.([0-9]*\.){2}[0-9]*'
+DOMAIN_UPPER=$(echo "$DOMAIN_NAME" | tr "[a-z]" "[A-Z]")
+IP_ADDRESS=$(hostname -I | grep -Eo '10.([0-9]*\.){2}[0-9]*')
 echo $PASSWORD | sudo kinit $USERNAME@$DOMAIN_UPPER
 touch dns_record
 echo "update add $VM_NAME.$DOMAIN_NAME 600 a $IP_ADDRESS" > dns_record
