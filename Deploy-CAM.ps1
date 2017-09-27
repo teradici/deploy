@@ -101,6 +101,45 @@ param
 )
 
 
+#from: https://stackoverflow.com/questions/22002748/hashtables-from-convertfrom-json-have-different-type-from-powershells-built-in-h
+function ConvertPSObjectToHashtable
+{
+    param (
+        [Parameter(ValueFromPipeline)]
+        $InputObject
+    )
+
+    process
+    {
+        if ($null -eq $InputObject) { return $null }
+
+        if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string])
+        {
+            $collection = @(
+                foreach ($object in $InputObject) { ConvertPSObjectToHashtable $object }
+            )
+
+            Write-Output -NoEnumerate $collection
+        }
+        elseif ($InputObject -is [psobject])
+        {
+            $hash = @{}
+
+            foreach ($property in $InputObject.PSObject.Properties)
+            {
+                $hash[$property.Name] = ConvertPSObjectToHashtable $property.Value
+            }
+
+            $hash
+        }
+        else
+        {
+            $InputObject
+        }
+    }
+}
+
+
 function Login-AzureRmAccountWithBetterReporting($Credential)
 {
 	try
@@ -315,12 +354,12 @@ function createAndPopulateKeyvault()
 		$spName,
 
 		[parameter(Mandatory=$true)]
-		[System.Management.Automation.PSCredential]
-		$registrationCodeAsCred,
+		[String]
+		$registrationCode,
 		
 		[parameter(Mandatory=$true)]
-		[System.Management.Automation.PSCredential]
-		$DomainJoinCreds
+		[String]
+		$DomainJoinPassword
 	)
 
 	try{
@@ -336,7 +375,8 @@ function createAndPopulateKeyvault()
 
 		Write-Host "Populating Azure KeyVault $kvName"
 		
-		$registrationCode = $registrationCodeAsCred.Password
+		$registrationCodeSecure = ConvertTo-SecureString $registrationCode -AsPlainText -Force
+		$domainJoinPasswordSecure = ConvertTo-SecureString $domainJoinPassword -AsPlainText -Force
 
 		$rcSecretName = 'cloudAccessRegistrationCode'
 		$djSecretName = 'domainJoinPassword'
@@ -355,8 +395,8 @@ function createAndPopulateKeyvault()
 			{
 				Set-AzureRmKeyVaultAccessPolicy -VaultName $kvName -ServicePrincipalName $spName -PermissionsToSecrets get, set -ErrorAction stop
 
-				$rcSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $rcSecretName -SecretValue $registrationCode -ErrorAction stop
-				$djSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $djSecretName -SecretValue $DomainJoinCreds.Password -ErrorAction stop
+				$rcSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $rcSecretName -SecretValue $registrationCodeSecure -ErrorAction stop
+				$djSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $djSecretName -SecretValue $domainJoinPasswordSecure -ErrorAction stop
 				break
 			}
 			catch
@@ -389,10 +429,18 @@ function createAndPopulateKeyvault()
 		$laSecretVersionedURL = $laSecret.Id
 		$laSecretURL = $laSecretVersionedURL.Substring(0, $laSecretVersionedURL.lastIndexOf('/'))
 
-		# create self signed certificate for application gateway. Administrators can override the self signed certificate if desired in future.
+		# create self signed certificate for Application Gateway.
+		# System Administrators can override the self signed certificate if desired in future.
+		# In order to create the certificate you must be running as Administrator on a Windows 10/Server 2016 machine
+		# (Potentially Windows 8/Server 2012R2, but not Windows 7 or Server 2008R2)
         $currentPrincipal = New-Object Security.Principal.WindowsPrincipal( [Security.Principal.WindowsIdentity]::GetCurrent())
         $isAdminSession = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-        if(!$isAdminSession) { throw "You must be running as adminsitrator to create the self-signed certificate for the application gateway" }
+		if(!$isAdminSession) { throw "You must be running as administrator to create the self-signed certificate for the application gateway" }
+		
+		if(! (Get-Command New-SelfSignedCertificates -ErrorAction SilentlyContinue) )
+		{
+			{ throw "New-SelfSignedCertificate cmdlet must be available - please ensure you are running on a supported OS such as Windows 10 or Server 2016." }
+		}
 
 
 		$certLoc = 'cert:Localmachine\My'
@@ -448,91 +496,6 @@ function createAndPopulateKeyvault()
 }
 
 
-
-
-<#
-	$standardVMSize = "Standard_D2_v3"
-	$graphicsVMSize = "Standard_NV6"
-
-	$dcvmfqdn = "$DCVMName.$domainFQDN"
-	$pbvmfqdn = "$env:computername.$domainFQDN"
-	$family   = "Windows Server 2016"
-
-	#Java locations
-	$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_91"
-	$JavaBinLocation = $JavaRootLocation + "\bin"
-	$JavaLibLocation = $JavaRootLocation + "\jre\lib"
-
-	#Tomcat locations
-	$localtomcatpath = "$env:systemdrive\tomcat"
-	$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
-	$CatalinaBinLocation = $CatalinaHomeLocation + "\bin"
-
-	$brokerServiceName = "CAMBroker"
-	$AUIServiceName = "CAMAUI"
-
-	# Retry for CAM Registration
-	$retryCount = 3
-	$delay = 10
-
-	Import-DscResource -ModuleName xPSDesiredStateConfiguration
-
-    Node "localhost"
-    {
-        LocalConfigurationManager
-        {
-            RebootNodeIfNeeded = $true
-        }
-
-		xRemoteFile Download_Java_Installer
-		{
-			Uri = "$sourceURI/$javaInstaller"
-			DestinationPath = "$LocalDLPath\$javaInstaller"
-			MatchSource = $false
-		}
-
-		xRemoteFile Download_Tomcat_Installer
-		{
-			Uri = "$sourceURI/$tomcatInstaller"
-			DestinationPath = "$LocalDLPath\$tomcatInstaller"
-			MatchSource = $false
-		}
-
-		xRemoteFile Download_Keystore
-		{
-			Uri = "$sourceURI/.keystore"
-			DestinationPath = "$LocalDLPath\.keystore"
-			MatchSource = $false
-		}
-
-		xRemoteFile Download_Broker_WAR
-		{
-			Uri = "$sourceURI/$brokerWAR"
-			DestinationPath = "$LocalDLPath\$brokerWAR"
-			MatchSource = $false
-		}
-
-		xRemoteFile Download_Admin_WAR
-		{
-			Uri = "$sourceURI/$adminWAR"
-			DestinationPath = "$LocalDLPath\$adminWAR"
-			MatchSource = $false
-		}
-
-		xRemoteFile Download_Agent_ARM
-		{
-			Uri = "$templateAgentURI/$agentARM"
-			DestinationPath = "$LocalDLPath\$agentARM"
-			MatchSource = $false
-		}
-
-		xRemoteFile Download_Ga_Agent_ARM
-		{
-			Uri = "$templateAgentURI/$gaAgentARM"
-			DestinationPath = "$LocalDLPath\$gaAgentARM"
-			MatchSource = $false
-		}
-#>
 
 function Create-CAMAppSP()
 {
@@ -676,6 +639,9 @@ function Create-CAMAppSP()
 }
 
 
+################## Actual script start here ####################
+
+
 
 Login-AzureRmAccount
 #get-azurermsubscription
@@ -686,17 +652,33 @@ $camSaasBaseUri = "https://cam-staging.teradici.com"
 Select-AzureRmSubscription -SubscriptionId $subscriptionID
 
 
-$azureRGName = "bdallkv2"
+$azureRGName = "bdallkv7"
 
 New-AzureRmResourceGroup -Name $azureRGName -Location "East US"
 
-$spInfo2 = Create-CAMAppSP -RGName $azureRGName
 
-createAndPopulateKeyvault -RGName $azureRGName -registrationCodeAsCred $spInfo2.spCreds -DomainJoinCreds $spInfo2.spCreds -spName $spInfo2.spCreds.UserName
 
-$client = $spInfo2.spCreds.UserName
-$key = $spInfo2.spCreds.GetNetworkCredential().Password
-$tenant = $spInfo2.tenantId
+# get configuration from file
+$configFileName = "camconfig.json"
+$outputParametersFileName = "camconfig-parameters-out.json"
+$configFileContent = Get-Content $configFileName
+$CAMConfig = ConvertFrom-Json ([string]$configFileContent)
+
+
+$spInfo = Create-CAMAppSP -RGName $azureRGName
+
+$kvInfo = createAndPopulateKeyvault `
+	-RGName $azureRGName `
+	-registrationCode $registrationCode `
+	-DomainJoinPassword $CAMConfig.parameters.domainAdminPassword.value `
+	-spName $spInfo.spCreds.UserName
+
+$client = $spInfo.spCreds.UserName
+$key = $spInfo.spCreds.GetNetworkCredential().Password
+$tenant = $spInfo.tenantId
+
+# need to add a retry on the registration for invalid SP as there is a race condition (sigh).
+Start-Sleep -seconds 30
 
 $camDeploymenRegInfo = Register-CAM `
 	-SubscriptionId $subscriptionID `
@@ -706,9 +688,6 @@ $camDeploymenRegInfo = Register-CAM `
 	-RGName $azureRGName `
 	-registrationCode $registrationCode `
 	-camSaasBaseUri $camSaasBaseUri
-
-$camDeploymenRegInfoJSON = ConvertTo-JSON $camDeploymenRegInfo -Depth 16 -Compress
-$camDeploymenRegInfoURL = [System.Web.HttpUtility]::UrlEncode($camDeploymenRegInfoJSON)
 
 
 Write-Host "Create auth file information for the CAM frontend."
@@ -725,7 +704,6 @@ graphURL=https\://graph.windows.net/
 "@
 
 $authFileContentURL = [System.Web.HttpUtility]::UrlEncode($authFileContent) 
-Write-Host "This is the Encoded URL" $authFileContentURL -ForegroundColor Green
 
 $camDeploymenInfo = @{};
 $camDeploymenInfo.Add("registrationInfo",$camDeploymenRegInfo)
@@ -734,95 +712,81 @@ $camDeploymenInfo.Add("AzureAuthFile",$authFileContentURL)
 $camDeploymenInfoJSON = ConvertTo-JSON $camDeploymenInfo -Depth 16 -Compress
 $camDeploymenInfoURL = [System.Web.HttpUtility]::UrlEncode($camDeploymenInfoJSON)
 
+
+$camDeploymenInfoURLSecure = ConvertTo-SecureString $camDeploymenInfoURL -AsPlainText -Force
+$camDeploySecretName = 'CAMDeploymentInfo'
+$camDeploySecret = Set-AzureKeyVaultSecret -VaultName $kvInfo.VaultName -Name $camDeploySecretName -SecretValue $camDeploymenInfoURLSecure
+
+$SPKeySecretName = 'SPKey'
+$SPKeySecret = Set-AzureKeyVaultSecret -VaultName $kvInfo.VaultName -Name $SPKeySecretName -SecretValue $spInfo.spCreds.Password
+
+<# Test code for encoding/decoding
 $camDeploymenInfoURL
 $camDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($camDeploymenInfoURL)
 $camDeploymenInfoDecoded = ConvertFrom-Json $camDeploymenInfoJSONDecoded
 
-$camDeploymenInfoJSONDecoded
 
 [System.Web.HttpUtility]::UrlDecode($camDeploymenInfoDecoded.AzureAuthFile)
 
 $regInfo = $camDeploymenInfoDecoded.RegistrationInfo
 
-foreach($var in $reginfo.GetEnumerator()) {
-Write-Host "loop: $var"
-}
-
-
-$regInfo.psobject | get-member -membertype properties | fl *
-
 $regInfo.psobject.properties | Foreach-Object {
-    [System.Environment]::SetEnvironmentVariable($_.Name, $_.Value, "Machine")
+	Write-Host "Name: " $_.Name " Value: " $_.Value
+
+#>
+
+
+#keyvault ID of the form: /subscriptions/$subscriptionID/resourceGroups/$azureRGName/providers/Microsoft.KeyVault/vaults/$kvName
+
+$kvId = $kvInfo.ResourceId
+
+$generatedDeploymentParameters = @"
+"AzureAdminUsername": {
+	"value": "$client"
+},
+"AzureAdminPassword": {
+	"reference": {
+		"keyVault": {
+		  "id": "$kvId"
+		},
+		"secretName": "$SPKeySecretName"
+	  }
+},
+"tenantID": {
+	"value": "$tenant"
+},
+"certData": {
+	"reference": {
+		"keyVault": {
+		  "id": "$kvId"
+		},
+		"secretName": "CAMFECertificate"
+	  }		
+},
+"certPassword": {
+	"reference": {
+		"keyVault": {
+		  "id": "$kvId"
+		},
+		"secretName": "CAMFECertificatePassword"
+	  }		
+},
+"keyVaultId": {
+	"value": "$kvId"
+},
+"CAMDeploymentInfo": {
+	"reference": {
+		"keyVault": {
+		  "id": "$kvId"
+		},
+		"secretName": "$camDeploySecretName"
+	  }		
 }
- Write-Host $_.name + " v " + $_.value  }
-
- | get-member -membertype properties | Select Name | fl *
-
-
-
-$regInfo | get-member -membertype object | Foreach-Object { Write-Host $_ | fl * }
-
-$reginfo.Keys()
-
-################## Actual script start here ####################
-
-	#save Azure login context for current user
-	$generatedFileRoot = -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})
-	$RMContextFileName = "$env:temp\$generatedFileRoot.json"
-	Save-AzureRmContext $RMContextFileName #There is some online cookie crumbs that Import-AzureRmContext (to resore the context) may operate from a variable than a file. Worth checking.
-
-	try {
-		$spName = $spCreds.UserName
-		Write-Host "Logging in SP $spName with tenantID $tenantID"
-
-		# retry required since it can take a few seconds for the app registration to percolate through Azure (and different to different endpoints... sigh).
-		$LoginSPRetry = 60
-		while($LoginSPRetry -ne 0)
-		{
-			$LoginSPRetry--
-
-			try
-			{
-				Login-AzureRmAccount -ServicePrincipal -Credential $spCreds -TenantId $tenantID -ErrorAction Stop
-				break
-			}
-			catch
-			{
-				Write-Host "Retrying SP login $LoginSPRetry : SPName=$spName TenantID=$tenantID"
-				Start-sleep -Seconds 1
-				if ($LoginSPRetry -eq 0)
-				{
-					#re-throw whatever the original exception was
-					throw
-				}
-			}
-		}
-		
-		Write-Host "Create auth file information for the CAM frontend."
-		
-		$sub = Get-AzureRMContext
-		$subID = $sub.Subscription.Id
-		$spPassword = $spCreds.GetNetworkCredential().Password
-
-		$authFileContent = @"
-subscription=$subID
-client=$spName
-key=$spPassword
-tenant=$tenantID
-managementURI=https\://management.core.windows.net/
-baseURL=https\://management.azure.com/
-authURL=https\://login.windows.net/
-graphURL=https\://graph.windows.net/
 "@
 
-$authFileContentEncoded = [System.Web.HttpUtility]::UrlEncode($authFileContent) 
-Write-Host "This is the Encoded URL" $authFileContentEncoded -ForegroundColor Green
+$outFileContent = $configFileContent.Replace('"%GENERATED-PARAMETERS-HERE%" : true',$generatedDeploymentParameters)
+Set-Content $outputParametersFileName  $outFileContent
 
+Test-AzureRmResourceGroupDeployment -ResourceGroupName $azureRGName -TemplateFile "azuredeploy.json" -TemplateParameterFile $outputParametersFileName  -Verbose
 
-createAndPopulateKeyvault `
-	-RGName $RGName `
-	-registrationCodeAsCred $registrationCodeAsCred `
-	-DomainJoinCreds $DomainAdminCreds
-
-################################
-
+New-AzureRmResourceGroupDeployment -DeploymentName "ad1" -ResourceGroupName $azureRGName -TemplateFile "azuredeploy.json" -TemplateParameterFile $outputParametersFileName 
