@@ -24,7 +24,6 @@
     },
     "AzureAdminUsername": {
       "type": "string",
-      "defaultValue": "adminuser@example.com",
       "metadata": {
         "description": "The name of the Azure account/service principal with contributor access to the subscription. This account cannot require MFA."
       }
@@ -37,7 +36,6 @@
     },
     "tenantID": {
         "type": "string",
-        "defaultValue": "null",
         "metadata": {
             "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave as 'null' if a standard user (non-SP) account is being used."
         }
@@ -124,7 +122,7 @@
       "name": "Frontend",
       "apiVersion": "2016-02-01",
       "dependsOn": [
-        "Microsoft.Resources/deployments/Root"
+        "Root"
       ],
       "properties": {
         "mode": "Incremental",
@@ -133,20 +131,21 @@
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          "existingVNETName": {
-            "value": "[reference('Root').outputs.virtualNetworkName.value]"
+          
+          "virtualNetworkName" : {
+              "value" : "vnet-"
           },
           "adSubnetName": {
-            "value": "[reference('Root').outputs.adSubnetName.value]"
+            "value": "ad-Subnet"
           },
           "gatewaySubnetName": {
-            "value": "[reference('Root').outputs.gatewaySubnetName.value]"
+            "value": "gateway-Subnet"
           },
           "adminDesktopVMName" : {
-            "value" : "[reference('Root').outputs.adminDesktopVMName.value]"
+            "value" : "admin-desk"
           },
           "cmnsgName" : {
-            "value" : "[reference('Root').outputs.cmnsgName.value]"
+            "value" : "cm-nsg"
           },
           
           "domainName": {
@@ -206,13 +205,13 @@
         },
         "parameters": {
           "existingVNETName": {
-              "value": "[reference('Root').outputs.virtualNetworkName.value]"
+              "value": "vnet-"
             },          
           "existingSubnetName": {
-              "value": "[reference('Root').outputs.adSubnetName]"
+              "value": "ad-Subnet"
             },
           "dnsLabelPrefix": {
-              "value": "[reference('Root').outputs.adminDesktopVMName.value]"
+              "value": "vm-desk"
             },
           "vmSize": {
             "value": "Standard_D2_v3"
