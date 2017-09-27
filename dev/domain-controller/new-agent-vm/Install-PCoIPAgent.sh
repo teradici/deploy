@@ -97,7 +97,7 @@ echo "-->Joining the domain"
 echo $PASSWORD | sudo realm join --user=$USERNAME $DOMAIN_NAME
 
 echo "-->Configuring settings"
-sudo sed -i '$ a\dyndns_update = True\ndyndns_ttl = 3600\ndyndns_refresh_interval = 43200\ndyndns_update_ptr = True' /etc/sssd/sssd.conf
+sudo sed -i '$ a\dyndns_update = True\ndyndns_ttl = 3600\ndyndns_refresh_interval = 43200\ndyndns_update_ptr = True\nldap_user_principal = nosuchattribute' /etc/sssd/sssd.conf
 sudo sed -c -i "s/\(use_fully_qualified_names *= *\).*/\1False/" /etc/sssd/sssd.conf
 sudo sed -c -i "s/\(fallback_homedir *= *\).*/\1\/home\/%u/" /etc/sssd/sssd.conf
 sudo domainname $VM_NAME.$DOMAIN_NAME
