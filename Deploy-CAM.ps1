@@ -342,6 +342,138 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 }
 
 
+
+function Register-RemoteAccessWorkstation()
+{
+	Param(
+		[bool]
+		$verifyCAMSaaSCertificate = $true,
+		
+		# Retry for MAchine Registration
+		$retryCount = 3,
+		$retryDelay = 10,
+
+		[parameter(Mandatory=$true)] 
+		$subscription,
+		
+		[parameter(Mandatory=$true)]
+		$client,
+		
+		[parameter(Mandatory=$true)]
+		$key,
+		
+		[parameter(Mandatory=$true)]
+		$tenant,
+		
+		[parameter(Mandatory=$true)]
+		$adminDesktopVMName,
+
+		[parameter(Mandatory=$true)]
+		$RGName,
+
+		[parameter(Mandatory=$true)]
+		$deploymentId,
+
+		[parameter(Mandatory=$true)]
+		$camSaasBaseUri
+	)
+
+	# Register Agent Machine
+
+
+	$userRequest = @{
+		username = $client
+		password = $key
+		tenantId = $tenant
+	}
+
+
+	$machineRequest = @{
+		deploymentId = $deploymentId
+		resourceGroup = $RGName
+		machineName = $adminDesktopVMName
+		subscriptionId = $subscription
+	}
+
+	$machineRegistrationError = ""
+	for($idx = 0; $idx -lt $retryCount; $idx++) {
+		try {
+			$certificatePolicy = [System.Net.ServicePointManager]::CertificatePolicy
+
+			if (!$verifyCAMSaaSCertificate) {
+				# Do this so SSL Errors are ignored
+				add-type @"
+using System.Net;
+using System.Security.Cryptography.X509Certificates;
+public class TrustAllCertsPolicy : ICertificatePolicy {
+	public bool CheckValidationResult(
+		ServicePoint srvPoint, X509Certificate certificate,
+		WebRequest request, int certificateProblem) {
+		return true;
+	}
+}
+"@
+
+				[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+			}
+			####################
+
+			# Get a Sign-in token
+			$signInResult = ""
+			try {
+				$signInResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/signin") -Body $userRequest
+			} catch {
+				if ($_.ErrorDetails.Message) {
+					$signInResult = ConvertFrom-Json $_.ErrorDetails.Message
+				} else {
+					throw $_
+				}							
+			}
+			Write-Verbose ((ConvertTo-Json $signInResult) -replace "\.*token.*", 'Token": "Sanitized"')
+			# Check if signIn succeded
+			if ($signInResult.code -ne 200) {
+				throw ("Signing in failed. Result was: " + (ConvertTo-Json $signInResult))
+			}
+			$tokenHeader = @{
+				authorization=$signInResult.data.token
+			}
+			Write-Host "Cloud Access Manager sign in succeeded"
+
+			$registerMachineResult = ""
+			try {
+				$registerMachineResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/machines") -Body $machineRequest -Headers $tokenHeader
+			} catch {
+				if ($_.ErrorDetails.Message) {
+					$registerMachineResult = ConvertFrom-Json $_.ErrorDetails.Message
+				} else {
+					throw $_
+				}
+			}
+			Write-Verbose (ConvertTo-Json $registerMachineResult)
+			# Check if registration succeeded
+			if( !(($registerMachineResult.code -eq 201) -or ($registerMachineResult.data.reason.ToLower().Contains("exists")))) {
+				throw ("Registering Machine failed. Result was: " + (ConvertTo-Json $registerMachineResult))
+			}
+			Write-Host "Machine has been registered succesfully with Cloud Access Manager"
+
+			break;
+		} catch {
+			$machineRegistrationError = $_
+			Write-Verbose ( "Attempt {0} of $retryCount failed due to Error: {1}" -f ($idx+1), $machineRegistrationError )
+			Start-Sleep -s $retryDelay
+		} finally {
+			# restore CertificatePolicy 
+			[System.Net.ServicePointManager]::CertificatePolicy = $certificatePolicy
+		}
+	}
+
+	if($machineRegistrationError) {
+		throw $machineRegistrationError
+	}
+}
+
+
+
 function createAndPopulateKeyvault()
 {
 	Param(
@@ -652,7 +784,7 @@ $camSaasBaseUri = "https://cam-staging.teradici.com"
 Select-AzureRmSubscription -SubscriptionId $subscriptionID
 
 
-$azureRGName = "bdallkv7"
+$azureRGName = "bdallkv5"
 
 New-AzureRmResourceGroup -Name $azureRGName -Location "East US"
 
@@ -738,9 +870,21 @@ $regInfo.psobject.properties | Foreach-Object {
 
 #keyvault ID of the form: /subscriptions/$subscriptionID/resourceGroups/$azureRGName/providers/Microsoft.KeyVault/vaults/$kvName
 
+Register-RemoteAccessWorkstation `
+		-subscription $subscriptionID `
+        -client $client `
+        -key $key `
+        -tenant $tenant `
+		-RGName $azureRGName `
+        -deploymentId $camDeploymenRegInfo.CAM_DEPLOYMENTID `
+        -camSaasBaseUri $camDeploymenRegInfo.CAM_URI `
+        -adminDesktopVMName "vm-desk"
+
+
 $kvId = $kvInfo.ResourceId
 
 $generatedDeploymentParameters = @"
+{
 "AzureAdminUsername": {
 	"value": "$client"
 },
@@ -782,11 +926,23 @@ $generatedDeploymentParameters = @"
 		"secretName": "$camDeploySecretName"
 	  }		
 }
+}
 "@
 
-$outFileContent = $configFileContent.Replace('"%GENERATED-PARAMETERS-HERE%" : true',$generatedDeploymentParameters)
-Set-Content $outputParametersFileName  $outFileContent
+
+
+$CAMConfigTable = ConvertPSObjectToHashtable -InputObject $CAMConfig
+
+$deploymentParametersObj = ConvertFrom-Json $generatedDeploymentParameters
+$deploymentParametersTable = ConvertPSObjectToHashtable -InputObject $deploymentParametersObj
+
+$CAMConfigTable.parameters += $deploymentParametersTable
+
+$outParametersFileContent = ConvertTo-Json -InputObject $CAMConfigTable -Depth 99
+Set-Content $outputParametersFileName  $outParametersFileContent
+
 
 Test-AzureRmResourceGroupDeployment -ResourceGroupName $azureRGName -TemplateFile "azuredeploy.json" -TemplateParameterFile $outputParametersFileName  -Verbose
 
 New-AzureRmResourceGroupDeployment -DeploymentName "ad1" -ResourceGroupName $azureRGName -TemplateFile "azuredeploy.json" -TemplateParameterFile $outputParametersFileName 
+
