@@ -42,6 +42,39 @@
             "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave as 'null' if a standard user (non-SP) account is being used."
         }
     },
+
+    "virtualNetworkName": {
+      "type": "string",
+      "metadata": {
+          "description": "Existing VNET that contains the domain controller"
+      }
+    },
+    "adSubnetName": {
+      "type": "string",
+      "metadata": {
+          "description": "Existing subnet that contains the domain controller"
+      }
+    },
+    
+    "adminDesktopVMName": {
+      "type": "string",
+      "metadata": {
+          "description": "admin desktop VM name"
+      }
+    },
+    "gatewaySubnetName": {
+      "type": "string",
+      "metadata": {
+          "description": "gateway subnet name"
+      }
+    },
+    "cmnsgName": {
+      "type": "string",
+      "metadata": {
+          "description": "Connection Manager Network Security Group Name"
+      }
+    },
+
     "registrationCode": {
       "type": "securestring",
       "minLength": 21,
@@ -88,26 +121,12 @@
     }
   },
   "variables": {
-    "virtualNetworkName": "vnet-CloudAccessManager",
-    "virtualNetworkAddressRange": "10.0.0.0/16",
     "storageAccountName": "[concat(uniquestring(resourceGroup().id),'fe')]",
-    "adNicName": "vm-ad-nic",
-    "adNicIPAddress": "10.0.0.4",
     "cmPrivateIP": "10.0.0.10",
     "auPrivateIP": "10.0.0.11",
-    "brPrivateIP": "10.0.0.12",
     "brokerPort":  "8444",
     "adVMName": "vm-dc",
-    "adSubnetName": "Subnet-CloudAccessManager",
-    "adSubnetAddressPrefix": "10.0.0.0/24",
-    "gatewaySubnetName": "Subnet-gateway",
-    "gatewaySubnetAddressPrefix": "10.0.1.0/24",
-    "publicIPAddressName": "adPublicIP",
-    "adLBName": "adLoadBalancer",
     "serverRootName": "vm",
-    "adminDesktopVMName": "[concat(variables('serverRootName'), '-desk')]",
-    "dcnsgName": "dcNSG",
-    "cmnsgName": "cmNSG",
     "domainGroupAppServersJoin": "Cloud Access Application Servers"
   },
   "resources": [
@@ -134,7 +153,7 @@
         },
         "parameters": {
           "cmnsgName": {
-            "value": "[variables('cmnsgName')]"
+            "value": "[parameters('cmnsgName')]"
           }
         }
       }
@@ -151,10 +170,10 @@
         },
         "parameters": {
           "existingVNETName": {
-            "value": "[variables('virtualNetworkName')]"
+            "value": "[parameters('virtualNetworkName')]"
           },
           "existingSubnetName": {
-            "value": "[variables('adSubnetName')]"
+            "value": "[parameters('adSubnetName')]"
           },
           "dnsLabelPrefix": {
             "value": "[concat(variables('serverRootName'), '-au')]"
@@ -204,10 +223,10 @@
         },
         "parameters": {
           "existingVNETName": {
-            "value": "[variables('virtualNetworkName')]"
+            "value": "[parameters('virtualNetworkName')]"
           },
           "existingSubnetName": {
-            "value": "[variables('adSubnetName')]"
+            "value": "[parameters('adSubnetName')]"
           },
           "dnsLabelPrefix": {
             "value": "[concat(variables('serverRootName'), '-au')]"
@@ -255,7 +274,7 @@
             "value": "[variables('storageAccountName')]"
           },
           "adminDesktopVMName": {
-            "value": "[variables('adminDesktopVMName')]"
+            "value": "[parameters('adminDesktopVMName')]"
           },
           "_artifactsLocation": {
             "value": "[concat(parameters('_artifactsLocation'), '/new-admin-vm')]"
@@ -264,7 +283,7 @@
               "value": "[parameters('_agentArtifactsLocation')]"
           },
           "AGsubnetRef": {
-              "value": "[concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')),'/subnets/',variables('gatewaySubnetName'))]"
+              "value": "[concat(resourceId('Microsoft.Network/virtualNetworks',parameters('virtualNetworkName')),'/subnets/',parameters('gatewaySubnetName'))]"
           },
           "AGbackendIpAddressDefault": {
               "value": "[variables('auPrivateIP')]"
@@ -299,13 +318,13 @@
         },
         "parameters": {
           "existingVNETName": {
-            "value": "[variables('virtualNetworkName')]"
+            "value": "[parameters('virtualNetworkName')]"
           },
           "existingSubnetName": {
-            "value": "[variables('adSubnetName')]"
+            "value": "[parameters('adSubnetName')]"
           },
           "cmnsgName": {
-            "value": "[variables('cmnsgName')]"
+            "value": "[parameters('cmnsgName')]"
           },
           "dnsLabelPrefix": {
             "value": "[concat(variables('serverRootName'), '-cm')]"

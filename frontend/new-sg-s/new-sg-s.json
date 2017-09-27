@@ -3,15 +3,6 @@
     "contentVersion": "1.0.0.0",
 
     "parameters": {
-        "dcnsgName": {
-            "type": "string",
-            "defaultValue": "dc-nsg",
-            "metadata": {
-                "description": "Name of the network security group.",
-                "minLength": 1,
-                "maxLength": 80
-            }
-        },
         "cmnsgName": {
             "type": "string",
             "defaultValue": "cm-nsg",
@@ -29,34 +20,7 @@
     },
 
     "resources": [
-        {
-            "apiVersion": "[variables('apiVersion')]",
-            "type": "Microsoft.Network/networkSecurityGroups",
-            "name": "[parameters('dcnsgName')]",
-            "location": "[resourceGroup().location]",
-            "tags": {
-                "displayName": "NSG - Domain Controller"
-            },
-
-            "properties": {
-                "securityRules": [
-                    {
-                        "name": "rdp-rule",
-                        "properties": {
-                            "description": "Allow RDP Session",
-                            "protocol": "Tcp",
-                            "sourcePortRange": "*",
-                            "destinationPortRange": "3389",
-                            "sourceAddressPrefix": "INTERNET",
-                            "destinationAddressPrefix": "*",
-                            "access": "Allow",
-                            "priority": 100,
-                            "direction": "Inbound"
-                        }
-                    }
-                ]
-            }
-        },
+        
         {
             "apiVersion": "[variables('apiVersion')]",
             "type": "Microsoft.Network/networkSecurityGroups",

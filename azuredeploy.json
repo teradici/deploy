@@ -86,27 +86,6 @@
     }
   },
   "variables": {
-    "configuration-name": "Complete CAM deployment with included Active Directory",
-    "virtualNetworkName": "vnet-CloudAccessManager",
-    "virtualNetworkAddressRange": "10.0.0.0/16",
-    "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'adsa')]",
-    "adNicName": "vm-ad-nic",
-    "adNicIPAddress": "10.0.0.4",
-    "cmPrivateIP": "10.0.0.10",
-    "auPrivateIP": "10.0.0.11",
-    "brPrivateIP": "10.0.0.12",
-    "brokerPort":  "8444",
-    "adVMName": "vm-dc",
-    "adSubnetName": "Subnet-CloudAccessManager",
-    "adSubnetAddressPrefix": "10.0.0.0/24",
-    "gatewaySubnetName": "Subnet-gateway",
-    "gatewaySubnetAddressPrefix": "10.0.1.0/24",
-    "publicIPAddressName": "adPublicIP",
-    "adLBName": "adLoadBalancer",
-    "serverRootName": "vm",
-    "adminDesktopVMName": "[concat(variables('serverRootName'), '-desk')]",
-    "dcnsgName": "dcNSG",
-    "cmnsgName": "cmNSG",
     "domainGroupAppServersJoin": "Cloud Access Application Servers"
   },
   "resources": [
@@ -154,6 +133,22 @@
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
+          "existingVNETName": {
+            "value": "[reference('Root').outputs.virtualNetworkName.value]"
+          },
+          "adSubnetName": {
+            "value": "[reference('Root').outputs.adSubnetName.value]"
+          },
+          "gatewaySubnetName": {
+            "value": "[reference('Root').outputs.gatewaySubnetName.value]"
+          },
+          "adminDesktopVMName" : {
+            "value" : "[reference('Root').outputs.adminDesktopVMName.value]"
+          },
+          "cmnsgName" : {
+            "value" : "[reference('Root').outputs.cmnsgName.value]"
+          },
+          
           "domainName": {
             "value": "[parameters('domainName')]"
           },
@@ -211,14 +206,14 @@
         },
         "parameters": {
           "existingVNETName": {
-            "value": "[variables('virtualNetworkName')]"
-          },
+              "value": "[reference('Root').outputs.virtualNetworkName.value]"
+            },          
           "existingSubnetName": {
-            "value": "[variables('adSubnetName')]"
-          },
+              "value": "[reference('Root').outputs.adSubnetName]"
+            },
           "dnsLabelPrefix": {
-            "value": "[variables('adminDesktopVMName')]"
-          },
+              "value": "[reference('Root').outputs.adminDesktopVMName.value]"
+            },
           "vmSize": {
             "value": "Standard_D2_v3"
           },
