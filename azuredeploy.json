@@ -61,7 +61,7 @@
       "metadata": {
         "description": "The location of resources, such as templates and DSC modules, that the template depends on"
       },
-      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/master"
+      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/TSW-66292-split-ARM-template-cleanup"
     },
     "_artifactsLocationSasToken": {
       "type": "securestring",

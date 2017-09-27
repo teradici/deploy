@@ -51,12 +51,12 @@
            "adNicIPAddress": "10.0.0.4",
            "adNicName": "vm-ad-nic",
            "adPubIPName": "adPublicIP",
-           "vnet" : "[variables('networkSettings').vnetName]"
+           "vnet" : "vnet-CloudAccessManager"
         },
         "gatewaySubnet" : {
            "name" : "Subnet-gateway",
            "prefix" : "10.0.1.0/24",
-           "vnet" : "[variables('networkSettings').vnetName]" 
+           "vnet" : "vnet-CloudAccessManager" 
         }
       },
       "networkSecurityGroups" : {
