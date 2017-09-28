@@ -133,7 +133,7 @@
         "parameters": {
           
           "virtualNetworkName" : {
-              "value" : "vnet-CloudAccessManager"
+              "value" : "CloudAccessManager"
           },
           "adSubnetName": {
             "value": "ad-Subnet"
@@ -205,7 +205,7 @@
         },
         "parameters": {
           "existingVNETName": {
-              "value": "vnet-CloudAccessManager"
+              "value": "CloudAccessManager"
             },          
           "existingSubnetName": {
               "value": "ad-Subnet"
