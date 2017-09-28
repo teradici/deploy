@@ -42,7 +42,7 @@
     "serverRootName": "vm",
     "adminDesktopVMName": "[concat(variables('serverRootName'), '-desk')]",
     "networkSettings" : {
-      "vnetName" : "CloudAccessManager",
+      "vnetName" : "vnet-CloudAccessManager",
       "addressPrefix" : "10.0.0.0/16",
       "subnets": {
         "adSubnet" : {
@@ -293,7 +293,7 @@
   "outputs": {
     "virtualNetworkName" : {
       "type": "string",
-      "value": "[variables('networkSettings').vnetName]"
+      "value": "[reference(variables('networkSettings').vnetName).name]"
     },
     "adSubnetName" : {
       "type": "string",
