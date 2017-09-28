@@ -133,7 +133,8 @@
         "parameters": {
           
           "virtualNetworkName" : {
-              "value" : "CloudAccessManager"
+            "type" : "String",
+              "value" : "vnet-CloudAccessManager"
           },
           "adSubnetName": {
             "value": "ad-Subnet"
@@ -208,7 +209,7 @@
               "value": "CloudAccessManager"
             },          
           "existingSubnetName": {
-              "value": "ad-Subnet"
+              "value": "Subnet-CloudAccessManager"
             },
           "dnsLabelPrefix": {
               "value": "vm-desk"

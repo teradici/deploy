@@ -293,7 +293,7 @@
   "outputs": {
     "virtualNetworkName" : {
       "type": "string",
-      "value": "[reference(variables('networkSettings').vnetName).name]"
+      "value": "[variables('networkSettings').vnetName]"
     },
     "adSubnetName" : {
       "type": "string",
