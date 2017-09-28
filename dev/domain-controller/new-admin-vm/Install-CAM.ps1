@@ -158,48 +158,56 @@ Configuration InstallCAM
 		{
 			Uri = "$sourceURI/$javaInstaller"
 			DestinationPath = "$LocalDLPath\$javaInstaller"
+			MatchSource = $false
 		}
 
 		xRemoteFile Download_Tomcat_Installer
 		{
 			Uri = "$sourceURI/$tomcatInstaller"
 			DestinationPath = "$LocalDLPath\$tomcatInstaller"
+			MatchSource = $false
 		}
 
 		xRemoteFile Download_Keystore
 		{
 			Uri = "$sourceURI/.keystore"
 			DestinationPath = "$LocalDLPath\.keystore"
+			MatchSource = $false
 		}
 
 		xRemoteFile Download_Broker_WAR
 		{
 			Uri = "$sourceURI/$brokerWAR"
 			DestinationPath = "$LocalDLPath\$brokerWAR"
+			MatchSource = $false
 		}
 
 		xRemoteFile Download_Admin_WAR
 		{
 			Uri = "$sourceURI/$adminWAR"
 			DestinationPath = "$LocalDLPath\$adminWAR"
+			MatchSource = $false
 		}
 
 		xRemoteFile Download_Agent_ARM
 		{
 			Uri = "$templateAgentURI/$agentARM"
 			DestinationPath = "$LocalDLPath\$agentARM"
+			MatchSource = $false
 		}
 
 		xRemoteFile Download_Ga_Agent_ARM
 		{
 			Uri = "$templateAgentURI/$gaAgentARM"
 			DestinationPath = "$LocalDLPath\$gaAgentARM"
+			MatchSource = $false
 		}
 
 		xRemoteFile Download_Linux_Agent_ARM
 		{
 			Uri = "$templateAgentURI/$linuxAgentARM"
 			DestinationPath = "$LocalDLPath\$linuxAgentARM"
+			MatchSource = $false
 		}
 
         File Sumo_Directory 
