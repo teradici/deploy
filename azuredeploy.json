@@ -133,20 +133,19 @@
         "parameters": {
           
           "virtualNetworkName" : {
-            "type" : "String",
-              "value" : "vnet-CloudAccessManager"
+            "value" : "[reference('Root').outputs.virtualNetworkName.value]"
           },
           "adSubnetName": {
-            "value": "ad-Subnet"
+            "value": "[reference('Root').outputs.adSubnetName.value]"
           },
           "gatewaySubnetName": {
-            "value": "gateway-Subnet"
+            "value": "[reference('Root').outputs.gatewaySubnetName.value]"
           },
           "adminDesktopVMName" : {
-            "value" : "admin-desk"
+            "value" : "[reference('Root').outputs.adminDesktopVMName.value]"
           },
           "cmnsgName" : {
-            "value" : "cm-nsg"
+            "value" : "[reference('Root').outputs.cmnsgName.value]"
           },
           
           "domainName": {
@@ -206,13 +205,13 @@
         },
         "parameters": {
           "existingVNETName": {
-              "value": "CloudAccessManager"
+              "value": "[reference('Root').outputs.virtualNetworkName.value]"
             },          
           "existingSubnetName": {
-              "value": "Subnet-CloudAccessManager"
+              "value": "[reference('Root').outputs.adSubnetName.value]"
             },
           "dnsLabelPrefix": {
-              "value": "vm-desk"
+              "value": "[reference('Root').outputs.adminDesktopVMName.value]"
             },
           "vmSize": {
             "value": "Standard_D2_v3"
