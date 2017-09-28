@@ -1,104 +1,6 @@
 # Deploy-CAM.ps1
 #
-param
-(
-	[string]
-	$LocalDLPath = "$env:systemdrive\WindowsAzure\PCoIPCAMInstall",
 
-	[Parameter(Mandatory)]
-	[String]$sourceURI,
-
-	[Parameter(Mandatory)]
-	[String]$templateURI,
-
-	[Parameter(Mandatory)]
-	[String]$templateAgentURI,
-
-	[Parameter(Mandatory)]
-	[System.Management.Automation.PSCredential]$registrationCodeAsCred,
-
-	[string]
-	$javaInstaller = "jdk-8u91-windows-x64.exe",
-
-	[string]
-	$tomcatInstaller = "apache-tomcat-8.0.39-windows-x64.zip",
-
-	[string]
-	$brokerWAR = "pcoip-broker.war",
-
-	[string]
-	$adminWAR = "CloudAccessManager.war",
-
-	[string]
-	$agentARM = "server2016-standard-agent.json",
-
-	[string]
-	$gaAgentARM = "server2016-graphics-agent.json",
-
-	[Parameter(Mandatory)]
-	[String]$domainFQDN,
-
-	[Parameter(Mandatory)]
-	[String]$adminDesktopVMName,
-
-	[Parameter(Mandatory)]
-	[String]$domainGroupAppServersJoin,
-
-	[Parameter(Mandatory)]
-	[String]$existingVNETName,
-
-	[Parameter(Mandatory)]
-	[String]$existingSubnetName,
-
-	[Parameter(Mandatory)]
-	[String]$storageAccountName,
-
-	[Parameter(Mandatory)]
-	[System.Management.Automation.PSCredential]$VMAdminCreds,
-
-	[Parameter(Mandatory)]
-	[System.Management.Automation.PSCredential]$DomainAdminCreds,
-
-	[Parameter(Mandatory)]
-	[System.Management.Automation.PSCredential]$AzureCreds,
-
-	[Parameter(Mandatory=$false)]
-	[String]$tenantID,
-
-	[Parameter(Mandatory)]
-	[String]$DCVMName, #without the domain suffix
-
-	[Parameter(Mandatory)]
-	[String]$RGName, #Azure resource group name
-
-	[Parameter(Mandatory)]
-	[String]$gitLocation,
-
-	[Parameter(Mandatory)]
-	[String]$sumoCollectorID,
-
-	[Parameter(Mandatory=$false)]
-	[String]$brokerPort = "8444",
-
-	#For application gateway
-	[Parameter(Mandatory=$true)]
-	[string]$AGsubnetRef,
-
-	[Parameter(Mandatory=$true)]
-	[string]$AGbackendIpAddressDefault,
-
-	[Parameter(Mandatory=$true)]
-	[string]$AGbackendIpAddressForPathRule1,
-
-	[Parameter(Mandatory=$true)] #passed as credential to prevent logging of any embedded access keys
-	[System.Management.Automation.PSCredential]$AGtemplateUri,
-
-	[Parameter(Mandatory=$true)]
-	[string]$camSaasUri,
-
-	[Parameter(Mandatory=$false)]
-	[bool]$verifyCAMSaaSCertificate=$true
-)
 
 
 #from: https://stackoverflow.com/questions/22002748/hashtables-from-convertfrom-json-have-different-type-from-powershells-built-in-h
@@ -249,7 +151,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 				throw ("Failed to register with CAM. Result was: " + (ConvertTo-Json $registerUserResult))
 			}
 
-			Write-Host "Cloud Access Manager Frontend has been registered succesfully"
+			Write-Host "Cloud Access Manager Frontend has been registered successfully"
 
 			# Get a Sign-in token
 			$signInResult = ""
@@ -323,7 +225,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 			$camDeploymentInfo.Add("CAM_URI",$camSaasBaseUri)
 			$camDeploymentInfo.Add("CAM_DEPLOYMENTID",$deploymentId)
 
-			Write-Host "Deployment has been registered succesfully with Cloud Access Manager"
+			Write-Host "Deployment has been registered successfully with Cloud Access Manager"
 
 			break;
 		} catch {
@@ -454,7 +356,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 			if( !(($registerMachineResult.code -eq 201) -or ($registerMachineResult.data.reason.ToLower().Contains("exists")))) {
 				throw ("Registering Machine failed. Result was: " + (ConvertTo-Json $registerMachineResult))
 			}
-			Write-Host "Machine has been registered succesfully with Cloud Access Manager"
+			Write-Host "Machine " + $machineRequest.machineName + " has been registered successfully with Cloud Access Manager."
 
 			break;
 		} catch {
@@ -769,180 +671,3 @@ function Create-CAMAppSP()
 
 	return $spInfo
 }
-
-
-################## Actual script start here ####################
-
-
-
-Login-AzureRmAccount
-#get-azurermsubscription
-$subscriptionID = "523a0eda-0b3e-41a2-bf22-4a095d972aae"
-$registrationCode = "YYZZ9UMBYQBF@CA5E-2E7D-0841-D6A3"
-$camSaasBaseUri = "https://cam-staging.teradici.com"
-
-Select-AzureRmSubscription -SubscriptionId $subscriptionID
-
-
-$azureRGName = "bdallkv5"
-
-New-AzureRmResourceGroup -Name $azureRGName -Location "East US"
-
-
-
-# get configuration from file
-$configFileName = "camconfig.json"
-$outputParametersFileName = "camconfig-parameters-out.json"
-$configFileContent = Get-Content $configFileName
-$CAMConfig = ConvertFrom-Json ([string]$configFileContent)
-
-
-$spInfo = Create-CAMAppSP -RGName $azureRGName
-
-$kvInfo = createAndPopulateKeyvault `
-	-RGName $azureRGName `
-	-registrationCode $registrationCode `
-	-DomainJoinPassword $CAMConfig.parameters.domainAdminPassword.value `
-	-spName $spInfo.spCreds.UserName
-
-$client = $spInfo.spCreds.UserName
-$key = $spInfo.spCreds.GetNetworkCredential().Password
-$tenant = $spInfo.tenantId
-
-# need to add a retry on the registration for invalid SP as there is a race condition (sigh).
-Start-Sleep -seconds 30
-
-$camDeploymenRegInfo = Register-CAM `
-	-SubscriptionId $subscriptionID `
-	-client $client `
-	-key $key `
-	-tenant $tenant `
-	-RGName $azureRGName `
-	-registrationCode $registrationCode `
-	-camSaasBaseUri $camSaasBaseUri
-
-
-Write-Host "Create auth file information for the CAM frontend."
-
-$authFileContent = @"
-subscription=$subscriptionID
-client=$client
-key=$key
-tenant=$tenant
-managementURI=https\://management.core.windows.net/
-baseURL=https\://management.azure.com/
-authURL=https\://login.windows.net/
-graphURL=https\://graph.windows.net/
-"@
-
-$authFileContentURL = [System.Web.HttpUtility]::UrlEncode($authFileContent) 
-
-$camDeploymenInfo = @{};
-$camDeploymenInfo.Add("registrationInfo",$camDeploymenRegInfo)
-$camDeploymenInfo.Add("AzureAuthFile",$authFileContentURL)
-
-$camDeploymenInfoJSON = ConvertTo-JSON $camDeploymenInfo -Depth 16 -Compress
-$camDeploymenInfoURL = [System.Web.HttpUtility]::UrlEncode($camDeploymenInfoJSON)
-
-
-$camDeploymenInfoURLSecure = ConvertTo-SecureString $camDeploymenInfoURL -AsPlainText -Force
-$camDeploySecretName = 'CAMDeploymentInfo'
-$camDeploySecret = Set-AzureKeyVaultSecret -VaultName $kvInfo.VaultName -Name $camDeploySecretName -SecretValue $camDeploymenInfoURLSecure
-
-$SPKeySecretName = 'SPKey'
-$SPKeySecret = Set-AzureKeyVaultSecret -VaultName $kvInfo.VaultName -Name $SPKeySecretName -SecretValue $spInfo.spCreds.Password
-
-<# Test code for encoding/decoding
-$camDeploymenInfoURL
-$camDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($camDeploymenInfoURL)
-$camDeploymenInfoDecoded = ConvertFrom-Json $camDeploymenInfoJSONDecoded
-
-
-[System.Web.HttpUtility]::UrlDecode($camDeploymenInfoDecoded.AzureAuthFile)
-
-$regInfo = $camDeploymenInfoDecoded.RegistrationInfo
-
-$regInfo.psobject.properties | Foreach-Object {
-	Write-Host "Name: " $_.Name " Value: " $_.Value
-
-#>
-
-
-#keyvault ID of the form: /subscriptions/$subscriptionID/resourceGroups/$azureRGName/providers/Microsoft.KeyVault/vaults/$kvName
-
-Register-RemoteAccessWorkstation `
-		-subscription $subscriptionID `
-        -client $client `
-        -key $key `
-        -tenant $tenant `
-		-RGName $azureRGName `
-        -deploymentId $camDeploymenRegInfo.CAM_DEPLOYMENTID `
-        -camSaasBaseUri $camDeploymenRegInfo.CAM_URI `
-        -adminDesktopVMName "vm-desk"
-
-
-$kvId = $kvInfo.ResourceId
-
-$generatedDeploymentParameters = @"
-{
-"AzureAdminUsername": {
-	"value": "$client"
-},
-"AzureAdminPassword": {
-	"reference": {
-		"keyVault": {
-		  "id": "$kvId"
-		},
-		"secretName": "$SPKeySecretName"
-	  }
-},
-"tenantID": {
-	"value": "$tenant"
-},
-"certData": {
-	"reference": {
-		"keyVault": {
-		  "id": "$kvId"
-		},
-		"secretName": "CAMFECertificate"
-	  }		
-},
-"certPassword": {
-	"reference": {
-		"keyVault": {
-		  "id": "$kvId"
-		},
-		"secretName": "CAMFECertificatePassword"
-	  }		
-},
-"keyVaultId": {
-	"value": "$kvId"
-},
-"CAMDeploymentInfo": {
-	"reference": {
-		"keyVault": {
-		  "id": "$kvId"
-		},
-		"secretName": "$camDeploySecretName"
-	  }		
-}
-}
-"@
-
-
-
-$CAMConfigTable = ConvertPSObjectToHashtable -InputObject $CAMConfig
-
-$deploymentParametersObj = ConvertFrom-Json $generatedDeploymentParameters
-$deploymentParametersTable = ConvertPSObjectToHashtable -InputObject $deploymentParametersObj
-
-$CAMConfigTable.parameters += $deploymentParametersTable
-
-$outParametersFileContent = ConvertTo-Json -InputObject $CAMConfigTable -Depth 99
-Set-Content $outputParametersFileName  $outParametersFileContent
-
-
-Test-AzureRmResourceGroupDeployment -ResourceGroupName $azureRGName -TemplateFile "azuredeploy.json" -TemplateParameterFile $outputParametersFileName  -Verbose
-
-New-AzureRmResourceGroupDeployment -DeploymentName "ad1" -ResourceGroupName $azureRGName -TemplateFile "azuredeploy.json" -TemplateParameterFile $outputParametersFileName 
-
