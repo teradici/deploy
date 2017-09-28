@@ -4,9 +4,7 @@
     "parameters": {
        "dcnsgName": {
          "value": "dcnsgName"
-       },
-       "cmnsgName": {
-         "value": "cmnsgName"
        }
+     
    }
 }

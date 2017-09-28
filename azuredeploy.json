@@ -24,7 +24,6 @@
     },
     "AzureAdminUsername": {
       "type": "string",
-      "defaultValue": "adminuser@example.com",
       "metadata": {
         "description": "The name of the Azure account/service principal with contributor access to the subscription. This account cannot require MFA."
       }
@@ -37,7 +36,6 @@
     },
     "tenantID": {
         "type": "string",
-        "defaultValue": "null",
         "metadata": {
             "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave as 'null' if a standard user (non-SP) account is being used."
         }
@@ -99,7 +97,7 @@
       "metadata": {
         "description": "The location of resources, such as templates and DSC modules, that the template depends on"
       },
-      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/master"
+      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/TSW-66292-split-ARM-template-cleanup"
     },
     "_artifactsLocationSasToken": {
       "type": "securestring",
@@ -110,27 +108,6 @@
     }
   },
   "variables": {
-    "configuration-name": "Complete CAM deployment with included Active Directory",
-    "virtualNetworkName": "vnet-CloudAccessManager",
-    "virtualNetworkAddressRange": "10.0.0.0/16",
-    "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'adsa')]",
-    "adNicName": "vm-ad-nic",
-    "adNicIPAddress": "10.0.0.4",
-    "cmPrivateIP": "10.0.0.10",
-    "auPrivateIP": "10.0.0.11",
-    "brPrivateIP": "10.0.0.12",
-    "brokerPort":  "8444",
-    "adVMName": "vm-dc",
-    "adSubnetName": "Subnet-CloudAccessManager",
-    "adSubnetAddressPrefix": "10.0.0.0/24",
-    "gatewaySubnetName": "Subnet-gateway",
-    "gatewaySubnetAddressPrefix": "10.0.1.0/24",
-    "publicIPAddressName": "adPublicIP",
-    "adLBName": "adLoadBalancer",
-    "serverRootName": "vm",
-    "adminDesktopVMName": "[concat(variables('serverRootName'), '-desk')]",
-    "dcnsgName": "dcNSG",
-    "cmnsgName": "cmNSG",
     "domainGroupAppServersJoin": "Cloud Access Application Servers"
   },
   "resources": [
@@ -169,7 +146,7 @@
       "name": "Frontend",
       "apiVersion": "2016-02-01",
       "dependsOn": [
-        "Microsoft.Resources/deployments/Root"
+        "Root"
       ],
       "properties": {
         "mode": "Incremental",
@@ -178,6 +155,23 @@
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
+          
+          "virtualNetworkName" : {
+            "value" : "[reference('Root').outputs.virtualNetworkName.value]"
+          },
+          "adSubnetName": {
+            "value": "[reference('Root').outputs.adSubnetName.value]"
+          },
+          "gatewaySubnetName": {
+            "value": "[reference('Root').outputs.gatewaySubnetName.value]"
+          },
+          "adminDesktopVMName" : {
+            "value" : "[reference('Root').outputs.adminDesktopVMName.value]"
+          },
+          "cmnsgName" : {
+            "value" : "[reference('Root').outputs.cmnsgName.value]"
+          },
+          
           "domainName": {
             "value": "[parameters('domainName')]"
           },
@@ -247,14 +241,14 @@
         },
         "parameters": {
           "existingVNETName": {
-            "value": "[variables('virtualNetworkName')]"
-          },
+              "value": "[reference('Root').outputs.virtualNetworkName.value]"
+            },          
           "existingSubnetName": {
-            "value": "[variables('adSubnetName')]"
-          },
+              "value": "[reference('Root').outputs.adSubnetName.value]"
+            },
           "dnsLabelPrefix": {
-            "value": "[variables('adminDesktopVMName')]"
-          },
+              "value": "[reference('Root').outputs.adminDesktopVMName.value]"
+            },
           "vmSize": {
             "value": "Standard_D2_v3"
           },

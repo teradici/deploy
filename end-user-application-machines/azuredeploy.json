@@ -97,7 +97,6 @@
         "imagePublisher": "MicrosoftWindowsServer",
         "imageOffer": "WindowsServer",
         "windowsOSVersion": "2016-Datacenter",
-        "virtualNetworkName": "vnet-CloudAccessManager",
         "apiVersion": "2015-06-15",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
@@ -106,7 +105,6 @@
         "videoDriverUrl": "",
         "registrationCode": "[parameters('registrationCode')]",
         "enableAutoShutdown" : false,
-        "adSubnetName": "Subnet-CloudAccessManager",
         "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'euam')]"
   },
   "resources": [
@@ -138,16 +136,16 @@
         },
         "parameters": {
           "existingVNETName": {
-            "value": "[variables('virtualNetworkName')]"
+            "value": "[parameters('existingVNETName')]"
           },
           "existingSubnetName": {
-            "value": "[variables('adSubnetName')]"
+            "value": "[parameters('existingSubnetName')]"
           },
           "dnsLabelPrefix": {
             "value": "[parameters('dnsLabelPrefix')]"
           },
           "vmSize": {
-            "value": "Standard_D2_v3"
+            "value": "[parameters('vmSize')]"
           },
           "domainToJoin": {
             "value": "[parameters('domainToJoin')]"

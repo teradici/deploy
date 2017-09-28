@@ -45,10 +45,10 @@
             "value": "This+would+be+a+URI+encoded+string"
         },
         "_agentArtifactsLocation": {
-            "value": "https://raw.githubusercontent.com/teradici/deploy/bd/end-user-application-machines/new-agent-vm')]"
+            "value": "https://raw.githubusercontent.com/teradici/deploy/TSW-66292-split-ARM-template-cleanup/end-user-application-machines/new-agent-vm"
         },
         "_artifactsLocation": {
-            "value": "https://raw.githubusercontent.com/teradici/deploy/bd/frontend"
+            "value": "https://raw.githubusercontent.com/teradici/deploy/TSW-66292-split-ARM-template-cleanup/frontend"
         }
     }
 }

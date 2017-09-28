@@ -46,7 +46,7 @@
             }
         },
         "domainPassword": {
-            "type": "secureString",
+            "type": "securestring",
             "metadata": {
                 "description": "Password of the account on the domain"
             }
@@ -65,7 +65,7 @@
             }
         },
         "vmAdminPassword": {
-            "type": "secureString",
+            "type": "securestring",
             "metadata": {
                 "description": "The password for the administrator account of the new VM and the domain"
             }
