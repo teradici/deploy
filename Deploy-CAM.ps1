@@ -696,7 +696,11 @@ function Deploy-CAM()
 
 
     $spInfo = Create-CAMAppSP -RGName $RGName
-    $registrationCode = $CAMConfig.parameters.registrationCode.value
+
+	# Login with SP - do we need to also make a new PSSession here?
+	Login-AzureRmAccount -Credential $spInfo.spCreds -ServicePrincipal -TenantId $spInfo.tenantId
+	
+	$registrationCode = $CAMConfig.parameters.registrationCode.value
     $camSaasBaseUri = $CAMConfig.parameters.camSaasUri.value
 
     $kvInfo = createAndPopulateKeyvault `
