@@ -671,3 +671,177 @@ function Create-CAMAppSP()
 
 	return $spInfo
 }
+
+
+function Deploy-CAM()
+{
+    param(
+	    [bool]
+	    $verifyCAMSaaSCertificate = $true,
+
+        $configFilePath,
+
+        $CAMDeploymentTemplateURI,
+		
+	    [parameter(Mandatory=$true)] 
+	    $subscriptionId,
+		
+	    [parameter(Mandatory=$true)]
+	    $RGName
+	)
+
+
+    $configFileContent = Get-Content $configFilePath
+    $CAMConfig = ConvertFrom-Json ([string]$configFileContent)
+
+
+    $spInfo = Create-CAMAppSP -RGName $RGName
+    $registrationCode = $CAMConfig.parameters.registrationCode.value
+    $camSaasBaseUri = $CAMConfig.parameters.camSaasUri.value
+
+    $kvInfo = createAndPopulateKeyvault `
+	    -RGName $RGName `
+	    -registrationCode $registrationCode `
+	    -DomainJoinPassword $CAMConfig.parameters.domainAdminPassword.value `
+	    -spName $spInfo.spCreds.UserName
+
+    $client = $spInfo.spCreds.UserName
+    $key = $spInfo.spCreds.GetNetworkCredential().Password
+    $tenant = $spInfo.tenantId
+
+    # need to add a retry on the registration for invalid SP as there is a race condition (sigh).
+    Start-Sleep -seconds 30
+
+    $camDeploymenRegInfo = Register-CAM `
+	    -SubscriptionId $subscriptionID `
+	    -client $client `
+	    -key $key `
+	    -tenant $tenant `
+	    -RGName $RGName `
+	    -registrationCode $registrationCode `
+	    -camSaasBaseUri $camSaasBaseUri
+
+
+    Write-Host "Create auth file information for the CAM frontend."
+
+    $authFileContent = @"
+subscription=$subscriptionID
+client=$client
+key=$key
+tenant=$tenant
+managementURI=https\://management.core.windows.net/
+baseURL=https\://management.azure.com/
+authURL=https\://login.windows.net/
+graphURL=https\://graph.windows.net/
+"@
+
+    $authFileContentURL = [System.Web.HttpUtility]::UrlEncode($authFileContent) 
+
+    $camDeploymenInfo = @{};
+    $camDeploymenInfo.Add("registrationInfo",$camDeploymenRegInfo)
+    $camDeploymenInfo.Add("AzureAuthFile",$authFileContentURL)
+
+    $camDeploymenInfoJSON = ConvertTo-JSON $camDeploymenInfo -Depth 16 -Compress
+    $camDeploymenInfoURL = [System.Web.HttpUtility]::UrlEncode($camDeploymenInfoJSON)
+
+    $camDeploymenInfoURLSecure = ConvertTo-SecureString $camDeploymenInfoURL -AsPlainText -Force
+    $camDeploySecretName = 'CAMDeploymentInfo'
+    $camDeploySecret = Set-AzureKeyVaultSecret -VaultName $kvInfo.VaultName -Name $camDeploySecretName -SecretValue $camDeploymenInfoURLSecure
+
+    $SPKeySecretName = 'SPKey'
+    $SPKeySecret = Set-AzureKeyVaultSecret -VaultName $kvInfo.VaultName -Name $SPKeySecretName -SecretValue $spInfo.spCreds.Password
+
+    <# Test code for encoding/decoding
+    $camDeploymenInfoURL
+    $camDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($camDeploymenInfoURL)
+    $camDeploymenInfoDecoded = ConvertFrom-Json $camDeploymenInfoJSONDecoded
+
+
+    [System.Web.HttpUtility]::UrlDecode($camDeploymenInfoDecoded.AzureAuthFile)
+
+    $regInfo = $camDeploymenInfoDecoded.RegistrationInfo
+
+    $regInfo.psobject.properties | Foreach-Object {
+	    Write-Host "Name: " $_.Name " Value: " $_.Value
+
+    #>
+
+
+    #keyvault ID of the form: /subscriptions/$subscriptionID/resourceGroups/$azureRGName/providers/Microsoft.KeyVault/vaults/$kvName
+
+    Register-RemoteAccessWorkstation `
+		    -subscription $subscriptionID `
+            -client $client `
+            -key $key `
+            -tenant $tenant `
+		    -RGName $RGName `
+            -deploymentId $camDeploymenRegInfo.CAM_DEPLOYMENTID `
+            -camSaasBaseUri $camDeploymenRegInfo.CAM_URI `
+            -adminDesktopVMName "vm-desk"
+
+
+    $kvId = $kvInfo.ResourceId
+
+$generatedDeploymentParameters = @"
+{
+"AzureAdminUsername": {
+	"value": "$client"
+},
+"AzureAdminPassword": {
+	"reference": {
+		"keyVault": {
+		  "id": "$kvId"
+		},
+		"secretName": "$SPKeySecretName"
+	  }
+},
+"tenantID": {
+	"value": "$tenant"
+},
+"certData": {
+	"reference": {
+		"keyVault": {
+		  "id": "$kvId"
+		},
+		"secretName": "CAMFECertificate"
+	  }		
+},
+"certPassword": {
+	"reference": {
+		"keyVault": {
+		  "id": "$kvId"
+		},
+		"secretName": "CAMFECertificatePassword"
+	  }		
+},
+"keyVaultId": {
+	"value": "$kvId"
+},
+"CAMDeploymentInfo": {
+	"reference": {
+		"keyVault": {
+		  "id": "$kvId"
+		},
+		"secretName": "$camDeploySecretName"
+	  }
+}
+}
+"@
+
+
+
+    $CAMConfigTable = ConvertPSObjectToHashtable -InputObject $CAMConfig
+
+    $deploymentParametersObj = ConvertFrom-Json $generatedDeploymentParameters
+    $deploymentParametersTable = ConvertPSObjectToHashtable -InputObject $deploymentParametersObj
+
+    $CAMConfigTable.parameters += $deploymentParametersTable
+
+    $outParametersFileContent = ConvertTo-Json -InputObject $CAMConfigTable -Depth 99
+    Set-Content $outputParametersFileName  $outParametersFileContent
+
+
+# Test-AzureRmResourceGroupDeployment -ResourceGroupName $azureRGName -TemplateFile "azuredeploy.json" -TemplateParameterFile $outputParametersFileName  -Verbose
+
+    New-AzureRmResourceGroupDeployment -DeploymentName "ad1" -ResourceGroupName $azureRGName -TemplateFile $CAMDeploymentTemplateURI -TemplateParameterFile $outputParametersFileName 
+}
