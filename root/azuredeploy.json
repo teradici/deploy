@@ -171,8 +171,8 @@
       "location": "[resourceGroup().location]",
       "dependsOn": [
         "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
-        "[resourceId('Microsoft.Network/publicIPAddresses', variables('networkSettings').subnets.adSubnet.adPubIPName)]",
-        "VNet"
+        "VNet",
+        "[resourceId('Microsoft.Network/networkInterfaces', variables('networkSettings').subnets.adSubnet.adNicName)]"
       ],
       "properties": {
         "hardwareProfile": {
