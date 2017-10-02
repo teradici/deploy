@@ -27,10 +27,10 @@
             "value": "https://teradeploy.blob.core.windows.net/binaries"
         },
         "_agentArtifactsLocation": {
-            "value": "https://raw.githubusercontent.com/teradici/deploy/TSW-66292-split-ARM-template-cleanup/end-user-application-machines/new-agent-vm"
+            "value": "https://raw.githubusercontent.com/teradici/deploy/master/end-user-application-machines/new-agent-vm"
         },
         "_artifactsLocation": {
-            "value": "https://raw.githubusercontent.com/teradici/deploy/TSW-66292-split-ARM-template-cleanup/frontend"
+            "value": "https://raw.githubusercontent.com/teradici/deploy/master/frontend"
         }
     }
 }
