@@ -1383,6 +1383,7 @@ brokerLocale=en_US
 "@
 					[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
 				}
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 				##
 
 				# Read in Authorization Information
