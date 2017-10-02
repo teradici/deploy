@@ -4,8 +4,8 @@ install_driver()
 {
     # Install kernel-source/kernel-devel and gcc
     sudo yum -y install kernel-source kernel-devel gcc
-    FILE_NAME='NVIDIA-Linux-x86_64-367.106-grid.run'
-    FILE_LOCATION='/root/'$FILE_NAME
+    FILE_NAME="NVIDIA-Linux-x86_64-367.106-grid.run"
+    FILE_LOCATION="/root/$FILE_NAME"
     # Download Driver first
     echo "Downloading and Installing Nvidia driver"
     sudo wget --retry-connrefused --tries=3 --waitretry=5 -O $FILE_LOCATION https://binarystore.blob.core.windows.net/thirdparty/nvidia/$FILE_NAME
@@ -27,7 +27,7 @@ install_driver()
         echo "Driver is installed successfully"
     else
         echo "failed to install Nvidia driver. Will create a script to install driver when machine boots up"
-        file_path=/root/install_driver.sh
+        file_path="/root/install_driver.sh"
         cat <<EOF >$file_path
 #!/bin/bash
 if [ -e /root/.first_boot ]
@@ -53,21 +53,21 @@ EOF
 }
 
 # the first argument is the Registration Code of PCoIP agent
-REGISTRATION_CODE=$1
+REGISTRATION_CODE="$1"
 # the second argument is the agent type
-AGENT_TYPE=$2
+AGENT_TYPE="$2"
 # the third argument is the VM name
-VM_NAME=$3
+VM_NAME="$3"
 # the forth argument is the domain name
-DOMAIN_NAME=$4
+DOMAIN_NAME="$4"
 # the fifith argument is the username
-USERNAME=$5
+USERNAME="$5"
 # the sixth argument is the password
-PASSWORD=$6
+PASSWORD="$6"
 # the seventh argument is the domain group to join
-GROUP=$7
+GROUP="$7"
 # set the domain controller address
-DC_ADDRESS='vm-dc'.$DOMAIN_NAME
+DC_ADDRESS="vm-dc.$DOMAIN_NAME"
 
 # Make sure Linux OS is up to date
 echo "--> Updating Linux OS to latest"
@@ -96,19 +96,19 @@ sudo yum -y install sssd realmd oddjob oddjob-mkhomedir adcli samba-common samba
 sudo systemctl enable sssd
 
 echo "-->Joining the domain"
-echo $PASSWORD | sudo realm join --user=$USERNAME $DOMAIN_NAME
+echo "$PASSWORD" | sudo realm join --user="$USERNAME" "$DOMAIN_NAME"
 
 echo "-->Configuring settings"
 sudo sed -i '$ a\dyndns_update = True\ndyndns_ttl = 3600\ndyndns_refresh_interval = 43200\ndyndns_update_ptr = True\nldap_user_principal = nosuchattribute' /etc/sssd/sssd.conf
-sudo sed -c -i "s/\(use_fully_qualified_names *= *\).*/\1False/" /etc/sssd/sssd.conf
-sudo sed -c -i "s/\(fallback_homedir *= *\).*/\1\/home\/%u/" /etc/sssd/sssd.conf
-sudo domainname $VM_NAME.$DOMAIN_NAME
+sudo sed -c -i "s/\\(use_fully_qualified_names *= *\\).*/\\1False/" /etc/sssd/sssd.conf
+sudo sed -c -i "s/\\(fallback_homedir *= *\\).*/\\1\\/home\\/%u/" /etc/sssd/sssd.conf
+sudo domainname "$VM_NAME.$DOMAIN_NAME"
 echo "%$DOMAIN_NAME\\\\Domain\\ Admins ALL=(ALL) ALL" > /etc/sudoers.d/sudoers
 
 echo "-->Registering with DNS"
-DOMAIN_UPPER=$(echo "$DOMAIN_NAME" | tr "[a-z]" "[A-Z]")
+DOMAIN_UPPER=$(echo "$DOMAIN_NAME" | tr '[:lower:]' '[:upper:]')
 IP_ADDRESS=$(hostname -I | grep -Eo '10.([0-9]*\.){2}[0-9]*')
-echo $PASSWORD | sudo kinit $USERNAME@$DOMAIN_UPPER
+echo "$PASSWORD" | sudo kinit "$USERNAME"@"$DOMAIN_UPPER"
 touch dns_record
 echo "update add $VM_NAME.$DOMAIN_NAME 600 a $IP_ADDRESS" > dns_record
 echo "send" >> dns_record
@@ -119,6 +119,8 @@ sudo yum -y install python-ldap
 echo "Creating a python script to join the group"
 file_path=/root/join_group.py
 cat <<EOF >$file_path
+'''
+'''
 '''
 /**
 * Copyright Teradici Corporation 2012-2014. All Rights Reserved.
@@ -136,7 +138,7 @@ import ldap
 import ldap.filter
 import ldap.modlist
 import ldap.sasl
-from optparse import OptionParser
+import argparse
 
 class ldap_lib(object):
     def __init__(self, server_address, username, password, domain):
@@ -206,20 +208,20 @@ class ldap_lib(object):
             return False
         return True
 
-parser = OptionParser()
-parser.add_option("-d", "--domain", dest="domain", help="Domain name")
-parser.add_option("-a", "--address", dest="address", help="domain controller address")
-parser.add_option("-u", "--user_name", dest="user_name", help="user name to login to domain controller")
-parser.add_option("-p", "--password", dest="password", help="password to login to domain controller")
-parser.add_option("-c", "--computer", dest="computer", help="computer to add to the group")
-parser.add_option("-g", "--group", dest="group", help="group name")
-(options, args) = parser.parse_args()
+parser = argparse.ArgumentParser(description='Join a computer to a group')
+parser.add_argument("-d", "--domain", dest="domain", required=True, help="Domain name")
+parser.add_argument("-a", "--address", dest="address", required=True, help="domain controller address")
+parser.add_argument("-u", "--user_name", dest="user_name", required=True, help="user name to login to domain controller")
+parser.add_argument("-p", "--password", dest="password", required=True, help="password to login to domain controller")
+parser.add_argument("-c", "--computer", dest="computer", required=True, help="computer to add to the group")
+parser.add_argument("-g", "--group", dest="group", help="group name")
+args = parser.parse_args()
 
-active_d = ldap_lib(options.address, options.user_name, options.password, options.domain)
-active_d.add_computer_to_group(options.computer, options.group)
+active_d = ldap_lib(args.address, args.user_name, args.password, args.domain)
+active_d.add_computer_to_group(args.computer, args.group)
 
 EOF
-sudo python $file_path -d $DOMAIN_NAME -a $DC_ADDRESS -u $USERNAME -p $PASSWORD -c $VM_NAME -g $GROUP
+sudo python $file_path -d "$DOMAIN_NAME" -a "$DC_ADDRESS" -u "$USERNAME" -p "$PASSWORD" -c "$VM_NAME" -g "$GROUP"
 
 
 # Install the EPEL repository
@@ -271,7 +273,7 @@ done
 echo "-->Register license code"
 for idx in {1..3}
 do
-    pcoip-register-host --registration-code=$REGISTRATION_CODE
+    pcoip-register-host --registration-code="$REGISTRATION_CODE"
     pcoip-validate-license    
     exitCode=$?
     
@@ -307,10 +309,10 @@ echo "-->create file gnome-initial-setup-done to skip gnome desktop initial setu
 for homeDir in $( find /home -mindepth 1 -maxdepth 1 -type d )
 do 
     confDir=$homeDir/.config
-    sudo mkdir -p $confDir
-    sudo chmod 777 $confDir
-    echo "yes" | sudo tee $confDir/gnome-initial-setup-done
-    sudo chmod 777 $confDir/gnome-initial-setup-done
+    sudo mkdir -p "$confDir"
+    sudo chmod 755 "$confDir"
+    echo "yes" | sudo tee "$confDir"/gnome-initial-setup-done
+    sudo chmod 755 "$confDir"/gnome-initial-setup-done
 done
 
 echo "-->start graphical target"
