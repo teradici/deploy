@@ -341,6 +341,7 @@
       "name": "CreateAppGateway",
       "apiVersion": "2016-02-01",
       "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
         "Microsoft.Resources/deployments/CreateNetworkSGs"
       ],
       "properties": {

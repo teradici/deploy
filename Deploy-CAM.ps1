@@ -698,7 +698,7 @@ function Deploy-CAM()
     $spInfo = Create-CAMAppSP -RGName $RGName
 
 	# Login with SP - do we need to also make a new PSSession here?
-	Login-AzureRmAccount -Credential $spInfo.spCreds -ServicePrincipal -TenantId $spInfo.tenantId
+	Add-AzureRmAccount -Credential $spInfo.spCreds -ServicePrincipal -TenantId $spInfo.tenantId -ContextName "CAM-SP-Context"
 	
 	$registrationCode = $CAMConfig.parameters.registrationCode.value
     $camSaasBaseUri = $CAMConfig.parameters.camSaasUri.value
@@ -847,5 +847,5 @@ $generatedDeploymentParameters = @"
 
 # Test-AzureRmResourceGroupDeployment -ResourceGroupName $azureRGName -TemplateFile "azuredeploy.json" -TemplateParameterFile $outputParametersFileName  -Verbose
 
-    New-AzureRmResourceGroupDeployment -DeploymentName "ad1" -ResourceGroupName $azureRGName -TemplateFile $CAMDeploymentTemplateURI -TemplateParameterFile $outputParametersFileName 
+#    New-AzureRmResourceGroupDeployment -DeploymentName "ad1" -ResourceGroupName $azureRGName -TemplateFile $CAMDeploymentTemplateURI -TemplateParameterFile $outputParametersFileName 
 }
