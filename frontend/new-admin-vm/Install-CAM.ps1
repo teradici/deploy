@@ -1070,7 +1070,7 @@ graphURL=https\://graph.windows.net/
         "domainToJoin": { "value": "$using:domainFQDN" },
         "domainGroupToJoin": { "value": "$using:domainGroupAppServersJoin" },
         "storageAccountName": { "value": "$using:storageAccountName" },
-        "_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller/new-agent-vm" }
+        "_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/end-user-application-machines/new-agent-vm" }
     }
 }
 
