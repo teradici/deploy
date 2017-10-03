@@ -304,18 +304,6 @@ echo "-->set default graphical target"
 # The below command will change runlevel from runlevel 3 to runelevel 5 
 sudo systemctl set-default graphical.target
 
-# Comment out code below for security concern 
-# # skip the gnome initial setup
-# echo "-->create file gnome-initial-setup-done to skip gnome desktop initial setup"
-# for homeDir in $( find /home -mindepth 1 -maxdepth 1 -type d )
-# do 
-#     confDir=$homeDir/.config
-#     sudo mkdir -p "$confDir"
-#     sudo chmod 777 "$confDir"
-#     echo "yes" | sudo tee "$confDir"/gnome-initial-setup-done
-#     sudo chmod 777 "$confDir"/gnome-initial-setup-done
-# done
-
 echo "-->start graphical target"
 sudo systemctl start graphical.target
 
