@@ -66,8 +66,6 @@ USERNAME="$5"
 PASSWORD="$6"
 # the seventh argument is the domain group to join
 GROUP="$7"
-# set the domain controller address
-DC_ADDRESS="vm-dc.$DOMAIN_NAME"
 
 # Make sure Linux OS is up to date
 echo "--> Updating Linux OS to latest"
@@ -115,6 +113,8 @@ echo "send" >> dns_record
 sudo nsupdate -g dns_record
 
 echo "-->Join the group"
+# set the domain controller address
+DC_ADDRESS=$(host -t srv _ldap._tcp."$DOMAIN_NAME" | awk '{print $NF}')
 sudo yum -y install python-ldap
 echo "Creating a python script to join the group"
 file_path=/root/join_group.py
@@ -303,6 +303,18 @@ sudo yum -y install firefox
 echo "-->set default graphical target"
 # The below command will change runlevel from runlevel 3 to runelevel 5 
 sudo systemctl set-default graphical.target
+
+# Comment out code below for security concern 
+# # skip the gnome initial setup
+# echo "-->create file gnome-initial-setup-done to skip gnome desktop initial setup"
+# for homeDir in $( find /home -mindepth 1 -maxdepth 1 -type d )
+# do 
+#     confDir=$homeDir/.config
+#     sudo mkdir -p "$confDir"
+#     sudo chmod 777 "$confDir"
+#     echo "yes" | sudo tee "$confDir"/gnome-initial-setup-done
+#     sudo chmod 777 "$confDir"/gnome-initial-setup-done
+# done
 
 echo "-->start graphical target"
 sudo systemctl start graphical.target
