@@ -155,7 +155,8 @@
         },
 
         "binaryLocation": "[parameters('CAMDeploymentBlobSource')]",
-        "scriptFileName": "Install-PCoIPAgent.sh"
+        "scriptFileName": "Install-PCoIPAgent.sh",
+        "idleShutdownScriptFileName": "Install-Idle-Shutdown.sh"
     },
     "resources": [
         {
@@ -251,6 +252,27 @@
                 "commandToExecute": "[concat('bash ', variables('scriptFileName'), ' \"', parameters('registrationCode'), '\" \"', parameters('agentType'), '\" \"', variables('vmSettings').vmNamePrefix, '\" \"', parameters('domainToJoin'), '\" \"', parameters('domainUsername'), '\" \"', parameters('domainPassword'), '\" \"', parameters('domainGroupToJoin'), '\"')]"
                 }
               }
-            }
+            },
+            {
+              "type": "Microsoft.Compute/virtualMachines/extensions",
+              "name": "[concat(parameters('dnsLabelPrefix'),'/CAMIdleShutdownShellScript')]",
+              "apiVersion": "2017-03-30",
+              "location": "[resourceGroup().location]",
+              "dependsOn": [
+                "[concat(parameters('dnsLabelPrefix'),'/PCoIPAgentShellScript')]"
+              ],
+                "properties": {
+                    "publisher": "Microsoft.Azure.Extensions",
+                    "type": "CustomScript",
+                    "typeHandlerVersion": "2.0",
+                    "autoUpgradeMinorVersion": true,
+                    "settings": {
+                    "fileUris": [ "[concat(parameters('_artifactsLocation'), '/', variables('idleShutdownScriptFileName'))]" ]
+                    },
+                "protectedSettings": {
+                    "commandToExecute": "[concat('sudo bash ', variables('idleShutdownScriptFileName')]"
+                    }
+                  }
+                }
     ]
 }
