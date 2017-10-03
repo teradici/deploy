@@ -1159,8 +1159,10 @@ graphURL=https\://graph.windows.net/
 				Copy-Item "$catalinaHome\conf" "$catalinaBase\conf" -Recurse -ErrorAction SilentlyContinue
 				Copy-Item "$catalinaHome\logs" "$catalinaBase\logs" -Recurse -ErrorAction SilentlyContinue
 				Copy-Item "$catalinaHome\temp" "$catalinaBase\temp" -Recurse -ErrorAction SilentlyContinue
-				Copy-Item "$catalinaHome\webapps" "$catalinaBase\webapps" -Recurse -ErrorAction SilentlyContinue
 				Copy-Item "$catalinaHome\work" "$catalinaBase\work" -Recurse -ErrorAction SilentlyContinue
+
+				# Make empty webapps directory if it does not exist. 
+				New-Item -ItemType Directory -Force -Path "$catalinaBase\webapps"
 
 				$serverXMLFile = $catalinaBase + '\conf\server.xml'
 				$origServerXMLFile = $catalinaBase + '\conf\server.xml.orig'

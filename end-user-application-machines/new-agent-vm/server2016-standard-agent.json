@@ -20,8 +20,29 @@
                 "description": "Virtual machine name for both Azure and AD"
             }
         },
+        "osType": {
+            "type": "string",
+            "defaultValue": "Windows Server 2016",
+            "allowedValues": [
+              "Windows Server 2016",
+              "RHEL 7"
+            ],
+            "metadata": {
+              "description": "Type of OS to use for VM."
+            }
+        },
+        "agentType": {
+            "type": "string",
+            "defaultValue": "Standard",
+            "allowedValues": [
+              "Standard",
+              "Graphics"
+            ],
+            "metadata": {
+              "description": "PCoIP Agent Type: Standard or Graphics."
+            }
+        },
         "vmSize": {
-            "defaultValue": "Standard_D2_v2",
             "type": "string",
             "metadata": {
                 "description": "The size of the virtual machines"
@@ -98,20 +119,62 @@
             "metadata": {
                 "description": "Storage account to use for VM data and VHD's"
             }
+        },
+        "enableAutoShutdown": {
+            "type": "bool",
+            "defaultValue": true,
+            "metadata": {
+                "description": "Flag for enabling auto-shutdown on idle for Agents"
+        }
         }
     },
     "variables": {
-        "imagePublisher": "MicrosoftWindowsServer",
-        "imageOffer": "WindowsServer",
-        "windowsOSVersion": "2016-Datacenter",
+
         "apiVersion": "2015-06-15",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
-        "pcoipAgentInstallerUrl": "[concat(parameters('CAMDeploymentBlobSource'),'/PCoIP_agent_release_installer_2.10.0.7600_standard.exe')]",
-        "videoDriverUrl": "",
         "registrationCode": "[parameters('registrationCode')]",
-        "enableAutoShutdown" : false
+
+        "osSettings": {
+            "Windows Server 2016": {
+              "publisher": "MicrosoftWindowsServer",
+              "offer": "WindowsServer",
+              "sku": "2016-Datacenter",
+              "version": "latest"
+            },
+            "RHEL 7": {
+              "publisher": "RedHat",
+              "offer": "RHEL",
+              "sku": "7.3",
+              "version": "latest"
+            }
+        },
+      
+        "vmSettings": {
+            "vmNamePrefix": "[parameters('dnsLabelPrefix')]",
+            "adminUserName": "[parameters('vmAdminUsername')]",
+            "adminPassword": "[parameters('vmAdminPassword')]",
+            "vmSize": "[parameters('vmSize')]",
+            "nicName": "[variables('nicName')]",
+            "os": "[variables('osSettings')[parameters('osType')]]"
+        },
+
+        "binaryLocation": "[parameters('CAMDeploymentBlobSource')]",
+          
+        "extensions": {
+            "Standard": {
+                "pcoipAgentInstallerUrl": "[concat(variables('binaryLocation'), '/PCoIP_agent_release_installer_2.10.0.7600_standard.exe')]",
+                "videoDriverUrl": ""
+            },
+            "Graphics": {
+                "pcoipAgentInstallerUrl": "[concat(variables('binaryLocation'), '/PCoIP_agent_release_installer_2.10.0.7600_graphics.exe')]",
+                "videoDriverUrl": "[concat(variables('binaryLocation'), '/370.12_grid_win10_server2016_64bit_international.exe')]"
+            }
+        },
+          
+        "pcoipAgentInstallerUrl": "[variables('extensions')[parameters('agentType')].pcoipAgentInstallerUrl]",
+        "videoDriverUrl": "[variables('extensions')[parameters('agentType')].videoDriverUrl]"
     },
     "resources": [
         {
@@ -135,24 +198,24 @@
         },
         {
             "type": "Microsoft.Compute/virtualMachines",
-            "name": "[parameters('dnsLabelPrefix')]",
-            "apiVersion": "[variables('apiVersion')]",
+            "name": "[variables('vmSettings').vmNamePrefix]",
+            "apiVersion": "2017-03-30",
             "location": "[resourceGroup().location]",
             "properties": {
                 "hardwareProfile": {
                     "vmSize": "[parameters('vmSize')]"
                 },
                 "osProfile": {
-                    "computerName": "[parameters('dnsLabelPrefix')]",
-                    "adminUsername": "[parameters('vmAdminUsername')]",
-                    "adminPassword": "[parameters('vmAdminPassword')]"
+                    "computerName": "[variables('vmSettings').vmNamePrefix]",
+                    "adminUsername": "[variables('vmSettings').adminUserName]",
+                    "adminPassword": "[variables('vmSettings').adminPassword]"
                 },
                 "storageProfile": {
                     "imageReference": {
-                        "publisher": "[variables('imagePublisher')]",
-                        "offer": "[variables('imageOffer')]",
-                        "sku": "[variables('windowsOSVersion')]",
-                        "version": "latest"
+                        "publisher": "[variables('vmSettings').os.publisher]",
+                        "offer": "[variables('vmSettings').os.offer]",
+                        "sku": "[variables('vmSettings').os.sku]",
+                        "version": "[variables('vmSettings').os.version]"
                     },
                     "osDisk": {
                         "name": "osdisk",
@@ -181,12 +244,6 @@
                             "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
                         }
                     ]
-                },
-                "diagnosticsProfile": {
-                    "bootDiagnostics": {
-                        "enabled": "false",
-                        "storageUri": "[concat('http://',parameters('storageAccountName'),'.blob.core.windows.net')]"
-                    }
                 }
             },
             "dependsOn": [
@@ -242,7 +299,7 @@
                 "gitLocation": "[parameters('_artifactsLocation')]",
                 "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId)]",
                 "domainGroupToJoin": "[parameters('domainGroupToJoin')]",
-                "enableAutoShutdown": "[variables('enableAutoShutdown')]"
+                "enableAutoShutdown": "[parameters('enableAutoShutdown')]"
               },
               "privacy": {
                 "DataCollection": "Disable"

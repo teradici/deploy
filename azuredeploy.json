@@ -1,0 +1,253 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "domainAdminUsername": {
+      "type": "string",
+      "defaultValue": "adminUser",
+      "metadata": {
+        "description": "The name of the administrator account of the new VM and domain"
+      }
+    },
+    "domainAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password for the administrator account of the new VM and domain"
+      }
+    },
+    "domainName": {
+      "type": "string",
+      "defaultValue": "example.com",
+      "metadata": {
+        "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
+      }
+    },
+    "AzureAdminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the Azure account/service principal with contributor access to the subscription. This account cannot require MFA."
+      }
+    },
+    "AzureAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password of the Azure account/service principal with contributor access to the subscription. This account cannot require MFA."
+      }
+    },
+    "tenantID": {
+        "type": "string",
+        "metadata": {
+            "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave as 'null' if a standard user (non-SP) account is being used."
+        }
+    },
+    "registrationCode": {
+      "type": "securestring",
+      "minLength": 21,
+      "metadata": {
+        "description": "PCoIP Agent License Registration Code."
+      }
+    },
+    "CAMDeploymentBlobSource": {
+      "type": "string",
+      "defaultValue": "https://teradeploy.blob.core.windows.net/binaries",
+      "metadata": {
+        "description": "The location of the blobs for admin GUI machine installation"
+      }
+    },
+    "_artifactsLocation": {
+      "type": "string",
+      "metadata": {
+        "description": "The location of resources, such as templates and DSC modules, that the template depends on"
+      },
+      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/master"
+    },
+    "_artifactsLocationSasToken": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Auto-generated token to access _artifactsLocation"
+      },
+      "defaultValue": ""
+    },
+    "camSaasUri": {
+      "type": "string",
+      "metadata": {
+        "description": "URI for the CAM SAAS"
+      },
+      "defaultValue": "https://cam-antar.teradici.com"
+    },
+    "verifyCAMSaaSCertificate": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "a flag to indicate whether to verify CAM SaaS Server certificate. True means to verify."
+      }
+    }
+  },
+  "variables": {
+    "domainGroupAppServersJoin": "Cloud Access Application Servers"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "Root",
+      "apiVersion": "2016-02-01",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('_artifactsLocation'), '/root/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "domainName": {
+            "value": "[parameters('domainName')]"
+          },
+          "domainAdminUsername": {
+            "value": "[parameters('domainAdminUsername')]"
+          },
+          "domainAdminPassword": {
+            "value": "[parameters('domainAdminPassword')]"
+          },
+          "_artifactsLocation": {
+            "value": "[concat(parameters('_artifactsLocation'), '/root')]"
+          },
+          "_artifactsLocationSasToken": {
+            "value": "[parameters('_artifactsLocationSasToken')]"
+          }
+        }
+      }
+    },
+
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "Frontend",
+      "apiVersion": "2016-02-01",
+      "dependsOn": [
+        "Root"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('_artifactsLocation'), '/frontend/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          
+          "virtualNetworkName" : {
+            "value" : "[reference('Root').outputs.virtualNetworkName.value]"
+          },
+          "adSubnetName": {
+            "value": "[reference('Root').outputs.adSubnetName.value]"
+          },
+          "gatewaySubnetName": {
+            "value": "[reference('Root').outputs.gatewaySubnetName.value]"
+          },
+          "adminDesktopVMName" : {
+            "value" : "[reference('Root').outputs.adminDesktopVMName.value]"
+          },
+          "cmnsgName" : {
+            "value" : "[reference('Root').outputs.cmnsgName.value]"
+          },
+          
+          "domainName": {
+            "value": "[parameters('domainName')]"
+          },
+          "domainAdminUsername": {
+            "value": "[parameters('domainAdminUsername')]"
+          },
+          "domainAdminPassword": {
+            "value": "[parameters('domainAdminPassword')]"
+          },
+          "AzureAdminUsername": {
+            "value": "[parameters('AzureAdminUsername')]"
+          },
+          "AzureAdminPassword": {
+            "value": "[parameters('AzureAdminPassword')]"
+          },
+          "tenantID": {
+            "value": "[parameters('tenantID')]"
+          },
+          "registrationCode": {
+            "value": "[parameters('registrationCode')]"
+          },
+          "camSaasUri": {
+            "value": "[parameters('camSaasUri')]"
+          },
+          "verifyCAMSaaSCertificate": {
+            "value": "[parameters('verifyCAMSaaSCertificate')]"
+          },
+          "CAMDeploymentBlobSource": {
+            "value": "[parameters('CAMDeploymentBlobSource')]"
+          },
+          "_agentArtifactsLocation": {
+            "value": "[concat(parameters('_artifactsLocation'), '/end-user-application-machines/new-agent-vm')]"
+          },
+          "_artifactsLocation": {
+            "value": "[concat(parameters('_artifactsLocation'), '/frontend')]"
+          },
+          "_artifactsLocationSasToken": {
+            "value": "[parameters('_artifactsLocationSasToken')]"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "CreateEndUserApplicationMachine",
+      "apiVersion": "2016-02-01",
+      "dependsOn": [
+        "Microsoft.Resources/deployments/Root"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('_artifactsLocation'), '/end-user-application-machines/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "existingVNETName": {
+              "value": "[reference('Root').outputs.virtualNetworkName.value]"
+            },          
+          "existingSubnetName": {
+              "value": "[reference('Root').outputs.adSubnetName.value]"
+            },
+          "dnsLabelPrefix": {
+              "value": "[reference('Root').outputs.adminDesktopVMName.value]"
+            },
+          "vmSize": {
+            "value": "Standard_D2_v3"
+          },
+          "domainToJoin": {
+            "value": "[parameters('domainName')]"
+          },
+          "domainUsername": {
+            "value": "[parameters('domainAdminUsername')]"
+          },
+          "domainPassword": {
+            "value": "[parameters('domainAdminPassword')]"
+          },
+          "domainJoinOptions": {
+            "value": 3
+          },
+          "vmAdminUsername": {
+            "value": "[parameters('domainAdminUsername')]"
+          },
+          "vmAdminPassword": {
+            "value": "[parameters('domainAdminPassword')]"
+          },
+          "domainGroupToJoin": {
+            "value": "[variables('domainGroupAppServersJoin')]"
+          },
+          "_artifactsLocation": {
+            "value": "[concat(parameters('_artifactsLocation'), '/end-user-application-machines')]"
+          },
+          "CAMDeploymentBlobSource": {
+            "value": "[parameters('CAMDeploymentBlobSource')]"
+          },
+          "registrationCode": {
+            "value": "[parameters('registrationCode')]"
+          }
+        }
+      }
+    }
+  ]
+}
