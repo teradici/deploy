@@ -119,6 +119,13 @@
             "metadata": {
                 "description": "Storage account to use for VM data and VHD's"
             }
+        },
+        "enableAutoShutdown": {
+            "type": "bool",
+            "defaultValue": true,
+            "metadata": {
+                "description": "Flag for enabling auto-shutdown on idle for Agents"
+        }
         }
     },
     "variables": {
@@ -128,7 +135,6 @@
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
         "registrationCode": "[parameters('registrationCode')]",
-        "enableAutoShutdown" : false,
 
         "osSettings": {
             "Windows Server 2016": {
@@ -293,7 +299,7 @@
                 "gitLocation": "[parameters('_artifactsLocation')]",
                 "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId)]",
                 "domainGroupToJoin": "[parameters('domainGroupToJoin')]",
-                "enableAutoShutdown": "[variables('enableAutoShutdown')]"
+                "enableAutoShutdown": "[parameters('enableAutoShutdown')]"
               },
               "privacy": {
                 "DataCollection": "Disable"
