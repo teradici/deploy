@@ -1,0 +1,27 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+    "parameters": {
+        "domainUsername": {
+            "value": "GEN-USER"
+        },
+        "domainPassword": {
+            "value": "GEN-PASSWORD"
+        },
+        "domainToJoin": {
+            "value": "mydomain.com"
+        },
+        "registrationCode": {
+            "value": "xxxxxxxxxxxx@nnnn-nnnn-nnnn-nnnn"
+        },
+        "vmSize": { "value": "Standard_D2_v3" },
+        "existingSubnetName": { "value": "subnet1" },
+        "dnsLabelPrefix": { "value": "tbd-vmname" },
+        "existingVNETName": { "value": "existingVNETName" },
+        "vmAdminUsername": { "value": "GEN-USER" },
+        "vmAdminPassword": { "value": "GEN-PASSWORD" },
+        "domainGroupToJoin": { "value": "domainGroupAppServersJoin" },
+        "CAMDeploymentBlobSource": { "value": "https://teradeploy.blob.core.windows.net/binaries" },
+        "_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/end-user-application-machines" }
+    }
+}

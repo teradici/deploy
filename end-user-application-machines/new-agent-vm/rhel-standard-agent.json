@@ -17,20 +17,35 @@
         "dnsLabelPrefix": {
             "type": "string",
             "metadata": {
-                "description": "Unique machine name used for naming the machine in the Azure resource group and also in the domain join operation. Up to ?15? chars, digits or dashes, lowercase, should start with a letter: must conform to '^[a-z][a-z0-9-]{1,61}[a-z0-9]$'."
+                "description": "Virtual machine name for both Azure and AD"
+            }
+        },
+        "osType": {
+            "type": "string",
+            "defaultValue": "RHEL 7",
+            "allowedValues": [
+              "Windows Server 2016",
+              "RHEL 7"
+            ],
+            "metadata": {
+              "description": "Type of OS to use for VM."
+            }
+        },
+        "agentType": {
+            "type": "string",
+            "defaultValue": "Standard",
+            "allowedValues": [
+              "Standard",
+              "Graphics"
+            ],
+            "metadata": {
+              "description": "PCoIP Agent Type: Standard or Graphics."
             }
         },
         "vmSize": {
-            "defaultValue": "Standard_A2",
             "type": "string",
             "metadata": {
                 "description": "The size of the virtual machines"
-            }
-        },
-        "privateIP": {
-            "type": "string",
-            "metadata": {
-                "description": "private IP of the instance to create"
             }
         },
         "domainToJoin": {
@@ -39,6 +54,9 @@
                 "description": "The FQDN of the AD domain"
             }
         },
+        "domainGroupToJoin": {
+            "type": "string"
+        },
         "domainUsername": {
             "type": "string",
             "metadata": {
@@ -46,7 +64,7 @@
             }
         },
         "domainPassword": {
-            "type": "secureString",
+            "type": "securestring",
             "metadata": {
                 "description": "Password of the account on the domain"
             }
@@ -65,10 +83,36 @@
             }
         },
         "vmAdminPassword": {
-            "type": "secureString",
+            "type": "securestring",
             "metadata": {
                 "description": "The password for the administrator account of the new VM and the domain"
             }
+        },
+        "_artifactsLocation": {
+            "type": "string",
+            "metadata": {
+                "description": "The location of resources, such as templates and DSC modules, that the template depends on"
+            }
+        },
+        "_artifactsLocationSasToken": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Auto-generated token to access _artifactsLocation"
+            },
+            "defaultValue": ""
+        },
+        "CAMDeploymentBlobSource": {
+            "type": "string",
+            "metadata": {
+                "description": "The location of the blobs for admin GUI machine installation"
+            }
+        },
+        "registrationCode": {
+          "type": "securestring",
+          "minLength": 21,
+          "metadata": {
+            "description": "PCoIP Standard Agent License Registration Code."
+          }
         },
         "storageAccountName": {
             "type": "string",
@@ -78,13 +122,40 @@
         }
     },
     "variables": {
-        "imagePublisher": "MicrosoftWindowsServer",
-        "imageOffer": "WindowsServer",
-        "windowsOSVersion": "2016-Datacenter",
+
         "apiVersion": "2015-06-15",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
-        "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]"
+        "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
+        "registrationCode": "[parameters('registrationCode')]",
+        "enableAutoShutdown" : false,
+
+        "osSettings": {
+            "Windows Server 2016": {
+              "publisher": "MicrosoftWindowsServer",
+              "offer": "WindowsServer",
+              "sku": "2016-Datacenter",
+              "version": "latest"
+            },
+            "RHEL 7": {
+              "publisher": "RedHat",
+              "offer": "RHEL",
+              "sku": "7.3",
+              "version": "latest"
+            }
+        },
+      
+        "vmSettings": {
+            "vmNamePrefix": "[parameters('dnsLabelPrefix')]",
+            "adminUserName": "[parameters('vmAdminUsername')]",
+            "adminPassword": "[parameters('vmAdminPassword')]",
+            "vmSize": "[parameters('vmSize')]",
+            "nicName": "[variables('nicName')]",
+            "os": "[variables('osSettings')[parameters('osType')]]"
+        },
+
+        "binaryLocation": "[parameters('CAMDeploymentBlobSource')]",
+        "scriptFileName": "Install-PCoIPAgent.sh"
     },
     "resources": [
         {
@@ -97,11 +168,10 @@
                     {
                         "name": "ipconfig",
                         "properties": {
-                            "privateIPAllocationMethod": "Static",
+                            "privateIPAllocationMethod": "Dynamic",
                             "subnet": {
                                 "id": "[variables('subnetId')]"
-                            },
-                            "privateIPAddress": "[parameters('privateIP')]"
+                            }
                         }
                     }
                 ]
@@ -109,24 +179,24 @@
         },
         {
             "type": "Microsoft.Compute/virtualMachines",
-            "name": "[parameters('dnsLabelPrefix')]",
-            "apiVersion": "[variables('apiVersion')]",
+            "name": "[variables('vmSettings').vmNamePrefix]",
+            "apiVersion": "2017-03-30",
             "location": "[resourceGroup().location]",
             "properties": {
                 "hardwareProfile": {
                     "vmSize": "[parameters('vmSize')]"
                 },
                 "osProfile": {
-                    "computerName": "[parameters('dnsLabelPrefix')]",
-                    "adminUsername": "[parameters('vmAdminUsername')]",
-                    "adminPassword": "[parameters('vmAdminPassword')]"
+                    "computerName": "[variables('vmSettings').vmNamePrefix]",
+                    "adminUsername": "[variables('vmSettings').adminUserName]",
+                    "adminPassword": "[variables('vmSettings').adminPassword]"
                 },
                 "storageProfile": {
                     "imageReference": {
-                        "publisher": "[variables('imagePublisher')]",
-                        "offer": "[variables('imageOffer')]",
-                        "sku": "[variables('windowsOSVersion')]",
-                        "version": "latest"
+                        "publisher": "[variables('vmSettings').os.publisher]",
+                        "offer": "[variables('vmSettings').os.offer]",
+                        "sku": "[variables('vmSettings').os.sku]",
+                        "version": "[variables('vmSettings').os.version]"
                     },
                     "osDisk": {
                         "name": "osdisk",
@@ -155,12 +225,6 @@
                             "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
                         }
                     ]
-                },
-                "diagnosticsProfile": {
-                    "bootDiagnostics": {
-                        "enabled": "true",
-                        "storageUri": "[concat('http://',parameters('storageAccountName'),'.blob.core.windows.net')]"
-                    }
                 }
             },
             "dependsOn": [
@@ -168,28 +232,25 @@
             ]
         },
         {
-            "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(parameters('dnsLabelPrefix'),'/joindomain')]",
-            "apiVersion": "[variables('apiVersion')]",
-            "location": "[resourceGroup().location]",
+          "type": "Microsoft.Compute/virtualMachines/extensions",
+          "name": "[concat(parameters('dnsLabelPrefix'),'/PCoIPAgentShellScript')]",
+          "apiVersion": "2017-03-30",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+              "[concat('Microsoft.Compute/virtualMachines/', parameters('dnsLabelPrefix'))]"
+          ],
             "properties": {
-                "publisher": "Microsoft.Compute",
-                "type": "JsonADDomainExtension",
-                "typeHandlerVersion": "1.3",
+                "publisher": "Microsoft.Azure.Extensions",
+                "type": "CustomScript",
+                "typeHandlerVersion": "2.0",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "Name": "[parameters('domainToJoin')]",
-                    "User": "[concat(parameters('domainToJoin'), '\\', parameters('domainUsername'))]",
-                    "Restart": "true",
-                    "Options": "[parameters('domainJoinOptions')]"
+                "fileUris": [ "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'))]" ]
                 },
-                "protectedsettings": {
-                    "Password": "[parameters('domainPassword')]"
+            "protectedSettings": {
+                "commandToExecute": "[concat('bash ', variables('scriptFileName'), ' \"', parameters('registrationCode'), '\" \"', parameters('agentType'), '\" \"', variables('vmSettings').vmNamePrefix, '\" \"', parameters('domainToJoin'), '\" \"', parameters('domainUsername'), '\" \"', parameters('domainPassword'), '\" \"', parameters('domainGroupToJoin'), '\"')]"
                 }
-            },
-            "dependsOn": [
-                "[concat('Microsoft.Compute/virtualMachines/', parameters('dnsLabelPrefix'))]"
-            ]
-        }
+              }
+            }
     ]
 }

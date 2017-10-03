@@ -26,30 +26,11 @@
                 "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
             }
         },
-        "existingVNETName": {
-            "type": "string",
-            "metadata": {
-                "description": "Existing VNET that contains the domain controller"
-            }
-        },
         "adminDesktopVMName": {
             "type": "string",
             "metadata": {
                 "description": "Name of the desktop to assign to the administrative user"
             }
-        },
-        "_artifactsLocation": {
-            "type": "string",
-            "metadata": {
-                "description": "The location of resources, such as templates and DSC modules, that the template depends on"
-            }
-        },
-        "_artifactsLocationSasToken": {
-            "type": "securestring",
-            "metadata": {
-                "description": "Auto-generated token to access _artifactsLocation"
-            },
-            "defaultValue": ""
         }
     },
     "resources": [
