@@ -1,0 +1,320 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "domainAdminUsername": {
+      "type": "string",
+      "defaultValue": "adminUser",
+      "metadata": {
+        "description": "The name of the administrator account of the new VM and domain"
+      }
+    },
+    "domainAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password for the administrator account of the new VM and domain"
+      }
+    },
+    "domainName": {
+      "type": "string",
+      "defaultValue": "example.com",
+      "metadata": {
+        "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
+      }
+    },
+    "_artifactsLocation": {
+      "type": "string",
+      "metadata": {
+        "description": "The location of resources, such as templates and DSC modules, that the template depends on"
+      }
+    },
+    "_artifactsLocationSasToken": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Auto-generated token to access _artifactsLocation"
+      },
+      "defaultValue": ""
+    }
+  },
+  "variables": {
+    "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'adsa')]",
+    "adVMName": "vm-dc",
+    "serverRootName": "vm",
+    "adminDesktopVMName": "[concat(variables('serverRootName'), '-desk')]",
+    "networkSettings" : {
+      "vnetName" : "vnet-CloudAccessManager",
+      "addressPrefix" : "10.0.0.0/16",
+      "subnets": {
+        "adSubnet" : {
+          "name" : "Subnet-CloudAccessManager",
+           "prefix" : "10.0.0.0/24",
+           "adNicIPAddress": "10.0.0.4",
+           "adNicName": "vm-ad-nic",
+           "adPubIPName": "adPublicIP"
+        },
+        "gatewaySubnet" : {
+           "name" : "Subnet-gateway",
+           "prefix" : "10.0.1.0/24"
+        }
+      },
+      "networkSecurityGroups" : {
+        "dcnsgName" : "dcNSG",
+        "cmnsgName" : "cmNSG"
+      }
+    }
+  },
+
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[variables('storageAccountName')]",
+      "apiVersion": "2016-01-01",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "Storage",
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[variables('networkSettings').subnets.adSubnet.adPubIPName]",
+      "apiVersion": "2016-03-30",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "publicIPAllocationMethod": "Static"
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "VNet",
+      "apiVersion": "2016-02-01",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('_artifactsLocation'), '/new-vnet/vnet.json', parameters('_artifactsLocationSasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "virtualNetworkName": {
+            "value": "[variables('networkSettings').vnetName]"
+          },
+          "virtualNetworkAddressRange": {
+            "value": "[variables('networkSettings').addressPrefix]"
+          },
+          "subnetName": {
+            "value": "[variables('networkSettings').subnets.adSubnet.name]"
+          },
+          "subnetRange": {
+            "value": "[variables('networkSettings').subnets.adSubnet.prefix]"
+          },
+          "gatewaySubnetName": {
+            "value": "[variables('networkSettings').subnets.gatewaySubnet.name]"
+          },
+          "gatewaySubnetRange": {
+            "value": "[variables('networkSettings').subnets.gatewaySubnet.prefix]"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "CreateNetworkSGs",
+      "apiVersion": "2016-02-01",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('_artifactsLocation'), '/new-sg-s/new-sg-s.json', parameters('_artifactsLocationSasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "dcnsgName": {
+            "value": "[variables('networkSettings').networkSecurityGroups.dcnsgName]"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('networkSettings').subnets.adSubnet.adNicName]",
+      "apiVersion": "2016-03-30",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "VNet",
+        "CreateNetworkSGs"
+      ],
+      "properties": {
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('networkSettings').networkSecurityGroups.dcnsgName)]"
+        },
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "[variables('networkSettings').subnets.adSubnet.adNicIPAddress]",
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('networkSettings').vnetName, variables('networkSettings').subnets.adSubnet.name)]"
+              },
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('networkSettings').subnets.adSubnet.adPubIPName)]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[variables('adVMName')]",
+      "apiVersion": "2015-06-15",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+        "VNet",
+        "[resourceId('Microsoft.Network/networkInterfaces', variables('networkSettings').subnets.adSubnet.adNicName)]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_D1_v2"
+        },
+        "osProfile": {
+          "computerName": "[variables('adVMName')]",
+          "adminUsername": "[parameters('domainAdminUsername')]",
+          "adminPassword": "[parameters('domainAdminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2016-Datacenter",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "osdisk",
+            "vhd": {
+              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))).primaryEndpoints.blob, 'vhds/', variables('adVMName'), '-os-disk.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          },
+          "dataDisks": [
+            {
+              "vhd": {
+                "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))).primaryEndpoints.blob, 'vhds/', variables('adVMName'), '-data-disk.vhd')]"
+              },
+              "name": "[concat(variables('adVMName'), '-data-disk')]",
+              "caching": "None",
+              "createOption": "Empty",
+              "diskSizeGB": "100",
+              "lun": 0
+            }
+          ]
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkSettings').subnets.adSubnet.adNicName)]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "ConfigureDCandCA",
+      "apiVersion": "2016-02-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', variables('adVMName'))]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('_artifactsLocation'), '/configure-dc-and-ca/configure-dc-and-ca.json', parameters('_artifactsLocationSasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "domainControllerVMName": {
+            "value": "[variables('adVMName')]"
+          },
+          "domainName": {
+            "value": "[parameters('domainName')]"
+          },
+          "adminUsername": {
+            "value": "[parameters('domainAdminUsername')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('domainAdminPassword')]"
+          },
+          "adminDesktopVMName": {
+            "value": "[variables('adminDesktopVMName')]"
+          }       
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "SetDNSForVNet",
+      "apiVersion": "2016-02-01",
+      "dependsOn": [
+        "Microsoft.Resources/deployments/ConfigureDCandCA"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('_artifactsLocation'), '/new-vnet/vnet.json', parameters('_artifactsLocationSasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "virtualNetworkName": {
+            "value": "[variables('networkSettings').vnetName]"
+          },
+          "virtualNetworkAddressRange": {
+            "value": "[variables('networkSettings').addressPrefix]"
+          },
+          "subnetName": {
+            "value": "[variables('networkSettings').subnets.adSubnet.name]"
+          },
+          "subnetRange": {
+            "value": "[variables('networkSettings').subnets.adSubnet.prefix]"
+          },
+          "gatewaySubnetName": {
+            "value": "[variables('networkSettings').subnets.gatewaySubnet.name]"
+          },
+          "gatewaySubnetRange": {
+            "value": "[variables('networkSettings').subnets.gatewaySubnet.prefix]"
+          },
+          "DNSServerAddress": {
+            "value": [ "[variables('networkSettings').subnets.adSubnet.adNicIPAddress]" ]
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "virtualNetworkName" : {
+      "type": "string",
+      "value": "[variables('networkSettings').vnetName]"
+    },
+    "adSubnetName" : {
+      "type": "string",
+      "value": "[variables('networkSettings').subnets.adSubnet.name]"
+    },
+    "gatewaySubnetName" : {
+      "type": "string",
+      "value": "[variables('networkSettings').subnets.gatewaySubnet.name]"
+    },
+    "dcnsgName" : {
+      "type": "string",
+      "value": "[variables('networkSettings').networkSecurityGroups.dcnsgName]"
+    },
+    "cmnsgName" : {
+      "type": "string",
+      "value": "[variables('networkSettings').networkSecurityGroups.cmnsgName]"
+    },
+    "adminDesktopVMName" : {
+      "type": "string",
+      "value": "[variables('adminDesktopVMName')]"
+    }
+  }
+}
