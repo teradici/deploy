@@ -53,11 +53,11 @@ Configuration InstallCAM
 		[string]
 		$gaAgentARM = "server2016-graphics-agent.json",
 
-        [string]
-        $linuxAgentARM = "rhel-standard-agent.json",
+		[string]
+		$linuxAgentARM = "rhel-standard-agent.json",
 
-        [Parameter(Mandatory)]
-        [String]$domainFQDN,
+		[Parameter(Mandatory)]
+		[String]$domainFQDN,
 
 		[Parameter(Mandatory)]
 		[String]$adminDesktopVMName,
@@ -537,8 +537,8 @@ Configuration InstallCAM
 			SetScript  = {
 				$LocalDLPath = $using:LocalDLPath
 				$adminWAR = $using:adminWAR
-                $agentARM = $using:agentARM
-                $gaAgentARM = $using:gaAgentARM
+				$agentARM = $using:agentARM
+				$gaAgentARM = $using:gaAgentARM
 				$linuxAgentARM = $using:linuxAgentARM
 				$localtomcatpath = $using:localtomcatpath
 				$CatalinaHomeLocation = $using:CatalinaHomeLocation
@@ -1070,8 +1070,8 @@ graphURL=https\://graph.windows.net/
 		"domainToJoin": { "value": "$using:domainFQDN" },
 		"domainGroupToJoin": { "value": "$using:domainGroupAppServersJoin" },
 		"storageAccountName": { "value": "$using:storageAccountName" },
-		"_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller/new-agent-vm" }
-	}
+		"_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/end-user-application-machines/new-agent-vm" }
+   }
 }
 
 "@
@@ -1084,8 +1084,8 @@ graphURL=https\://graph.windows.net/
 				Write-Host "Creating default template parameters files"
 
 				#now make the default parameters filenames - same root name but different suffix as the templates
-                $agentARM = $using:agentARM
-                $gaAgentARM = $using:gaAgentARM
+				$agentARM = $using:agentARM
+				$gaAgentARM = $using:gaAgentARM
 				$linuxAgentARM = $using:linuxAgentARM
 
 				$agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
