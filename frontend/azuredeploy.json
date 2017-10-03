@@ -352,7 +352,7 @@
         },
         "parameters": {
           "subnetRef": {
-              "value": "[concat(resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName')),'/subnets/',variables('gatewaySubnetName'))]"
+              "value": "[concat(resourceId('Microsoft.Network/virtualNetworks',parameters('virtualNetworkName')),'/subnets/',parameters('gatewaySubnetName'))]"
           },
           "skuName": {
             "value": "Standard_Small"
