@@ -12,91 +12,91 @@
 # $StorageContainer = 'binaries'
 # 
 # $StorageContext = New-AzureStorageContext -StorageAccountName $StorageAccount -StorageAccountKey $StorageKey
-# Publish-AzureVMDscConfiguration -ConfigurationPath .\Install-CAM.ps1  -ContainerName $StorageContainer -StorageContext $StorageContext
+# Publish-AzureVMDscConfiguration -ConfigurationPath .\Install-CAM.ps1	-ContainerName $StorageContainer -StorageContext $StorageContext
 #
 #
 Configuration InstallCAM
 {
 	# One day pull from Oracle as per here? https://github.com/gregjhogan/cJre8/blob/master/DSCResources/cJre8/cJre8.schema.psm1
-    param
-    (
-        [string]
-        $LocalDLPath = "$env:systemdrive\WindowsAzure\PCoIPCAMInstall",
+	param
+	(
+		[string]
+		$LocalDLPath = "$env:systemdrive\WindowsAzure\PCoIPCAMInstall",
 
-        [Parameter(Mandatory)]
+		[Parameter(Mandatory)]
 		[String]$sourceURI,
 
-        [Parameter(Mandatory)]
+		[Parameter(Mandatory)]
 		[String]$templateURI,
 
-        [Parameter(Mandatory)]
+		[Parameter(Mandatory)]
 		[String]$templateAgentURI,
 
-        [Parameter(Mandatory)]
+		[Parameter(Mandatory)]
 		[System.Management.Automation.PSCredential]$registrationCodeAsCred,
 
-        [string]
-        $javaInstaller = "jdk-8u91-windows-x64.exe",
+		[string]
+		$javaInstaller = "jdk-8u91-windows-x64.exe",
 
-        [string]
-        $tomcatInstaller = "apache-tomcat-8.0.39-windows-x64.zip",
+		[string]
+		$tomcatInstaller = "apache-tomcat-8.0.39-windows-x64.zip",
 
-        [string]
-        $brokerWAR = "pcoip-broker.war",
+		[string]
+		$brokerWAR = "pcoip-broker.war",
 
-        [string]
-        $adminWAR = "CloudAccessManager.war",
+		[string]
+		$adminWAR = "CloudAccessManager.war",
 
-        [string]
-        $agentARM = "server2016-standard-agent.json",
+		[string]
+		$agentARM = "server2016-standard-agent.json",
 
-        [string]
-        $gaAgentARM = "server2016-graphics-agent.json",
+		[string]
+		$gaAgentARM = "server2016-graphics-agent.json",
 
-        [Parameter(Mandatory)]
-        [String]$domainFQDN,
+		[Parameter(Mandatory)]
+		[String]$domainFQDN,
 
-        [Parameter(Mandatory)]
+		[Parameter(Mandatory)]
 		[String]$adminDesktopVMName,
 
-        [Parameter(Mandatory)]
-        [String]$domainGroupAppServersJoin,
+		[Parameter(Mandatory)]
+		[String]$domainGroupAppServersJoin,
 
-        [Parameter(Mandatory)]
-        [String]$existingVNETName,
+		[Parameter(Mandatory)]
+		[String]$existingVNETName,
 
-        [Parameter(Mandatory)]
-        [String]$existingSubnetName,
+		[Parameter(Mandatory)]
+		[String]$existingSubnetName,
 
-        [Parameter(Mandatory)]
-        [String]$storageAccountName,
+		[Parameter(Mandatory)]
+		[String]$storageAccountName,
 
-        [Parameter(Mandatory)]
-        [System.Management.Automation.PSCredential]$VMAdminCreds,
+		[Parameter(Mandatory)]
+		[System.Management.Automation.PSCredential]$VMAdminCreds,
 
-        [Parameter(Mandatory)]
-        [System.Management.Automation.PSCredential]$DomainAdminCreds,
+		[Parameter(Mandatory)]
+		[System.Management.Automation.PSCredential]$DomainAdminCreds,
 
-        [Parameter(Mandatory)]
-        [System.Management.Automation.PSCredential]$AzureCreds,
-
-        [Parameter(Mandatory=$false)]
-		[String]$tenantID,
-
-        [Parameter(Mandatory)]
-        [String]$DCVMName, #without the domain suffix
-
-        [Parameter(Mandatory)]
-        [String]$RGName, #Azure resource group name
-
-        [Parameter(Mandatory)]
-        [String]$gitLocation,
-
-        [Parameter(Mandatory)]
-        [String]$sumoCollectorID,
+		[Parameter(Mandatory)]
+		[System.Management.Automation.PSCredential]$AzureCreds,
 
 		[Parameter(Mandatory=$false)]
-        [String]$brokerPort = "8444",
+		[String]$tenantID,
+
+		[Parameter(Mandatory)]
+		[String]$DCVMName, #without the domain suffix
+
+		[Parameter(Mandatory)]
+		[String]$RGName, #Azure resource group name
+
+		[Parameter(Mandatory)]
+		[String]$gitLocation,
+
+		[Parameter(Mandatory)]
+		[String]$sumoCollectorID,
+
+		[Parameter(Mandatory=$false)]
+		[String]$brokerPort = "8444",
 
 		#For application gateway
 		[Parameter(Mandatory=$true)]
@@ -144,12 +144,12 @@ Configuration InstallCAM
 
 	Import-DscResource -ModuleName xPSDesiredStateConfiguration
 
-    Node "localhost"
-    {
-        LocalConfigurationManager
-        {
-            RebootNodeIfNeeded = $true
-        }
+	Node "localhost"
+	{
+		LocalConfigurationManager
+		{
+			RebootNodeIfNeeded = $true
+		}
 
 		xRemoteFile Download_Java_Installer
 		{
@@ -193,44 +193,44 @@ Configuration InstallCAM
 			DestinationPath = "$LocalDLPath\$gaAgentARM"
 		}
 
-        File Sumo_Directory 
-        {
-            Ensure          = "Present"
-            Type            = "Directory"
-            DestinationPath = "C:\sumo"
-        }
+		File Sumo_Directory 
+		{
+			Ensure			= "Present"
+			Type			= "Directory"
+			DestinationPath = "C:\sumo"
+		}
 
-        # Aim to install the collector first and start the log collection before any 
-        # other applications are installed.
-        Script Install_SumoCollector
-        {
-            DependsOn  = "[File]Sumo_Directory"
-            GetScript  = { @{ Result = "Install_SumoCollector" } }
+		# Aim to install the collector first and start the log collection before any 
+		# other applications are installed.
+		Script Install_SumoCollector
+		{
+			DependsOn  = "[File]Sumo_Directory"
+			GetScript  = { @{ Result = "Install_SumoCollector" } }
 
-            TestScript = { 
-                return Test-Path "C:\sumo\sumo.conf" -PathType leaf
-                }
+			TestScript = { 
+				return Test-Path "C:\sumo\sumo.conf" -PathType leaf
+				}
 
-            SetScript  = {
-                Write-Verbose "Install_SumoCollector"
+			SetScript  = {
+				Write-Verbose "Install_SumoCollector"
 
-                $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
-                $sumo_package = "$using:sourceURI/$installerFileName"
-                $sumo_config = "$using:gitLocation/sumo.conf"
-                $sumo_collector_json = "$using:gitLocation/sumo-admin-vm.json"
-                $dest = "C:\sumo"
-                Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile "$dest\sumo.conf"
-                Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile "$dest\sumo-admin-vm.json"
-                #
-                #Insert unique ID
-                $collectorID = "$using:sumoCollectorID"
-                (Get-Content -Path "$dest\sumo.conf").Replace("collectorID", $collectorID) | Set-Content -Path "$dest\sumo.conf"
-                
-                Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
-                
-                #install the collector
-                $command = "$dest\$installerFileName -console -q"
-                Invoke-Expression $command
+				$installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
+				$sumo_package = "$using:sourceURI/$installerFileName"
+				$sumo_config = "$using:gitLocation/sumo.conf"
+				$sumo_collector_json = "$using:gitLocation/sumo-admin-vm.json"
+				$dest = "C:\sumo"
+				Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile "$dest\sumo.conf"
+				Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile "$dest\sumo-admin-vm.json"
+				#
+				#Insert unique ID
+				$collectorID = "$using:sumoCollectorID"
+				(Get-Content -Path "$dest\sumo.conf").Replace("collectorID", $collectorID) | Set-Content -Path "$dest\sumo.conf"
+				
+				Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
+				
+				#install the collector
+				$command = "$dest\$installerFileName -console -q"
+				Invoke-Expression $command
 
 				# Wait for collector to be installed before exiting this configuration.
 				#### Note if we change binary versions we will need to change registry path - 7857-4527-9352-4688 will change ####
@@ -241,7 +241,7 @@ Configuration InstallCAM
 
 					if ($readyToConfigure)
 					{
-						break   #success
+						break	#success
 					}
 					else
 					{
@@ -257,22 +257,22 @@ Configuration InstallCAM
 						}
 					}
 				}
-            }
-        }
-        #
+			}
+		}
+		#
 		# One day can split this to 'install java' and 'configure java environemnt' and use 'package' dsc like here:
 		# http://stackoverflow.com/questions/31562451/installing-jre-using-powershell-dsc-hangs
-        Script Install_Java
-        {
-            DependsOn  = "[xRemoteFile]Download_Java_Installer"
-            GetScript  = { @{ Result = "Install_Java" } }
+		Script Install_Java
+		{
+			DependsOn  = "[xRemoteFile]Download_Java_Installer"
+			GetScript  = { @{ Result = "Install_Java" } }
 
-            #TODO: Just check for a directory being present? What to do when Java version changes? (Can also check registry key as in SetScript.)
-            TestScript = {
-                return Test-Path "$using:JavaBinLocation"
+			#TODO: Just check for a directory being present? What to do when Java version changes? (Can also check registry key as in SetScript.)
+			TestScript = {
+				return Test-Path "$using:JavaBinLocation"
 			}
-            SetScript  = {
-                Write-Verbose "Install_Java"
+			SetScript  = {
+				Write-Verbose "Install_Java"
 
 				# Run the installer. Start-Process does not work due to permissions issue however '&' calling will not wait so looks for registry key as 'completion.'
 				# Start-Process $LocalDLPath\$javaInstaller -ArgumentList '/s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"' -Wait
@@ -281,16 +281,16 @@ Configuration InstallCAM
 				$retrycount = 1800
 				while ($retryCount -gt 0)
 				{
-					$readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{26A24AE4-039D-4CA4-87B4-2F86418091F0}"  -ErrorAction SilentlyContinue )
+					$readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{26A24AE4-039D-4CA4-87B4-2F86418091F0}"	-ErrorAction SilentlyContinue )
 					# don't wait for {64A3A4F4-B792-11D6-A78A-00B0D0180910} - that's the JDK. The JRE is installed 2nd {26A...} so wait for that.
 
 					if ($readyToConfigure)
 					{
-						break   #success
+						break	#success
 					}
 					else
 					{
-    					Start-Sleep -s 1;
+						Start-Sleep -s 1;
 						$retrycount = $retrycount - 1;
 						if ( $retrycount -eq 0)
 						{
@@ -310,8 +310,8 @@ Configuration InstallCAM
 				$NewPath = $env:Path
 				if ($NewPath -notlike "*"+$using:JavaBinLocation+"*")
 				{
-    				#put java path in front of the Oracle defined path
-				    $NewPath= $using:JavaBinLocation + ";" + $NewPath
+					#put java path in front of the Oracle defined path
+					$NewPath= $using:JavaBinLocation + ";" + $NewPath
 				}
 
 				[System.Environment]::SetEnvironmentVariable("Path", $NewPath, "Machine")
@@ -334,11 +334,11 @@ Configuration InstallCAM
 
 					if ($readyToConfigure)
 					{
-						break   #success
+						break	#success
 					}
 					else
 					{
-    					Start-Sleep -s 1;
+						Start-Sleep -s 1;
 						$retrycount = $retrycount - 1;
 						if ( $retrycount -eq 0)
 						{
@@ -353,17 +353,17 @@ Configuration InstallCAM
 
 				# Reboot machine - seems to need to happen to get Tomcat to install??? Perhaps not after environment fixes. Needs testing.
 				$global:DSCMachineStatus = 1
-            }
-        }
+			}
+		}
 
 		Script Install_Tomcat
-        {
-            DependsOn = @("[xRemoteFile]Download_Tomcat_Installer", "[Script]Install_Java", "[xRemoteFile]Download_Keystore")
-            GetScript  = { @{ Result = "Install_Tomcat" } }
+		{
+			DependsOn = @("[xRemoteFile]Download_Tomcat_Installer", "[Script]Install_Java", "[xRemoteFile]Download_Keystore")
+			GetScript  = { @{ Result = "Install_Tomcat" } }
 
-            TestScript = { 
+			TestScript = { 
 				if ( $env:CATALINA_HOME )
-                {
+				{
 					return $true
 				}
 				else
@@ -371,14 +371,14 @@ Configuration InstallCAM
 					return $false
 				}
 			}
-            SetScript  = {
-                Write-Verbose "Install_Tomcat"
+			SetScript  = {
+				Write-Verbose "Install_Tomcat"
 
 				#just going 'manual' now since installer has been a massive PITA
-                #(but perhaps unfairly so since it might have been affected by some Java install issues I had previously as well.)
+				#(but perhaps unfairly so since it might have been affected by some Java install issues I had previously as well.)
 
-		        $LocalDLPath = $using:LocalDLPath
-		        $tomcatInstaller = $using:tomcatInstaller
+				$LocalDLPath = $using:LocalDLPath
+				$tomcatInstaller = $using:tomcatInstaller
 				$localtomcatpath = $using:localtomcatpath
 				$CatalinaHomeLocation = $using:CatalinaHomeLocation
 				$CatalinaBinLocation = $using:CatalinaBinLocation
@@ -394,23 +394,23 @@ Configuration InstallCAM
 				$NewPath = $env:Path
 				if ($NewPath -notlike "*"+$CatalinaBinLocation+"*")
 				{
-				    #put tomcat path at the end
-				    $NewPath= $NewPath + ";" + $CatalinaBinLocation
+					#put tomcat path at the end
+					$NewPath= $NewPath + ";" + $CatalinaBinLocation
 				}
 
 				[System.Environment]::SetEnvironmentVariable("Path", $NewPath, "Machine")
 				[System.Environment]::SetEnvironmentVariable("CATALINA_HOME", $CatalinaHomeLocation, "Machine")
 				$env:Path = $NewPath
 				$env:CATALINA_HOME = $CatalinaHomeLocation
-	        }
-        }
+			}
+		}
 
 		Script Setup_AUI_Service
-        {
-            DependsOn = @("[Script]Install_Tomcat", "[xRemoteFile]Download_Keystore")
-            GetScript  = { @{ Result = "Setup_AUI_Service" } }
+		{
+			DependsOn = @("[Script]Install_Tomcat", "[xRemoteFile]Download_Keystore")
+			GetScript  = { @{ Result = "Setup_AUI_Service" } }
 
-            TestScript = {
+			TestScript = {
 				return !!(Get-Service $using:AUIServiceName -ErrorAction SilentlyContinue)
 			}
 
@@ -454,7 +454,7 @@ Configuration InstallCAM
 					# new child
 				#	$xml.ImportNode($unencConnector.Connector,$true),
 					#ref child
-			    #	$xml.Server.Service.Engine )
+				#	$xml.Server.Service.Engine )
 
 				$NewConnector = [xml] ('<Connector
 					port="8443"
@@ -496,51 +496,51 @@ Configuration InstallCAM
 
 				Write-Host "Starting Tomcat Service for $using:AUIServiceName"
 				Set-Service $using:AUIServiceName -startuptype "automatic"
-	        }
-        }
+			}
+		}
 
-        Script Install_AUI
-        {
-            DependsOn  = @("[xRemoteFile]Download_Admin_WAR",
+		Script Install_AUI
+		{
+			DependsOn  = @("[xRemoteFile]Download_Admin_WAR",
 						   "[xRemoteFile]Download_Agent_ARM",
 						   "[Script]Setup_AUI_Service",
 						   "[xRemoteFile]Download_Ga_Agent_ARM")
 
-            GetScript  = { @{ Result = "Install_AUI" } }
+			GetScript  = { @{ Result = "Install_AUI" } }
 
-            TestScript = {
+			TestScript = {
 				$CatalinaHomeLocation = $using:CatalinaHomeLocation
 				$catalinaBase = "$CatalinaHomeLocation" # \$using:AUIServiceName"
 				$WARPath = "$catalinaBase\webapps\$using:adminWAR"
 
-                return Test-Path $WARPath -PathType Leaf
+				return Test-Path $WARPath -PathType Leaf
 			}
 
-            SetScript  = {
-		        $LocalDLPath = $using:LocalDLPath
+			SetScript  = {
+				$LocalDLPath = $using:LocalDLPath
 				$adminWAR = $using:adminWAR
-                $agentARM = $using:agentARM
-                $gaAgentARM = $using:gaAgentARM
+				$agentARM = $using:agentARM
+				$gaAgentARM = $using:gaAgentARM
 				$localtomcatpath = $using:localtomcatpath
 				$CatalinaHomeLocation = $using:CatalinaHomeLocation
 				$catalinaBase = "$CatalinaHomeLocation" #\$using:AUIServiceName"
 
-                Write-Verbose "Ensure Nuget Package Provider and AzureRM module are installed"
+				Write-Verbose "Ensure Nuget Package Provider and AzureRM module are installed"
 
 				If(-not [bool](Get-PackageProvider -ListAvailable | where {$_.Name -eq "NuGet"}))
 				{
-	                Write-Verbose "Installing NuGet"
+					Write-Verbose "Installing NuGet"
 					Install-packageProvider -Name NuGet -Force
 				}
 
 				If(-not [bool](Get-InstalledModule | where {$_.Name -eq "AzureRM"}))
 				{
-	                Write-Verbose "Installing AzureRM"
+					Write-Verbose "Installing AzureRM"
 					Install-Module -Name AzureRM -Force
 				}
 				
 
-                Write-Verbose "Install_CAM"
+				Write-Verbose "Install_CAM"
 
 				copy "$LocalDLPath\$adminWAR" ($catalinaBase + "\webapps")
 
@@ -557,7 +557,7 @@ Configuration InstallCAM
 				$domainroot = $domainsplit[1]  # get the second part of the domain name
 				$date = Get-Date
 				$domainControllerFQDN = $using:dcvmfqdn
-				$RGNameLocal        = $using:RGName
+				$RGNameLocal		= $using:RGName
 
 				$auProperties = @"
 #$date
@@ -587,9 +587,9 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 				Set-Content $configFileName $auProperties -Force
 				Write-Host "CAM configuration file re-generated."
 
-		        Write-Host "Redirecting ROOT to Cloud Access Manager."
+				Write-Host "Redirecting ROOT to Cloud Access Manager."
 
-                $redirectString = '<%response.sendRedirect("CloudAccessManager/login.jsp");%>'
+				$redirectString = '<%response.sendRedirect("CloudAccessManager/login.jsp");%>'
 				$targetDir = "$CatalinaBase\webapps\ROOT"
 				$indexFileName = "$targetDir\index.jsp"
 
@@ -607,7 +607,7 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 
 
 
-		        Write-Host "Pulling in Agent machine deployment script."
+				Write-Host "Pulling in Agent machine deployment script."
 
 				$templateLoc = "$CatalinaHomeLocation\ARMtemplateFiles"
 				
@@ -625,19 +625,19 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 			}
 		}
 
-        Script Install_Auth_file
-        {
-            DependsOn  = @("[Script]Install_AUI")
+		Script Install_Auth_file
+		{
+			DependsOn  = @("[Script]Install_AUI")
 
-            GetScript  = { @{ Result = "Install_Auth_file" } }
+			GetScript  = { @{ Result = "Install_Auth_file" } }
 
-            TestScript = {
+			TestScript = {
 				$targetDir = "$env:CATALINA_HOME\adminproperty"
 				$authFilePath = "$targetDir\authfile.txt"
  
-                return Test-Path $authFilePath -PathType Leaf
+				return Test-Path $authFilePath -PathType Leaf
 			}
-            SetScript  = {
+			SetScript  = {
 
 
 				Write-Host "Creating SP if needed, creating keyvault, and writing auth file."
@@ -676,12 +676,12 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 				}
 
 				$localAzureCreds = $using:AzureCreds
-				$RGNameLocal     = $using:RGName
-				$tenantID        = $using:tenantID
+				$RGNameLocal	 = $using:RGName
+				$tenantID		 = $using:tenantID
 
 				if ((-not $tenantID) -or ($tenantID -eq "null"))
 				{
-				    Write-Host "No tenant ID entered. Calling Azure Active Directory to make an app and a service principal."
+					Write-Host "No tenant ID entered. Calling Azure Active Directory to make an app and a service principal."
 
 					Login-AzureRmAccountWithBetterReporting -Credential $localAzureCreds
 
@@ -805,7 +805,7 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 
 					# get SP credentials
 					$spPass = ConvertTo-SecureString $generatedPassword -AsPlainText -Force
-					$spCreds = New-Object -TypeName pscredential -ArgumentList  $sp.ApplicationId, $spPass
+					$spCreds = New-Object -TypeName pscredential -ArgumentList	$sp.ApplicationId, $spPass
 
 					# get tenant ID for this subscription
 					$subForTenantID = Get-AzureRmSubscription
@@ -813,13 +813,13 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 				}
 				else
 				{
-    				Write-Host "Tenant ID was provided."
+					Write-Host "Tenant ID was provided."
 
 					$spCreds = $localAzureCreds
 				}
 
 				$spName = $spCreds.UserName
-  				Write-Host "Logging in SP $spName with tenantID $tenantID"
+				Write-Host "Logging in SP $spName with tenantID $tenantID"
 
 				# retry required since it can take a few seconds for the app registration to percolate through Azure (and different to different endpoints... sigh).
 				$LoginSPRetry = 1800
@@ -967,8 +967,8 @@ graphURL=https\://graph.windows.net/
 				$startDate = [DateTime]::Now.AddDays(-1)
 				$subject = "CN=localhost,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"
 				$cert = New-SelfSignedCertificate -certstorelocation $certLoc -DnsName "*.cloudapp.net" -Subject $subject -KeyLength 3072 `
-				    -FriendlyName "PCoIP Application Gateway" -NotBefore $startDate -TextExtension @("2.5.29.19={critical}{text}ca=1") `
-				    -HashAlgorithm SHA384 -KeyUsage DigitalSignature, CertSign, CRLSign, KeyEncipherment
+					-FriendlyName "PCoIP Application Gateway" -NotBefore $startDate -TextExtension @("2.5.29.19={critical}{text}ca=1") `
+					-HashAlgorithm SHA384 -KeyUsage DigitalSignature, CertSign, CRLSign, KeyEncipherment
 
 				#generate pfx file from certificate
 				$certPath = $certLoc + '\' + $cert.Thumbprint
@@ -1013,14 +1013,14 @@ graphURL=https\://graph.windows.net/
 
 				$armParamContent = @"
 {
-    "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
+	"`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
 		"vmSize": { "value": "%vmSize%" },
-        "CAMDeploymentBlobSource": { "value": "$using:sourceURI" },
-        "existingSubnetName": { "value": "$using:existingSubnetName" },
-        "domainUsername": { "value": "$DomainAdminUsername" },
-        "domainPassword": {
+		"CAMDeploymentBlobSource": { "value": "$using:sourceURI" },
+		"existingSubnetName": { "value": "$using:existingSubnetName" },
+		"domainUsername": { "value": "$DomainAdminUsername" },
+		"domainPassword": {
 			"reference": {
 			  "keyVault": {
 				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
@@ -1028,7 +1028,7 @@ graphURL=https\://graph.windows.net/
 			  "secretName": "$djSecretName"
 			}		
 		},
-        "registrationCode": {
+		"registrationCode": {
 			"reference": {
 			  "keyVault": {
 				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
@@ -1036,10 +1036,10 @@ graphURL=https\://graph.windows.net/
 			  "secretName": "$rcSecretName"
 			}
 		},
-        "dnsLabelPrefix": { "value": "tbd-vmname" },
-        "existingVNETName": { "value": "$using:existingVNETName" },
-        "vmAdminUsername": { "value": "$VMAdminUsername" },
-        "vmAdminPassword": {
+		"dnsLabelPrefix": { "value": "tbd-vmname" },
+		"existingVNETName": { "value": "$using:existingVNETName" },
+		"vmAdminUsername": { "value": "$VMAdminUsername" },
+		"vmAdminPassword": {
 			"reference": {
 			  "keyVault": {
 				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
@@ -1047,11 +1047,11 @@ graphURL=https\://graph.windows.net/
 			  "secretName": "$laSecretName"
 			}
 		},
-        "domainToJoin": { "value": "$using:domainFQDN" },
-        "domainGroupToJoin": { "value": "$using:domainGroupAppServersJoin" },
-        "storageAccountName": { "value": "$using:storageAccountName" },
-        "_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller/new-agent-vm" }
-    }
+		"domainToJoin": { "value": "$using:domainFQDN" },
+		"domainGroupToJoin": { "value": "$using:domainGroupAppServersJoin" },
+		"storageAccountName": { "value": "$using:storageAccountName" },
+		"_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller/new-agent-vm" }
+	}
 }
 
 "@
@@ -1063,8 +1063,8 @@ graphURL=https\://graph.windows.net/
 				Write-Host "Creating default template parameters files"
 
 				#now make the default parameters filenames - same root name but different suffix as the templates
-                $agentARM = $using:agentARM
-                $gaAgentARM = $using:gaAgentARM
+				$agentARM = $using:agentARM
+				$gaAgentARM = $using:gaAgentARM
 
 				$agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
 				$gaAgentARMparam = ($gaAgentARM.split('.')[0]) + ".customparameters.json"
@@ -1099,25 +1099,25 @@ graphURL=https\://graph.windows.net/
 				Set-Content $GaParamTargetFilePath $graphicsArmParamContent -Force
 
 
-		        Write-Host "Finished Creating default template parameters file data."
-            }
+				Write-Host "Finished Creating default template parameters file data."
+			}
 		}
 
 		Script Setup_Broker_Service
-        {
-            DependsOn = @("[Script]Install_Tomcat", "[xRemoteFile]Download_Keystore")
-            GetScript  = { @{ Result = "Setup_Broker_Service" } }
+		{
+			DependsOn = @("[Script]Install_Tomcat", "[xRemoteFile]Download_Keystore")
+			GetScript  = { @{ Result = "Setup_Broker_Service" } }
 
-            TestScript = {
+			TestScript = {
 				return !!(Get-Service $using:brokerServiceName -ErrorAction SilentlyContinue)
 			}
-            SetScript  = {
+			SetScript  = {
 				Write-Host "Configuring Tomcat for $using:brokerServiceName service"
 
 				$catalinaHome = $using:CatalinaHomeLocation
 				$catalinaBase = "$catalinaHome\$using:brokerServiceName"
 
-                #set the current (temporary) environment
+				#set the current (temporary) environment
 				$env:CATALINA_BASE = $catalinaBase
 
 				# make new broker instance location - copying the directories specified
@@ -1186,21 +1186,21 @@ graphURL=https\://graph.windows.net/
 
 				Write-Host "Setting Tomcat Service for $using:brokerServiceName to automatically startup."
 				Set-Service $using:brokerServiceName -startuptype "automatic"
-	        }
-        }
+			}
+		}
 
 		Script Install_Broker
-        {
-            DependsOn  = @("[xRemoteFile]Download_Broker_WAR", "[Script]Setup_Broker_Service")
-            GetScript  = { @{ Result = "Install_Broker" } }
+		{
+			DependsOn  = @("[xRemoteFile]Download_Broker_WAR", "[Script]Setup_Broker_Service")
+			GetScript  = { @{ Result = "Install_Broker" } }
 
-            TestScript = {
+			TestScript = {
 				$WARPath = "$using:CatalinaHomeLocation\$using:brokerServiceName\webapps\$using:brokerWAR"
  
-                return Test-Path $WARPath -PathType Leaf
+				return Test-Path $WARPath -PathType Leaf
 			}
-            SetScript  = {
-                Write-Verbose "Install_Broker"
+			SetScript  = {
+				Write-Verbose "Install_Broker"
 
 				$catalinaHome = $using:CatalinaHomeLocation
 				$catalinaBase = "$catalinaHome\$using:brokerServiceName"
@@ -1295,7 +1295,7 @@ brokerLocale=en_US
 								$cloc = $args[1]
 								$icloc = $args[2]
 
-				  				$cert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cs }
+								$cert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cs }
 								if(-not $cert)
 								{
 									Write-Host "Did not find LDAP certificate."
@@ -1311,7 +1311,7 @@ brokerLocale=en_US
 
 									#Now export issuer Certificate
 									$issuerCert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cert.Issuer }
-									Export-Certificate -Cert $issuerCert -filepath  $icloc -force
+									Export-Certificate -Cert $issuerCert -filepath	$icloc -force
 
 									return $true
 								}
@@ -1339,14 +1339,14 @@ brokerLocale=en_US
 
 				# Have the certificate file, add to keystore
 
-                # keytool seems to be causing an error but succeeding. Ignore and continue.
-                $eap = $ErrorActionPreference
-                $ErrorActionPreference = 'SilentlyContinue'
+				# keytool seems to be causing an error but succeeding. Ignore and continue.
+				$eap = $ErrorActionPreference
+				$ErrorActionPreference = 'SilentlyContinue'
 				& "keytool" -import -file "$env:systemdrive\$issuerCertFileName" -keystore ($env:classpath + "\security\cacerts") -storepass changeit -noprompt
-                $ErrorActionPreference = $eap
+				$ErrorActionPreference = $eap
 
-		        Write-Host "Finished importing LDAP certificate to keystore."
-            }
+				Write-Host "Finished importing LDAP certificate to keystore."
+			}
 		}
 		
 		Script RegisterCam
@@ -1354,7 +1354,7 @@ brokerLocale=en_US
 			DependsOn  = @("[Script]Install_Auth_file", "[Script]Install_Broker")  # depends on both services being installed to ensure the reboot at the end will start both services properly.
 			GetScript  = { @{ Result = "RegisterCam" } }
 
-            TestScript = { 
+			TestScript = { 
 
 				if ( $env:CAM_USERNAME -and $env:CAM_PASSWORD -and $env:CAM_TENANTID -and $env:CAM_URI -and $env:CAM_DEPLOYMENTID)
 				{
@@ -1364,7 +1364,7 @@ brokerLocale=en_US
 				}
 			}
 
-            SetScript  = {
+			SetScript  = {
 				##
 				$certificatePolicy = [System.Net.ServicePointManager]::CertificatePolicy
 
@@ -1383,7 +1383,7 @@ brokerLocale=en_US
 "@
 					[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
 				}
-                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+				[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 				##
 
 				# Read in Authorization Information
@@ -1544,6 +1544,6 @@ brokerLocale=en_US
 				$global:DSCMachineStatus = 1
 			}
 		}
-    }
+	}
 }
 
