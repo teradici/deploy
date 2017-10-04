@@ -270,7 +270,7 @@
                     "fileUris": [ "[concat(parameters('_artifactsLocation'), '/', variables('idleShutdownScriptFileName'))]" ]
                     },
                 "protectedSettings": {
-                    "commandToExecute": "[concat('sudo bash ', variables('idleShutdownScriptFileName')]"
+                    "commandToExecute": "[concat('sudo bash ', variables('idleShutdownScriptFileName'), ' -install')]"
                     }
                   }
                 }
