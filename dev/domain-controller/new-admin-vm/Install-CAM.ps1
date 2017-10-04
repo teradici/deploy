@@ -36,10 +36,10 @@ Configuration InstallCAM
 		[System.Management.Automation.PSCredential]$registrationCodeAsCred,
 
         [string]
-        $javaInstaller = "jdk-8u91-windows-x64.exe",
+        $javaInstaller = "jdk-8u144-windows-x64.exe",
 
         [string]
-        $tomcatInstaller = "apache-tomcat-8.0.39-windows-x64.zip",
+        $tomcatInstaller = "apache-tomcat-8.5.23-windows-x64.zip",
 
         [string]
         $brokerWAR = "pcoip-broker.war",
