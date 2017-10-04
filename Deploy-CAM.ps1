@@ -469,7 +469,10 @@ function createAndPopulateKeyvault()
 		# System Administrators can override the self signed certificate if desired in future.
 		# In order to create the certificate you must be running as Administrator on a Windows 10/Server 2016 machine
 		# (Potentially Windows 8/Server 2012R2, but not Windows 7 or Server 2008R2)
-        $currentPrincipal = New-Object Security.Principal.WindowsPrincipal( [Security.Principal.WindowsIdentity]::GetCurrent())
+
+		Write-Host "Creating Self-signed certificate for Application Gateway"
+
+		$currentPrincipal = New-Object Security.Principal.WindowsPrincipal( [Security.Principal.WindowsIdentity]::GetCurrent())
         $isAdminSession = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 		if(!$isAdminSession) { throw "You must be running as administrator to create the self-signed certificate for the application gateway" }
 		
@@ -501,6 +504,8 @@ function createAndPopulateKeyvault()
 		#export pfx file
 		Export-PfxCertificate -Cert $certPath -FilePath $certPfx -Password $secureCertPswd
 
+		Write-Host "Putting certificate in Key Vault."
+
 		#read from pfx file and convert to base64 string
 		$fileContentEncoded = [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes($certPfx))
 
@@ -516,6 +521,8 @@ function createAndPopulateKeyvault()
 		$FECertPasswordSecretVersionedURL = $FECertPasswordSecret.Id
 		$FECertPasswordSecretURL = $FECertPasswordSecretVersionedURL.Substring(0, $FECertPasswordSecretVersionedURL.lastIndexOf('/'))
 
+		Write-Host "Successfully put certificate in Key Vault."
+		
 		$secretHash = @{}
 		$secretHash.Add($rcSecretName,$rcSecretURL)
 		$secretHash.Add($djSecretName,$djSecretURL)
@@ -722,7 +729,9 @@ function Deploy-CAM()
 			$tenant = $spInfo.tenantId
 		
 			# need to add a retry on the registration for invalid SP as there is a race condition (sigh).
-			Start-Sleep -seconds 30
+			#Start-Sleep -seconds 30
+
+			Write-Host "Registering CAM Deployment to CAM Service"
 		
 			$camDeploymenRegInfo = Register-CAM `
 				-SubscriptionId $subscriptionID `
