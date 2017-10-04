@@ -127,6 +127,8 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 
 				[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
 			}
+
+			[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 			##
 
 
@@ -356,7 +358,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 			if( !(($registerMachineResult.code -eq 201) -or ($registerMachineResult.data.reason.ToLower().Contains("exists")))) {
 				throw ("Registering Machine failed. Result was: " + (ConvertTo-Json $registerMachineResult))
 			}
-			Write-Host "Machine " + $machineRequest.machineName + " has been registered successfully with Cloud Access Manager."
+			Write-Host ("Machine " + $machineRequest.machineName + " has been registered successfully with Cloud Access Manager.")
 
 			break;
 		} catch {

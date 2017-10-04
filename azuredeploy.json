@@ -251,7 +251,7 @@
               "value": "[reference('Root').outputs.adminDesktopVMName.value]"
             },
           "vmSize": {
-            "value": "Standard_D2_v3"
+            "value": "Standard_D2_v2"
           },
           "domainToJoin": {
             "value": "[parameters('domainName')]"

@@ -127,7 +127,7 @@ Configuration InstallCAM
 		[string]$keyVaultId
 	)
 
-	$standardVMSize = "Standard_D2_v3"
+	$standardVMSize = "Standard_D2_v2"
 	$graphicsVMSize = "Standard_NV6"
 
 	$dcvmfqdn = "$DCVMName.$domainFQDN"
@@ -764,7 +764,7 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
         "domainToJoin": { "value": "$using:domainFQDN" },
         "domainGroupToJoin": { "value": "$using:domainGroupAppServersJoin" },
         "storageAccountName": { "value": "$using:storageAccountName" },
-        "_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/dev/domain-controller/new-agent-vm" }
+		"_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/end-user-application-machines/new-agent-vm" }
     }
 }
 
