@@ -118,7 +118,7 @@ Configuration InstallCAM
 		[bool]$verifyCAMSaaSCertificate=$true
 	)
 
-	$standardVMSize = "Standard_D2_v3"
+	$standardVMSize = "Standard_D2_v2"
 	$graphicsVMSize = "Standard_NV6"
 
 	$dcvmfqdn = "$DCVMName.$domainFQDN"
