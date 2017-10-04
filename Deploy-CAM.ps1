@@ -740,7 +740,9 @@ function Deploy-CAM()
 				-tenant $tenant `
 				-RGName $RGName `
 				-registrationCode $registrationCode `
-				-camSaasBaseUri $camSaasBaseUri
+				-camSaasBaseUri $camSaasBaseUri `
+				-verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
+
 		
 		
 			Write-Host "Create auth file information for the CAM frontend."
@@ -798,7 +800,9 @@ graphURL=https\://graph.windows.net/
 					-RGName $RGName `
 					-deploymentId $camDeploymenRegInfo.CAM_DEPLOYMENTID `
 					-camSaasBaseUri $camDeploymenRegInfo.CAM_URI `
-					-adminDesktopVMName "vm-desk"
+					-adminDesktopVMName "vm-desk" `
+					-verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
+
 		
 		
 			$kvId = $kvInfo.ResourceId
@@ -863,7 +867,8 @@ graphURL=https\://graph.windows.net/
 	
 	
 	# Test-AzureRmResourceGroupDeployment -ResourceGroupName $azureRGName -TemplateFile "azuredeploy.json" -TemplateParameterFile $outputParametersFileName  -Verbose
-	
+		Write-Host "Deploying Cloud Access Manager Connection Service"
+		
 		New-AzureRmResourceGroupDeployment -DeploymentName "ad1" -ResourceGroupName $azureRGName -TemplateFile $CAMDeploymentTemplateURI -TemplateParameterFile $outputParametersFileName 
 
 	}
