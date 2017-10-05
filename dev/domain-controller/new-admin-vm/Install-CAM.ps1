@@ -126,13 +126,13 @@ Configuration InstallCAM
 	$family   = "Windows Server 2016"
 
 	#Java locations
-	$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_91"
+	$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_144"
 	$JavaBinLocation = $JavaRootLocation + "\bin"
 	$JavaLibLocation = $JavaRootLocation + "\jre\lib"
 
 	#Tomcat locations
 	$localtomcatpath = "$env:systemdrive\tomcat"
-	$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
+	$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.5.23"
 	$CatalinaBinLocation = $CatalinaHomeLocation + "\bin"
 
 	$brokerServiceName = "CAMBroker"
