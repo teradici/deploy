@@ -3,6 +3,8 @@
 # There must be one argument passed to this script.
 # first argument is the FQDN of the broker.
 
+#Update system to latest
+yum -y update
 
 #Install and setup the Sumo Collector
 wget https://teradeploy.blob.core.windows.net/binaries/SC_1.0.zip -P /tmp/
@@ -10,8 +12,8 @@ unzip -o /tmp/SC_1.0.zip
 rpm -i sumo/SumoCollector-19.182-25.x86_64.rpm
 cp sumo/user.properties /opt/SumoCollector/config/
 cp sumo/sumo_cm_vm.json /opt/SumoCollector/config/
-echo "Attemtping to set sumo collector ID to: " $2
-sed -i s/collectorID/$2/ /opt/SumoCollector/config/user.properties
+echo "Attemtping to set sumo collector ID to: " "$2"
+sed -i s/collectorID/"$2"/ /opt/SumoCollector/config/user.properties
 # service collector install - configures the collector to start at boot time
 service collector install
 service collector restart
@@ -19,8 +21,8 @@ service collector status
 
 
 #get the install zip files
-wget https://teradeploy.blob.core.windows.net/binaries/P-CM-1.6_SG-1.12.zip -P /tmp/
-unzip -o /tmp/P-CM-1.6_SG-1.12.zip
+wget https://teradeploy.blob.core.windows.net/binaries/P-CM-1.8_SG-1.14.zip -P /tmp/
+unzip -o /tmp/P-CM-1.8_SG-1.14.zip
 
 #remove unwanted jdk's
 yum -y remove java-1.6.0-openjdk
@@ -36,10 +38,10 @@ service iptables save
 
 
 #get current networking configuration and use that for system setup. If there are dynamic IP's in the system THIS WILL EVENTUALLY FAIL.
-mypublicip=`dig +short myip.opendns.com @resolver1.opendns.com`
+mypublicip=$(dig +short myip.opendns.com @resolver1.opendns.com)
 #alternates if opendns turns off: curl ipinfo.io/ip    curl ipecho.net/plain ; echo
-myhostname=`hostname`
-myprivateip=`ifconfig eth0 | awk '/inet addr/ {gsub("addr:", "", $2); print $2}'`
+myhostname=$(hostname)
+myprivateip=$(ifconfig eth0 | awk '/inet addr/ {gsub("addr:", "", $2); print $2}')
 
 echo "Detected hostname= $myhostname privateIP = $myprivateip publicip = $mypublicip"
 
@@ -47,7 +49,21 @@ echo "Detected hostname= $myhostname privateIP = $myprivateip publicip = $mypubl
 echo " $myprivateip   $myhostname" >> /etc/hosts
 service network restart
 
-sh cm_setup.sh
+# find folder name
+FOLDER_NAME=$(find . -type f -name 'cm_setup.sh' | sed -r 's|/[^/]+$||') 
+
+# if folder name contain space, change to cm_sg
+case "$FOLDER_NAME" in  
+     *\ * )
+           mv "$FOLDER_NAME" cm_sg
+		   FOLDER_NAME=cm_sg
+          ;;
+       *)
+           echo "no space in directoy name"
+           ;;
+esac
+
+sh "$FOLDER_NAME"/cm_setup.sh
 
 service security_gateway stop
 service connection_manager stop
@@ -55,7 +71,7 @@ service connection_manager stop
 # modify CM setup
 #make the 'original' file
 cp -n /etc/ConnectionManager.conf /etc/ConnectionManager.conf.orig
-awk -v broker=$1 '/^PcoipAddress/{printf "PcoipAddress = %s\n",broker;next};{print}' /etc/ConnectionManager.conf.orig > ConnectionManager.conf
+awk -v broker="$1" '/^PcoipAddress/{printf "PcoipAddress = %s\n",broker;next};{print}' /etc/ConnectionManager.conf.orig > ConnectionManager.conf
 
 
 cp -f ConnectionManager.conf /etc/ConnectionManager.conf
@@ -84,7 +100,7 @@ if [ -n "$mypublicip" ]; then
 
 	#make the 'original' file one time only
 	cp -n /etc/SecurityGateway.conf /etc/SecurityGateway.conf.orig
-	awk -v externalip=$mypublicip '/^ExternalRoutableIP/{printf "ExternalRoutableIP = %s\n",externalip;next};{print}' /etc/SecurityGateway.conf.orig > SecurityGateway.conf
+	awk -v externalip="$mypublicip" '/^ExternalRoutableIP/{printf "ExternalRoutableIP = %s\n",externalip;next};{print}' /etc/SecurityGateway.conf.orig > SecurityGateway.conf
 	cp -f SecurityGateway.conf /etc/SecurityGateway.conf
 
 	echo "Finished setting up SG"
