@@ -21,8 +21,8 @@ service collector status
 
 
 #get the install zip files
-wget https://teradeploy.blob.core.windows.net/binaries/P-CM-1.8_SG-1.14.zip -P /tmp/
-unzip -o /tmp/P-CM-1.8_SG-1.14.zip
+wget https://teradeploy.blob.core.windows.net/binaries/CM-1.8_SG-1.14.zip -P /tmp/
+unzip -o /tmp/CM-1.8_SG-1.14.zip
 
 #remove unwanted jdk's
 yum -y remove java-1.6.0-openjdk
