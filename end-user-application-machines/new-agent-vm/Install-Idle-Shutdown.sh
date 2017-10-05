@@ -5,26 +5,33 @@ SERVICE="CAMIdleShutdown.service"
 SERVICE_PATH="/etc/systemd/system/${SERVICE}"
 SERVICE_CONFIG_PATH="${SERVICE_PATH}.d"
 SERVICE_CONFIG="${SERVICE_CONFIG_PATH}/CAMIdleShutdown.conf"
-MONITOR_SCRIPT=/opt/Teradici_CAM_idle_shutdown.sh
+MONITOR_SCRIPT=/opt/Teradici_CAM_idle_shutdown.py
 
 function create_monitor_script() {
     touch ${MONITOR_SCRIPT}
     chmod +x ${MONITOR_SCRIPT}
     cat <<'EOF'> ${MONITOR_SCRIPT}
-#!/bin/bash
+#!/usr/bin/python
 # Copyright 2017 Teradici Corporation
+import argparse
+import syslog
+import time
+import os
+import subprocess
+import re
+
+syslog.openlog("ShutdownIdleAgent", syslog.LOG_PID)
 
 # Shutdown the machine if it has been idle more than the specified number of minutes
 # Additionally, do not log off if there is an active ssh connection, or
 # there are instances of pcoip-server processes running.
 
 ## Global settings
-##
 # minimum number of minutes machine can be idle before shutting down
 MIN_IDLE_WAIT_TIME=5
 
 # maximum number of minutes machine can be idle before shutting down
-MAX_IDLE_WAIT_TIME=10000 # about 7 days
+MAX_IDLE_WAIT_TIME=7*24*60
 
 # minimum number of minutes to wait between polling machine session status
 MIN_POLL_INTERVAL=1
@@ -33,184 +40,138 @@ MIN_POLL_INTERVAL=1
 MAX_POLL_INTERVAL=60
 ##
 
-####################################################################
-# Log to Syslog
-####################################################################
-function logit {
-   logger --id $$ -t "ShutdownIdleAgent" "$*"
-}
+def logit(message):
+    """
+    Log messages to Syslog
+    """
+    syslog.syslog(message)
 
-####################################################################
-# If there are active remote ssh connections or we detect PCoIP return 1, else 0
-# Note that a remote ssh session is one where the remote address is NOT "0.0.0.0" (ipv4
-# or "::0" or "::" (ipv6)
-####################################################################
-function activeConnectionsExist() {
-    set -x
+def activeConnectionsExist():
+    """
+    Check for active PCoIP or SSH sessions
+    """
+    # Check for SSH Session
+    sessions = subprocess.check_output(['/usr/bin/who']).split('\n')
+    for session in sessions:
+        # Check if session is an X-Session
+        re_session = re.match(".*\((.*)\)", session)
+        if re_session and ":" not in re_session.group(1)[0]:
+            return True
 
-    # first, check to see if anyone is connected remotely
-    #  last will produce something like the list below,
+    # Check for PCoIP Session
+    proccesses = subprocess.check_output(['/bin/ps', 'aux']).split('\n')
+    for proccess in proccesses:
+        if 'pcoip-server' in proccess:
+            return True
 
-    #  someuser  pts/2         tervdiw10dev13.t Wed Jul 12 10:51   still logged in
-    #  someuser  pts/1         0.0.0.0          Wed Jul 12 10:36   gone - no logout
-    #  someuser  pts/0         0.0.0.0          Wed Jul 12 10:35   gone - no logout
-    #  someuser  :100          0.0.0.0          Wed Jul 12 10:35   gone - no logout
-    #  reboot   system reboot  0.0.0.0          Wed Jul 12 10:35   gone - no logout
-    #  
-    #  wtmp begins Wed Jul 12 10:35:17 2017
+    return False
 
-    # in this case, pts/2 has a remotely logged on user, but the rest are local ssh connections we
-    # can ignore, including the system one.  Format is slightly different when the system status is displayed
-        
-    ipList=$(/usr/bin/last  | /usr/bin/grep 'still logged in' | /usr/bin/awk '{ if (!($0~"wtmp begins")) { if ($2 == "system") {print $4} else {print $3 }}}')
+def getCPULoad():
+    """
+    Get average CPU Load over last 15 minutes
+    """
+    cpu_over_last_15 = 0
+    uptime = subprocess.check_output('/usr/bin/uptime').strip('\n')
+    re_cpu_over_last_15 = re.match(".*\d*\.\d*,\s*\d*\.\d*,\s*(\d*\.\d*)", uptime)
+    if re_cpu_over_last_15:
+        cpu_over_last_15 = float(re_cpu_over_last_15.group(1))*100
+    return cpu_over_last_15
 
-    for i in $ipList; do
-        if [ $i != "0.0.0.0" ] && [ $i != "::" ] && [ $i != "::0" ]; then
-            # a remote ssh connection detected
-            echo 1
-            return
-        fi
-    done
+def parseArgs():
+    """
+    Parse Input Arguements
+    """
+    # Default Values
+    pollInterval = 15
+    waitTime = 60
+    cpuThreshold = 20
 
-    # Is PCoIP active?
-    /bin/ps -e | /bin/grep -s pcoip-server  > /dev/null 2>&1
-    rc=$?
+    parser = argparse.ArgumentParser(
+        description="Teradici provided Service to monitor active sessions and CPU usage to shutdown VM when not in use",
+        usage="Teradici_CAM_Idle_Shutdown.py: [ <wait-minutes> <poll-interval> <cpu-threshold> ]"
+    )
+    parser.add_argument(
+        'waitTime',
+        metavar='waitTime',
+        type=int,
+        nargs=1,
+        choices=range(
+            MIN_IDLE_WAIT_TIME,
+            MAX_IDLE_WAIT_TIME
+        ),
+        default=waitTime,
+        help="The Number of minutes a machine must be idle before shutting off"
+    )
+    parser.add_argument(
+        'pollInterval',
+        metavar='pollInterval',
+        type=int,
+        nargs=1,
+        choices=range(
+            MIN_POLL_INTERVAL,
+            MAX_POLL_INTERVAL
+        ),
+        default=pollInterval,
+        help="The Number of minutes between checking for the idle CPU Usage"
+    )
+    parser.add_argument(
+        'cpuThreshold',
+        metavar='cpuThreshold',
+        type=int,
+        nargs=1,
+        choices=range(0, 100),
+        default=cpuThreshold,
+        help="The Percentage CPU Usage below where the machine is considered to be idling"
+    )
+    args = parser.parse_args()
+    return (args.pollInterval[0]*60, args.cpuThreshold[0], args.waitTime[0]*60)
 
-    if [ $rc -eq 0 ]; then
-        # someone is connected via pcoip
-        echo 1
-        return
-    fi
+def main():
+    """
+    Main function, monitor active sessions and CPU usage and shutdown when appropriate
+    """
+    pollInterval, cpuThreshold, waitTime = parseArgs()
+    logit(  ("Monitoring system for idle state every {POLL_INTERVAL} " +
+            "minutes and will shutdown machine if idle (CPU <" +
+            " {CPU_THRESHOLD}% utilization) for {WAIT_TIME} minutes.").format(
+                POLL_INTERVAL= pollInterval/60,
+                CPU_THRESHOLD= cpuThreshold,
+                WAIT_TIME= waitTime/60
+            )
+    )
 
-    echo 0
-    return
-}
+    startTime = None
+    while True:
+        if activeConnectionsExist():
+            logit("Sessions still active, not shutting down")
+            startTime = None
+        else:
+            cpuUsage = getCPULoad()
+            if cpuUsage < cpuThreshold:
+                logit('CPU usage is now {cpu}%, it is below idle threshold'.format(
+                        cpu=cpuUsage
+                ))
+                if not startTime:
+                    startTime = time.time()
+                currentTime = time.time()
+                elapsedTime = currentTime - startTime
+                logit("CPU has been idle for at least {} minutes".format(
+                    int(elapsedTime/60)
+                ))
+                if elapsedTime > waitTime:
+                    logit("CPU has been idle for more than {} minutes, shutting down".format(
+                        waitTime
+                    ))
+                    os.system('/sbin/shutdown')
+            else:
+                logit("CPU usage is now {cpu}%, CPU is active".format(
+                    cpu=cpuUsage
+                ))
+                startTime = None
+        time.sleep(pollInterval)
 
-####################################################################
-# convert string to integer, 0 if it is invalid
-####################################################################
-function validateInt(){
-    typeset -r input=$1
-    if [[ $input =~ ^[0-9]+$ ]]; then
-        echo $input
-        return 
-    fi
-    echo 0
-}
-
-####################################################################
-# Returns an integer representing the percentage cpuload of the busiest
-# cpu.  e.g. 10 = 10%
-# We do not attempt to normalize
-####################################################################
-function getCPULoad() {
-    # get load average for last 15 minutes
-
-    loadAvg=$(/usr/bin/uptime | sed s/"^.*load average:"// | sed s/","// | /usr/bin/awk '{ print $3}')
-    result=$(echo "($loadAvg * 100 )" | bc)
-    result=${result%%.*}
-    if [ $result -gt 100 ]; then
-        result=100
-    fi
-    echo $result
-}
-
-####################################################################
-# Set the globals wait_minutes and poll_interval
-####################################################################
-function processArgs () {
-    if [ $# -eq 3 ]; then
-        wait_minutes=$(validateInt $1)
-        poll_interval=$(validateInt $2)
-        cpu_threshold=$(validateInt $3)
-    elif [ $# -ne 0 ]; then
-        echo "Usage $(basename $0): [ <wait-minutes> <poll-interval> <cpu-threshold> ]"
-        echo "      where <wait-minutes> are the number of minutes a machine must be idle before it is shutdown"
-        echo "      <poll-interval> are the number of minutes between checking for the idle state"
-        echo "      and <cpu-threshold> the percentage cpu utilization below which a shutdown is allowed to occur"
-        exit 1
-    fi
-
-    # clamp waiting minutes to max roughly 1 week, minimum of 5 minutes
-    if [ $wait_minutes -gt $MAX_IDLE_WAIT_TIME ]; then
-        wait_minutes=$MAX_IDLE_WAIT_TIME
-        logit "Reset idle machine wait period to $wait_minutes minutes"
-    elif [ $wait_minutes -lt $MIN_IDLE_WAIT_TIME ]; then
-        wait_minutes=$MIN_IDLE_WAIT_TIME
-        logit "Reset idle machine wait period to $wait_minutes minutes"
-    fi
-
-    if [ $poll_interval -gt $MAX_POLL_INTERVAL ]; then
-        poll_interval=$MAX_POLL_INTERVAL
-        logit "Reset polling interval to $poll_interval minutes"
-    elif [ $poll_interval -lt $MIN_POLL_INTERVAL ]; then
-        poll_interval=$MIN_POLL_INTERVAL
-        logit "Reset polling interval to $poll_interval minutes"
-    fi
-
-    if [ $cpu_threshold -gt 100 ]; then
-        cpu_threshold=100
-        logit "Reset cpu threshold to $cpu_threshold"
-    elif [ $cpu_threshold -lt 0 ]; then
-        cpu_threshold=0
-        logit "Reset cpu threshold to $cpu_threshold"
-    fi
-}
-
-####################################################################
-# Main program
-# set the globals wait_minutes and poll_interval
-####################################################################
-function main() {
-    wait_minutes=60  # default is an hour
-    poll_interval=15 # default is 15 minutes
-    cpu_threshold=20 # default 20%
-
-    # this will potentially reset the above two variables
-    processArgs $@
-    
-    required_idle_time=$(( 60 * $wait_minutes))
-
-    if [ $(activeConnectionsExist) -gt 0 ]; then
-        echo exit 0
-    fi
-
-    logit "Monitoring system for idle state every $poll_interval minutes and will shutdown machine if idle (every cpu < $cpu_threshold% utilization) for $wait_minutes minutes."
-
-    startTime=0
-    # Main while loop.  Flip between two states: someone is connected, and a triggered timer
-    # counting until we shutdown or someone connects
-    while [ 1 -ne 0 ]; do
-        if [ $(activeConnectionsExist) -gt 0 ]; then
-            startTime=0
-        else
-            if [ $startTime -eq 0 ]; then
-                startTime=$(/bin/date +%s)
-            fi
-
-            cpuLoad=$(getCPULoad)
-            if [ $cpuLoad -ge $cpu_threshold ]; then
-                # a cpu load greater than threshold, assume something's going on
-                #logit "Shutdown process reset because CPU load ($cpuLoad%) > $cpu_threshold%"
-                startTime=0
-            else
-                currentTime=$(/bin/date +%s)
-                elapsedIdleTime=$(( $currentTime - $startTime ))
-
-                if [ $required_idle_time -le $elapsedIdleTime ]; then
-                logit "Shutting down idle machine."
-                sudo /sbin/shutdown now
-                fi
-            fi
-        fi
-
-        /bin/sleep $((60 * $poll_interval))
-    done 
-
-    exit 0
-}
-
-main $@
+if __name__=="__main__":
+    main()
 EOF
 }
 
@@ -229,7 +190,7 @@ After=pcoip.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/sudo /usr/bin/bash ${MONITOR_SCRIPT} \${MinutesIdleBeforeShutdown} \${PollingIntervalMinutes} \${CPUUtilizationLimit}
+ExecStart=/usr/bin/sudo /usr/bin/python ${MONITOR_SCRIPT} \${MinutesIdleBeforeShutdown} \${PollingIntervalMinutes} \${CPUUtilizationLimit}
 KillMode=process
 
 [Install]
