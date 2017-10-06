@@ -9,7 +9,7 @@ MONITOR_SCRIPT=/opt/Teradici_CAM_idle_shutdown.py
 
 function create_monitor_script() {
     touch ${MONITOR_SCRIPT}
-    chmod +x ${MONITOR_SCRIPT}
+    chmod 644 ${MONITOR_SCRIPT}
     cat <<'EOF'> ${MONITOR_SCRIPT}
 #!/usr/bin/python
 # Copyright 2017 Teradici Corporation
@@ -26,19 +26,8 @@ syslog.openlog("ShutdownIdleAgent", syslog.LOG_PID)
 # Additionally, do not log off if there is an active ssh connection, or
 # there are instances of pcoip-server processes running.
 
-## Global settings
-# minimum number of minutes machine can be idle before shutting down
-MIN_IDLE_WAIT_TIME=5
-
-# maximum number of minutes machine can be idle before shutting down
-MAX_IDLE_WAIT_TIME=7*24*60
-
-# minimum number of minutes to wait between polling machine session status
-MIN_POLL_INTERVAL=1
-
-# maximum number of minutes to wait between polling machine session status
-MAX_POLL_INTERVAL=60
-##
+# Used for measuring CPU Usage, initialize to 0
+BusyTime_last = BusyTime_now = IdleTime_now = IdleTime_last = 0
 
 def logit(message):
     """
@@ -68,69 +57,71 @@ def activeConnectionsExist():
 
 def getCPULoad():
     """
-    Get average CPU Load over last 15 minutes
-    """
-    cpu_over_last_15 = 0
-    uptime = subprocess.check_output('/usr/bin/uptime').strip('\n')
-    re_cpu_over_last_15 = re.match(".*\d*\.\d*,\s*\d*\.\d*,\s*(\d*\.\d*)", uptime)
-    if re_cpu_over_last_15:
-        cpu_over_last_15 = float(re_cpu_over_last_15.group(1))*100
-    return cpu_over_last_15
+    Get average CPU Load since last Poll
+    
+    For each CPU there are 7 counters:
+        UserTime, NiceTime, SystemTime, IdleTime, IOwaitTime, IRQTime, and SoftIRQTime
+    The average CPU usage since startup for any given sample is therefore simply:
 
-def parseArgs():
-    """
-    Parse Input Arguements
-    """
-    # Default Values
-    pollInterval = 15
-    waitTime = 60
-    cpuThreshold = 20
+        Usage = (1 - IdleTime/(IdleTime + BusyTime))*100%, where
+        BusyTime = UserTime + NiceTime + SystemTime + IOwaitTime + IRQTime + SoftIRQTime
 
-    parser = argparse.ArgumentParser(
-        description="Teradici provided Service to monitor active sessions and CPU usage to shutdown VM when not in use",
-        usage="Teradici_CAM_Idle_Shutdown.py: [ <wait-minutes> <poll-interval> <cpu-threshold> ]"
-    )
-    parser.add_argument(
-        'waitTime',
-        metavar='waitTime',
-        type=int,
-        nargs=1,
-        choices=range(
-            MIN_IDLE_WAIT_TIME,
-            MAX_IDLE_WAIT_TIME
-        ),
-        default=waitTime,
-        help="The Number of minutes a machine must be idle before shutting off"
-    )
-    parser.add_argument(
-        'pollInterval',
-        metavar='pollInterval',
-        type=int,
-        nargs=1,
-        choices=range(
-            MIN_POLL_INTERVAL,
-            MAX_POLL_INTERVAL
-        ),
-        default=pollInterval,
-        help="The Number of minutes between checking for the idle CPU Usage"
-    )
-    parser.add_argument(
-        'cpuThreshold',
-        metavar='cpuThreshold',
-        type=int,
-        nargs=1,
-        choices=range(0, 100),
-        default=cpuThreshold,
-        help="The Percentage CPU Usage below where the machine is considered to be idling"
-    )
-    args = parser.parse_args()
-    return (args.pollInterval[0]*60, args.cpuThreshold[0], args.waitTime[0]*60)
+    This is pretty straight forward, but what is needed is actually the average CPU usage
+    over the sampling interval. To get this, we need to values of the IdleTime and BusyTime
+    of the previous sample. This leads to the equation:
+
+        Usage_avg   = Change in CPU Stat Counter
+                    = 1 - (IdleTime_now - IdleTime_last)/((IdleTime_now + BusyTime_now) - (IdleTime_last + BusyTime_last))
+                    = ((IdleTime_now + BusyTime_now) - (IdleTime_last + BusyTime_last))/((IdleTime_now + BusyTime_now) - (IdleTime_last + BusyTime_last))
+                        - (IdleTime_now - IdleTime_last)/((IdleTime_now + BusyTime_now) - (IdleTime_last + BusyTime_last))
+                    = (IdleTime_now + BusyTime_now -IdleTime_last - BusyTime_last - IdleTime_now + IdleTime_last)/((IdleTime_now + BusyTime_now) - (IdleTime_last + BusyTime_last))
+                    = (BusyTime_now - BusyTime_last)/((IdleTime_now + BusyTime_now) - (IdleTime_last + BusyTime_last))
+    """
+    global BusyTime_last, BusyTime_now, IdleTime_now, IdleTime_last
+    cpu_usage = 0
+    cpu_stats = ''
+    proc_stats = subprocess.check_output(['/bin/cat','/proc/stat']).split('\n')
+    for stat in proc_stats:
+        if re.match('^cpu[^\d]+', stat):
+            cpu_stats = stat
+            break
+
+    re_cpu_stats = re.match('^cpu\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+', cpu_stats)
+    if re_cpu_stats:
+        user_cpu = float(re_cpu_stats.group(1))
+        nice_cpu = float(re_cpu_stats.group(2))
+        system_cpu = float(re_cpu_stats.group(3))
+        idle_cpu = float(re_cpu_stats.group(4))
+        iowait_cpu = float(re_cpu_stats.group(5))
+        irq_cpu = float(re_cpu_stats.group(6))
+        softirq_cpu = float(re_cpu_stats.group(7))
+
+        IdleTime_now = idle_cpu
+        BusyTime_now = user_cpu + nice_cpu + system_cpu + iowait_cpu + irq_cpu + softirq_cpu
+
+        cpu_usage = 100.0* (BusyTime_now - BusyTime_last)/((IdleTime_now + BusyTime_now) - (IdleTime_last + BusyTime_last))
+        
+        BusyTime_last = BusyTime_now
+        IdleTime_last = IdleTime_now
+    
+    return cpu_usage
+
+def getSettings():
+    """
+    Get Settings from environment
+    """
+    # Load Values, use Defaults if needed, convert to seconds as needed
+    pollInterval = float(os.environ.get('PollingIntervalMinutes', 15))*60
+    waitTime = float(os.environ.get('MinutesIdleBeforeShutdown', 60))*60
+    cpuThreshold = float(os.environ.get('CPUUtilizationLimit', 20))
+    
+    return (pollInterval, cpuThreshold, waitTime)
 
 def main():
     """
     Main function, monitor active sessions and CPU usage and shutdown when appropriate
     """
-    pollInterval, cpuThreshold, waitTime = parseArgs()
+    pollInterval, cpuThreshold, waitTime = getSettings()
     logit(  ("Monitoring system for idle state every {POLL_INTERVAL} " +
             "minutes and will shutdown machine if idle (CPU <" +
             " {CPU_THRESHOLD}% utilization) for {WAIT_TIME} minutes.").format(
@@ -178,10 +169,10 @@ EOF
 function install() {
     echo "Installing"
     touch ${SERVICE_PATH}
-    chmod 664 ${SERVICE_PATH}
+    chmod 644 ${SERVICE_PATH}
     mkdir -p ${SERVICE_CONFIG_PATH}
     touch ${SERVICE_CONFIG}
-    chmod 664 ${SERVICE_CONFIG}
+    chmod 644 ${SERVICE_CONFIG}
     create_monitor_script
     cat <<EOF> ${SERVICE_PATH}
 [Unit]
@@ -190,7 +181,7 @@ After=pcoip.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/sudo /usr/bin/python ${MONITOR_SCRIPT} \${MinutesIdleBeforeShutdown} \${PollingIntervalMinutes} \${CPUUtilizationLimit}
+ExecStart=/usr/bin/python ${MONITOR_SCRIPT}
 KillMode=process
 
 [Install]
