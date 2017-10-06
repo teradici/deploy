@@ -696,15 +696,37 @@ function Deploy-CAM()
 	    $subscriptionId,
 		
 	    [parameter(Mandatory=$true)]
-	    $RGName
+		$RGName,
+		
+		[parameter(Mandatory=$false)]
+		[System.Management.Automation.PSCredential]
+		$spCredential,
+
+		[parameter(Mandatory=$false)] #required if $spCredential is provided
+		[string]
+		$tenantId
 	)
 
 
     $configFileContent = Get-Content $configFilePath
     $CAMConfig = ConvertFrom-Json ([string]$configFileContent)
 
+	if($spCredential -eq $null)	{
+		$spInfo = Create-CAMAppSP `
+			-RGName $RGName
+	}
+	else {
+		if ($tenantId -eq $null) {throw "SP provided but no tenantId"}
+		$spInfo = @{}
+		$spinfo.spCreds = $spCredential
+		$spInfo.tenantId = $tenantId
+	}
 
-    $spInfo = Create-CAMAppSP -RGName $RGName
+	$client = $spInfo.spCreds.UserName
+	$key = $spInfo.spCreds.GetNetworkCredential().Password
+	$tenant = $spInfo.tenantId
+
+	Write-Host "Using SP $client in tenant $tenant and subscription $subscriptionId"
 
 	$registrationCode = $CAMConfig.parameters.registrationCode.value
     $camSaasBaseUri = $CAMConfig.parameters.camSaasUri.value
@@ -723,10 +745,6 @@ function Deploy-CAM()
 			-registrationCode $registrationCode `
 			-DomainJoinPassword $CAMConfig.parameters.domainAdminPassword.value `
 			-spName $spInfo.spCreds.UserName
-
-			$client = $spInfo.spCreds.UserName
-			$key = $spInfo.spCreds.GetNetworkCredential().Password
-			$tenant = $spInfo.tenantId
 		
 			# need to add a retry on the registration for invalid SP as there is a race condition (sigh).
 			#Start-Sleep -seconds 30
@@ -742,8 +760,6 @@ function Deploy-CAM()
 				-registrationCode $registrationCode `
 				-camSaasBaseUri $camSaasBaseUri `
 				-verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
-
-		
 		
 			Write-Host "Create auth file information for the CAM frontend."
 		
