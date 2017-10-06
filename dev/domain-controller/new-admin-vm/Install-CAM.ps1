@@ -332,7 +332,6 @@ Configuration InstallCAM
 				while ($retryCount -gt 0)
 				{
 					$readyToConfigure = ( Get-Item $JVMServerdll -ErrorAction SilentlyContinue )
-					# don't wait for {64A3A4F4-B792-11D6-A78A-00B0D0180144} - that's the JDK. The JRE is installed 2nd {26A...} so wait for that.
 
 					if ($readyToConfigure)
 					{
