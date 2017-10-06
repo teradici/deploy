@@ -806,7 +806,13 @@ graphURL=https\://graph.windows.net/
 		
 		
 			$kvId = $kvInfo.ResourceId
-		
+
+			$verifyCAMSaaSCertificateText = "false"
+			if($verifyCAMSaaSCertificate)
+			{
+				$verifyCAMSaaSCertificateText = "true"
+			}
+
 		$generatedDeploymentParameters = @"
 	{
 		"AzureAdminUsername": {
@@ -849,7 +855,10 @@ graphURL=https\://graph.windows.net/
 				},
 				"secretName": "$camDeploySecretName"
 			}
-		}
+		},
+        "verifyCAMSaaSCertificate": {
+            "value": $verifyCAMSaaSCertificateText
+        }
 	}
 "@
 		
@@ -868,7 +877,7 @@ graphURL=https\://graph.windows.net/
 	
 	# Test-AzureRmResourceGroupDeployment -ResourceGroupName $azureRGName -TemplateFile "azuredeploy.json" -TemplateParameterFile $outputParametersFileName  -Verbose
 		Write-Host "Deploying Cloud Access Manager Connection Service"
-		
+
 		New-AzureRmResourceGroupDeployment -DeploymentName "ad1" -ResourceGroupName $azureRGName -TemplateFile $CAMDeploymentTemplateURI -TemplateParameterFile $outputParametersFileName 
 
 	}
