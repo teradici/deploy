@@ -58,7 +58,7 @@ def activeConnectionsExist():
 def getCPULoad():
     """
     Get average CPU Load since last Poll
-    
+
     For each CPU there are 7 counters:
         UserTime, NiceTime, SystemTime, IdleTime, IOwaitTime, IRQTime, and SoftIRQTime
     The average CPU usage since startup for any given sample is therefore simply:
@@ -104,7 +104,7 @@ def getCPULoad():
         BusyTime_last = BusyTime_now
         IdleTime_last = IdleTime_now
     
-    return cpu_usage
+    return round(cpu_usage, 2)
 
 def getSettings():
     """
@@ -134,7 +134,7 @@ def main():
     startTime = None
     while True:
         if activeConnectionsExist():
-            logit("Sessions still active, not shutting down")
+            logit("Sessions is active, not shutting down")
             startTime = None
         else:
             cpuUsage = getCPULoad()
