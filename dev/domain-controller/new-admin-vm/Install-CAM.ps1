@@ -283,8 +283,8 @@ Configuration InstallCAM
 				$retrycount = 1800
 				while ($retryCount -gt 0)
 				{
-					$readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{26A24AE4-039D-4CA4-87B4-2F86418091F0}"  -ErrorAction SilentlyContinue )
-					# don't wait for {64A3A4F4-B792-11D6-A78A-00B0D0180910} - that's the JDK. The JRE is installed 2nd {26A...} so wait for that.
+					$readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{26A24AE4-039D-4CA4-87B4-2F64180144F0}"  -ErrorAction SilentlyContinue )
+					# don't wait for {64A3A4F4-B792-11D6-A78A-00B0D0180144} - that's the JDK. The JRE is installed 2nd {26A...} so wait for that.
 
 					if ($readyToConfigure)
 					{
@@ -332,7 +332,7 @@ Configuration InstallCAM
 				while ($retryCount -gt 0)
 				{
 					$readyToConfigure = ( Get-Item $JVMServerdll -ErrorAction SilentlyContinue )
-					# don't wait for {64A3A4F4-B792-11D6-A78A-00B0D0180910} - that's the JDK. The JRE is installed 2nd {26A...} so wait for that.
+					# don't wait for {64A3A4F4-B792-11D6-A78A-00B0D0180144} - that's the JDK. The JRE is installed 2nd {26A...} so wait for that.
 
 					if ($readyToConfigure)
 					{
