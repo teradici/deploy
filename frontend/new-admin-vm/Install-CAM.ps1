@@ -36,10 +36,10 @@ Configuration InstallCAM
 		[System.Management.Automation.PSCredential]$registrationCodeAsCred,
 
 		[string]
-		$javaInstaller = "jdk-8u91-windows-x64.exe",
+		$javaInstaller = "jdk-8u144-windows-x64.exe",
 
 		[string]
-		$tomcatInstaller = "apache-tomcat-8.0.39-windows-x64.zip",
+		$tomcatInstaller = "apache-tomcat-8.5.23-windows-x64.zip",
 
 		[string]
 		$brokerWAR = "pcoip-broker.war",
@@ -129,13 +129,13 @@ Configuration InstallCAM
 	$family   = "Windows Server 2016"
 
 	#Java locations
-	$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_91"
+	$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_144"
 	$JavaBinLocation = $JavaRootLocation + "\bin"
 	$JavaLibLocation = $JavaRootLocation + "\jre\lib"
 
 	#Tomcat locations
 	$localtomcatpath = "$env:systemdrive\tomcat"
-	$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
+	$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.5.23"
 	$CatalinaBinLocation = $CatalinaHomeLocation + "\bin"
 
 	$brokerServiceName = "CAMBroker"
@@ -298,8 +298,8 @@ Configuration InstallCAM
 				$retrycount = 1800
 				while ($retryCount -gt 0)
 				{
-					$readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{26A24AE4-039D-4CA4-87B4-2F86418091F0}"	-ErrorAction SilentlyContinue )
-					# don't wait for {64A3A4F4-B792-11D6-A78A-00B0D0180910} - that's the JDK. The JRE is installed 2nd {26A...} so wait for that.
+					$readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{26A24AE4-039D-4CA4-87B4-2F64180144F0}"	-ErrorAction SilentlyContinue )
+					# don't wait for {64A3A4F4-B792-11D6-A78A-00B0D0180144} - that's the JDK. The JRE is installed 2nd {26A...} so wait for that.
 
 					if ($readyToConfigure)
 					{
@@ -347,7 +347,6 @@ Configuration InstallCAM
 				while ($retryCount -gt 0)
 				{
 					$readyToConfigure = ( Get-Item $JVMServerdll -ErrorAction SilentlyContinue )
-					# don't wait for {64A3A4F4-B792-11D6-A78A-00B0D0180910} - that's the JDK. The JRE is installed 2nd {26A...} so wait for that.
 
 					if ($readyToConfigure)
 					{
