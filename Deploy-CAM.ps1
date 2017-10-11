@@ -688,9 +688,15 @@ function Deploy-CAM()
 	    [bool]
 	    $verifyCAMSaaSCertificate = $true,
 
-        $configFilePath,
-
         $CAMDeploymentTemplateURI,
+
+		$domainAdminUsername,
+		$domainAdminPassword,
+		$domainName,
+		$registrationCode,
+		$camSaasUri,
+		$CAMDeploymentBlobSource,
+		$outputParametersFileName,
 		
 	    [parameter(Mandatory=$true)] 
 	    $subscriptionId,
@@ -707,9 +713,40 @@ function Deploy-CAM()
 		$tenantId
 	)
 
+	#artifacts location 'folder' is where the template is stored
+	$artifactsLocation = $CAMDeploymentTemplateURI.Substring(0, $CAMDeploymentTemplateURI.lastIndexOf('/'))
 
-    $configFileContent = Get-Content $configFilePath
-    $CAMConfig = ConvertFrom-Json ([string]$configFileContent)
+	$camConfigurationJson = @"
+	{
+	  "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	  "contentVersion": "1.0.0.0",
+		"parameters": {
+			"domainAdminUsername": {
+				"value": "$domainAdminUsername"
+			},
+			"domainAdminPassword": {
+				  "value": "$domainAdminPassword"
+			},
+			"domainName": {
+				  "value": "$domainName"
+			},
+			"registrationCode": {
+				  "value": "$registrationCode"
+			},
+			"camSaasUri": {
+				"value": "$camSaasUri"
+			},
+			"CAMDeploymentBlobSource": {
+				"value": "$CAMDeploymentBlobSource"
+			},
+			"_artifactsLocation": {
+				"value": "$artifactsLocation"
+			}
+		}
+	}
+"@
+	
+    $CAMConfig = ConvertFrom-Json ([string]$camConfigurationJson)
 
 	if($spCredential -eq $null)	{
 		$spInfo = Create-CAMAppSP `
@@ -727,9 +764,6 @@ function Deploy-CAM()
 	$tenant = $spInfo.tenantId
 
 	Write-Host "Using SP $client in tenant $tenant and subscription $subscriptionId"
-
-	$registrationCode = $CAMConfig.parameters.registrationCode.value
-    $camSaasBaseUri = $CAMConfig.parameters.camSaasUri.value
 
 	# Login with SP since some Powershell contexts (with token auth - like Azure Cloud PowerShell or Visual Studio)
 	# can't do operations on keyvaults
@@ -758,7 +792,7 @@ function Deploy-CAM()
 				-tenant $tenant `
 				-RGName $RGName `
 				-registrationCode $registrationCode `
-				-camSaasBaseUri $camSaasBaseUri `
+				-camSaasBaseUri $camSaasUri `
 				-verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
 		
 			Write-Host "Create auth file information for the CAM frontend."
@@ -894,7 +928,11 @@ graphURL=https\://graph.windows.net/
 	# Test-AzureRmResourceGroupDeployment -ResourceGroupName $azureRGName -TemplateFile "azuredeploy.json" -TemplateParameterFile $outputParametersFileName  -Verbose
 		Write-Host "Deploying Cloud Access Manager Connection Service"
 
-		New-AzureRmResourceGroupDeployment -DeploymentName "ad1" -ResourceGroupName $azureRGName -TemplateFile $CAMDeploymentTemplateURI -TemplateParameterFile $outputParametersFileName 
+		New-AzureRmResourceGroupDeployment `
+			-DeploymentName "ad1" `
+			-ResourceGroupName $azureRGName `
+			-TemplateFile $CAMDeploymentTemplateURI `
+			-TemplateParameterFile $outputParametersFileName 
 
 	}
 	finally {
