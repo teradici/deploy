@@ -11,8 +11,6 @@ TIMER_CONFIG_PATH="${TIMER_PATH}.d"
 TIMER_CONFIG="${TIMER_CONFIG_PATH}/CAMIdleShutdown.conf"
 SERVICE_CONFIG="${SERVICE_CONFIG_PATH}/CAMIdleShutdown.conf"
 
-SERVICE_START_TIME_TMP_FILE="/tmp/CAMIdleState"
-SERVICE_CPU_USAGE_TMP_FILE="/tmp/CAMIdleStateCPU"
 MONITOR_SCRIPT=/opt/Teradici_CAM_idle_shutdown.py
 
 function create_monitor_script() {
@@ -39,8 +37,8 @@ syslog.openlog("ShutdownIdleAgent", syslog.LOG_PID)
 BusyTime_last = BusyTime_now = IdleTime_now = IdleTime_last = 0
 
 # File containing state information
-startTimeFile = "${SERVICE_START_TIME_TMP_FILE}"
-cpuUsageFile = "${SERVICE_CPU_USAGE_TMP_FILE}"
+startTimeFile = "/tmp/CAMIdleState"
+cpuUsageFile = "/tmp/CAMIdleStateCPU"
 
 def getStartTime():
     """
