@@ -79,7 +79,7 @@ Click the **Deploy Azure** button to  begin.
 
 **NOTE:** In general it takes over an hour for the deployment to complete.
 
-<a target="_blank" href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fteradici%2Fdeploy%2Fmaster%2Fazuredeploy.json">
+<a target="_blank" href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fteradici%2Fdeploy%%2private-blob-storageFazuredeploy.json">
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
