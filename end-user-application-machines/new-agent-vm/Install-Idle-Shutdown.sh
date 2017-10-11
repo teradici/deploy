@@ -267,7 +267,7 @@ function remove() {
     systemctl stop ${SERVICE}
     systemctl disable ${TIMER}
     systemctl disable ${SERVICE}
-    rm -rf "/etc/systemd/system/${SERVICE_NAME}*"
+    rm -rf "/etc/systemd/system/${SERVICE_NAME}"*
     rm ${MONITOR_SCRIPT}
     systemctl daemon-reload
 }
