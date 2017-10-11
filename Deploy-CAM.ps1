@@ -1,5 +1,33 @@
 # Deploy-CAM.ps1
 #
+param(
+	[bool]
+	$verifyCAMSaaSCertificate = $true,
+
+	$CAMDeploymentTemplateURI,
+
+	$domainAdminUsername,
+	$domainAdminPassword,
+	$domainName,
+	$registrationCode,
+	$camSaasUri,
+	$CAMDeploymentBlobSource,
+	$outputParametersFileName,
+	
+	[parameter(Mandatory=$true)] 
+	$subscriptionId,
+	
+	[parameter(Mandatory=$true)]
+	$RGName,
+	
+	[parameter(Mandatory=$false)]
+	[System.Management.Automation.PSCredential]
+	$spCredential,
+
+	[parameter(Mandatory=$false)] #required if $spCredential is provided
+	[string]
+	$tenantId
+)
 
 
 
@@ -942,3 +970,9 @@ graphURL=https\://graph.windows.net/
 		}
 	}
 }
+
+###### Script starts here ######
+
+# Run the deploy function with the bound parameters
+Deploy-CAM @PSBoundParameters
+
