@@ -217,6 +217,9 @@
           "vmSize": {
             "value": "Standard_D2_v2"
           },
+          "userDataStorageAccount": {
+            "value": "[reference('Root').outputs.templateStorageAccountName.value]"
+          },
           "domainToJoin": {
             "value": "[parameters('domainName')]"
           },

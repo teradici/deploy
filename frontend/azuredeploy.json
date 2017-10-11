@@ -302,6 +302,9 @@
           },
           "verifyCAMSaaSCertificate": {
             "value": "[parameters('verifyCAMSaaSCertificate')]"
+          },
+          "userDataStorageAccount": {
+            "value": "[parameters('userDataStorageAccount')]"
           }
         }
       }
