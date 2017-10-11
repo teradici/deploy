@@ -1,10 +1,18 @@
 #!/bin/bash
 # Copyright 2017 Teradici Corporation
 
-SERVICE="CAMIdleShutdown.service"
+SERVICE_NAME="CAMIdleShutdown"
+SERVICE="${SERVICE_NAME}.service"
+TIMER="${SERVICE_NAME}.timer"
 SERVICE_PATH="/etc/systemd/system/${SERVICE}"
+TIMER_PATH="/etc/systemd/system/${TIMER}"
 SERVICE_CONFIG_PATH="${SERVICE_PATH}.d"
+TIMER_CONFIG_PATH="${TIMER_PATH}.d"
+TIMER_CONFIG="${TIMER_CONFIG_PATH}/CAMIdleShutdown.conf"
 SERVICE_CONFIG="${SERVICE_CONFIG_PATH}/CAMIdleShutdown.conf"
+
+SERVICE_START_TIME_TMP_FILE="/tmp/CAMIdleState"
+SERVICE_CPU_USAGE_TMP_FILE="/tmp/CAMIdleStateCPU"
 MONITOR_SCRIPT=/opt/Teradici_CAM_idle_shutdown.py
 
 function create_monitor_script() {
@@ -13,6 +21,7 @@ function create_monitor_script() {
     cat <<'EOF'> ${MONITOR_SCRIPT}
 #!/usr/bin/python
 # Copyright 2017 Teradici Corporation
+
 import argparse
 import syslog
 import time
@@ -20,20 +29,69 @@ import os
 import subprocess
 import re
 
-syslog.openlog("ShutdownIdleAgent", syslog.LOG_PID)
-
 # Shutdown the machine if it has been idle more than the specified number of minutes
 # Additionally, do not log off if there is an active ssh connection, or
 # there are instances of pcoip-server processes running.
 
+syslog.openlog("ShutdownIdleAgent", syslog.LOG_PID)
+
 # Used for measuring CPU Usage, initialize to 0
 BusyTime_last = BusyTime_now = IdleTime_now = IdleTime_last = 0
 
-def logit(message):
+# File containing state information
+startTimeFile = "${SERVICE_START_TIME_TMP_FILE}"
+cpuUsageFile = "${SERVICE_CPU_USAGE_TMP_FILE}"
+
+def getStartTime():
     """
-    Log messages to Syslog
+    Check what the start time is
     """
-    syslog.syslog(message)
+    if os.path.exists(startTimeFile):
+        f = open(startTimeFile, 'rb')
+        startTime = f.read()
+        f.close()
+        return int(startTime)
+    else:
+        return None
+
+def clearStartTime():
+    """
+    Clears what the start time is
+    """
+    if os.path.exists(startTimeFile):
+        os.remove(startTimeFile)
+
+def setStartTime(startTime):
+    """
+    Set what the start time is
+    """
+    f = open(startTimeFile, 'wb')
+    f.write(str(int(startTime)))
+    f.flush()
+    f.close()
+    return
+
+def loadCPU():
+    """
+    Get what the Idle and Busy CPU Time was for last sample
+    """
+    if os.path.exists(cpuUsageFile):
+        f = open(cpuUsageFile, 'rb')
+        return map(float, f.read().split(','))
+    return [0, 0]
+
+def saveCPU(idleTime, busyTime):
+    """
+    Set what the Idle and Busy CPU Time was for last sample
+    """
+    f = open(cpuUsageFile, 'wb')
+    f.write("{idle},{busy}".format(
+        idle=idleTime,
+        busy=busyTime
+    ))
+    f.flush()
+    f.close()
+    return
 
 def activeConnectionsExist():
     """
@@ -77,7 +135,7 @@ def getCPULoad():
                     = (IdleTime_now + BusyTime_now -IdleTime_last - BusyTime_last - IdleTime_now + IdleTime_last)/((IdleTime_now + BusyTime_now) - (IdleTime_last + BusyTime_last))
                     = (BusyTime_now - BusyTime_last)/((IdleTime_now + BusyTime_now) - (IdleTime_last + BusyTime_last))
     """
-    global BusyTime_last, BusyTime_now, IdleTime_now, IdleTime_last
+    IdleTime_last, BusyTime_last = loadCPU()
     cpu_usage = 0
     cpu_stats = ''
     proc_stats = subprocess.check_output(['/bin/cat','/proc/stat']).split('\n')
@@ -101,8 +159,7 @@ def getCPULoad():
 
         cpu_usage = 100.0* (BusyTime_now - BusyTime_last)/((IdleTime_now + BusyTime_now) - (IdleTime_last + BusyTime_last))
         
-        BusyTime_last = BusyTime_now
-        IdleTime_last = IdleTime_now
+        saveCPU(IdleTime_now, BusyTime_now)
     
     return round(cpu_usage, 2)
 
@@ -111,55 +168,44 @@ def getSettings():
     Get Settings from environment
     """
     # Load Values, use Defaults if needed, convert to seconds as needed
-    pollInterval = float(os.environ.get('PollingIntervalMinutes', 15))*60
     waitTime = float(os.environ.get('MinutesIdleBeforeShutdown', 60))*60
     cpuThreshold = float(os.environ.get('CPUUtilizationLimit', 20))
     
-    return (pollInterval, cpuThreshold, waitTime)
+    return (cpuThreshold, waitTime)
 
 def main():
     """
     Main function, monitor active sessions and CPU usage and shutdown when appropriate
     """
-    pollInterval, cpuThreshold, waitTime = getSettings()
-    logit(  ("Monitoring system for idle state every {POLL_INTERVAL} " +
-            "minutes and will shutdown machine if idle (CPU <" +
-            " {CPU_THRESHOLD}% utilization) for {WAIT_TIME} minutes.").format(
-                POLL_INTERVAL= pollInterval/60,
-                CPU_THRESHOLD= cpuThreshold,
-                WAIT_TIME= waitTime/60
-            )
-    )
+    cpuThreshold, waitTime = getSettings()
 
-    startTime = None
-    while True:
-        if activeConnectionsExist():
-            logit("Sessions is active, not shutting down")
-            startTime = None
+    if activeConnectionsExist():
+        syslog.syslog("Session is active, not shutting down")
+        clearStartTime()
+    else:
+        cpuUsage = getCPULoad()
+        if cpuUsage < cpuThreshold:
+            startTime = getStartTime()
+            if not startTime:
+                startTime = time.time()
+                setStartTime(startTime)
+            currentTime = time.time()
+            elapsedTime = currentTime - startTime
+            syslog.syslog("CPU usage is now {cpu}%, it is below idle threshold. CPU has been idle for at least {min} minutes".format(
+                min=int(elapsedTime/60),
+                cpu=cpuUsage
+            ))
+            if elapsedTime > waitTime:
+                syslog.syslog("CPU has been idle for more than {} minutes, shutting down".format(
+                    waitTime
+                ))
+                os.system('/sbin/shutdown')
+                clearStartTime()
         else:
-            cpuUsage = getCPULoad()
-            if cpuUsage < cpuThreshold:
-                logit('CPU usage is now {cpu}%, it is below idle threshold'.format(
-                        cpu=cpuUsage
-                ))
-                if not startTime:
-                    startTime = time.time()
-                currentTime = time.time()
-                elapsedTime = currentTime - startTime
-                logit("CPU has been idle for at least {} minutes".format(
-                    int(elapsedTime/60)
-                ))
-                if elapsedTime > waitTime:
-                    logit("CPU has been idle for more than {} minutes, shutting down".format(
-                        waitTime
-                    ))
-                    os.system('/sbin/shutdown')
-            else:
-                logit("CPU usage is now {cpu}%, CPU is active".format(
-                    cpu=cpuUsage
-                ))
-                startTime = None
-        time.sleep(pollInterval)
+            syslog.syslog("CPU usage is now {cpu}%, CPU is active".format(
+                cpu=cpuUsage
+            ))
+            clearStartTime()
 
 if __name__=="__main__":
     main()
@@ -173,37 +219,55 @@ function install() {
     mkdir -p ${SERVICE_CONFIG_PATH}
     touch ${SERVICE_CONFIG}
     chmod 644 ${SERVICE_CONFIG}
+    mkdir -p ${TIMER_CONFIG_PATH}
+    touch ${TIMER_CONFIG}
+    chmod 644 ${TIMER_CONFIG}
     create_monitor_script
     cat <<EOF> ${SERVICE_PATH}
 [Unit]
 Description=Teradici CAM Idle Shutdown monitoring service
-After=pcoip.service
 
 [Service]
 Type=simple
 ExecStart=/usr/bin/python ${MONITOR_SCRIPT}
 KillMode=process
+EOF
+    cat <<EOF> ${TIMER_PATH}
+[Unit]
+Description=Teradici CAM Idle Shutdown monitoring service
+
+[Timer]
+OnBootSec=30
+OnUnitActiveSec=15min
+Unit=${SERVICE}
 
 [Install]
 WantedBy=multi-user.target
 EOF
     cat <<EOF> ${SERVICE_CONFIG}
 [Service]
-Environment="PollingIntervalMinutes=15"
 Environment="MinutesIdleBeforeShutdown=60"
 Environment="CPUUtilizationLimit=20"
+EOF
+    cat <<EOF> ${TIMER_CONFIG}
+[Timer]
+OnUnitActiveSec=15min
 EOF
     echo "Starting Service"
     systemctl daemon-reload
     systemctl enable ${SERVICE}
+    systemctl enable ${TIMER}
     systemctl start ${SERVICE}
+    systemctl start ${TIMER}
 }
 
 function remove() {
     echo "Removing"
+    systemctl stop ${TIMER}
     systemctl stop ${SERVICE}
+    systemctl disable ${TIMER}
     systemctl disable ${SERVICE}
-    rm -rf ${SERVICE_PATH}*
+    rm -rf "/etc/systemd/system/${SERVICE_NAME}*"
     rm ${MONITOR_SCRIPT}
     systemctl daemon-reload
 }
