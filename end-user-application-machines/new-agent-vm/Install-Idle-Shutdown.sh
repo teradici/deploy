@@ -100,7 +100,7 @@ def activeConnectionsExist():
     for session in sessions:
         # Check if session is an X-Session
         re_session = re.match(".*\((.*)\)", session)
-        if re_session and ":" not in re_session.group(1)[0]:
+        if re_session and not re_session.group(1).startswith(":"):
             return True
 
     # Check for PCoIP Session
