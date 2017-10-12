@@ -117,6 +117,9 @@ Configuration InstallCAM
 		[Parameter(Mandatory=$true)]
 		[string]$camSaasUri,
 
+		[Parameter(Mandatory=$true)]
+    [string]$userDataStorageAccount,
+
 		[Parameter(Mandatory=$false)]
 		[bool]$verifyCAMSaaSCertificate=$true
 	)
@@ -208,6 +211,56 @@ Configuration InstallCAM
 			Uri = "$templateAgentURI/$linuxAgentARM"
 			DestinationPath = "$LocalDLPath\$linuxAgentARM"
 			MatchSource = $false
+		}
+
+		xRemoteFile UploadInstallAgent 
+		{
+				Uri = "$gitLocation/Install-PCoIPAgent.ps1"
+				DestinationPath = "$LocalDLPath\Install-PCoIPAgent.ps1"
+				MatchSource = $false
+		}
+
+		xRemoteFile UploadInstallAgent.sh
+		{
+				Uri = "$gitLocation/Install-PCoIPAgent.sh"
+				DestinationPath = "$LocalDLPath\Install-PCoIPAgent.sh"
+				MatchSource = $false
+		}
+		xRemoteFile rhelStandardAgent 
+		{
+				Uri = "$gitLocation/rhel-standard-agent.json"
+				DestinationPath = "$LocalDLPath\rhel-standard-agent.json"
+				MatchSource = $false
+		}
+		xRemoteFile serverGa 
+		{
+				Uri = "$gitLocation/server2016-graphics-agent.json"
+				DestinationPath = "$LocalDLPath\server2016-graphics-agent.json"
+				MatchSource = $false
+		}
+		xRemoteFile serverSA 
+		{
+				Uri = "$gitLocation/server2016-standard-agent.json"
+				DestinationPath = "$LocalDLPath\server2016-standard-agent.json"
+				MatchSource = $false
+		}
+		xRemoteFile sumoagent 
+		{
+				Uri = "$gitLocation/sumo-agent-vm.json"
+				DestinationPath = "$LocalDLPath\sumo-agent-vm.json"
+				MatchSource = $false
+		}
+		xRemoteFile sumo 
+		{
+				Uri = "$gitLocation/sumo.conf"
+				DestinationPath = "$LocalDLPath\sumo.conf"
+				MatchSource = $false
+		}
+		xRemoteFile ps1zip
+		{
+				Uri = "https://teradeploy.blob.core.windows.net/binaries/Install-PCoIPAgent.ps1.zip"
+				DestinationPath = "$LocalDLPath\InstallPCoIPAgent.ps1.zip"
+				MatchSource = $false
 		}
 
 		File Sumo_Directory 
@@ -976,6 +1029,36 @@ graphURL=https\://graph.windows.net/
 				$laSecretVersionedURL = $laSecret.Id
 				$laSecretURL = $laSecretVersionedURL.Substring(0, $laSecretVersionedURL.lastIndexOf('/'))
 
+				################################
+				Write-Host "Populating user blob"
+				################################
+				$container_name = "cloudaccessmanager"
+				$acct_name = $using:userDataStorageAccount
+				$new_agent_vm_files = @("Install-PCoIPAgent.ps1", 
+						"Install-PCoIPAgent.sh", "rhel-standard-agent.json", 
+						"server2016-graphics-agent.json", "server2016-standard-agent.json", 
+						"sumo-agent-vm.json", "sumo.conf", "InstallPCoIPAgent.ps1.zip")
+				$acctKey = (Get-AzureRmStorageAccountKey -ResourceGroupName $using:RGName -AccountName $acct_name).Value[0]
+				$ctx = New-AzureStorageContext -StorageAccountName $acct_name -StorageAccountKey $acctKey
+				try {
+						Get-AzureStorageContainer -Name $container_name -Context $ctx -ErrorAction Stop
+				} Catch {
+						New-AzureStorageContainer -Name $container_name -Context $ctx -Permission "Blob"
+				}
+				Write-Host "Uploading files to private blob"
+				ForEach($file in $new_agent_vm_files) {
+						$filepath = Join-Path $using:LocalDLPath $file
+						try {
+						Get-AzureStorageBlob -Context $ctx -Container $container_name -Blob "remote-workstation\$file" -ErrorAction Stop
+						# file already exists do nothing
+						} Catch {
+						Write-Host "Uploading $filepath to blob.."
+						Set-AzureStorageBlobContent -File $filepath -Container $container_name -Blob "remote-workstation\$file" -Context $ctx
+						}
+				}
+
+				$blobUri = (((Get-AzureStorageBlob -Context $ctx -Container $container_name)[0].ICloudBlob.uri.AbsoluteUri) -split '/')[0..4] -join '/'
+				Write-Host $blobUri
 
 				################################
 				Write-Host "Creating application gateway"

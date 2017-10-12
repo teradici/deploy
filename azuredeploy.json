@@ -60,7 +60,7 @@
       "metadata": {
         "description": "The location of resources, such as templates and DSC modules, that the template depends on"
       },
-      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/private-blob-storage"
+      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/master"
     },
     "_artifactsLocationSasToken": {
       "type": "securestring",
@@ -68,10 +68,6 @@
         "description": "Auto-generated token to access _artifactsLocation"
       },
       "defaultValue": ""
-    },
-    "userDataStorageAccount": {
-        "type": "string",
-        "value": "[reference('Root').outputs.templateStorageAccountName.value]"
     },
     "camSaasUri": {
       "type": "string",
@@ -177,6 +173,9 @@
           "camSaasUri": {
             "value": "[parameters('camSaasUri')]"
           },
+          "userDataStorageAccount": {
+            "value": "[reference('Root').outputs.templateStorageAccountName.value]"
+          },
           "verifyCAMSaaSCertificate": {
             "value": "[parameters('verifyCAMSaaSCertificate')]"
           },
@@ -220,9 +219,6 @@
             },
           "vmSize": {
             "value": "Standard_D2_v2"
-          },
-          "userDataStorageAccount": {
-            "value": "[parameters('userDataStorageAccount')]"
           },
           "domainToJoin": {
             "value": "[parameters('domainName')]"
