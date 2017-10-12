@@ -213,50 +213,35 @@ Configuration InstallCAM
 			MatchSource = $false
 		}
 
-		xRemoteFile UploadInstallAgent 
+		xRemoteFile Download_Install_Agent.ps1
 		{
 				Uri = "$gitLocation/Install-PCoIPAgent.ps1"
 				DestinationPath = "$LocalDLPath\Install-PCoIPAgent.ps1"
 				MatchSource = $false
 		}
 
-		xRemoteFile UploadInstallAgent.sh
+		xRemoteFile Download_Install_Agent.sh
 		{
-				Uri = "$gitLocation/Install-PCoIPAgent.sh"
+				Uri = "$templateAgentURI/Install-PCoIPAgent.sh"
 				DestinationPath = "$LocalDLPath\Install-PCoIPAgent.sh"
 				MatchSource = $false
 		}
-		xRemoteFile rhelStandardAgent 
-		{
-				Uri = "$gitLocation/rhel-standard-agent.json"
-				DestinationPath = "$LocalDLPath\rhel-standard-agent.json"
-				MatchSource = $false
-		}
-		xRemoteFile serverGa 
-		{
-				Uri = "$gitLocation/server2016-graphics-agent.json"
-				DestinationPath = "$LocalDLPath\server2016-graphics-agent.json"
-				MatchSource = $false
-		}
-		xRemoteFile serverSA 
-		{
-				Uri = "$gitLocation/server2016-standard-agent.json"
-				DestinationPath = "$LocalDLPath\server2016-standard-agent.json"
-				MatchSource = $false
-		}
+
 		xRemoteFile sumoagent 
 		{
 				Uri = "$gitLocation/sumo-agent-vm.json"
 				DestinationPath = "$LocalDLPath\sumo-agent-vm.json"
 				MatchSource = $false
 		}
+
 		xRemoteFile sumo 
 		{
 				Uri = "$gitLocation/sumo.conf"
 				DestinationPath = "$LocalDLPath\sumo.conf"
 				MatchSource = $false
 		}
-		xRemoteFile ps1zip
+
+		xRemoteFile Download_Install_Agent.ps1.zip
 		{
 				Uri = "https://teradeploy.blob.core.windows.net/binaries/Install-PCoIPAgent.ps1.zip"
 				DestinationPath = "$LocalDLPath\InstallPCoIPAgent.ps1.zip"
