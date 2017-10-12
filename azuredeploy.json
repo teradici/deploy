@@ -50,7 +50,7 @@
     },
     "CAMDeploymentBlobSource": {
       "type": "string",
-      "defaultValue": "https://teradeploy.blob.core.windows.net/binaries",
+      "defaultValue": "https://teradeploy.blob.core.windows.net/ivan",
       "metadata": {
         "description": "The location of the blobs for admin GUI machine installation"
       }
@@ -60,7 +60,7 @@
       "metadata": {
         "description": "The location of resources, such as templates and DSC modules, that the template depends on"
       },
-      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/master"
+      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/private-blob-storage"
     },
     "_artifactsLocationSasToken": {
       "type": "securestring",
