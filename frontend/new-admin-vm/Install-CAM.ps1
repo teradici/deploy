@@ -1043,6 +1043,13 @@ graphURL=https\://graph.windows.net/
 				}
 
 				$blobUri = (((Get-AzureStorageBlob -Context $ctx -Container $container_name)[0].ICloudBlob.uri.AbsoluteUri) -split '/')[0..4] -join '/'
+
+				# this is the url to access the blob account
+				$saUriSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name "userStorageAccountUri" -SecretValue $blobUri -ErrorAction stop
+
+				# will be required to fetch data from private blob
+				$saKeySecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name "userStorageAccountKey" -SecretValue $acctKey -ErrorAction stop
+
 				Write-Host $blobUri
 
 				################################
