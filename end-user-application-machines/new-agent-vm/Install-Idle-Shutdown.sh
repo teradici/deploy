@@ -20,7 +20,6 @@ function create_monitor_script() {
 #!/usr/bin/python
 # Copyright 2017 Teradici Corporation
 
-import argparse
 import syslog
 import time
 import os
@@ -45,9 +44,8 @@ def getStartTime():
     Check what the start time is
     """
     if os.path.exists(startTimeFile):
-        f = open(startTimeFile, 'rb')
-        startTime = f.read()
-        f.close()
+        with open(startTimeFile, 'rb') as f:
+            startTime = f.read()
         return int(startTime)
     else:
         return None
@@ -63,10 +61,8 @@ def setStartTime(startTime):
     """
     Set what the start time is
     """
-    f = open(startTimeFile, 'wb')
-    f.write(str(int(startTime)))
-    f.flush()
-    f.close()
+    with open(startTimeFile, 'wb') as f:
+        f.write(str(int(startTime)))
     return
 
 def loadCPU():
@@ -74,21 +70,19 @@ def loadCPU():
     Get what the Idle and Busy CPU Time was for last sample
     """
     if os.path.exists(cpuUsageFile):
-        f = open(cpuUsageFile, 'rb')
-        return map(float, f.read().split(','))
+        with open(cpuUsageFile, 'rb') as f:
+            return map(float, f.read().split(','))
     return [0, 0]
 
 def saveCPU(idleTime, busyTime):
     """
     Set what the Idle and Busy CPU Time was for last sample
     """
-    f = open(cpuUsageFile, 'wb')
-    f.write("{idle},{busy}".format(
-        idle=idleTime,
-        busy=busyTime
-    ))
-    f.flush()
-    f.close()
+    with open(cpuUsageFile, 'wb') as f:
+        f.write("{idle},{busy}".format(
+            idle=idleTime,
+            busy=busyTime
+        ))
     return
 
 def activeConnectionsExist():
@@ -104,9 +98,9 @@ def activeConnectionsExist():
             return True
 
     # Check for PCoIP Session
-    proccesses = subprocess.check_output(['/bin/ps', 'aux']).split('\n')
-    for proccess in proccesses:
-        if 'pcoip-server' in proccess:
+    processes = subprocess.check_output(['/bin/ps', 'aux']).split('\n')
+    for process in processes:
+        if 'pcoip-server' in process:
             return True
 
     return False
@@ -197,8 +191,8 @@ def main():
                 syslog.syslog("CPU has been idle for more than {} minutes, shutting down".format(
                     waitTime
                 ))
-                os.system('/sbin/shutdown')
                 clearStartTime()
+                subprocess.Popen(['/sbin/shutdown'])
         else:
             syslog.syslog("CPU usage is now {cpu}%, CPU is active".format(
                 cpu=cpuUsage
