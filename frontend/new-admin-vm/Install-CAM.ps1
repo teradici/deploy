@@ -1426,6 +1426,7 @@ brokerLocale=en_US
 				}
 
 				$camSaasBaseUri = $using:camSaasUri
+				$camSaasBaseUri = $camSaasBaseUri.Trim().TrimEnd('/')
 				$camRegistrationError = ""
 				for($idx = 0; $idx -lt $using:retryCount; $idx++) {
 					try {
