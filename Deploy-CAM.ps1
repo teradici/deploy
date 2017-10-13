@@ -1,5 +1,7 @@
 # Deploy-CAM.ps1
 #
+#
+
 param(
 	[bool]
 	$verifyCAMSaaSCertificate = $true,
@@ -457,7 +459,12 @@ function createAndPopulateKeyvault()
 
 			try
 			{
-				Set-AzureRmKeyVaultAccessPolicy -VaultName $kvName -ServicePrincipalName $spName -PermissionsToSecrets get, set -ErrorAction stop
+                Write-Host "Set access policy for vault $kvName for user $spName"
+				Set-AzureRmKeyVaultAccessPolicy `
+                    -VaultName $kvName `
+                    -ServicePrincipalName $spName `
+                    -PermissionsToSecrets Get, Set `
+                    -ErrorAction stop
 
 				$rcSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $rcSecretName -SecretValue $registrationCodeSecure -ErrorAction stop
 				$djSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $djSecretName -SecretValue $domainJoinPasswordSecure -ErrorAction stop
@@ -800,7 +807,11 @@ function Deploy-CAM()
 	$azureContext = Get-AzureRMContext
 
 	try {
-		Add-AzureRmAccount -Credential $spInfo.spCreds -ServicePrincipal -TenantId $spInfo.tenantId
+		Add-AzureRmAccount `
+			-Credential $spInfo.spCreds `
+			-ServicePrincipal `
+			-TenantId $spInfo.tenantId `
+			-ErrorAction Stop 
 		
 		$kvInfo = createAndPopulateKeyvault `
 			-RGName $RGName `
@@ -973,6 +984,22 @@ graphURL=https\://graph.windows.net/
 
 ###### Script starts here ######
 
-# Run the deploy function with the bound parameters
-Deploy-CAM @PSBoundParameters
+
+Write-Warning "Deploy-CAM"
+
+# Not using splat because of bad handling of default values.
+Deploy-CAM `
+ -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
+ -CAMDeploymentTemplateURI $CAMDeploymentTemplateURI `
+ -domainAdminUsername $domainAdminUsername `
+ -domainAdminPassword $domainAdminPassword `
+ -domainName $domainName `
+ -registrationCode $registrationCode `
+ -camSaasUri $camSaasUri `
+ -CAMDeploymentBlobSource $CAMDeploymentBlobSource `
+ -outputParametersFileName $outputParametersFileName `
+ -subscriptionId $subscriptionId `
+ -RGName $RGName `
+ -spCredential $spCredential `
+ -tenantId $tenantId
 
