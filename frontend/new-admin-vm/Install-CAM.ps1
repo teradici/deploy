@@ -1058,13 +1058,13 @@ graphURL=https\://graph.windows.net/
 				ForEach($file in $new_agent_vm_files) {
 						$filepath = Join-Path $using:LocalDLPath $file
 						try {
-						Get-AzureStorageBlob -Context $ctx -Container $container_name -Blob "remote-workstation\$file" -ErrorAction Stop
+							Get-AzureStorageBlob -Context $ctx -Container $container_name -Blob "remote-workstation\$file" -ErrorAction Stop
 						# file already exists do nothing
 						} Catch {
-						Write-Host "Uploading $filepath to blob.."
-						Set-AzureStorageBlobContent -File $filepath -Container $container_name -Blob "remote-workstation\$file" -Context $ctx
+							Write-Host "Uploading $filepath to blob.."
+							Set-AzureStorageBlobContent -File $filepath -Container $container_name -Blob "remote-workstation\$file" -Context $ctx
 						}
-				e
+				}
 
 				$blobUri = (((Get-AzureStorageBlob -Context $ctx -Container $container_name)[0].ICloudBlob.uri.AbsoluteUri) -split '/')[0..4] -join '/'
 
@@ -1072,7 +1072,7 @@ graphURL=https\://graph.windows.net/
 				$saUriSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name "userStorageAccountUri" -SecretValue (ConvertTo-SecureString $blobUri -AsPlainText -Force) -ErrorAction stop
 
 				# will be required to fetch data from private blob
-				$saKeySecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name "userStorageAccountKey" -SecretValue (ConvertTo-SecureString $acctKey -AsPlainText -Force) -ErrorAction stop
+				$saKeySecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name "userStorageAccountKey" -SecretValue (ConvertTo-SecureString $acctKey -ErrorAction stop
 
 				Write-Host $blobUri
 
