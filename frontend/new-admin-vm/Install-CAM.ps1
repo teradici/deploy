@@ -1167,7 +1167,7 @@ graphURL=https\://graph.windows.net/
 		"vmAdminPassword": {
 			"reference": {
 			  "keyVault": {
-				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+					"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
 			  },
 			  "secretName": "$laSecretName"
 			}
@@ -1175,7 +1175,15 @@ graphURL=https\://graph.windows.net/
 		"domainToJoin": { "value": "$using:domainFQDN" },
 		"domainGroupToJoin": { "value": "$using:domainGroupAppServersJoin" },
 		"storageAccountName": { "value": "$using:storageAccountName" },
-		"_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/end-user-application-machines/new-agent-vm" }
+		"_artifactsLocation": { "value": "$blobUri" },
+		"_artifactsLocationSasToken": {
+			"reference": {
+			  "keyVault": {
+					"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+			  },
+			  "secretName": "$saKeySecret"
+			}
+		}
    }
 }
 
@@ -1201,6 +1209,24 @@ graphURL=https\://graph.windows.net/
 				$ParamTargetFilePath = "$ParamTargetDir\$agentARMparam"
 				$GaParamTargetFilePath = "$ParamTargetDir\$gaAgentARMparam"
 				$LinuxParamTargetFilePath = "$ParamTargetDir\$linuxAgentARMparam"
+
+				# upload the param files to the blob
+				$paramFiles = @(
+					$ParamTargetFilePath,
+					$GaParamTargetFilePath,
+					$LinuxParamTargetFilePath
+				)
+				ForEach($filepath in $paramFiles) {
+						$file = Split-Path $filepath -leaf
+						try {
+							Get-AzureStorageBlob -Context $ctx -Container $container_name -Blob "remote-workstation\$file" -ErrorAction Stop
+						# file already exists do nothing
+						} Catch {
+							Write-Host "Uploading $filepath to blob.."
+							Set-AzureStorageBlobContent -File $filepath -Container $container_name -Blob "remote-workstation\$file" -Context $ctx
+						}
+				}
+
 
 				if(-not (Test-Path $ParamTargetDir))
 				{
