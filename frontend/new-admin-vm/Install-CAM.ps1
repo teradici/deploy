@@ -1215,24 +1215,6 @@ graphURL=https\://graph.windows.net/
 				$GaParamTargetFilePath = "$ParamTargetDir\$gaAgentARMparam"
 				$LinuxParamTargetFilePath = "$ParamTargetDir\$linuxAgentARMparam"
 
-				# upload the param files to the blob
-				$paramFiles = @(
-					$ParamTargetFilePath,
-					$GaParamTargetFilePath,
-					$LinuxParamTargetFilePath
-				)
-				ForEach($filepath in $paramFiles) {
-						$file = Split-Path $filepath -leaf
-						try {
-							Get-AzureStorageBlob -Context $ctx -Container $container_name -Blob "remote-workstation\$file" -ErrorAction Stop
-						# file already exists do nothing
-						} Catch {
-							Write-Host "Uploading $filepath to blob.."
-							Set-AzureStorageBlobContent -File $filepath -Container $container_name -Blob "remote-workstation\$file" -Context $ctx
-						}
-				}
-
-
 				if(-not (Test-Path $ParamTargetDir))
 				{
 					New-Item $ParamTargetDir -type directory
@@ -1241,6 +1223,7 @@ graphURL=https\://graph.windows.net/
 				#clear out whatever was stuffed in from the deployment WAR file
 				Remove-Item "$ParamTargetDir\*" -Recurse
 
+                # TODO: rewrite below using a foreach
 				# Standard Agent Parameter file
 				if(-not (Test-Path $ParamTargetFilePath))
 				{
@@ -1265,6 +1248,24 @@ graphURL=https\://graph.windows.net/
 				}
 
 				Set-Content $LinuxParamTargetFilePath $linuxArmParamContent -Force
+                ####
+
+				# upload the param files to the blob
+				$paramFiles = @(
+					$ParamTargetFilePath,
+					$GaParamTargetFilePath,
+					$LinuxParamTargetFilePath
+				)
+				ForEach($filepath in $paramFiles) {
+						$file = Split-Path $filepath -leaf
+						try {
+							Get-AzureStorageBlob -Context $ctx -Container $container_name -Blob "remote-workstation\$file" -ErrorAction Stop
+						# file already exists do nothing
+						} Catch {
+							Write-Host "Uploading $filepath to blob.."
+							Set-AzureStorageBlobContent -File $filepath -Container $container_name -Blob "remote-workstation\$file" -Context $ctx
+						}
+				}
 
 				Write-Host "Finished Creating default template parameters file data."
 			}
