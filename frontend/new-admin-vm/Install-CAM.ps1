@@ -1072,7 +1072,7 @@ graphURL=https\://graph.windows.net/
 				$saUriSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name "userStorageAccountUri" -SecretValue (ConvertTo-SecureString $blobUri -AsPlainText -Force) -ErrorAction stop
 
 				# will be required to fetch data from private blob
-				$saKeySecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name "userStorageAccountKey" -SecretValue (ConvertTo-SecureString $acctKey AsPlainText -Force) -ErrorAction stop
+				$saKeySecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name "userStorageAccountKey" -SecretValue (ConvertTo-SecureString $acctKey -AsPlainText -Force) -ErrorAction stop
 
 				Write-Host $blobUri
 
