@@ -39,6 +39,15 @@ Configuration InstallCAM
 		$javaInstaller = "jdk-8u144-windows-x64.exe",
 
 		[string]
+		$idleShutdownLinux = "Install-Idle-Shutdown.sh",
+
+		[string]
+		$sumoAgentApplicationVM = "sumo-agent-vm.json",
+
+		[string]
+		$sumoConf = "sumo.conf",
+
+		[string]
 		$tomcatInstaller = "apache-tomcat-8.5.23-windows-x64.zip",
 
 		[string]
@@ -215,29 +224,36 @@ Configuration InstallCAM
 
 		xRemoteFile Download_Install_Agent.ps1
 		{
-				Uri = "$gitLocation/Install-PCoIPAgent.ps1"
+				Uri = "$templateAgentURI/Install-PCoIPAgent.ps1"
 				DestinationPath = "$LocalDLPath\Install-PCoIPAgent.ps1"
 				MatchSource = $false
 		}
 
 		xRemoteFile Download_Install_Agent.sh
 		{
-				Uri = "$templateAgentURI/Install-PCoIPAgent.sh"
+				Uri = "$templateAgentUri/Install-PCoIPAgent.sh"
+				DestinationPath = "$LocalDLPath\Install-PCoIPAgent.sh"
+				MatchSource = $false
+		}
+
+		xRemoteFile DownloadIdleShutdown.sh
+		{
+				Uri = "$templateAgentUri/$idleShutdownLinux"
 				DestinationPath = "$LocalDLPath\Install-PCoIPAgent.sh"
 				MatchSource = $false
 		}
 
 		xRemoteFile sumoagent 
 		{
-				Uri = "$gitLocation/sumo-agent-vm.json"
-				DestinationPath = "$LocalDLPath\sumo-agent-vm.json"
+				Uri = "$templateAgentUri/$sumoAgentApplicationVM"
+				DestinationPath = "$LocalDLPath\$sumoAgentApplicationVM"
 				MatchSource = $false
 		}
 
 		xRemoteFile sumo 
 		{
-				Uri = "$gitLocation/sumo.conf"
-				DestinationPath = "$LocalDLPath\sumo.conf"
+				Uri = "$gitLocation/$sumoConf"
+				DestinationPath = "$LocalDLPath\$sumoConf"
 				MatchSource = $false
 		}
 
@@ -271,7 +287,7 @@ Configuration InstallCAM
 
 				$installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
 				$sumo_package = "$using:sourceURI/$installerFileName"
-				$sumo_config = "$using:gitLocation/sumo.conf"
+				$sumo_config = "$using:gitLocation/$sumoConf"
 				$sumo_collector_json = "$using:gitLocation/sumo-admin-vm.json"
 				$dest = "C:\sumo"
 				Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile "$dest\sumo.conf"
@@ -954,8 +970,9 @@ graphURL=https\://graph.windows.net/
 
 				Write-Host "Creating Azure KeyVault $kvName"
 
-
 				$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGNameLocal
+				Write-Host "RGNameLocal: $RGNameLocal. Found ResourceGroup: $rg"
+				
 				New-AzureRmKeyVault -VaultName $kvName -ResourceGroupName $RGNameLocal -Location $rg.Location -EnabledForTemplateDeployment -EnabledForDeployment
 
 				Write-Host "Populating Azure KeyVault $kvName"
@@ -1019,10 +1036,17 @@ graphURL=https\://graph.windows.net/
 				################################
 				$container_name = "cloudaccessmanager"
 				$acct_name = $using:userDataStorageAccount
-				$new_agent_vm_files = @("Install-PCoIPAgent.ps1", 
-						"Install-PCoIPAgent.sh", "rhel-standard-agent.json", 
-						"server2016-graphics-agent.json", "server2016-standard-agent.json", 
-						"sumo-agent-vm.json", "sumo.conf", "InstallPCoIPAgent.ps1.zip")
+				$new_agent_vm_files = @(
+					"Install-PCoIPAgent.ps1", 
+					"Install-PCoIPAgent.sh", 
+					"$linuxAgentARM", 
+					"$gaAgentARM",
+					"$agentARM", 
+					"$sumoAgentApplicationVM",
+					"$sumoConf",
+					"InstallPCoIPAgent.ps1.zip",
+					"$idleShutdownLinux"
+					)
 				$acctKey = (Get-AzureRmStorageAccountKey -ResourceGroupName $using:RGName -AccountName $acct_name).Value[0]
 				$ctx = New-AzureStorageContext -StorageAccountName $acct_name -StorageAccountKey $acctKey
 				try {
@@ -1040,15 +1064,15 @@ graphURL=https\://graph.windows.net/
 						Write-Host "Uploading $filepath to blob.."
 						Set-AzureStorageBlobContent -File $filepath -Container $container_name -Blob "remote-workstation\$file" -Context $ctx
 						}
-				}
+				e
 
 				$blobUri = (((Get-AzureStorageBlob -Context $ctx -Container $container_name)[0].ICloudBlob.uri.AbsoluteUri) -split '/')[0..4] -join '/'
 
 				# this is the url to access the blob account
-				$saUriSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name "userStorageAccountUri" -SecretValue $blobUri -ErrorAction stop
+				$saUriSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name "userStorageAccountUri" -SecretValue (ConvertTo-SecureString $blobUri -AsPlainText -Force) -ErrorAction stop
 
 				# will be required to fetch data from private blob
-				$saKeySecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name "userStorageAccountKey" -SecretValue $acctKey -ErrorAction stop
+				$saKeySecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name "userStorageAccountKey" -SecretValue (ConvertTo-SecureString $acctKey -AsPlainText -Force) -ErrorAction stop
 
 				Write-Host $blobUri
 
