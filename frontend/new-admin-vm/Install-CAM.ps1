@@ -239,7 +239,7 @@ Configuration InstallCAM
 		xRemoteFile DownloadIdleShutdown.sh
 		{
 				Uri = "$templateAgentUri/$idleShutdownLinux"
-				DestinationPath = "$LocalDLPath\Install-PCoIPAgent.sh"
+				DestinationPath = "$LocalDLPath\$idleShutdownLinux"
 				MatchSource = $false
 		}
 
@@ -287,19 +287,25 @@ Configuration InstallCAM
 
 				$installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
 				$sumo_package = "$using:sourceURI/$installerFileName"
-				$sumo_config = "$using:gitLocation/$sumoConf"
+				$sumo_config = "$using:gitLocation/$using:sumoConf"
 				$sumo_collector_json = "$using:gitLocation/sumo-admin-vm.json"
 				$dest = "C:\sumo"
+
+                Write-Host "Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile $dest\sumo.conf"
 				Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile "$dest\sumo.conf"
+
+                Write-Host "Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile $dest\sumo-admin-vm.conf"
 				Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile "$dest\sumo-admin-vm.json"
-				#
+				
 				#Insert unique ID
 				$collectorID = "$using:sumoCollectorID"
 				(Get-Content -Path "$dest\sumo.conf").Replace("collectorID", $collectorID) | Set-Content -Path "$dest\sumo.conf"
 				
+                Write-Host "Before Invoke-WebRequest $sumo_package -Outfile $dest\$installerFileName"
 				Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
 				
 				#install the collector
+				Write-Host "Installing the collector"
 				$command = "$dest\$installerFileName -console -q"
 				Invoke-Expression $command
 
@@ -1039,14 +1045,15 @@ graphURL=https\://graph.windows.net/
 				$new_agent_vm_files = @(
 					"Install-PCoIPAgent.ps1", 
 					"Install-PCoIPAgent.sh", 
-					"$linuxAgentARM", 
-					"$gaAgentARM",
-					"$agentARM", 
-					"$sumoAgentApplicationVM",
-					"$sumoConf",
+					"$using:linuxAgentARM", 
+					"$using:gaAgentARM",
+					"$using:agentARM", 
+					"$using:sumoAgentApplicationVM",
+					"$using:sumoConf",
 					"InstallPCoIPAgent.ps1.zip",
-					"$idleShutdownLinux"
+					"$using:idleShutdownLinux"
 					)
+                Write-Host "Will upload these files: $new_agent_vm_files"
 				$acctKey = (Get-AzureRmStorageAccountKey -ResourceGroupName $using:RGName -AccountName $acct_name).Value[0]
 				$ctx = New-AzureStorageContext -StorageAccountName $acct_name -StorageAccountKey $acctKey
 				try {
