@@ -1078,8 +1078,13 @@ graphURL=https\://graph.windows.net/
 				# this is the url to access the blob account
 				$saUriSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name "userStorageAccountUri" -SecretValue (ConvertTo-SecureString $blobUri -AsPlainText -Force) -ErrorAction stop
 
-				# will be required to fetch data from private blob
+				# should be used if storage account needs to be modified. possibly not mandatory in KV as a priveleged account can always retrieve the secret
 				$saKeySecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name "userStorageAccountKey" -SecretValue (ConvertTo-SecureString $acctKey -AsPlainText -Force) -ErrorAction stop
+
+				
+				Write-Host "Generating Sas Token"
+				$saSasToken = New-AzureStorageContainerSASToken -Name $container_name -Permission rwdl -Context $ctx
+				$saSasTokenSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name "userStorageAccountSaasToken" -SecretValue (ConvertTo-SecureString $saSasToken -AsPlainText -Force) -ErrorAction stop
 
 				Write-Host $blobUri
 
@@ -1181,7 +1186,7 @@ graphURL=https\://graph.windows.net/
 			  "keyVault": {
 					"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
 			  },
-			  "secretName": "$saKeySecret"
+			  "secretName": "$saSasTokenSecret"
 			}
 		}
    }
