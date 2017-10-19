@@ -127,7 +127,7 @@ Configuration InstallCAM
 		[string]$camSaasUri,
 
 		[Parameter(Mandatory=$true)]
-    [string]$userDataStorageAccount,
+		[string]$userDataStorageAccount,
 
 		[Parameter(Mandatory=$false)]
 		[bool]$verifyCAMSaaSCertificate=$true
@@ -291,17 +291,17 @@ Configuration InstallCAM
 				$sumo_collector_json = "$using:gitLocation/sumo-admin-vm.json"
 				$dest = "C:\sumo"
 
-                Write-Host "Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile $dest\sumo.conf"
+				Write-Host "Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile $dest\sumo.conf"
 				Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile "$dest\sumo.conf"
 
-                Write-Host "Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile $dest\sumo-admin-vm.conf"
+				Write-Host "Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile $dest\sumo-admin-vm.conf"
 				Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile "$dest\sumo-admin-vm.json"
 				
 				#Insert unique ID
 				$collectorID = "$using:sumoCollectorID"
 				(Get-Content -Path "$dest\sumo.conf").Replace("collectorID", $collectorID) | Set-Content -Path "$dest\sumo.conf"
 				
-                Write-Host "Before Invoke-WebRequest $sumo_package -Outfile $dest\$installerFileName"
+				Write-Host "Before Invoke-WebRequest $sumo_package -Outfile $dest\$installerFileName"
 				Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
 				
 				#install the collector
@@ -1237,7 +1237,7 @@ graphURL=https\://graph.windows.net/
 				$paramFiles = @(
 					@($ParamTargetFilePath, $standardArmParamContent),
 					@($GaParamTargetFilePath, $graphicsArmParamContent),
-					$($LinuxParamTargetFilePath, $linuxAgentARMparam)
+					@($LinuxParamTargetFilePath, $linuxAgentARMparam)
 				)
 				ForEach($item in $paramFiles) {
 						$filepath = $item[0]
