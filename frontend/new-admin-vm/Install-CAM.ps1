@@ -1076,18 +1076,28 @@ graphURL=https\://graph.windows.net/
 				$blobUri = (((Get-AzureStorageBlob -Context $ctx -Container $container_name)[0].ICloudBlob.uri.AbsoluteUri) -split '/')[0..4] -join '/'
 
 				# this is the url to access the blob account
-				Set-AzureKeyVaultSecret -VaultName $kvName -Name "userStorageAccountUri" -SecretValue (ConvertTo-SecureString $blobUri -AsPlainText -Force) -ErrorAction stop
+				$blobUriSecretName = "userStorageAccountUri"
+				Set-AzureKeyVaultSecret -VaultName $kvName -Name $blobUriSecretName -SecretValue (ConvertTo-SecureString $blobUri -AsPlainText -Force) -ErrorAction stop
 
-				# secret should be used if storage account needs to be modified. possibly not mandatory in KV as a priveleged account can always retrieve the secret
-				Set-AzureKeyVaultSecret -VaultName $kvName -Name "userStorageAccountKey" -SecretValue (ConvertTo-SecureString $acctKey -AsPlainText -Force) -ErrorAction stop
+				$storageAccountSecretName = "userStorageName"
+				Set-AzureKeyVaultSecret -VaultName $kvName -Name $storageAccountSecretName -SecretValue (ConvertTo-SecureString $acct_name -AsPlainText -Force) -ErrorAction stop
+				$storageAccountKeyName = "userStorageAccountKey"
+				Set-AzureKeyVaultSecret -VaultName $kvName -Name $storageAccountKeyName -SecretValue (ConvertTo-SecureString $acctKey -AsPlainText -Force) -ErrorAction stop
 
-				
-				Write-Host "Generating Sas Token"
 				$saSasToken = New-AzureStorageContainerSASToken -Name $container_name -Permission rwdl -Context $ctx
-                $saSasTokenSecretName = 'userStorageAccountSaasToken'
+				$saSasTokenSecretName = 'userStorageAccountSaasToken'
 				Set-AzureKeyVaultSecret -VaultName $kvName -Name $saSasTokenSecretName -SecretValue (ConvertTo-SecureString $saSasToken -AsPlainText -Force) -ErrorAction stop
 
-				Write-Host $blobUri
+				# using the blob uri + the token from the key vault will allow the web interface to retrieve required information from private blob
+				[System.Environment]::SetEnvironmentVariable("CAM_KEY_VAULT_NAME", $kvName, "Machine")
+
+				# these two are used to retrieve files via http. Their values need to be retrieved from the key vault
+				[System.Environment]::SetEnvironmentVariable("CAM_USER_BLOB_URI", $blobUriSecretName, "Machine")
+				[System.Environment]::SetEnvironmentVariable("CAM_USER_BLOB_TOKEN", $saSasTokenSecretName, "Machine")
+
+				# these two are used to upload files using cli or sdk. Their values need to be retrieved from the key vault
+				[System.Environment]::SetEnvironmentVariable("CAM_USER_STORAGE_ACCOUNT_NAME", $storageAccountSecretName, "Machine")
+				[System.Environment]::SetEnvironmentVariable("CAM_USER_STORAGE_ACCOUNT_KEY", $storageAccountKeyName, "Machine")
 
 				################################
 				Write-Host "Creating application gateway"
@@ -1220,44 +1230,24 @@ graphURL=https\://graph.windows.net/
 				{
 					New-Item $ParamTargetDir -type directory
 				}
-
 				#clear out whatever was stuffed in from the deployment WAR file
 				Remove-Item "$ParamTargetDir\*" -Recurse
 
-                # TODO: rewrite below using a foreach
-				# Standard Agent Parameter file
-				if(-not (Test-Path $ParamTargetFilePath))
-				{
-					New-Item $ParamTargetFilePath -type file
-				}
-
-				Set-Content $ParamTargetFilePath $standardArmParamContent -Force
-
-
-				# Graphics Agent Parameter file
-				if(-not (Test-Path $GaParamTargetFilePath))
-				{
-					New-Item $GaParamTargetFilePath -type file
-				}
-
-				Set-Content $GaParamTargetFilePath $graphicsArmParamContent -Force
-
-				# Linux Agent Parameter file
-				if(-not (Test-Path $LinuxParamTargetFilePath))
-				{
-					New-Item $LinuxParamTargetFilePath -type file
-				}
-
-				Set-Content $LinuxParamTargetFilePath $linuxArmParamContent -Force
-                ####
-
 				# upload the param files to the blob
 				$paramFiles = @(
-					$ParamTargetFilePath,
-					$GaParamTargetFilePath,
-					$LinuxParamTargetFilePath
+					@($ParamTargetFilePath, $standardArmParamContent),
+					@($GaParamTargetFilePath, $graphicsArmParamContent),
+					$($LinuxParamTargetFilePath, $linuxAgentARMparam)
 				)
-				ForEach($filepath in $paramFiles) {
+				ForEach($item in $paramFiles) {
+						$filepath = $item[0]
+						$content = $item[1]
+						if (-not (Test-Path $filepath)) 
+						{
+							New-Item $filepath -type file
+						}
+						Set-Content $filepath $content -Force
+
 						$file = Split-Path $filepath -leaf
 						try {
 							Get-AzureStorageBlob -Context $ctx -Container $container_name -Blob "remote-workstation\$file" -ErrorAction Stop
