@@ -246,7 +246,7 @@
                 "typeHandlerVersion": "2.0",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "fileUris": [ "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'), parameters('artifactsLocationSasToken'))]" ]
+                    "fileUris": [ "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'), parameters('_artifactsLocationSasToken'))]" ]
                 },
                 "protectedSettings": {
                     "commandToExecute": "[concat('bash ', variables('scriptFileName'), ' \"', parameters('registrationCode'), '\" \"', parameters('agentType'), '\" \"', variables('vmSettings').vmNamePrefix, '\" \"', parameters('domainToJoin'), '\" \"', parameters('domainUsername'), '\" \"', parameters('domainPassword'), '\" \"', parameters('domainGroupToJoin'), '\"')]"
@@ -267,7 +267,7 @@
                 "typeHandlerVersion": "1.4",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "fileUris": [ "[concat(parameters('_artifactsLocation'), '/', variables('idleShutdownScriptFileName'), parameters('artifactsLocationSasToken'))]" ]
+                    "fileUris": [ "[concat(parameters('_artifactsLocation'), '/', variables('idleShutdownScriptFileName'), parameters('_artifactsLocationSasToken'))]" ]
                 },
                 "protectedSettings": {
                     "commandToExecute": "[concat('sudo bash ', variables('idleShutdownScriptFileName'), ' -install')]"
