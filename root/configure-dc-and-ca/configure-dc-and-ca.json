@@ -45,7 +45,7 @@
                 "typeHandlerVersion": "2.19",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "modulesUrl": "[concat(parameters('blobSource'),'/Install-DC-and-CA.ps1.zip')]",                    
+                    "modulesUrl": "[concat(parameters('CAMDeploymentBlobSource'),'/Install-DC-and-CA.ps1.zip')]",                    
                     "configurationFunction": "Install-DC-and-CA.ps1\\CreateDCCA",
                     "Properties": {
                         "DomainName": "[parameters('domainName')]",
