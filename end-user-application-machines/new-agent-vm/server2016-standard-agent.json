@@ -298,6 +298,7 @@
                 "videoDriverUrl": "[variables('videoDriverUrl')]",
                 "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId)]",
                 "domainGroupToJoin": "[parameters('domainGroupToJoin')]",
+                "blobLocation": "[parameters('_artifactsLocation')]",
                 "enableAutoShutdown": "[parameters('enableAutoShutdown')]"
               },
               "privacy": {
@@ -315,7 +316,7 @@
                     "Password": "[parameters('domainPassword')]"
                 },
                 "sasTokenAsCred": {
-                    "UserName": "[parameters('_artifactsLocation')]",
+                    "UserName": "dummyUser",
                     "Password": "[parameters('_artifactsLocationSasToken')]"
                 }
               }
