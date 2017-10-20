@@ -1065,7 +1065,7 @@ graphURL=https\://graph.windows.net/
 				ForEach($file in $new_agent_vm_files) {
 						$filepath = Join-Path $using:LocalDLPath $file
 						try {
-							Get-AzureStorageBlob -Context $ctx -Container $container_name -Blob "remote-workstation\$file" -ErrorAction Stop
+							Get-AzureStorageBlob -Context $ctx -Container $container_name -Blob "remote-workstation/$file" -ErrorAction Stop
 						# file already exists do nothing
 						} Catch {
 							Write-Host "Uploading $filepath to blob.."
