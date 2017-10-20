@@ -1558,6 +1558,32 @@ brokerLocale=en_US
 							throw ("Registering Machine failed. Result was: " + (ConvertTo-Json $registerMachineResult))
 						}
 						Write-Host "Machine has been registered succesfully with Cloud Access Manager"
+						
+						# Register User Entitlement to Machine
+						Add-Type -AssemblyName System.DirectoryServices.AccountManagement            
+						$userGuid = [System.DirectoryServices.AccountManagement.UserPrincipal]::Current.Guid
+						$entitlementRequest = @{
+							machineId = $registerMachineResult.data.machineId
+							deploymentId = $deploymentId
+							userGuid = $userGuid
+						}
+						$registerEntitlementResult = ""
+						try {
+							$registerEntitlementResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/machines/entitlements") -Body $entitlementRequest -Headers $tokenHeader
+						} catch {
+							if ($_.ErrorDetails.Message) {
+								$registerEntitlementResult = ConvertFrom-Json $_.ErrorDetails.Message
+							} else {
+								throw $_
+							}
+						}
+						Write-Verbose (ConvertTo-Json $registerEntitlementResult)
+						# Check if registration succeeded
+						if( !(($registerEntitlementResult.code -eq 201) -or ($registerEntitlementResult.data.reason.ToLower().Contains("exists")))) {
+							throw ("Registering User Entitlement failed. Result was: " + (ConvertTo-Json $registerEntitlementResult))
+						}
+						Write-Host "User Entitlement has been registered succesfully with Cloud Access Manager"
+
 						$camRegistrationError = ""
 						break;
 					} catch {
