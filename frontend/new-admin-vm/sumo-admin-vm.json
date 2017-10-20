@@ -21,7 +21,7 @@
     },
     {
         "name":  "CAMPOC_Teradici_AdminUI_Tomcat_Logs",
-        "category":  "CAMPOC/Teradici/AdminUI/Logs",
+        "category":  "CAMPOC/Teradici/AdminUI/TomcatLogs",
         "automaticDateParsing":  true,
         "multilineProcessingEnabled":  false,
         "useAutolineMatching":  false,
@@ -32,6 +32,24 @@
         "cutoffTimestamp": 0,
         "encoding":  "UTF-8",
         "pathExpression":  "C:\\tomcat\\apache-tomcat-*\\logs\\*.log",
+        "blacklist":  [
+                      ],
+        "sourceType":  "LocalFile",
+        "alive":  false
+    },
+    {
+        "name":  "CAMPOC_Teradici_AdminUI_Webapp_Logs",
+        "category":  "CAMPOC/Teradici/AdminUI/Logs",
+        "automaticDateParsing":  true,
+        "multilineProcessingEnabled":  false,
+        "useAutolineMatching":  false,
+        "forceTimeZone":  false,
+        "timeZone":  "Etc/UTC",
+        "filters":  [
+                    ],
+        "cutoffTimestamp": 0,
+        "encoding":  "UTF-8",
+        "pathExpression":  "C:\\tomcat\\apache-tomcat-*\\logs\\admin\\*.*",
         "blacklist":  [
                       ],
         "sourceType":  "LocalFile",
