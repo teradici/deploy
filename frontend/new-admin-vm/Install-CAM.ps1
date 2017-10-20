@@ -1053,7 +1053,7 @@ graphURL=https\://graph.windows.net/
 					"InstallPCoIPAgent.ps1.zip",
 					"$using:idleShutdownLinux"
 					)
-                Write-Host "Will upload these files: $new_agent_vm_files"
+				Write-Host "Will upload these files: $new_agent_vm_files"
 				$acctKey = (Get-AzureRmStorageAccountKey -ResourceGroupName $using:RGName -AccountName $acct_name).Value[0]
 				$ctx = New-AzureStorageContext -StorageAccountName $acct_name -StorageAccountKey $acctKey
 				try {
@@ -1088,6 +1088,7 @@ graphURL=https\://graph.windows.net/
 				$saSasTokenSecretName = 'userStorageAccountSaasToken'
 				Set-AzureKeyVaultSecret -VaultName $kvName -Name $saSasTokenSecretName -SecretValue (ConvertTo-SecureString $saSasToken -AsPlainText -Force) -ErrorAction stop
 
+				# These environment variables will kick in when the admin ui vm is up and running. do not refer to them within this script.
 				# using the blob uri + the token from the key vault will allow the web interface to retrieve required information from private blob
 				[System.Environment]::SetEnvironmentVariable("CAM_KEY_VAULT_NAME", $kvName, "Machine")
 
