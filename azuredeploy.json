@@ -86,7 +86,7 @@
   },
   "variables": {
     "domainGroupAppServersJoin": "Remote Workstations",
-    "adminDesktopVMName": "admin-remote-workstation"
+    "adminDesktopVMName": "admin-rws"
   },
   "resources": [
     {
