@@ -26,13 +26,13 @@
                 "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
             }
         },
-        "adminDesktopVMName": {
+        "CAMDeploymentBlobSource": {
             "type": "string",
             "metadata": {
-                "description": "Name of the desktop to assign to the administrative user"
+              "description": "The location of the blobs for admin GUI machine installation"
             }
-        }
-    },
+          }
+        },
     "resources": [
         {
             "type": "Microsoft.Compute/virtualMachines/extensions",
@@ -45,11 +45,10 @@
                 "typeHandlerVersion": "2.19",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "modulesUrl": "https://teradeploy.blob.core.windows.net/binaries/Install-DC-and-CA.ps1.zip",
+                    "modulesUrl": "[concat(parameters('blobSource'),'/Install-DC-and-CA.ps1.zip')]",                    
                     "configurationFunction": "Install-DC-and-CA.ps1\\CreateDCCA",
                     "Properties": {
                         "DomainName": "[parameters('domainName')]",
-                        "adminDesktopVMName": "[parameters('adminDesktopVMName')]",
                         "AdminCreds": {
                             "UserName": "[parameters('adminUsername')]",
                             "Password": "PrivateSettingsRef:AdminPassword"

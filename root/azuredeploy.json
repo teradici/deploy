@@ -22,6 +22,12 @@
         "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
       }
     },
+    "CAMDeploymentBlobSource": {
+      "type": "string",
+      "metadata": {
+        "description": "The location of the blobs for admin GUI machine installation"
+      }
+    },
     "_artifactsLocation": {
       "type": "string",
       "metadata": {
@@ -248,7 +254,10 @@
           },
           "adminDesktopVMName": {
             "value": "[variables('adminDesktopVMName')]"
-          }       
+          },
+          "CAMDeploymentBlobSource": {
+            "value": "[parameters('CAMDeploymentBlobSource')]"
+          }
         }
       }
     },

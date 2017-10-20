@@ -85,7 +85,8 @@
     }
   },
   "variables": {
-    "domainGroupAppServersJoin": "Cloud Access Application Servers"
+    "domainGroupAppServersJoin": "Remote Workstations",
+    "adminDesktopVMName": "admin-remote-workstation"
   },
   "resources": [
     {
@@ -143,7 +144,7 @@
             "value": "[reference('Root').outputs.gatewaySubnetName.value]"
           },
           "adminDesktopVMName" : {
-            "value" : "[reference('Root').outputs.adminDesktopVMName.value]"
+            "value" : "[variables('adminDesktopVMName')]"
           },
           "cmnsgName" : {
             "value" : "[reference('Root').outputs.cmnsgName.value]"
@@ -206,14 +207,14 @@
         },
         "parameters": {
           "existingVNETName": {
-              "value": "[reference('Root').outputs.virtualNetworkName.value]"
-            },          
+            "value": "[reference('Root').outputs.virtualNetworkName.value]"
+          },          
           "existingSubnetName": {
-              "value": "[reference('Root').outputs.adSubnetName.value]"
-            },
+            "value": "[reference('Root').outputs.adSubnetName.value]"
+          },
           "dnsLabelPrefix": {
-              "value": "[reference('Root').outputs.adminDesktopVMName.value]"
-            },
+            "value" : "[variables('adminDesktopVMName')]"
+          },
           "vmSize": {
             "value": "Standard_D2_v2"
           },
