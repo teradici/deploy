@@ -296,8 +296,6 @@
               "configurationArguments": {
                 "pcoipAgentInstallerUrl": "[variables('pcoipAgentInstallerUrl')]",
                 "videoDriverUrl": "[variables('videoDriverUrl')]",
-                "gitLocation": "[parameters('_artifactsLocation')]",
-                "sasToken": "[parameters('_artifactsLocationSasToken')]",
                 "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId)]",
                 "domainGroupToJoin": "[parameters('domainGroupToJoin')]",
                 "enableAutoShutdown": "[parameters('enableAutoShutdown')]"
@@ -315,6 +313,10 @@
                 "domainJoinCredential": {
                     "UserName": "[concat(parameters('domainToJoin'), '\\', parameters('domainUsername'))]",
                     "Password": "[parameters('domainPassword')]"
+                },
+                "sasTokenAsCred": {
+                    "UserName": "[parameters('_artifactsLocation')]",
+                    "Password": "[parameters('_artifactsLocationSasToken')]"
                 }
               }
             }
