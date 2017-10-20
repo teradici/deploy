@@ -15,7 +15,7 @@ Configuration InstallPCoIPAgent
         [String]$sumoCollectorID,
 
         [Parameter(Mandatory=$false)]
-		[System.Management.Automation.PSCredential]$sasTokenAsCred,
+		[PSCredential]$sasTokenAsCred,
 
         [Parameter(Mandatory=$false)]
 		[String]$blobLocation,

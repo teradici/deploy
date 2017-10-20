@@ -135,6 +135,7 @@
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
         "registrationCode": "[parameters('registrationCode')]",
+        "sasToken": "[parameters('_artifactsLocationSasToken')]",
 
         "osSettings": {
             "Windows Server 2016": {
@@ -317,7 +318,7 @@
                 },
                 "sasTokenAsCred": {
                     "UserName": "dummyUser",
-                    "Password": "[parameters('_artifactsLocationSasToken')]"
+                    "Password": "[variables('sasToken')]"
                 }
               }
             }

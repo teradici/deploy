@@ -117,6 +117,7 @@
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
         "pcoipAgentInstallerUrl": "[concat(parameters('CAMDeploymentBlobSource'),'/PCoIP_agent_release_installer_2.10.0.7600_graphics.exe')]",
         "videoDriverUrl": "[concat(parameters('CAMDeploymentBlobSource'),'/370.12_grid_win10_server2016_64bit_international.exe')]",
+        "sasToken": "[parameters('_artifactsLocationSasToken')]",
         "registrationCode": "[parameters('registrationCode')]"
     },
     "resources": [
@@ -266,7 +267,7 @@
                 },
                 "sasTokenAsCred": {
                     "UserName": "dummyUser",
-                    "Password": "[parameters('_artifactsLocationSasToken')]"
+                    "Password": "[variables('sasToken')]"
                 }
               }
             }
