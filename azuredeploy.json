@@ -109,6 +109,9 @@
           "domainAdminPassword": {
             "value": "[parameters('domainAdminPassword')]"
           },
+          "CAMDeploymentBlobSource": {
+            "value": "[parameters('CAMDeploymentBlobSource')]"
+          },
           "_artifactsLocation": {
             "value": "[concat(parameters('_artifactsLocation'), '/root')]"
           },
