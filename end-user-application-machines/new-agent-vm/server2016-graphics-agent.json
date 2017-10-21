@@ -78,7 +78,7 @@
             "metadata": {
                 "description": "Auto-generated token to access _artifactsLocation"
             },
-            "defaultValue": "public"
+            "defaultValue": "?public"
         },
         "CAMDeploymentBlobSource": {
             "type": "string",
