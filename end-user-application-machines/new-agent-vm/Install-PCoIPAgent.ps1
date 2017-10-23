@@ -18,9 +18,6 @@ Configuration InstallPCoIPAgent
 		[PSCredential]$sasTokenAsCred,
 
         [Parameter(Mandatory=$false)]
-		[String]$blobLocation,
-
-        [Parameter(Mandatory=$false)]
      	[PSCredential] $domainJoinCredential,
 
         [Parameter(Mandatory=$false)]
@@ -92,10 +89,11 @@ Configuration InstallPCoIPAgent
                 $uninstallerRegistryID = "7857-4527-9352-4688"  # This will need to change for every installer version change!
 
 				$sasToken = ($using:sasTokenAsCred).GetNetworkCredential().password
+				$blobLocation = ($using:sasTokenAsCred).GetNetworkCredential().username
 
                 $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/$installerFileName"
-                $sumo_config = "$using:blobLocation/sumo.conf$sasToken"
-                $sumo_collector_json = "$using:blobLocation/sumo-agent-vm.json$sasToken"
+                $sumo_config = "$blobLocation/sumo.conf$sasToken"
+                $sumo_collector_json = "$blobLocation/sumo-agent-vm.json$sasToken"
                 $dest = "C:\sumo"
                 Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile "$dest\sumo.conf"
                 Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile "$dest\sumo-agent-vm.json"

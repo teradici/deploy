@@ -1059,7 +1059,8 @@ graphURL=https\://graph.windows.net/
 				try {
 						Get-AzureStorageContainer -Name $container_name -Context $ctx -ErrorAction Stop
 				} Catch {
-						New-AzureStorageContainer -Name $container_name -Context $ctx -Permission "Blob"
+						# -Permission needs to be off to allow only owner read and to require access key!
+						New-AzureStorageContainer -Name $container_name -Context $ctx -Permission "Off"
 				}
 				Write-Host "Uploading files to private blob"
 				ForEach($file in $new_agent_vm_files) {
@@ -1084,7 +1085,7 @@ graphURL=https\://graph.windows.net/
 				$storageAccountKeyName = "userStorageAccountKey"
 				Set-AzureKeyVaultSecret -VaultName $kvName -Name $storageAccountKeyName -SecretValue (ConvertTo-SecureString $acctKey -AsPlainText -Force) -ErrorAction stop
 
-				$saSasToken = New-AzureStorageContainerSASToken -Name $container_name -Permission rwdl -Context $ctx
+				$saSasToken = New-AzureStorageAccountSASToken -Service Blob -Resource Object -Context $ctx -Name -ExpiryTime ((Get-Date).AddYears(2)) -Permission "racwdlup" 
 				$saSasTokenSecretName = 'userStorageAccountSaasToken'
 				Set-AzureKeyVaultSecret -VaultName $kvName -Name $saSasTokenSecretName -SecretValue (ConvertTo-SecureString $saSasToken -AsPlainText -Force) -ErrorAction stop
 
@@ -1238,7 +1239,7 @@ graphURL=https\://graph.windows.net/
 				$paramFiles = @(
 					@($ParamTargetFilePath, $standardArmParamContent),
 					@($GaParamTargetFilePath, $graphicsArmParamContent),
-					@($LinuxParamTargetFilePath, $linuxAgentARMparam)
+					@($LinuxParamTargetFilePath, $linuxArmParamContent)
 				)
 				ForEach($item in $paramFiles) {
 						$filepath = $item[0]

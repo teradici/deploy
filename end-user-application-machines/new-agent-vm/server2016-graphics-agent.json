@@ -246,7 +246,6 @@
               "configurationArguments": {
                 "pcoipAgentInstallerUrl": "[variables('pcoipAgentInstallerUrl')]",
                 "videoDriverUrl": "[variables('videoDriverUrl')]",
-                "blobLocation": "[parameters('_artifactsLocation')]",
                 "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId)]",
                 "domainGroupToJoin": "[parameters('domainGroupToJoin')]",
                 "enableAutoShutdown": "[parameters('enableAutoShutdown')]"
@@ -266,7 +265,7 @@
                     "Password": "[parameters('domainPassword')]"
                 },
                 "sasTokenAsCred": {
-                    "UserName": "dummyUser",
+                    "UserName": "[parameters('blobLocation')]",
                     "Password": "[variables('sasToken')]"
                 }
               }
