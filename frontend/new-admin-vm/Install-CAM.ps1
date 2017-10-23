@@ -1557,13 +1557,32 @@ brokerLocale=en_US
 						if( !(($registerMachineResult.code -eq 201) -or ($registerMachineResult.data.reason.ToLower().Contains("exists")))) {
 							throw ("Registering Machine failed. Result was: " + (ConvertTo-Json $registerMachineResult))
 						}
+						$machineId = ""
+						# Get the machineId
+						if( ($registerMachineResult.code -eq 409) -and ($registerMachineResult.data.reason.ToLower().Contains("already exist")) ) {
+							# Deployment is already registered so the deplymentId needs to be retrieved
+							$registeredMachine = ""
+							try {
+								$registeredMachine = Invoke-RestMethod -Method Get -Uri ($camSaasBaseUri + "/api/v1/machines") -Body $machineRequest -Headers $tokenHeader
+								$machineId = $registeredMachine.data.machineId
+							} catch {
+								if ($_.ErrorDetails.Message) {
+									$registeredMachine = ConvertFrom-Json $_.ErrorDetails.Message
+									throw ("Getting Deployment ID failed. Result was: " + (ConvertTo-Json $registeredMachine))
+								} else {
+									throw $_
+								}								
+							}
+						} else {
+							$machineId = $registerMachineResult.data.machineId
+						}
 						Write-Host "Machine has been registered succesfully with Cloud Access Manager"
 						
 						# Register User Entitlement to Machine
 						Add-Type -AssemblyName System.DirectoryServices.AccountManagement            
-						$userGuid = [System.DirectoryServices.AccountManagement.UserPrincipal]::Current.Guid
+						$userGuid = [System.DirectoryServices.AccountManagement.UserPrincipal]::Current.Guid.Guid
 						$entitlementRequest = @{
-							machineId = $registerMachineResult.data.machineId
+							machineId = $machineId
 							deploymentId = $deploymentId
 							userGuid = $userGuid
 						}
