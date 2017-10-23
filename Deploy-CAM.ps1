@@ -1016,7 +1016,7 @@ if($subscriptionsToDisplay.Length -lt 1) {
             Add-Member -InputObject $s -Name "Number" -Value "" -MemberType NoteProperty
         }
 
-        if($s.SubscriptionId -eq $rmContext.Subscription.Id) {
+        if(($s.SubscriptionId -eq $rmContext.Subscription.Id) -and ($s.TenantId -eq $rmContext.Tenant.Id)) {
             $s.Current = "*"
             $currentSubscriptionIndex = $subscriptionIndex
         }
@@ -1052,8 +1052,9 @@ if($subscriptionsToDisplay.Length -lt 1) {
     # Let user choose since it's sometimes not obvious...
     Write-Host ($subscriptionsToDisplay[$chosenSubscriptionIndex] | Select-Object -Property Current, Number, Name, SubscriptionId, TenantId | Format-Table | Out-String)
     $rmContext = Set-AzureRmContext -SubscriptionId $subscriptionsToDisplay[$chosenSubscriptionIndex].SubscriptionId -TenantId $subscriptionsToDisplay[$chosenSubscriptionIndex].TenantId
-
-# Now we have the subscription set. Time to find the CAM root RG.
+	Write-Host ($rmContext | Out-String)
+	Write-Host $rmContext.Tenant.Id
+	# Now we have the subscription set. Time to find the CAM root RG.
 
     $resouceGroups = Get-AzureRmResourceGroup
 
@@ -1119,7 +1120,7 @@ if($subscriptionsToDisplay.Length -lt 1) {
 		$spCredential = Get-Credential -Message "Please enter SP credential"
 	}
 	if(-not $domainAdminCredential ) {
-		$domainAdminCredential = Get-Credential -Message "Please enter admin credential for new domain" -UserName "adminUser"
+		$domainAdminCredential = Get-Credential -Message "Please enter admin credential for new domain"
 	}
 	if(-not $domainName ) {
 		$domainName = Read-Host "Please enter new domain name including a '.' like example.com"
