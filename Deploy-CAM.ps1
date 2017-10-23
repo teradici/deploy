@@ -1052,8 +1052,11 @@ if($subscriptionsToDisplay.Length -lt 1) {
     # Let user choose since it's sometimes not obvious...
     Write-Host ($subscriptionsToDisplay[$chosenSubscriptionIndex] | Select-Object -Property Current, Number, Name, SubscriptionId, TenantId | Format-Table | Out-String)
     $rmContext = Set-AzureRmContext -SubscriptionId $subscriptionsToDisplay[$chosenSubscriptionIndex].SubscriptionId -TenantId $subscriptionsToDisplay[$chosenSubscriptionIndex].TenantId
-	Write-Host ($rmContext | Out-String)
-	Write-Host $rmContext.Tenant.Id
+
+	# The Context doesn't always seem to take the tenant depending on who is logged in - so making a copy from the selected subscription
+	$selectedTenantId = $subscriptionsToDisplay[$chosenSubscriptionIndex].TenantId
+	$selectedSubcriptionId = $subscriptionsToDisplay[$chosenSubscriptionIndex].SubscriptionId
+	
 	# Now we have the subscription set. Time to find the CAM root RG.
 
     $resouceGroups = Get-AzureRmResourceGroup
@@ -1139,8 +1142,8 @@ Deploy-CAM `
  -CAMDeploymentTemplateURI $CAMDeploymentTemplateURI `
  -CAMDeploymentBlobSource $CAMDeploymentBlobSource `
  -outputParametersFileName $outputParametersFileName `
- -subscriptionId $rmContext.Subscription.Id `
+ -subscriptionId $selectedSubcriptionId `
  -RGName $rgMatch.ResourceGroupName `
  -spCredential $spCredential `
- -tenantId $rmContext.Tenant.Id
+ -tenantId $selectedTenantId
 
