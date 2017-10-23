@@ -1579,8 +1579,12 @@ brokerLocale=en_US
 						Write-Host "Machine has been registered succesfully with Cloud Access Manager"
 						
 						# Register User Entitlement to Machine
-						Add-Type -AssemblyName System.DirectoryServices.AccountManagement            
-						$userGuid = [System.DirectoryServices.AccountManagement.UserPrincipal]::Current.Guid.Guid
+						# Get User Guid for Domain User
+						$DCSession = New-PSSession $using:dcvmfqdn -Credential $using:DomainAdminCreds
+						$userGuid = Invoke-Command -Session $DCSession -ScriptBlock {
+							Add-Type -AssemblyName System.DirectoryServices.AccountManagement
+							[System.DirectoryServices.AccountManagement.UserPrincipal]::Current.Guid.Guid
+						}
 						$entitlementRequest = @{
 							machineId = $machineId
 							deploymentId = $deploymentId
