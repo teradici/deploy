@@ -790,11 +790,43 @@ function Deploy-CAM()
 	
     $CAMConfig = ConvertFrom-Json ([string]$camConfigurationJson)
 
-	if($spCredential -eq $null)	{
-		$spInfo = Create-CAMAppSP `
-			-RGName $RGName
+	$spInfo = $null
+	if(-not $spCredential)	{
+
+		#if there's no SP provided then we either need to make one or ask for one
+
+		# if the current context tenantId does not match the desired tenantId then we can't make SP's
+		$currentContext = Get-AzureRmContext
+		$currentContextTenant = $currentContext.Tenant.Id 
+		$tenantIDsMatch = ($currentContextTenant -eq $tenantId)
+
+		if(-not $tenantIDsMatch) {
+			Write-Host "The Current Azure context is for a different tenant ($currentContextTenant) that"
+			Write-Host "does not match the tenant of the deploment ($tenantId)."
+			Write-Host "This can happen in Azure Cloud Powershell when an account has access to multiple tenants."
+			Write-Host "Please make a service principal through the Azure Portal or other means and provide here."
+		}
+		else {
+			Write-Host "The CAM deployment script will attempt to create a service principal."
+			$requestSPGeneration = Read-Host "Please hit enter to continue or 'no' to manually enter service principal credentials"
+		}
+
+		if((-not $tenantIDsMatch) -or ($requestSPGeneration -like "*n*")) {
+			# manually get credential
+			$spCredential = Get-Credential -Message "Please enter SP credential"
+
+			$spInfo = @{}
+			$spinfo.spCreds = $spCredential
+			$spInfo.tenantId = $tenantId
+			}
+		else {
+			# generate SP
+			$spInfo = Create-CAMAppSP `
+				-RGName $RGName
+		}
 	}
 	else {
+		# SP credential provided in parameter list
 		if ($tenantId -eq $null) {throw "SP provided but no tenantId"}
 		$spInfo = @{}
 		$spinfo.spCreds = $spCredential
@@ -1119,17 +1151,39 @@ if($subscriptionsToDisplay.Length -lt 1) {
         }
 	}
 	
-	if(-not $spCredential ) {
-		$spCredential = Get-Credential -Message "Please enter SP credential"
-	}
-	if(-not $domainAdminCredential ) {
+
+	# allow interactive input of a bunch of parameters. spCredential is handled in the SP functions (above) so it can be quickly validated
+	while (-not $domainAdminCredential ) {
 		$domainAdminCredential = Get-Credential -Message "Please enter admin credential for new domain"
+		
+		if ($domainAdminCredential.GetNetworkCredential().Password.Length -lt 12) {
+			#too short- try again.
+			Write-Host "The admin password must be at least 12 characters long"
+			$domainAdminCredential = $null
+		}
 	}
-	if(-not $domainName ) {
-		$domainName = Read-Host "Please enter new domain name including a '.' like example.com"
+
+	while(-not $domainName ) {
+		$domainName = Read-Host "Please enter new fully qualified domain name including a '.' such as example.com"
+		if($domainName -notlike "*.*") {
+			#too short- try again.
+			Write-Host "The domain name must include two components separated by a '.'"
+			$domainName = $null
+		}
 	}
-	if(-not $registrationCode ) {
-			$registrationCode = Read-Host -AsSecureString "Please enter your Cloud Access registration code"
+
+	while(-not $registrationCode ) {
+		$registrationCode = Read-Host -AsSecureString "Please enter your Cloud Access registration code"
+
+		# Need plaintext registration code
+		$userName = "Domain\DummyUser"
+		$regCreds = New-Object -TypeName pscredential -ArgumentList  $userName, $registrationCode
+		$clearRegCode = $regCreds.GetNetworkCredential().Password
+		if($clearRegCode.Length -lt 21) {
+			#too short- try again.
+			Write-Host "The registration code is at least 21 characters long"
+			$registrationCode = $null
+		}
 	}
 
 # Not using splat because of bad handling of default values.
