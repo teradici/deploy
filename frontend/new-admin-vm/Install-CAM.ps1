@@ -1085,7 +1085,7 @@ graphURL=https\://graph.windows.net/
 				$storageAccountKeyName = "userStorageAccountKey"
 				Set-AzureKeyVaultSecret -VaultName $kvName -Name $storageAccountKeyName -SecretValue (ConvertTo-SecureString $acctKey -AsPlainText -Force) -ErrorAction stop
 
-				$saSasToken = New-AzureStorageAccountSASToken -Service Blob -Resource Object -Context $ctx -Name -ExpiryTime ((Get-Date).AddYears(2)) -Permission "racwdlup" 
+				$saSasToken = New-AzureStorageAccountSASToken -Service Blob -Resource Object -Context $ctx -ExpiryTime ((Get-Date).AddYears(2)) -Permission "racwdlup" 
 				$saSasTokenSecretName = 'userStorageAccountSaasToken'
 				Set-AzureKeyVaultSecret -VaultName $kvName -Name $saSasTokenSecretName -SecretValue (ConvertTo-SecureString $saSasToken -AsPlainText -Force) -ErrorAction stop
 

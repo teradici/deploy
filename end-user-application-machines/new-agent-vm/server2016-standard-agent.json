@@ -316,7 +316,7 @@
                     "Password": "[parameters('domainPassword')]"
                 },
                 "sasTokenAsCred": {
-                    "UserName": "[parameters('blobLocation')]",
+                    "UserName": "[parameters('_artifactsLocation')]",
                     "Password": "[variables('sasToken')]"
                 }
               }
