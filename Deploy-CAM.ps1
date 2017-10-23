@@ -793,7 +793,7 @@ function Deploy-CAM()
 	$spInfo = $null
 	if(-not $spCredential)	{
 
-		#if there's no SP provided then we either need to make one or ask for one
+		# if there's no SP provided then we either need to make one or ask for one
 
 		# if the current context tenantId does not match the desired tenantId then we can't make SP's
 		$currentContext = Get-AzureRmContext
@@ -807,8 +807,9 @@ function Deploy-CAM()
 			Write-Host "Please make a service principal through the Azure Portal or other means and provide here."
 		}
 		else {
-			Write-Host "The CAM deployment script will attempt to create a service principal."
-			$requestSPGeneration = Read-Host "Please hit enter to continue or 'no' to manually enter service principal credentials"
+			Write-Host "The CAM deployment script was not passed service principal credentials. It will attempt to create a service principal."
+			$requestSPGeneration = Read-Host `
+			"Please hit enter to continue or 'no' to manually enter service principal credentials from a pre-made service principal"
 		}
 
 		if((-not $tenantIDsMatch) -or ($requestSPGeneration -like "*n*")) {
@@ -1000,8 +1001,11 @@ graphURL=https\://graph.windows.net/
 		Set-Content $outputParametersFileName  $outParametersFileContent
 	
 	
-		Write-Host "Deploying Cloud Access Manager Connection Service"
-
+		Write-Host "Deploying Cloud Access Manager Connection Service. This process can take up to 90 minutes."
+		Write-Host "Please feel free to watch here for early errors for a few minutes and then go do something else. Or go for coffee!"
+		Write-Host "If this script is running in Azure Cloud Shell then you may let the shell timeout and the deployment will continue."
+		Write-Host "Please watch the resource group $RGName in the Azure Portal for current status."
+		
 #		Test-AzureRmResourceGroupDeployment
 #			-ResourceGroupName $RGName `
 #			-TemplateFile "azuredeploy.json" `
