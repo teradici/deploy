@@ -2,33 +2,20 @@
 #
 #
 
+
 param(
-	[bool]
-	$verifyCAMSaaSCertificate = $true,
-
-	$CAMDeploymentTemplateURI,
-
-	$domainAdminUsername,
-	$domainAdminPassword,
-	$domainName,
-	$registrationCode,
-	$camSaasUri,
-	$CAMDeploymentBlobSource,
-	$outputParametersFileName,
-	
-	[parameter(Mandatory=$true)] 
 	$subscriptionId,
-	
-	[parameter(Mandatory=$true)]
-	$RGName,
-	
-	[parameter(Mandatory=$false)]
-	[System.Management.Automation.PSCredential]
-	$spCredential,
-
-	[parameter(Mandatory=$false)] #required if $spCredential is provided
-	[string]
-	$tenantId
+	$ResourceGroupName,
+	$tenantId,
+	[System.Management.Automation.PSCredential] $domainAdminCredential,
+	[System.Management.Automation.PSCredential] $spCredential,
+	$domainName,
+	[SecureString]$registrationCode,
+	[bool] $verifyCAMSaaSCertificate = $true,
+	$camSaasUri = "https://cam-antar.teradici.com",
+	$CAMDeploymentTemplateURI ="https://raw.githubusercontent.com/teradici/deploy/bd/azuredeploy.json",
+	$CAMDeploymentBlobSource = "https://teradeploy.blob.core.windows.net/bdbinaries",
+	$outputParametersFileName = "cam-output.parameters.json"  #fix me - remove credential, make file unique and delete after.
 )
 
 
@@ -129,7 +116,7 @@ function Register-CAM()
 		$RGName,
 
 		[parameter(Mandatory=$true)]
-		$registrationCode,
+		[SecureString]$registrationCode,
 
 		[parameter(Mandatory=$true)]
 		$camSaasBaseUri
@@ -206,11 +193,17 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 			}
 			Write-Host "Cloud Access Manager sign in succeeded"
 
+			# Need plaintext registration code
+			$userName = "Domain\DummyUser"
+			$regCreds = New-Object -TypeName pscredential -ArgumentList  $userName, $registrationCode
+			$clearRegCode = $regCreds.GetNetworkCredential().Password
+
+
 			# Register Deployment
 			$deploymentRequest = @{
 				resourceGroup = $RGName
 				subscriptionId = $subscriptionId
-				registrationCode = $registrationCode
+				registrationCode = $clearRegCode
 			}
 			$registerDeploymentResult = ""
 			try {
@@ -420,7 +413,7 @@ function createAndPopulateKeyvault()
 		$spName,
 
 		[parameter(Mandatory=$true)]
-		[String]
+		[SecureString]
 		$registrationCode,
 		
 		[parameter(Mandatory=$true)]
@@ -437,11 +430,16 @@ function createAndPopulateKeyvault()
 		Write-Host "Creating Azure KeyVault $kvName"
 
 		$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName
-		New-AzureRmKeyVault -VaultName $kvName -ResourceGroupName $RGName -Location $rg.Location -EnabledForTemplateDeployment -EnabledForDeployment
+		New-AzureRmKeyVault `
+			-VaultName $kvName `
+			-ResourceGroupName $RGName `
+			-Location $rg.Location `
+			-EnabledForTemplateDeployment `
+			-EnabledForDeployment `
+			-WarningAction Ignore
 
 		Write-Host "Populating Azure KeyVault $kvName"
 		
-		$registrationCodeSecure = ConvertTo-SecureString $registrationCode -AsPlainText -Force
 		$domainJoinPasswordSecure = ConvertTo-SecureString $domainJoinPassword -AsPlainText -Force
 
 		$rcSecretName = 'cloudAccessRegistrationCode'
@@ -466,7 +464,7 @@ function createAndPopulateKeyvault()
                     -PermissionsToSecrets Get, Set `
                     -ErrorAction stop
 
-				$rcSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $rcSecretName -SecretValue $registrationCodeSecure -ErrorAction stop
+				$rcSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $rcSecretName -SecretValue $registrationCode -ErrorAction stop
 				$djSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $djSecretName -SecretValue $domainJoinPasswordSecure -ErrorAction stop
 				break
 			}
@@ -725,10 +723,11 @@ function Deploy-CAM()
 
         $CAMDeploymentTemplateURI,
 
-		$domainAdminUsername,
-		$domainAdminPassword,
+		[System.Management.Automation.PSCredential]
+		$domainAdminCredential,
+		
 		$domainName,
-		$registrationCode,
+		[SecureString]$registrationCode,
 		$camSaasUri,
 		$CAMDeploymentBlobSource,
 		$outputParametersFileName,
@@ -751,6 +750,14 @@ function Deploy-CAM()
 	#artifacts location 'folder' is where the template is stored
 	$artifactsLocation = $CAMDeploymentTemplateURI.Substring(0, $CAMDeploymentTemplateURI.lastIndexOf('/'))
 
+	$domainAdminUsername = $domainAdminCredential.UserName
+	$domainAdminPassword = $domainAdminCredential.GetNetworkCredential().Password
+
+	# Need plaintext registration code
+	$userName = "Domain\DummyUser"
+	$regCreds = New-Object -TypeName pscredential -ArgumentList  $userName, $registrationCode
+	$clearRegCode = $regCreds.GetNetworkCredential().Password
+
 	$camConfigurationJson = @"
 	{
 	  "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
@@ -766,7 +773,7 @@ function Deploy-CAM()
 				  "value": "$domainName"
 			},
 			"registrationCode": {
-				  "value": "$registrationCode"
+				  "value": "$clearRegCode"
 			},
 			"camSaasUri": {
 				"value": "$camSaasUri"
@@ -819,9 +826,6 @@ function Deploy-CAM()
 			-DomainJoinPassword $CAMConfig.parameters.domainAdminPassword.value `
 			-spName $spInfo.spCreds.UserName
 		
-			# need to add a retry on the registration for invalid SP as there is a race condition (sigh).
-			#Start-Sleep -seconds 30
-
 			Write-Host "Registering CAM Deployment to CAM Service"
 		
 			$camDeploymenRegInfo = Register-CAM `
@@ -964,12 +968,17 @@ graphURL=https\://graph.windows.net/
 		Set-Content $outputParametersFileName  $outParametersFileContent
 	
 	
-	# Test-AzureRmResourceGroupDeployment -ResourceGroupName $azureRGName -TemplateFile "azuredeploy.json" -TemplateParameterFile $outputParametersFileName  -Verbose
 		Write-Host "Deploying Cloud Access Manager Connection Service"
 
+#		Test-AzureRmResourceGroupDeployment
+#			-ResourceGroupName $RGName `
+#			-TemplateFile "azuredeploy.json" `
+#			-TemplateParameterFile $outputParametersFileName  `
+#			-Verbose
+
 		New-AzureRmResourceGroupDeployment `
-			-DeploymentName "ad1" `
-			-ResourceGroupName $azureRGName `
+			-DeploymentName "CAM" `
+			-ResourceGroupName $RGName `
 			-TemplateFile $CAMDeploymentTemplateURI `
 			-TemplateParameterFile $outputParametersFileName 
 
@@ -982,24 +991,155 @@ graphURL=https\://graph.windows.net/
 	}
 }
 
-###### Script starts here ######
+##############################################
+############# Script starts here #############
+##############################################
 
+$rmContext = Get-AzureRmContext
+$subscriptions = Get-AzureRmSubscription -WarningAction Ignore
+$subscriptionsToDisplay = $subscriptions | Where-Object { $_.State -eq 'Enabled' }
 
-Write-Warning "Deploy-CAM"
+$chosenSubscriptionIndex = $null
+if($subscriptionsToDisplay.Length -lt 1) {
+    Write-Host ("Account " + $rmContext.Account.Id + " has access to no enabled subscriptions. Exiting.")
+    exit
+}
+
+    # Match up subscriptions with the current context and let the user choose 
+    $subscriptionIndex = 0
+    $currentSubscriptionIndex = $null
+    ForEach($s in $subscriptionsToDisplay) {
+        if(-not (Get-Member -inputobject $s -name "Current")) {
+            Add-Member -InputObject $s -Name "Current" -Value "" -MemberType NoteProperty
+        }
+        if(-not (Get-Member -inputobject $s -name "Number")) {
+            Add-Member -InputObject $s -Name "Number" -Value "" -MemberType NoteProperty
+        }
+
+        if($s.SubscriptionId -eq $rmContext.Subscription.Id) {
+            $s.Current = "*"
+            $currentSubscriptionIndex = $subscriptionIndex
+        }
+        else {
+            $s.Current = ""
+        }
+
+        $s.Number = ($subscriptionIndex++) + 1
+
+    }
+
+    if($subscriptionsToDisplay.Length -eq 1) {
+        Write-Host ("Account " + $rmContext.Account.Id + " has access to a single enabled subscription.")
+        $chosenSubscriptionNumber = 0
+    }
+    else {
+        # Let user choose since it's sometimes not obvious...
+        $subscriptionsToDisplay | Select-Object -Property Current, Number, Name, SubscriptionId, TenantId | Format-Table
+
+        $currentSubscriptionNumber = $currentSubscriptionIndex + 1
+
+        $chosenSubscriptionNumber = 0 #invalid
+        while( -not (( $chosenSubscriptionNumber -ge 1) -and ( $chosenSubscriptionNumber -le $subscriptionsToDisplay.Length))) {
+            $chosenSubscriptionNumber = 
+                if (($chosenSubscriptionNumber = Read-Host "Please enter the Number of the subscription you would like to use or press enter to accept the current one [$currentSubscriptionNumber]") -eq '') `
+                {$currentSubscriptionNumber} else {$chosenSubscriptionNumber}
+        }
+        Write-Host "Chosen Subscription:"
+    }
+
+    $chosenSubscriptionIndex = $chosenSubscriptionNumber - 1
+
+    # Let user choose since it's sometimes not obvious...
+    Write-Host ($subscriptionsToDisplay[$chosenSubscriptionIndex] | Select-Object -Property Current, Number, Name, SubscriptionId, TenantId | Format-Table | Out-String)
+    $rmContext = Set-AzureRmContext -SubscriptionId $subscriptionsToDisplay[$chosenSubscriptionIndex].SubscriptionId -TenantId $subscriptionsToDisplay[$chosenSubscriptionIndex].TenantId
+
+# Now we have the subscription set. Time to find the CAM root RG.
+
+    $resouceGroups = Get-AzureRmResourceGroup
+
+    $rgIndex = 0
+    ForEach($r in $resouceGroups) {
+        if(-not (Get-Member -inputobject $r -name "Number")) {
+            Add-Member -InputObject $r -Name "Number" -Value "" -MemberType NoteProperty
+        }
+
+        $r.Number = ($rgIndex++) + 1
+    }
+
+    Write-Host "`nAvailable Resource Groups"
+    Write-Host ($resouceGroups | Select-Object -Property Number, ResourceGroupName, Location | Format-Table | Out-String)
+
+    $selectedRGName = $false
+    $rgIsInt = $false
+    $rgMatch = $null
+    while(-not $selectedRGName) {
+        Write-Host "Please select the resource group of the CAM deployment root by number or type in a new resource group name for a new CAM deployment."
+        $rgIdentifier = Read-Host "Resource group"
+
+        $rgIsInt = [int]::TryParse($rgIdentifier,[ref]$rgIndex) #rgIndex will be 0 on parse failure
+
+        if($rgIsInt) {
+            # entered an integer - we are not supporting integer names here for new resource groups
+            $rgArrayLength = $resouceGroups.Length
+            if( -not (( $rgIndex -ge 1) -and ( $rgIndex -le $rgArrayLength))) {
+                #invalid range 
+                Write-Host "Please enter a range between 1 and $rgArrayLength or the name of a new resource group."
+            }
+            else {
+                $rgMatch = $resouceGroups[$rgIndex - 1]
+                $selectedRGName = $true
+            }
+            continue
+        }
+        else {
+            # entered a name. Let's see if it matches any resource groups first
+            $rgMatch = $resouceGroups | Where-Object {$_.ResourceGroupName -eq $rgIdentifier}
+            if ($rgMatch) {
+                $rgName = $rgMatch.ResourceGroupName
+                Write-Host ("Resource group `"$rgName`" already exists. The current one will be used.")
+                $selectedRGName = $true
+            }
+            else {
+                # make a new resource group and on failure go back to RG selection.
+                $rgName = $rgIdentifier
+                $newRgResult = $null
+
+                $newRGRegion = Read-Host "Please enter resource group region"
+                $newRgResult = New-AzureRmResourceGroup -Name $rgName -Location $newRGRegion
+                if($newRgResult) {
+                    # Success!
+                    $selectedRGName = $true
+                    $rgMatch = Get-AzureRmResourceGroup -Name $rgName
+                }
+            }
+        }
+	}
+	
+	if(-not $spCredential ) {
+		$spCredential = Get-Credential -Message "Please enter SP credential"
+	}
+	if(-not $domainAdminCredential ) {
+		$domainAdminCredential = Get-Credential -Message "Please enter admin credential for new domain" -UserName "adminUser"
+	}
+	if(-not $domainName ) {
+		$domainName = Read-Host "Please enter new domain name including a '.' like example.com"
+	}
+	if(-not $registrationCode ) {
+			$registrationCode = Read-Host -AsSecureString "Please enter your Cloud Access registration code"
+	}
 
 # Not using splat because of bad handling of default values.
 Deploy-CAM `
- -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
- -CAMDeploymentTemplateURI $CAMDeploymentTemplateURI `
- -domainAdminUsername $domainAdminUsername `
- -domainAdminPassword $domainAdminPassword `
+ -domainAdminCredential $domainAdminCredential `
  -domainName $domainName `
  -registrationCode $registrationCode `
  -camSaasUri $camSaasUri `
+ -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
+ -CAMDeploymentTemplateURI $CAMDeploymentTemplateURI `
  -CAMDeploymentBlobSource $CAMDeploymentBlobSource `
  -outputParametersFileName $outputParametersFileName `
- -subscriptionId $subscriptionId `
- -RGName $RGName `
+ -subscriptionId $rmContext.Subscription.Id `
+ -RGName $rgMatch.ResourceGroupName `
  -spCredential $spCredential `
- -tenantId $tenantId
+ -tenantId $rmContext.Tenant.Id
 
