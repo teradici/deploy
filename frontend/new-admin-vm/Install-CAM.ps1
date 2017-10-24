@@ -1512,6 +1512,8 @@ brokerLocale=en_US
 							# Deployment is already registered so the deplymentId needs to be retrieved
 							$registeredDeployment = ""
 							try {
+								# Remove registration code from query to prevent exposing it
+								$deploymentRequest.Remove("registrationCode")
 								$registeredDeployment = Invoke-RestMethod -Method Get -Uri ($camSaasBaseUri + "/api/v1/deployments") -Body $deploymentRequest -Headers $tokenHeader
 								$deploymentId = $registeredDeployment.data.deploymentId
 							} catch {
@@ -1585,6 +1587,7 @@ brokerLocale=en_US
 							Add-Type -AssemblyName System.DirectoryServices.AccountManagement
 							[System.DirectoryServices.AccountManagement.UserPrincipal]::Current.Guid.Guid
 						}
+						Remove-PSSession $DCSession
 						$entitlementRequest = @{
 							machineId = $machineId
 							deploymentId = $deploymentId
