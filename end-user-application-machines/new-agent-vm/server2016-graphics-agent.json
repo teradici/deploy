@@ -110,13 +110,15 @@
             "type": "string",
             "metadata": {
                 "description": "Storage account for user blob and custom templates"
-            }
+            },
+            "defaultValue": ""
         },
         "userStorageAccountKey": {
             "type": "securestring",
             "metadata": {
                 "description": "Storage account key for accessing private blob data"
-            }
+            },
+            "defaultValue": ""
         }
     },
     "variables": {
