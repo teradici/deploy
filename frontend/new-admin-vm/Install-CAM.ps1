@@ -259,7 +259,7 @@ Configuration InstallCAM
 
 		xRemoteFile Download_Install_Agent.ps1.zip
 		{
-				Uri = "https://teradeploy.blob.core.windows.net/binaries/Install-PCoIPAgent.ps1.zip"
+				Uri = "$sourceURI/Install-PCoIPAgent.ps1.zip"
 				DestinationPath = "$LocalDLPath\InstallPCoIPAgent.ps1.zip"
 				MatchSource = $false
 		}
