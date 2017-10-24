@@ -119,6 +119,18 @@
             "metadata": {
                 "description": "Storage account to use for VM data and VHD's"
             }
+        },
+        "userStorageAccountName": {
+            "type": "string",
+            "metadata": {
+                "description": "Storage account for user blob and custom templates"
+            }
+        },
+        "userStorageAccountKey": {
+            "type": "string",
+            "metadata": {
+                "description": "Storage account key for accessing private blob data"
+            }
         }
     },
     "variables": {
@@ -246,10 +258,12 @@
                 "typeHandlerVersion": "2.0",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
+                    "fileUris": [ "[ concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'))]" ]
                 },
                 "protectedSettings": {
                     "commandToExecute": "[concat('bash ', variables('scriptFileName'), ' \"', parameters('registrationCode'), '\" \"', parameters('agentType'), '\" \"', variables('vmSettings').vmNamePrefix, '\" \"', parameters('domainToJoin'), '\" \"', parameters('domainUsername'), '\" \"', parameters('domainPassword'), '\" \"', parameters('domainGroupToJoin'), '\"')]",
-                    "fileUris": [ "[ concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'), parameters('_artifactsLocationSasToken') )]" ]
+                    "storageAccountName": "[parameters('userStorageAccountName')]",
+                    "storageAccountKey": "[parameters('userStorageAccountKey')]"
                 }
             }
         },
@@ -267,10 +281,12 @@
                 "typeHandlerVersion": "1.4",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
+                    "fileUris": [ "[concat(parameters('_artifactsLocation'), '/', variables('idleShutdownScriptFileName'))]" ]
                 },
                 "protectedSettings": {
                     "commandToExecute": "[concat('sudo bash ', variables('idleShutdownScriptFileName'), ' -install')]",
-                    "fileUris": [ "[concat(parameters('_artifactsLocation'), '/', variables('idleShutdownScriptFileName'), parameters('_artifactsLocationSasToken'))]" ]
+                    "storageAccountName": "[parameters('userStorageAccountName')]",
+                    "storageAccountKey": "[parameters('userStorageAccountKey')]"
                 }
             }
         }

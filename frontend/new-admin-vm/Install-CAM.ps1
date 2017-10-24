@@ -1163,6 +1163,22 @@ graphURL=https\://graph.windows.net/
 		"CAMDeploymentBlobSource": { "value": "$using:sourceURI" },
 		"existingSubnetName": { "value": "$using:existingSubnetName" },
 		"domainUsername": { "value": "$DomainAdminUsername" },
+		"userStorageAccountName": {
+			"reference": {
+			  "keyVault": {
+				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+			  },
+			  "secretName": "$storageAccountSecretName"
+			}		
+		},
+		"userStorageAccountKey": {
+			"reference": {
+			  "keyVault": {
+				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+			  },
+			  "secretName": "$storageAccountKeyName"
+			}		
+		},
 		"domainPassword": {
 			"reference": {
 			  "keyVault": {

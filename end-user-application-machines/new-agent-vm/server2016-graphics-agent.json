@@ -105,6 +105,18 @@
             "metadata": {
                 "description": "Flag for enabling auto-shutdown on idle for Agents"
             }
+        },
+        "userStorageAccountName": {
+            "type": "string",
+            "metadata": {
+                "description": "Storage account for user blob and custom templates"
+            }
+        },
+        "userStorageAccountKey": {
+            "type": "string",
+            "metadata": {
+                "description": "Storage account key for accessing private blob data"
+            }
         }
     },
     "variables": {
