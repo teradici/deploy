@@ -127,7 +127,7 @@
             }
         },
         "userStorageAccountKey": {
-            "type": "string",
+            "type": "securestring",
             "metadata": {
                 "description": "Storage account key for accessing private blob data"
             }
