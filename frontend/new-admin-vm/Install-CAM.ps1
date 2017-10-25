@@ -260,7 +260,7 @@ Configuration InstallCAM
 		xRemoteFile Download_Install_Agent.ps1.zip
 		{
 				Uri = "$sourceURI/Install-PCoIPAgent.ps1.zip"
-				DestinationPath = "$LocalDLPath\InstallPCoIPAgent.ps1.zip"
+				DestinationPath = "$LocalDLPath\Install-PCoIPAgent.ps1.zip"
 				MatchSource = $false
 		}
 
@@ -1050,7 +1050,7 @@ graphURL=https\://graph.windows.net/
 					"$using:agentARM", 
 					"$using:sumoAgentApplicationVM",
 					"$using:sumoConf",
-					"InstallPCoIPAgent.ps1.zip",
+					"Install-PCoIPAgent.ps1.zip",
 					"$using:idleShutdownLinux"
 					)
 				Write-Host "Will upload these files: $new_agent_vm_files"
