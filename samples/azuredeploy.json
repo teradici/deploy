@@ -1,0 +1,284 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "domainName": {
+      "type": "string",
+      "defaultValue": "dcdemo.com",
+      "metadata": {
+        "description": "The FQDN of the Active Directory Domain to be created"
+      }
+    },
+    "adminUser": {
+      "type": "string",
+      "defaultValue": "dcAdminUser",
+      "metadata": {
+        "description": "The name of the administrator account of the new VM and domain"
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password for the administrator account of the new VM and domain"
+      }
+    },
+    "serviceAccountName": {
+      "type": "string",
+      "defaultValue": "svcJoiningDomain",
+      "metadata": {
+        "description": "The name of the service account to join computer to domain"
+      }
+    },
+    "serviceAccountPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password for the service account to join computer to domain"
+      }
+    },
+    "_artifactsLocation": {
+      "type": "string",
+      "metadata": {
+        "description": "The location of resources, such as templates and DSC modules, that the template depends on"
+      },
+      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/master/samples"
+    }
+  },
+
+  "variables": {
+    "apiVersion": "2016-12-01",
+    "vnetName": "demo-dc-vnet",
+    "vnetAddress": "192.168.0.0/24",
+    "dcSubnetName": "dc-subnet",
+    "dcSubnetAddress": "192.168.0.0/24",
+    "dcNicIPAddress": "192.168.0.4",
+    "vmName": "vm-dc",
+    "nicName": "[concat(variables('vmName'), '-nic')]",
+    "pipName": "[concat(variables('vmName'), '-pip')]",
+    "domainNameLabel": "[tolower(replace(concat('dcdemo-', uniqueString(resourceGroup().id, resourceGroup().location)), '.',''))]",
+    "hostDNSName": "[concat('*.',resourceGroup().location,'.cloudapp.azure.com')]"
+  },
+
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "VNet",
+      "apiVersion": "2016-02-01",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('_artifactsLocation'), '/', 'vnet.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "virtualNetworkName": {
+            "value": "[variables('vnetName')]"
+          },
+          "virtualNetworkAddressRange": {
+            "value": "[variables('vnetAddress')]"
+          },
+          "subnetName": {
+            "value": "[variables('dcSubnetName')]"
+          },
+          "subnetRange": {
+            "value": "[variables('dcSubnetAddress')]"
+          }
+        }
+      }
+    },
+
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[variables('pipName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('domainNameLabel')]"
+        }
+      }
+    },
+
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('nicName')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "VNet",
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))]"
+      ],
+
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig",
+            "properties": {
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))]"
+              },
+              "subnet": {
+                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')),'/subnets/',variables('dcSubnetName'))]"
+              },
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "[variables('dcNicIPAddress')]"
+            }
+          }
+        ]
+      }
+    },
+
+    {
+      "apiVersion": "2017-03-30",
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[variables('vmName')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', variables('nicName'))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_D2_v2"
+        },
+        "osProfile": {
+          "computerName": "[variables('vmName')]",
+          "adminUsername": "[parameters('adminUser')]",
+          "adminPassword": "[parameters('adminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "2016-Datacenter",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "os-disk",
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          },
+          "dataDisks": [
+            {
+              "name": "[concat(variables('vmName'), '-data-disk')]",
+              "caching": "None",
+              "diskSizeGB": 1023,
+              "lun": 0,
+              "createOption": "Empty"
+            }
+          ]
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+            }
+          ]
+        }
+      },
+
+      "resources": [
+        {
+          "type": "Microsoft.Compute/virtualMachines/extensions",
+          "name": "[concat(variables('vmName'),'/CreateADForest')]",
+          "apiVersion": "2017-03-30",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.Powershell",
+            "type": "DSC",
+            "typeHandlerVersion": "2.19",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "ModulesUrl": "[concat(parameters('_artifactsLocation'), '/', 'Config-DC-CA.zip')]",
+              "ConfigurationFunction": "Config-DC-CA.ps1\\ConfigDCCA",
+              "Properties": {
+                "DomainName": "[parameters('domainName')]",
+                "AdminCreds": {
+                  "UserName": "[parameters('adminUser')]",
+                  "Password": "PrivateSettingsRef:AdminPassword"
+                },
+                "serviceAccountCreds": {
+                  "UserName": "[parameters('serviceAccountName')]",
+                  "Password": "PrivateSettingsRef:saPassword"
+                }
+              }
+            },
+            "protectedSettings": {
+              "Items": {
+                "AdminPassword": "[parameters('adminPassword')]",
+                "saPassword":  "[parameters('serviceAccountPassword')]"
+              }
+            }
+          }
+        },
+
+        {
+          "apiVersion": "2017-03-30",
+          "type": "Microsoft.Compute/virtualMachines/extensions",
+          "name": "[concat(variables('vmName'),'/CustomScriptExtension')]",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]",
+            "[resourceId('Microsoft.Compute/virtualMachines/extensions', variables('vmName'), 'CreateADForest')]"
+          ],
+          "properties": {
+            "publisher": "Microsoft.Compute",
+            "type": "CustomScriptExtension",
+            "typeHandlerVersion": "1.9",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "fileUris": [
+                "[concat(parameters('_artifactsLocation'), '/', 'ConfigureWinRM.ps1')]"
+              ],
+              "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -file ConfigureWinRM.ps1 ', variables('hostDNSName'), parameters('serviceAccountName'))]"
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "apiVersion": "2016-02-01",
+      "type": "Microsoft.Resources/deployments",
+      "name": "UpdateVNetDNS",
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines/extensions', variables('vmName'), 'CustomScriptExtension')]"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(parameters('_artifactsLocation'), '/', 'vnet.json')]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "virtualNetworkName": {
+            "value": "[variables('vnetName')]"
+          },
+          "virtualNetworkAddressRange": {
+            "value": "[variables('vnetAddress')]"
+          },
+          "subnetName": {
+            "value": "[variables('dcSubnetName')]"
+          },
+          "subnetRange": {
+            "value": "[variables('dcSubnetAddress')]"
+          },
+          "DNSServerAddress": {
+            "value": [
+              "[variables('dcNicIPAddress')]"
+            ]
+          }
+        }
+      }
+    }
+  ],
+
+  "outputs": {
+    "fqdn": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses',variables('pipName'))).dnsSettings.fqdn]"
+    }
+  }
+}
