@@ -39,12 +39,12 @@ The following steps enable remote powershell admin
 Basically, there are two methods of enabling LDAPS on a DC.
 
 * Method #1: install an Enterprise Root CA  
-  The first method is the easiest: LDAPS is automatically enabled when you install an Enterprise Root CA on a Domain Controller. If you install the AD-CS role and specify the type of setup as ¡°Enterprise¡± on a DC, all DCs in the forest will be automatically be configured to accept LDAPS.  
+  The first method is the easiest: LDAPS is automatically enabled when you install an Enterprise Root CA on a Domain Controller. If you install the AD-CS role and specify the type of setup as "Enterprise" on a DC, all DCs in the forest will be automatically be configured to accept LDAPS.  
     
   
 * Method #2: add a Digital Certificate on DC  
   Requirements for an LDAPS certificate:  
-  1) Digital Certificate must be valid for the purpose of ¡°Server Authentication.¡± This means that they must contain the Server Authentication object identifier (OID). OIDs are like the Internet domain name space. They are series of numbers separated by dots, each with a specific meaning. For this purpose, the relevant OID we¡¯re looking for is 1.3.6.1.5.5.7.3.1.  
+  1) Digital Certificate must be valid for the purpose of "Server Authentication." This means that they must contain the Server Authentication object identifier (OID). OIDs are like the Internet domain name space. They are series of numbers separated by dots, each with a specific meaning. For this purpose, the relevant OID we're looking for is 1.3.6.1.5.5.7.3.1.  
   2) The Subject name or the first name in the Subject Alternative Name (SAN) must match the Fully Qualified Domain Name (FQDN) of the host machine, such as Subject:CN=server.domain.com.  
   3) The host machine account needs to have access to the private key. This is done when the digital certificate request is issued from that machine, or when the private key was exported and imported to a different machine.  
     
@@ -69,3 +69,13 @@ Basically, there are two methods of enabling LDAPS on a DC.
   3)  Type the name of the domain controller to which you want to connect.
       Type 636 as the port number.
   4)  Click OK.  
+  
+### Reference:  
+https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/enable-psremoting?view=powershell-5.1  
+https://morgansimonsen.com/2013/12/17/delegating-computer-object-management-tasks-2/  
+https://blogs.technet.microsoft.com/dubaisec/2016/02/01/who-can-add-workstation-to-the-domain/  
+https://prajwaldesai.com/allow-domain-user-to-add-computer-to-domain/  
+https://blogs.msdn.microsoft.com/microsoftrservertigerteam/2017/04/10/step-by-step-guide-to-setup-ldaps-on-windows-server  
+https://support.microsoft.com/en-us/help/321051/how-to-enable-ldap-over-ssl-with-a-third-party-certification-authority  
+https://www.petri.com/enable-secure-ldap-windows-server-2008-2012-dc  
+https://www.petri.com/configure-windows-remote-management-https-listener   
