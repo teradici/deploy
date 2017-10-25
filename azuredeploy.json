@@ -247,6 +247,9 @@
           "CAMDeploymentBlobSource": {
             "value": "[parameters('CAMDeploymentBlobSource')]"
           },
+          "binaryLocation": {
+            "value": "[parameters('CAMDeploymentBlobSource')]"
+          },
           "registrationCode": {
             "value": "[parameters('registrationCode')]"
           }

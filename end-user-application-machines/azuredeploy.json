@@ -82,7 +82,13 @@
         "CAMDeploymentBlobSource": {
             "type": "string",
             "metadata": {
-                "description": "The location of the blobs for admin GUI machine installation"
+                "description": "Location of binary store primarily targeted towards end-user-application-machines."
+            }
+        },
+        "binaryLocation": {
+            "type": "string",
+            "metadata": {
+                "description": "The location of the Teradici's binary store"
             }
         },
         "registrationCode": {
@@ -173,6 +179,9 @@
           },
           "CAMDeploymentBlobSource": {
             "value": "[parameters('CAMDeploymentBlobSource')]"
+          },
+          "binaryLocation": {
+            "value": "[parameters('binaryLocation')]"
           },
           "registrationCode": {
             "value": "[parameters('registrationCode')]"

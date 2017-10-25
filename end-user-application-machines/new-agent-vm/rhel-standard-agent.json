@@ -107,6 +107,12 @@
                 "description": "The location of the blobs for admin GUI machine installation"
             }
         },
+        "binaryLocation": {
+            "type": "string",
+            "metadata": {
+                "description": "The location of the blobs for admin GUI machine installation"
+            }
+        },
         "registrationCode": {
           "type": "securestring",
           "minLength": 21,
@@ -166,7 +172,6 @@
             "os": "[variables('osSettings')[parameters('osType')]]"
         },
 
-        "binaryLocation": "[parameters('CAMDeploymentBlobSource')]",
         "scriptFileName": "Install-PCoIPAgent.sh",
         "idleShutdownScriptFileName": "Install-Idle-Shutdown.sh"
     },

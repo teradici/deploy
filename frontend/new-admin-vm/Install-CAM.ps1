@@ -1160,7 +1160,8 @@ graphURL=https\://graph.windows.net/
 	"contentVersion": "1.0.0.0",
 	"parameters": {
 		"vmSize": { "value": "%vmSize%" },
-		"CAMDeploymentBlobSource": { "value": "$using:sourceURI" },
+		"CAMDeploymentBlobSource": { "value": "$blobUri" },
+		"binaryLocation": { "value": "$using:sourceURI" },
 		"existingSubnetName": { "value": "$using:existingSubnetName" },
 		"domainUsername": { "value": "$DomainAdminUsername" },
 		"userStorageAccountName": {
