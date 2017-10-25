@@ -39,6 +39,15 @@ Configuration InstallCAM
 		$javaInstaller = "jdk-8u144-windows-x64.exe",
 
 		[string]
+		$idleShutdownLinux = "Install-Idle-Shutdown.sh",
+
+		[string]
+		$sumoAgentApplicationVM = "sumo-agent-vm.json",
+
+		[string]
+		$sumoConf = "sumo.conf",
+
+		[string]
 		$tomcatInstaller = "apache-tomcat-8.5.23-windows-x64.zip",
 
 		[string]
@@ -116,6 +125,9 @@ Configuration InstallCAM
 
 		[Parameter(Mandatory=$true)]
 		[string]$camSaasUri,
+
+		[Parameter(Mandatory=$true)]
+		[string]$userDataStorageAccount,
 
 		[Parameter(Mandatory=$false)]
 		[bool]$verifyCAMSaaSCertificate=$true
@@ -210,6 +222,48 @@ Configuration InstallCAM
 			MatchSource = $false
 		}
 
+		xRemoteFile Download_Install_Agent.ps1
+		{
+				Uri = "$templateAgentURI/Install-PCoIPAgent.ps1"
+				DestinationPath = "$LocalDLPath\Install-PCoIPAgent.ps1"
+				MatchSource = $false
+		}
+
+		xRemoteFile Download_Install_Agent.sh
+		{
+				Uri = "$templateAgentUri/Install-PCoIPAgent.sh"
+				DestinationPath = "$LocalDLPath\Install-PCoIPAgent.sh"
+				MatchSource = $false
+		}
+
+		xRemoteFile DownloadIdleShutdown.sh
+		{
+				Uri = "$templateAgentUri/$idleShutdownLinux"
+				DestinationPath = "$LocalDLPath\$idleShutdownLinux"
+				MatchSource = $false
+		}
+
+		xRemoteFile sumoagent 
+		{
+				Uri = "$templateAgentUri/$sumoAgentApplicationVM"
+				DestinationPath = "$LocalDLPath\$sumoAgentApplicationVM"
+				MatchSource = $false
+		}
+
+		xRemoteFile sumo 
+		{
+				Uri = "$gitLocation/$sumoConf"
+				DestinationPath = "$LocalDLPath\$sumoConf"
+				MatchSource = $false
+		}
+
+		xRemoteFile Download_Install_Agent.ps1.zip
+		{
+				Uri = "$sourceURI/Install-PCoIPAgent.ps1.zip"
+				DestinationPath = "$LocalDLPath\Install-PCoIPAgent.ps1.zip"
+				MatchSource = $false
+		}
+
 		File Sumo_Directory 
 		{
 			Ensure			= "Present"
@@ -233,19 +287,25 @@ Configuration InstallCAM
 
 				$installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
 				$sumo_package = "$using:sourceURI/$installerFileName"
-				$sumo_config = "$using:gitLocation/sumo.conf"
+				$sumo_config = "$using:gitLocation/$using:sumoConf"
 				$sumo_collector_json = "$using:gitLocation/sumo-admin-vm.json"
 				$dest = "C:\sumo"
+
+				Write-Host "Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile $dest\sumo.conf"
 				Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile "$dest\sumo.conf"
+
+				Write-Host "Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile $dest\sumo-admin-vm.conf"
 				Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile "$dest\sumo-admin-vm.json"
-				#
+				
 				#Insert unique ID
 				$collectorID = "$using:sumoCollectorID"
 				(Get-Content -Path "$dest\sumo.conf").Replace("collectorID", $collectorID) | Set-Content -Path "$dest\sumo.conf"
 				
+				Write-Host "Before Invoke-WebRequest $sumo_package -Outfile $dest\$installerFileName"
 				Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
 				
 				#install the collector
+				Write-Host "Installing the collector"
 				$command = "$dest\$installerFileName -console -q"
 				Invoke-Expression $command
 
@@ -916,8 +976,9 @@ graphURL=https\://graph.windows.net/
 
 				Write-Host "Creating Azure KeyVault $kvName"
 
-
 				$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGNameLocal
+				Write-Host "RGNameLocal: $RGNameLocal. Found ResourceGroup: $rg"
+				
 				New-AzureRmKeyVault -VaultName $kvName -ResourceGroupName $RGNameLocal -Location $rg.Location -EnabledForTemplateDeployment -EnabledForDeployment
 
 				Write-Host "Populating Azure KeyVault $kvName"
@@ -976,6 +1037,69 @@ graphURL=https\://graph.windows.net/
 				$laSecretVersionedURL = $laSecret.Id
 				$laSecretURL = $laSecretVersionedURL.Substring(0, $laSecretVersionedURL.lastIndexOf('/'))
 
+				################################
+				Write-Host "Populating user blob"
+				################################
+				$container_name = "cloudaccessmanager"
+				$acct_name = $using:userDataStorageAccount
+				$new_agent_vm_files = @(
+					"Install-PCoIPAgent.ps1", 
+					"Install-PCoIPAgent.sh", 
+					"$using:linuxAgentARM", 
+					"$using:gaAgentARM",
+					"$using:agentARM", 
+					"$using:sumoAgentApplicationVM",
+					"$using:sumoConf",
+					"Install-PCoIPAgent.ps1.zip",
+					"$using:idleShutdownLinux"
+					)
+				Write-Host "Will upload these files: $new_agent_vm_files"
+				$acctKey = (Get-AzureRmStorageAccountKey -ResourceGroupName $using:RGName -AccountName $acct_name).Value[0]
+				$ctx = New-AzureStorageContext -StorageAccountName $acct_name -StorageAccountKey $acctKey
+				try {
+						Get-AzureStorageContainer -Name $container_name -Context $ctx -ErrorAction Stop
+				} Catch {
+						# -Permission needs to be off to allow only owner read and to require access key!
+						New-AzureStorageContainer -Name $container_name -Context $ctx -Permission "Off"
+				}
+				Write-Host "Uploading files to private blob"
+				ForEach($file in $new_agent_vm_files) {
+						$filepath = Join-Path $using:LocalDLPath $file
+						try {
+							Get-AzureStorageBlob -Context $ctx -Container $container_name -Blob "remote-workstation/$file" -ErrorAction Stop
+						# file already exists do nothing
+						} Catch {
+							Write-Host "Uploading $filepath to blob.."
+							Set-AzureStorageBlobContent -File $filepath -Container $container_name -Blob "remote-workstation\$file" -Context $ctx
+						}
+				}
+
+				$blobUri = (((Get-AzureStorageBlob -Context $ctx -Container $container_name)[0].ICloudBlob.uri.AbsoluteUri) -split '/')[0..4] -join '/'
+
+				# this is the url to access the blob account
+				$blobUriSecretName = "userStorageAccountUri"
+				Set-AzureKeyVaultSecret -VaultName $kvName -Name $blobUriSecretName -SecretValue (ConvertTo-SecureString $blobUri -AsPlainText -Force) -ErrorAction stop
+
+				$storageAccountSecretName = "userStorageName"
+				Set-AzureKeyVaultSecret -VaultName $kvName -Name $storageAccountSecretName -SecretValue (ConvertTo-SecureString $acct_name -AsPlainText -Force) -ErrorAction stop
+				$storageAccountKeyName = "userStorageAccountKey"
+				Set-AzureKeyVaultSecret -VaultName $kvName -Name $storageAccountKeyName -SecretValue (ConvertTo-SecureString $acctKey -AsPlainText -Force) -ErrorAction stop
+
+				$saSasToken = New-AzureStorageAccountSASToken -Service Blob -Resource Object -Context $ctx -ExpiryTime ((Get-Date).AddYears(2)) -Permission "racwdlup" 
+				$saSasTokenSecretName = 'userStorageAccountSaasToken'
+				Set-AzureKeyVaultSecret -VaultName $kvName -Name $saSasTokenSecretName -SecretValue (ConvertTo-SecureString $saSasToken -AsPlainText -Force) -ErrorAction stop
+
+				# These environment variables will kick in when the admin ui vm is up and running. do not refer to them within this script.
+				# using the blob uri + the token from the key vault will allow the web interface to retrieve required information from private blob
+				[System.Environment]::SetEnvironmentVariable("CAM_KEY_VAULT_NAME", $kvName, "Machine")
+
+				# these two are used to retrieve files via http. Their values need to be retrieved from the key vault
+				[System.Environment]::SetEnvironmentVariable("CAM_USER_BLOB_URI", $blobUriSecretName, "Machine")
+				[System.Environment]::SetEnvironmentVariable("CAM_USER_BLOB_TOKEN", $saSasTokenSecretName, "Machine")
+
+				# these two are used to upload files using cli or sdk. Their values need to be retrieved from the key vault
+				[System.Environment]::SetEnvironmentVariable("CAM_USER_STORAGE_ACCOUNT_NAME", $storageAccountSecretName, "Machine")
+				[System.Environment]::SetEnvironmentVariable("CAM_USER_STORAGE_ACCOUNT_KEY", $storageAccountKeyName, "Machine")
 
 				################################
 				Write-Host "Creating application gateway"
@@ -1036,9 +1160,26 @@ graphURL=https\://graph.windows.net/
 	"contentVersion": "1.0.0.0",
 	"parameters": {
 		"vmSize": { "value": "%vmSize%" },
-		"CAMDeploymentBlobSource": { "value": "$using:sourceURI" },
+		"CAMDeploymentBlobSource": { "value": "$blobUri" },
+		"binaryLocation": { "value": "$using:sourceURI" },
 		"existingSubnetName": { "value": "$using:existingSubnetName" },
 		"domainUsername": { "value": "$DomainAdminUsername" },
+		"userStorageAccountName": {
+			"reference": {
+			  "keyVault": {
+				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+			  },
+			  "secretName": "$storageAccountSecretName"
+			}		
+		},
+		"userStorageAccountKey": {
+			"reference": {
+			  "keyVault": {
+				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+			  },
+			  "secretName": "$storageAccountKeyName"
+			}		
+		},
 		"domainPassword": {
 			"reference": {
 			  "keyVault": {
@@ -1061,7 +1202,7 @@ graphURL=https\://graph.windows.net/
 		"vmAdminPassword": {
 			"reference": {
 			  "keyVault": {
-				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+					"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
 			  },
 			  "secretName": "$laSecretName"
 			}
@@ -1069,7 +1210,15 @@ graphURL=https\://graph.windows.net/
 		"domainToJoin": { "value": "$using:domainFQDN" },
 		"domainGroupToJoin": { "value": "$using:domainGroupAppServersJoin" },
 		"storageAccountName": { "value": "$using:storageAccountName" },
-		"_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/end-user-application-machines/new-agent-vm" }
+		"_artifactsLocation": { "value": "$blobUri" },
+		"_artifactsLocationSasToken": {
+			"reference": {
+			  "keyVault": {
+					"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+			  },
+			  "secretName": "$saSasTokenSecretName"
+			}
+		}
    }
 }
 
@@ -1100,34 +1249,33 @@ graphURL=https\://graph.windows.net/
 				{
 					New-Item $ParamTargetDir -type directory
 				}
-
 				#clear out whatever was stuffed in from the deployment WAR file
 				Remove-Item "$ParamTargetDir\*" -Recurse
 
-				# Standard Agent Parameter file
-				if(-not (Test-Path $ParamTargetFilePath))
-				{
-					New-Item $ParamTargetFilePath -type file
+				# upload the param files to the blob
+				$paramFiles = @(
+					@($ParamTargetFilePath, $standardArmParamContent),
+					@($GaParamTargetFilePath, $graphicsArmParamContent),
+					@($LinuxParamTargetFilePath, $linuxArmParamContent)
+				)
+				ForEach($item in $paramFiles) {
+						$filepath = $item[0]
+						$content = $item[1]
+						if (-not (Test-Path $filepath)) 
+						{
+							New-Item $filepath -type file
+						}
+						Set-Content $filepath $content -Force
+
+						$file = Split-Path $filepath -leaf
+						try {
+							Get-AzureStorageBlob -Context $ctx -Container $container_name -Blob "remote-workstation\$file" -ErrorAction Stop
+						# file already exists do nothing
+						} Catch {
+							Write-Host "Uploading $filepath to blob.."
+							Set-AzureStorageBlobContent -File $filepath -Container $container_name -Blob "remote-workstation\$file" -Context $ctx
+						}
 				}
-
-				Set-Content $ParamTargetFilePath $standardArmParamContent -Force
-
-
-				# Graphics Agent Parameter file
-				if(-not (Test-Path $GaParamTargetFilePath))
-				{
-					New-Item $GaParamTargetFilePath -type file
-				}
-
-				Set-Content $GaParamTargetFilePath $graphicsArmParamContent -Force
-
-				# Linux Agent Parameter file
-				if(-not (Test-Path $LinuxParamTargetFilePath))
-				{
-					New-Item $LinuxParamTargetFilePath -type file
-				}
-
-				Set-Content $LinuxParamTargetFilePath $linuxArmParamContent -Force
 
 				Write-Host "Finished Creating default template parameters file data."
 			}

@@ -99,9 +99,15 @@
             "metadata": {
                 "description": "Auto-generated token to access _artifactsLocation"
             },
-            "defaultValue": ""
+            "defaultValue": "?public"
         },
         "CAMDeploymentBlobSource": {
+            "type": "string",
+            "metadata": {
+                "description": "The location of the blobs for admin GUI machine installation"
+            }
+        },
+        "binaryLocation": {
             "type": "string",
             "metadata": {
                 "description": "The location of the blobs for admin GUI machine installation"
@@ -118,6 +124,18 @@
             "type": "string",
             "metadata": {
                 "description": "Storage account to use for VM data and VHD's"
+            }
+        },
+        "userStorageAccountName": {
+            "type": "string",
+            "metadata": {
+                "description": "Storage account for user blob and custom templates"
+            }
+        },
+        "userStorageAccountKey": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Storage account key for accessing private blob data"
             }
         }
     },
@@ -154,7 +172,6 @@
             "os": "[variables('osSettings')[parameters('osType')]]"
         },
 
-        "binaryLocation": "[parameters('CAMDeploymentBlobSource')]",
         "scriptFileName": "Install-PCoIPAgent.sh",
         "idleShutdownScriptFileName": "Install-Idle-Shutdown.sh"
     },
@@ -246,10 +263,12 @@
                 "typeHandlerVersion": "2.0",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "fileUris": [ "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'))]" ]
+                    "fileUris": [ "[ concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'))]" ]
                 },
                 "protectedSettings": {
-                    "commandToExecute": "[concat('bash ', variables('scriptFileName'), ' \"', parameters('registrationCode'), '\" \"', parameters('agentType'), '\" \"', variables('vmSettings').vmNamePrefix, '\" \"', parameters('domainToJoin'), '\" \"', parameters('domainUsername'), '\" \"', parameters('domainPassword'), '\" \"', parameters('domainGroupToJoin'), '\"')]"
+                    "commandToExecute": "[concat('bash ', variables('scriptFileName'), ' \"', parameters('registrationCode'), '\" \"', parameters('agentType'), '\" \"', variables('vmSettings').vmNamePrefix, '\" \"', parameters('domainToJoin'), '\" \"', parameters('domainUsername'), '\" \"', parameters('domainPassword'), '\" \"', parameters('domainGroupToJoin'), '\"')]",
+                    "storageAccountName": "[parameters('userStorageAccountName')]",
+                    "storageAccountKey": "[parameters('userStorageAccountKey')]"
                 }
             }
         },
@@ -270,7 +289,9 @@
                     "fileUris": [ "[concat(parameters('_artifactsLocation'), '/', variables('idleShutdownScriptFileName'))]" ]
                 },
                 "protectedSettings": {
-                    "commandToExecute": "[concat('sudo bash ', variables('idleShutdownScriptFileName'), ' -install')]"
+                    "commandToExecute": "[concat('sudo bash ', variables('idleShutdownScriptFileName'), ' -install')]",
+                    "storageAccountName": "[parameters('userStorageAccountName')]",
+                    "storageAccountKey": "[parameters('userStorageAccountKey')]"
                 }
             }
         }

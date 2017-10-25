@@ -99,12 +99,18 @@
             "metadata": {
                 "description": "Auto-generated token to access _artifactsLocation"
             },
-            "defaultValue": ""
+            "defaultValue": "?public"
+        },
+        "binaryLocation": {
+            "type": "string",
+            "metadata": {
+                "description": "The location of the blobs for admin GUI machine installation"
+            }
         },
         "CAMDeploymentBlobSource": {
             "type": "string",
             "metadata": {
-                "description": "The location of the blobs for admin GUI machine installation"
+                "description": "The location of the blobs for end-user-application-vms"
             }
         },
         "registrationCode": {
@@ -125,7 +131,21 @@
             "defaultValue": true,
             "metadata": {
                 "description": "Flag for enabling auto-shutdown on idle for Agents"
-        }
+            }
+        },
+        "userStorageAccountName": {
+            "type": "string",
+            "metadata": {
+                "description": "Storage account for user blob and custom templates"
+            },
+            "defaultValue": ""
+        },
+        "userStorageAccountKey": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Storage account key for accessing private blob data"
+            },
+            "defaultValue": ""
         }
     },
     "variables": {
@@ -135,6 +155,7 @@
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
         "registrationCode": "[parameters('registrationCode')]",
+        "sasToken": "[parameters('_artifactsLocationSasToken')]",
 
         "osSettings": {
             "Windows Server 2016": {
@@ -160,16 +181,14 @@
             "os": "[variables('osSettings')[parameters('osType')]]"
         },
 
-        "binaryLocation": "[parameters('CAMDeploymentBlobSource')]",
-          
         "extensions": {
             "Standard": {
-                "pcoipAgentInstallerUrl": "[concat(variables('binaryLocation'), '/PCoIP_agent_release_installer_2.10.0.7600_standard.exe')]",
+                "pcoipAgentInstallerUrl": "[concat(parameters('binaryLocation'), '/PCoIP_agent_release_installer_2.10.0.7600_standard.exe')]",
                 "videoDriverUrl": ""
             },
             "Graphics": {
-                "pcoipAgentInstallerUrl": "[concat(variables('binaryLocation'), '/PCoIP_agent_release_installer_2.10.0.7600_graphics.exe')]",
-                "videoDriverUrl": "[concat(variables('binaryLocation'), '/370.12_grid_win10_server2016_64bit_international.exe')]"
+                "pcoipAgentInstallerUrl": "[concat(parameters('binaryLocation'), '/PCoIP_agent_release_installer_2.10.0.7600_graphics.exe')]",
+                "videoDriverUrl": "[concat(parameters('binaryLocation'), '/370.12_grid_win10_server2016_64bit_international.exe')]"
             }
         },
           
@@ -296,7 +315,6 @@
               "configurationArguments": {
                 "pcoipAgentInstallerUrl": "[variables('pcoipAgentInstallerUrl')]",
                 "videoDriverUrl": "[variables('videoDriverUrl')]",
-                "gitLocation": "[parameters('_artifactsLocation')]",
                 "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId)]",
                 "domainGroupToJoin": "[parameters('domainGroupToJoin')]",
                 "enableAutoShutdown": "[parameters('enableAutoShutdown')]"
@@ -306,6 +324,7 @@
               }
             },
             "protectedSettings": {
+              "configurationUrlSasToken": "[variables('sasToken')]",
               "configurationArguments": {
                 "registrationCodeCredential": {
                   "userName": "dummyUser",
@@ -314,6 +333,10 @@
                 "domainJoinCredential": {
                     "UserName": "[concat(parameters('domainToJoin'), '\\', parameters('domainUsername'))]",
                     "Password": "[parameters('domainPassword')]"
+                },
+                "sasTokenAsCred": {
+                    "UserName": "[parameters('_artifactsLocation')]",
+                    "Password": "[variables('sasToken')]"
                 }
               }
             }

@@ -112,6 +112,12 @@
                 "description": "Storage account to use for VM data and VHD's"
             }
         },
+        "userDataStorageAccount": {
+            "type": "string",
+            "metadata": {
+                "description": "The private location to store artifacts, templates, and various dependencies used to ensure stable and reliable deployments."
+            }
+        },
         "adminDesktopVMName": {
             "type": "string",
             "metadata": {
@@ -231,6 +237,7 @@
                         "existingVNETName": "[parameters('existingVNETName')]",
                         "existingSubnetName": "[parameters('existingSubnetName')]",
                         "storageAccountName": "[parameters('storageAccountName')]",
+                        "userDataStorageAccount": "[parameters('userDataStorageAccount')]",
                         "tenantID": "[parameters('tenantID')]",
                         "gitLocation": "[parameters('_artifactsLocation')]",
                         "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-AdminUI-',subscription().subscriptionId)]",
