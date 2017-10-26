@@ -1660,6 +1660,8 @@ brokerLocale=en_US
 							# Deployment is already registered so the deplymentId needs to be retrieved
 							$registeredDeployment = ""
 							try {
+								# Remove registration code from query to prevent exposing it
+								$deploymentRequest.Remove("registrationCode")
 								$registeredDeployment = Invoke-RestMethod -Method Get -Uri ($camSaasBaseUri + "/api/v1/deployments") -Body $deploymentRequest -Headers $tokenHeader
 								$deploymentId = $registeredDeployment.data.deploymentId
 							} catch {
@@ -1705,7 +1707,57 @@ brokerLocale=en_US
 						if( !(($registerMachineResult.code -eq 201) -or ($registerMachineResult.data.reason.ToLower().Contains("exists")))) {
 							throw ("Registering Machine failed. Result was: " + (ConvertTo-Json $registerMachineResult))
 						}
+						$machineId = ""
+						# Get the machineId
+						if( ($registerMachineResult.code -eq 409) -and ($registerMachineResult.data.reason.ToLower().Contains("already exist")) ) {
+							# Deployment is already registered so the deplymentId needs to be retrieved
+							$registeredMachine = ""
+							try {
+								$registeredMachine = Invoke-RestMethod -Method Get -Uri ($camSaasBaseUri + "/api/v1/machines") -Body $machineRequest -Headers $tokenHeader
+								$machineId = $registeredMachine.data.machineId
+							} catch {
+								if ($_.ErrorDetails.Message) {
+									$registeredMachine = ConvertFrom-Json $_.ErrorDetails.Message
+									throw ("Getting Deployment ID failed. Result was: " + (ConvertTo-Json $registeredMachine))
+								} else {
+									throw $_
+								}								
+							}
+						} else {
+							$machineId = $registerMachineResult.data.machineId
+						}
 						Write-Host "Machine has been registered succesfully with Cloud Access Manager"
+						
+						# Register User Entitlement to Machine
+						# Get User Guid for Domain User
+						$DCSession = New-PSSession $using:dcvmfqdn -Credential $using:DomainAdminCreds
+						$userGuid = Invoke-Command -Session $DCSession -ScriptBlock {
+							Add-Type -AssemblyName System.DirectoryServices.AccountManagement
+							[System.DirectoryServices.AccountManagement.UserPrincipal]::Current.Guid.Guid
+						}
+						Remove-PSSession $DCSession
+						$entitlementRequest = @{
+							machineId = $machineId
+							deploymentId = $deploymentId
+							userGuid = $userGuid
+						}
+						$registerEntitlementResult = ""
+						try {
+							$registerEntitlementResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/machines/entitlements") -Body $entitlementRequest -Headers $tokenHeader
+						} catch {
+							if ($_.ErrorDetails.Message) {
+								$registerEntitlementResult = ConvertFrom-Json $_.ErrorDetails.Message
+							} else {
+								throw $_
+							}
+						}
+						Write-Verbose (ConvertTo-Json $registerEntitlementResult)
+						# Check if registration succeeded
+						if( !(($registerEntitlementResult.code -eq 201) -or ($registerEntitlementResult.data.reason.ToLower().Contains("exists")))) {
+							throw ("Registering User Entitlement failed. Result was: " + (ConvertTo-Json $registerEntitlementResult))
+						}
+						Write-Host "User Entitlement has been registered succesfully with Cloud Access Manager"
+
 						$camRegistrationError = ""
 						break;
 					} catch {

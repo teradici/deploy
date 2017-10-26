@@ -42,7 +42,6 @@
             "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave as 'null' if a standard user (non-SP) account is being used."
         }
     },
-
     "virtualNetworkName": {
       "type": "string",
       "metadata": {
@@ -55,7 +54,6 @@
           "description": "Existing subnet that contains the domain controller"
       }
     },
-    
     "adminDesktopVMName": {
       "type": "string",
       "metadata": {
@@ -74,7 +72,6 @@
           "description": "Connection Manager Network Security Group Name"
       }
     },
-
     "registrationCode": {
       "type": "securestring",
       "minLength": 21,
