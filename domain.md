@@ -22,7 +22,7 @@ Before deploymenting CAM integrated with existing AD DC, please prepare the foll
 * Validated write to service principle name
 
 Both command line tool **dsacls.exe** and **"Active Directory Users and Computers" MMC snap-in** GUI can be used.
-the following links are as examples:
+the following links are as examples:  
 https://support.microsoft.com/en-us/help/932455/error-message-when-non-administrator-users-who-have-been-delegated-con  
 https://www.youtube.com/watch?v=qht0xeQ9xuc  
 https://www.youtube.com/watch?v=v8t6eAd17RM  
@@ -43,7 +43,7 @@ Basically, there are two methods of enabling LDAPS on a DC.
   Requirements for an LDAPS certificate:    
        1) Digital Certificate must be valid for the purpose of "Server Authentication." This means that they must contain the Server Authentication object identifier (OID). OIDs are like the Internet domain name space. They are series of numbers separated by dots, each with a specific meaning. For this purpose, the relevant OID we're looking for is 1.3.6.1.5.5.7.3.1. 
        2) The Subject name or the first name in the Subject Alternative Name (SAN) must match the Fully Qualified Domain Name (FQDN) of the host machine, such as Subject:CN=server.domain.com.  
-       3) The host machine account needs to have access to the private key. This is done when the digital certificate request is issued from that machine, or when the private key was exported and imported to a different machine.  
+      3) The host machine account needs to have access to the private key. This is done when the digital certificate request is issued from that machine, or when the private key was exported and imported to a different machine.  
     
 The following links as exmples to setup LDAPS:  
 https://support.microsoft.com/en-us/help/321051/how-to-enable-ldap-over-ssl-with-a-third-party-certification-authority  
