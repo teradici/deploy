@@ -4,7 +4,7 @@
   "parameters": {
     "domainName": {
       "type": "string",
-      "defaultValue": "dcdemo.com",
+      "defaultValue": "camdomain.com",
       "metadata": {
         "description": "The FQDN of the Active Directory Domain to be created"
       }
@@ -46,11 +46,13 @@
 
   "variables": {
     "apiVersion": "2016-12-01",
-    "vnetName": "demo-dc-vnet",
-    "vnetAddress": "192.168.0.0/24",
+    "vnetName": "cam-vnet",
+    "vnetAddress": "192.168.0.0/16",
     "dcSubnetName": "dc-subnet",
     "dcSubnetAddress": "192.168.0.0/24",
     "dcNicIPAddress": "192.168.0.4",
+    "vmSubnetName": "vm-subnet",
+    "vmSubnetAddress": "192.168.1.0/24",
     "vmName": "vm-dc",
     "nicName": "[concat(variables('vmName'), '-nic')]",
     "pipName": "[concat(variables('vmName'), '-pip')]",
@@ -76,11 +78,17 @@
           "virtualNetworkAddressRange": {
             "value": "[variables('vnetAddress')]"
           },
-          "subnetName": {
+          "dcSubnetName": {
             "value": "[variables('dcSubnetName')]"
           },
-          "subnetRange": {
+          "dcSubnetRange": {
             "value": "[variables('dcSubnetAddress')]"
+          },
+          "vmSubnetName": {
+            "value": "[variables('vmSubnetName')]"
+          },
+          "vmSubnetRange": {
+            "value": "[variables('vmSubnetAddress')]"
           }
         }
       }
@@ -259,11 +267,17 @@
           "virtualNetworkAddressRange": {
             "value": "[variables('vnetAddress')]"
           },
-          "subnetName": {
+          "dcSubnetName": {
             "value": "[variables('dcSubnetName')]"
           },
-          "subnetRange": {
+          "dcSubnetRange": {
             "value": "[variables('dcSubnetAddress')]"
+          },
+          "vmSubnetName": {
+            "value": "[variables('vmSubnetName')]"
+          },
+          "vmSubnetRange": {
+            "value": "[variables('vmSubnetAddress')]"
           },
           "DNSServerAddress": {
             "value": [

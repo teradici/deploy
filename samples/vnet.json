@@ -4,6 +4,7 @@
   "parameters": {
     "virtualNetworkName": {
       "type": "string",
+      "defaultValue": "cam-vnet",
       "metadata": {
         "description": "The name of the Virtual Network to Create"
       }
@@ -13,20 +14,35 @@
       "metadata": {
         "description": "The address range of the new VNET in CIDR format"
       },
-      "defaultValue": "10.0.0.0/16"
+      "defaultValue": "192.168.0.0/16"
     },
-    "subnetName": {
+    "dcSubnetName": {
       "type": "string",
+      "defaultValue": "dc-subnet",
       "metadata": {
         "description": "The name of the subnet created in the new VNET"
       }
     },
-    "subnetRange": {
+    "dcSubnetRange": {
       "type": "string",
       "metadata": {
         "description": "The address range of the subnet created in the new VNET"
       },
-      "defaultValue": "10.0.0.0/24"
+      "defaultValue": "192.168.0.0/24"
+    },
+    "vmSubnetName": {
+      "type": "string",
+      "defaultValue": "vm-subnet",
+      "metadata": {
+        "description": "The name of the subnet created in the new VNET"
+      }
+    },
+    "vmSubnetRange": {
+      "type": "string",
+      "metadata": {
+        "description": "The address range of the subnet created in the new VNET"
+      },
+      "defaultValue": "192.168.1.0/24"
     },
     "DNSServerAddress": {
       "type": "array",
@@ -53,9 +69,15 @@
         },
         "subnets": [
           {
-            "name": "[parameters('subnetName')]",
+            "name": "[parameters('dcSubnetName')]",
             "properties": {
-              "addressPrefix": "[parameters('subnetRange')]"
+              "addressPrefix": "[parameters('dcSubnetRange')]"
+            }
+          },
+          {
+            "name": "[parameters('vmSubnetName')]",
+            "properties": {
+              "addressPrefix": "[parameters('vmSubnetRange')]"
             }
           }
         ]
