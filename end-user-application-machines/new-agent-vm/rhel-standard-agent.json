@@ -99,9 +99,15 @@
             "metadata": {
                 "description": "Auto-generated token to access _artifactsLocation"
             },
-            "defaultValue": ""
+            "defaultValue": "?public"
         },
         "CAMDeploymentBlobSource": {
+            "type": "string",
+            "metadata": {
+                "description": "The location of the blobs for admin GUI machine installation"
+            }
+        },
+        "binaryLocation": {
             "type": "string",
             "metadata": {
                 "description": "The location of the blobs for admin GUI machine installation"
@@ -118,6 +124,18 @@
             "type": "string",
             "metadata": {
                 "description": "Storage account to use for VM data and VHD's"
+            }
+        },
+        "userStorageAccountName": {
+            "type": "string",
+            "metadata": {
+                "description": "Storage account for user blob and custom templates"
+            }
+        },
+        "userStorageAccountKey": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Storage account key for accessing private blob data"
             }
         }
     },
@@ -154,8 +172,8 @@
             "os": "[variables('osSettings')[parameters('osType')]]"
         },
 
-        "binaryLocation": "[parameters('CAMDeploymentBlobSource')]",
-        "scriptFileName": "Install-PCoIPAgent.sh"
+        "scriptFileName": "Install-PCoIPAgent.sh",
+        "idleShutdownScriptFileName": "Install-Idle-Shutdown.sh"
     },
     "resources": [
         {
@@ -237,7 +255,7 @@
           "apiVersion": "2017-03-30",
           "location": "[resourceGroup().location]",
           "dependsOn": [
-              "[concat('Microsoft.Compute/virtualMachines/', parameters('dnsLabelPrefix'))]"
+              "[resourceId('Microsoft.Compute/virtualMachines', parameters('dnsLabelPrefix'))]"
           ],
             "properties": {
                 "publisher": "Microsoft.Azure.Extensions",
@@ -245,12 +263,37 @@
                 "typeHandlerVersion": "2.0",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                "fileUris": [ "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'))]" ]
+                    "fileUris": [ "[ concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'))]" ]
                 },
-            "protectedSettings": {
-                "commandToExecute": "[concat('bash ', variables('scriptFileName'), ' \"', parameters('registrationCode'), '\" \"', parameters('agentType'), '\" \"', variables('vmSettings').vmNamePrefix, '\" \"', parameters('domainToJoin'), '\" \"', parameters('domainUsername'), '\" \"', parameters('domainPassword'), '\" \"', parameters('domainGroupToJoin'), '\"')]"
+                "protectedSettings": {
+                    "commandToExecute": "[concat('bash ', variables('scriptFileName'), ' \"', parameters('registrationCode'), '\" \"', parameters('agentType'), '\" \"', variables('vmSettings').vmNamePrefix, '\" \"', parameters('domainToJoin'), '\" \"', parameters('domainUsername'), '\" \"', parameters('domainPassword'), '\" \"', parameters('domainGroupToJoin'), '\"')]",
+                    "storageAccountName": "[parameters('userStorageAccountName')]",
+                    "storageAccountKey": "[parameters('userStorageAccountKey')]"
                 }
-              }
             }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('dnsLabelPrefix'),'/CAMIdleShutdownShellScript')]",
+            "apiVersion": "2015-06-15",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('dnsLabelPrefix'), 'PCoIPAgentShellScript')]"
+            ],
+            "properties": {
+                "publisher": "Microsoft.OSTCExtensions",
+                "type": "CustomScriptForLinux",
+                "typeHandlerVersion": "1.4",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "fileUris": [ "[concat(parameters('_artifactsLocation'), '/', variables('idleShutdownScriptFileName'))]" ]
+                },
+                "protectedSettings": {
+                    "commandToExecute": "[concat('sudo bash ', variables('idleShutdownScriptFileName'), ' -install')]",
+                    "storageAccountName": "[parameters('userStorageAccountName')]",
+                    "storageAccountKey": "[parameters('userStorageAccountKey')]"
+                }
+            }
+        }
     ]
 }

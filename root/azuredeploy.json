@@ -22,6 +22,12 @@
         "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
       }
     },
+    "CAMDeploymentBlobSource": {
+      "type": "string",
+      "metadata": {
+        "description": "The location of the blobs for admin GUI machine installation"
+      }
+    },
     "_artifactsLocation": {
       "type": "string",
       "metadata": {
@@ -38,6 +44,7 @@
   },
   "variables": {
     "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'adsa')]",
+    "templateStorageAccountName": "[concat(uniquestring(resourceGroup().id), 'data')]",
     "adVMName": "vm-dc",
     "serverRootName": "vm",
     "adminDesktopVMName": "[concat(variables('serverRootName'), '-desk')]",
@@ -68,6 +75,17 @@
     {
       "type": "Microsoft.Storage/storageAccounts",
       "name": "[variables('storageAccountName')]",
+      "apiVersion": "2016-01-01",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "Storage",
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[variables('templateStorageAccountName')]",
       "apiVersion": "2016-01-01",
       "location": "[resourceGroup().location]",
       "sku": {
@@ -246,9 +264,9 @@
           "adminPassword": {
             "value": "[parameters('domainAdminPassword')]"
           },
-          "adminDesktopVMName": {
-            "value": "[variables('adminDesktopVMName')]"
-          }       
+          "CAMDeploymentBlobSource": {
+            "value": "[parameters('CAMDeploymentBlobSource')]"
+          }
         }
       }
     },
@@ -315,6 +333,10 @@
     "adminDesktopVMName" : {
       "type": "string",
       "value": "[variables('adminDesktopVMName')]"
+    },
+    "templateStorageAccountName" : {
+      "type": "string",
+      "value": "[variables('templateStorageAccountName')]"
     }
   }
 }

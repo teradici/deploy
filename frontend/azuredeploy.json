@@ -42,7 +42,6 @@
             "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave as 'null' if a standard user (non-SP) account is being used."
         }
     },
-
     "virtualNetworkName": {
       "type": "string",
       "metadata": {
@@ -55,7 +54,6 @@
           "description": "Existing subnet that contains the domain controller"
       }
     },
-    
     "adminDesktopVMName": {
       "type": "string",
       "metadata": {
@@ -74,7 +72,6 @@
           "description": "Connection Manager Network Security Group Name"
       }
     },
-
     "registrationCode": {
       "type": "securestring",
       "minLength": 21,
@@ -122,6 +119,12 @@
       "type": "string",
       "metadata": {
         "description": "The location of the blobs for admin GUI machine installation"
+      }
+    },
+    "userDataStorageAccount": {
+      "type": "string",
+      "metadata": {
+        "description": "The private location to store artifacts, templates, and various dependencies used to ensure stable and reliable deployments."
       }
     },
     "_agentArtifactsLocation": {
@@ -187,7 +190,7 @@
       "name": "CreateAdminMachine",
       "apiVersion": "2016-02-01",
       "dependsOn": [
-                        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+          "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
       ],
       "properties": {
         "mode": "Incremental",
@@ -299,6 +302,9 @@
           },
           "storageAccountName": {
             "value": "[variables('storageAccountName')]"
+          },
+          "userDataStorageAccount": {
+            "value": "[parameters('userDataStorageAccount')]"
           },
           "adminDesktopVMName": {
             "value": "[parameters('adminDesktopVMName')]"

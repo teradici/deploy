@@ -39,12 +39,21 @@ Configuration InstallCAM
 		[System.Management.Automation.PSCredential]$CAMDeploymentInfo,
 
         [string]
-        $javaInstaller = "jdk-8u91-windows-x64.exe",
+		$javaInstaller = "jdk-8u144-windows-x64.exe",
 
         [string]
-        $tomcatInstaller = "apache-tomcat-8.0.39-windows-x64.zip",
+		$idleShutdownLinux = "Install-Idle-Shutdown.sh",
 
         [string]
+		$sumoAgentApplicationVM = "sumo-agent-vm.json",
+
+		[string]
+		$sumoConf = "sumo.conf",
+
+		[string]
+		$tomcatInstaller = "apache-tomcat-8.5.23-windows-x64.zip",
+
+		[string]
         $brokerWAR = "pcoip-broker.war",
 
         [string]
@@ -120,6 +129,9 @@ Configuration InstallCAM
 		[Parameter(Mandatory=$true)]
 		[string]$camSaasUri,
 
+		[Parameter(Mandatory=$true)]
+		[string]$userDataStorageAccount,
+
 		[Parameter(Mandatory=$false)]
 		[bool]$verifyCAMSaaSCertificate=$true,
 
@@ -135,13 +147,13 @@ Configuration InstallCAM
 	$family   = "Windows Server 2016"
 
 	#Java locations
-	$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_91"
+	$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_144"
 	$JavaBinLocation = $JavaRootLocation + "\bin"
 	$JavaLibLocation = $JavaRootLocation + "\jre\lib"
 
 	#Tomcat locations
 	$localtomcatpath = "$env:systemdrive\tomcat"
-	$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.0.39"
+	$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.5.23"
 	$CatalinaBinLocation = $CatalinaHomeLocation + "\bin"
 
 	$brokerServiceName = "CAMBroker"
@@ -216,6 +228,48 @@ Configuration InstallCAM
 			MatchSource = $false
 		}
 
+		xRemoteFile Download_Install_Agent.ps1
+		{
+				Uri = "$templateAgentURI/Install-PCoIPAgent.ps1"
+				DestinationPath = "$LocalDLPath\Install-PCoIPAgent.ps1"
+				MatchSource = $false
+		}
+
+		xRemoteFile Download_Install_Agent.sh
+		{
+				Uri = "$templateAgentUri/Install-PCoIPAgent.sh"
+				DestinationPath = "$LocalDLPath\Install-PCoIPAgent.sh"
+				MatchSource = $false
+		}
+
+		xRemoteFile DownloadIdleShutdown.sh
+		{
+				Uri = "$templateAgentUri/$idleShutdownLinux"
+				DestinationPath = "$LocalDLPath\$idleShutdownLinux"
+				MatchSource = $false
+		}
+
+		xRemoteFile sumoagent 
+		{
+				Uri = "$templateAgentUri/$sumoAgentApplicationVM"
+				DestinationPath = "$LocalDLPath\$sumoAgentApplicationVM"
+				MatchSource = $false
+		}
+
+		xRemoteFile sumo 
+		{
+				Uri = "$gitLocation/$sumoConf"
+				DestinationPath = "$LocalDLPath\$sumoConf"
+				MatchSource = $false
+		}
+
+		xRemoteFile Download_Install_Agent.ps1.zip
+		{
+				Uri = "$sourceURI/Install-PCoIPAgent.ps1.zip"
+				DestinationPath = "$LocalDLPath\Install-PCoIPAgent.ps1.zip"
+				MatchSource = $false
+		}
+
         File Sumo_Directory 
         {
             Ensure          = "Present"
@@ -239,19 +293,25 @@ Configuration InstallCAM
 
                 $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
                 $sumo_package = "$using:sourceURI/$installerFileName"
-                $sumo_config = "$using:gitLocation/sumo.conf"
+				$sumo_config = "$using:gitLocation/$using:sumoConf"
                 $sumo_collector_json = "$using:gitLocation/sumo-admin-vm.json"
                 $dest = "C:\sumo"
+
+				Write-Host "Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile $dest\sumo.conf"
                 Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile "$dest\sumo.conf"
+
+				Write-Host "Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile $dest\sumo-admin-vm.conf"
                 Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile "$dest\sumo-admin-vm.json"
-                #
+				
                 #Insert unique ID
                 $collectorID = "$using:sumoCollectorID"
                 (Get-Content -Path "$dest\sumo.conf").Replace("collectorID", $collectorID) | Set-Content -Path "$dest\sumo.conf"
                 
+				Write-Host "Before Invoke-WebRequest $sumo_package -Outfile $dest\$installerFileName"
                 Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
                 
                 #install the collector
+				Write-Host "Installing the collector"
                 $command = "$dest\$installerFileName -console -q"
                 Invoke-Expression $command
 
@@ -304,8 +364,8 @@ Configuration InstallCAM
 				$retrycount = 1800
 				while ($retryCount -gt 0)
 				{
-					$readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{26A24AE4-039D-4CA4-87B4-2F86418091F0}"  -ErrorAction SilentlyContinue )
-					# don't wait for {64A3A4F4-B792-11D6-A78A-00B0D0180910} - that's the JDK. The JRE is installed 2nd {26A...} so wait for that.
+					$readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{26A24AE4-039D-4CA4-87B4-2F64180144F0}"	-ErrorAction SilentlyContinue )
+					# don't wait for {64A3A4F4-B792-11D6-A78A-00B0D0180144} - that's the JDK. The JRE is installed 2nd {26A...} so wait for that.
 
 					if ($readyToConfigure)
 					{
@@ -353,7 +413,6 @@ Configuration InstallCAM
 				while ($retryCount -gt 0)
 				{
 					$readyToConfigure = ( Get-Item $JVMServerdll -ErrorAction SilentlyContinue )
-					# don't wait for {64A3A4F4-B792-11D6-A78A-00B0D0180910} - that's the JDK. The JRE is installed 2nd {26A...} so wait for that.
 
 					if ($readyToConfigure)
 					{
@@ -713,11 +772,88 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 
 				$kvId = $using:keyVaultId
 
+======================= master
+				Write-Host "Creating Azure KeyVault $kvName"
+
+				$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGNameLocal
+				Write-Host "RGNameLocal: $RGNameLocal. Found ResourceGroup: $rg"
+				
+				New-AzureRmKeyVault -VaultName $kvName -ResourceGroupName $RGNameLocal -Location $rg.Location -EnabledForTemplateDeployment -EnabledForDeployment
+
+				Write-Host "Populating Azure KeyVault $kvName"
+				
+				$rcCred = $using:registrationCodeAsCred
+				$registrationCode = $rcCred.Password
+========================= master
+
 				$rcSecretName = 'cloudAccessRegistrationCode'
 				$djSecretName = 'domainJoinPassword'
 
 				$laSecretName = 'localAdminPassword'
 
+				################################
+				Write-Host "Populating user blob"
+				################################
+				$container_name = "cloudaccessmanager"
+				$acct_name = $using:userDataStorageAccount
+				$new_agent_vm_files = @(
+					"Install-PCoIPAgent.ps1", 
+					"Install-PCoIPAgent.sh", 
+					"$using:linuxAgentARM", 
+					"$using:gaAgentARM",
+					"$using:agentARM", 
+					"$using:sumoAgentApplicationVM",
+					"$using:sumoConf",
+					"Install-PCoIPAgent.ps1.zip",
+					"$using:idleShutdownLinux"
+					)
+				Write-Host "Will upload these files: $new_agent_vm_files"
+				$acctKey = (Get-AzureRmStorageAccountKey -ResourceGroupName $using:RGName -AccountName $acct_name).Value[0]
+				$ctx = New-AzureStorageContext -StorageAccountName $acct_name -StorageAccountKey $acctKey
+				try {
+						Get-AzureStorageContainer -Name $container_name -Context $ctx -ErrorAction Stop
+				} Catch {
+						# -Permission needs to be off to allow only owner read and to require access key!
+						New-AzureStorageContainer -Name $container_name -Context $ctx -Permission "Off"
+				}
+				Write-Host "Uploading files to private blob"
+				ForEach($file in $new_agent_vm_files) {
+						$filepath = Join-Path $using:LocalDLPath $file
+						try {
+							Get-AzureStorageBlob -Context $ctx -Container $container_name -Blob "remote-workstation/$file" -ErrorAction Stop
+						# file already exists do nothing
+						} Catch {
+							Write-Host "Uploading $filepath to blob.."
+							Set-AzureStorageBlobContent -File $filepath -Container $container_name -Blob "remote-workstation\$file" -Context $ctx
+						}
+				}
+
+				$blobUri = (((Get-AzureStorageBlob -Context $ctx -Container $container_name)[0].ICloudBlob.uri.AbsoluteUri) -split '/')[0..4] -join '/'
+
+				# this is the url to access the blob account
+				$blobUriSecretName = "userStorageAccountUri"
+				Set-AzureKeyVaultSecret -VaultName $kvName -Name $blobUriSecretName -SecretValue (ConvertTo-SecureString $blobUri -AsPlainText -Force) -ErrorAction stop
+
+				$storageAccountSecretName = "userStorageName"
+				Set-AzureKeyVaultSecret -VaultName $kvName -Name $storageAccountSecretName -SecretValue (ConvertTo-SecureString $acct_name -AsPlainText -Force) -ErrorAction stop
+				$storageAccountKeyName = "userStorageAccountKey"
+				Set-AzureKeyVaultSecret -VaultName $kvName -Name $storageAccountKeyName -SecretValue (ConvertTo-SecureString $acctKey -AsPlainText -Force) -ErrorAction stop
+
+				$saSasToken = New-AzureStorageAccountSASToken -Service Blob -Resource Object -Context $ctx -ExpiryTime ((Get-Date).AddYears(2)) -Permission "racwdlup" 
+				$saSasTokenSecretName = 'userStorageAccountSaasToken'
+				Set-AzureKeyVaultSecret -VaultName $kvName -Name $saSasTokenSecretName -SecretValue (ConvertTo-SecureString $saSasToken -AsPlainText -Force) -ErrorAction stop
+
+				# These environment variables will kick in when the admin ui vm is up and running. do not refer to them within this script.
+				# using the blob uri + the token from the key vault will allow the web interface to retrieve required information from private blob
+				[System.Environment]::SetEnvironmentVariable("CAM_KEY_VAULT_NAME", $kvName, "Machine")
+
+				# these two are used to retrieve files via http. Their values need to be retrieved from the key vault
+				[System.Environment]::SetEnvironmentVariable("CAM_USER_BLOB_URI", $blobUriSecretName, "Machine")
+				[System.Environment]::SetEnvironmentVariable("CAM_USER_BLOB_TOKEN", $saSasTokenSecretName, "Machine")
+
+				# these two are used to upload files using cli or sdk. Their values need to be retrieved from the key vault
+				[System.Environment]::SetEnvironmentVariable("CAM_USER_STORAGE_ACCOUNT_NAME", $storageAccountSecretName, "Machine")
+				[System.Environment]::SetEnvironmentVariable("CAM_USER_STORAGE_ACCOUNT_KEY", $storageAccountKeyName, "Machine")
 
 				################################
 
@@ -731,9 +867,26 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
     "contentVersion": "1.0.0.0",
     "parameters": {
 		"vmSize": { "value": "%vmSize%" },
-        "CAMDeploymentBlobSource": { "value": "$using:sourceURI" },
+		"CAMDeploymentBlobSource": { "value": "$blobUri" },
+		"binaryLocation": { "value": "$using:sourceURI" },
         "existingSubnetName": { "value": "$using:existingSubnetName" },
         "domainUsername": { "value": "$DomainAdminUsername" },
+		"userStorageAccountName": {
+			"reference": {
+			  "keyVault": {
+				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+			  },
+			  "secretName": "$storageAccountSecretName"
+			}		
+		},
+		"userStorageAccountKey": {
+			"reference": {
+			  "keyVault": {
+				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+			  },
+			  "secretName": "$storageAccountKeyName"
+			}		
+		},
         "domainPassword": {
 			"reference": {
 			  "keyVault": {
@@ -764,8 +917,16 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
         "domainToJoin": { "value": "$using:domainFQDN" },
         "domainGroupToJoin": { "value": "$using:domainGroupAppServersJoin" },
         "storageAccountName": { "value": "$using:storageAccountName" },
-		"_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/end-user-application-machines/new-agent-vm" }
-    }
+		"_artifactsLocation": { "value": "$blobUri" },
+		"_artifactsLocationSasToken": {
+			"reference": {
+			  "keyVault": {
+					"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+			  },
+			  "secretName": "$saSasTokenSecretName"
+			} ===================== check kvid and bracket count
+}
+   }
 }
 
 "@
@@ -795,34 +956,33 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 				{
 					New-Item $ParamTargetDir -type directory
 				}
-
 				#clear out whatever was stuffed in from the deployment WAR file
 				Remove-Item "$ParamTargetDir\*" -Recurse
 
-				# Standard Agent Parameter file
-				if(-not (Test-Path $ParamTargetFilePath))
+				# upload the param files to the blob
+				$paramFiles = @(
+					@($ParamTargetFilePath, $standardArmParamContent),
+					@($GaParamTargetFilePath, $graphicsArmParamContent),
+					@($LinuxParamTargetFilePath, $linuxArmParamContent)
+				)
+				ForEach($item in $paramFiles) {
+						$filepath = $item[0]
+						$content = $item[1]
+						if (-not (Test-Path $filepath)) 
 				{
-					New-Item $ParamTargetFilePath -type file
+							New-Item $filepath -type file
 				}
+						Set-Content $filepath $content -Force
 
-				Set-Content $ParamTargetFilePath $standardArmParamContent -Force
-
-
-				# Graphics Agent Parameter file
-				if(-not (Test-Path $GaParamTargetFilePath))
-				{
-					New-Item $GaParamTargetFilePath -type file
+						$file = Split-Path $filepath -leaf
+						try {
+							Get-AzureStorageBlob -Context $ctx -Container $container_name -Blob "remote-workstation\$file" -ErrorAction Stop
+						# file already exists do nothing
+						} Catch {
+							Write-Host "Uploading $filepath to blob.."
+							Set-AzureStorageBlobContent -File $filepath -Container $container_name -Blob "remote-workstation\$file" -Context $ctx
 				}
-
-				Set-Content $GaParamTargetFilePath $graphicsArmParamContent -Force
-
-				# Linux Agent Parameter file
-				if(-not (Test-Path $LinuxParamTargetFilePath))
-				{
-					New-Item $LinuxParamTargetFilePath -type file
 				}
-
-				Set-Content $LinuxParamTargetFilePath $linuxArmParamContent -Force
 
 		        Write-Host "Finished Creating default template parameters file data."
             }
@@ -1104,6 +1264,208 @@ brokerLocale=en_US
 				$regInfo.psobject.properties | Foreach-Object {
 					[System.Environment]::SetEnvironmentVariable($_.Name, $_.Value, "Machine")
 				}
+
+========================== review everything
+				$camSaasBaseUri = $using:camSaasUri
+				$camSaasBaseUri = $camSaasBaseUri.Trim().TrimEnd('/')
+				$camRegistrationError = ""
+				for($idx = 0; $idx -lt $using:retryCount; $idx++) {
+					try {
+						$userRequest = @{
+							username = $client
+							password = $key
+							tenantId = $tenant
+						}
+						$registerUserResult = ""
+						try {
+							$registerUserResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/users") -Body $userRequest
+						} catch {
+							if ($_.ErrorDetails.Message) {
+								$registerUserResult = ConvertFrom-Json $_.ErrorDetails.Message
+							} else {
+								throw $_
+							}	
+						}
+						Write-Verbose (ConvertTo-Json $registerUserResult)
+						# Check if registration succeeded or if it has been registered previously
+						if( !(($registerUserResult.code -eq 201) -or ($registerUserResult.data.reason.ToLower().Contains("already exist"))) ) {
+							throw ("Failed to register with CAM. Result was: " + (ConvertTo-Json $registerUserResult))
+						}
+
+						[System.Environment]::SetEnvironmentVariable("CAM_USERNAME", $userRequest.username, "Machine")
+						[System.Environment]::SetEnvironmentVariable("CAM_PASSWORD", $userRequest.password, "Machine")
+						[System.Environment]::SetEnvironmentVariable("CAM_TENANTID", $userRequest.tenantId, "Machine")
+						[System.Environment]::SetEnvironmentVariable("CAM_URI", $camSaasBaseUri, "Machine")
+						$env:CAM_USERNAME = $userRequest.username
+						$env:CAM_PASSWORD = $userRequest.password
+						$env:CAM_TENANTID = $userRequest.tenantId
+						$env:CAM_URI = $camSaasBaseUri
+
+						Write-Host "Cloud Access Manager Frontend has been registered succesfully"
+
+						# Get a Sign-in token
+						$signInResult = ""
+						try {
+							$signInResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/signin") -Body $userRequest
+						} catch {
+							if ($_.ErrorDetails.Message) {
+								$signInResult = ConvertFrom-Json $_.ErrorDetails.Message
+							} else {
+								throw $_
+							}							
+						}
+						Write-Verbose ((ConvertTo-Json $signInResult) -replace "\.*token.*", 'Token": "Sanitized"')
+						# Check if signIn succeded
+						if ($signInResult.code -ne 200) {
+							throw ("Signing in failed. Result was: " + (ConvertTo-Json $signInResult))
+						}
+						$tokenHeader = @{
+							authorization=$signInResult.data.token
+						}
+						Write-Host "Cloud Access Manager sign in succeeded"
+
+						$registrationCode = ($using:registrationCodeAsCred).GetNetworkCredential().password
+
+						# Register Deployment
+						$deploymentRequest = @{
+							resourceGroup = $using:RGName
+							subscriptionId = $subscription
+							registrationCode = $registrationCode
+						}
+						$registerDeploymentResult = ""
+						try {
+							$registerDeploymentResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/deployments") -Body $deploymentRequest -Headers $tokenHeader
+						} catch {
+							if ($_.ErrorDetails.Message) {
+								$registerDeploymentResult = ConvertFrom-Json $_.ErrorDetails.Message
+							} else {
+								throw $_
+							}
+						}
+						Write-Verbose ((ConvertTo-Json $registerDeploymentResult) -replace "\.*registrationCode.*", 'registrationCode":"Sanitized"')
+						# Check if registration succeeded
+						if( !( ($registerDeploymentResult.code -eq 201) -or ($registerDeploymentResult.data.reason.ToLower().Contains("already exist")) ) ) {
+							throw ("Registering Deployment failed. Result was: " + (ConvertTo-Json $registerDeploymentResult))
+						}
+						$deploymentId = ""
+						# Get the deploymentId
+						if( ($registerDeploymentResult.code -eq 409) -and ($registerDeploymentResult.data.reason.ToLower().Contains("already exist")) ) {
+							# Deployment is already registered so the deplymentId needs to be retrieved
+							$registeredDeployment = ""
+							try {
+								# Remove registration code from query to prevent exposing it
+								$deploymentRequest.Remove("registrationCode")
+								$registeredDeployment = Invoke-RestMethod -Method Get -Uri ($camSaasBaseUri + "/api/v1/deployments") -Body $deploymentRequest -Headers $tokenHeader
+								$deploymentId = $registeredDeployment.data.deploymentId
+							} catch {
+								if ($_.ErrorDetails.Message) {
+									$registeredDeployment = ConvertFrom-Json $_.ErrorDetails.Message
+									throw ("Getting Deployment ID failed. Result was: " + (ConvertTo-Json $registeredDeployment))
+								} else {
+									throw $_
+								}								
+							}
+						} else {
+							$deploymentId = $registerDeploymentResult.data.deploymentId
+						}
+
+						if ( !$deploymentId ) {
+							throw ("Failed to get a Deployment ID")
+						}
+
+						[System.Environment]::SetEnvironmentVariable("CAM_DEPLOYMENTID", $deploymentId, "Machine")
+						$env:CAM_DEPLOYMENTID = $deploymentId
+
+						Write-Host "Deployment has been registered succesfully with Cloud Access Manager"
+
+						# Register Agent Machine
+						$machineRequest = @{
+							deploymentId = $deploymentId
+							resourceGroup = $using:RGName
+							machineName = $using:adminDesktopVMName
+							subscriptionId = $subscription
+						}
+						$registerMachineResult = ""
+						try {
+							$registerMachineResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/machines") -Body $machineRequest -Headers $tokenHeader
+						} catch {
+							if ($_.ErrorDetails.Message) {
+								$registerMachineResult = ConvertFrom-Json $_.ErrorDetails.Message
+							} else {
+								throw $_
+							}
+						}
+						Write-Verbose (ConvertTo-Json $registerMachineResult)
+						# Check if registration succeeded
+						if( !(($registerMachineResult.code -eq 201) -or ($registerMachineResult.data.reason.ToLower().Contains("exists")))) {
+							throw ("Registering Machine failed. Result was: " + (ConvertTo-Json $registerMachineResult))
+						}
+						$machineId = ""
+						# Get the machineId
+						if( ($registerMachineResult.code -eq 409) -and ($registerMachineResult.data.reason.ToLower().Contains("already exist")) ) {
+							# Deployment is already registered so the deplymentId needs to be retrieved
+							$registeredMachine = ""
+							try {
+								$registeredMachine = Invoke-RestMethod -Method Get -Uri ($camSaasBaseUri + "/api/v1/machines") -Body $machineRequest -Headers $tokenHeader
+								$machineId = $registeredMachine.data.machineId
+							} catch {
+								if ($_.ErrorDetails.Message) {
+									$registeredMachine = ConvertFrom-Json $_.ErrorDetails.Message
+									throw ("Getting Deployment ID failed. Result was: " + (ConvertTo-Json $registeredMachine))
+								} else {
+									throw $_
+								}								
+							}
+						} else {
+							$machineId = $registerMachineResult.data.machineId
+						}
+						Write-Host "Machine has been registered succesfully with Cloud Access Manager"
+						
+						# Register User Entitlement to Machine
+						# Get User Guid for Domain User
+						$DCSession = New-PSSession $using:dcvmfqdn -Credential $using:DomainAdminCreds
+						$userGuid = Invoke-Command -Session $DCSession -ScriptBlock {
+							Add-Type -AssemblyName System.DirectoryServices.AccountManagement
+							[System.DirectoryServices.AccountManagement.UserPrincipal]::Current.Guid.Guid
+						}
+						Remove-PSSession $DCSession
+						$entitlementRequest = @{
+							machineId = $machineId
+							deploymentId = $deploymentId
+							userGuid = $userGuid
+						}
+						$registerEntitlementResult = ""
+						try {
+							$registerEntitlementResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/machines/entitlements") -Body $entitlementRequest -Headers $tokenHeader
+						} catch {
+							if ($_.ErrorDetails.Message) {
+								$registerEntitlementResult = ConvertFrom-Json $_.ErrorDetails.Message
+							} else {
+								throw $_
+							}
+						}
+						Write-Verbose (ConvertTo-Json $registerEntitlementResult)
+						# Check if registration succeeded
+						if( !(($registerEntitlementResult.code -eq 201) -or ($registerEntitlementResult.data.reason.ToLower().Contains("exists")))) {
+							throw ("Registering User Entitlement failed. Result was: " + (ConvertTo-Json $registerEntitlementResult))
+						}
+						Write-Host "User Entitlement has been registered succesfully with Cloud Access Manager"
+
+						$camRegistrationError = ""
+						break;
+					} catch {
+						$camRegistrationError = $_
+						Write-Verbose ( "Attempt {0} of $using:retryCount failed due to Error: {1}" -f ($idx+1), $camRegistrationError )
+						Start-Sleep -s $using:delay
+					}
+				}
+				if($camRegistrationError) {
+					throw $camRegistrationError
+				}
+
+				# restore CertificatePolicy 
+				[System.Net.ServicePointManager]::CertificatePolicy = $certificatePolicy
+==========================
 
 				# Reboot machine to ensure all changes are picked up by all services.
 				$global:DSCMachineStatus = 1

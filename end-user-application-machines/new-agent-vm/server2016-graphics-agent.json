@@ -78,9 +78,15 @@
             "metadata": {
                 "description": "Auto-generated token to access _artifactsLocation"
             },
-            "defaultValue": ""
+            "defaultValue": "?public"
         },
         "CAMDeploymentBlobSource": {
+            "type": "string",
+            "metadata": {
+                "description": "The location of the blobs for admin GUI machine installation"
+            }
+        },
+        "binaryLocation": {
             "type": "string",
             "metadata": {
                 "description": "The location of the blobs for admin GUI machine installation"
@@ -105,6 +111,20 @@
             "metadata": {
                 "description": "Flag for enabling auto-shutdown on idle for Agents"
             }
+        },
+        "userStorageAccountName": {
+            "type": "string",
+            "metadata": {
+                "description": "Storage account for user blob and custom templates"
+            },
+            "defaultValue": ""
+        },
+        "userStorageAccountKey": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Storage account key for accessing private blob data"
+            },
+            "defaultValue": ""
         }
     },
     "variables": {
@@ -117,6 +137,7 @@
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
         "pcoipAgentInstallerUrl": "[concat(parameters('CAMDeploymentBlobSource'),'/PCoIP_agent_release_installer_2.10.0.7600_graphics.exe')]",
         "videoDriverUrl": "[concat(parameters('CAMDeploymentBlobSource'),'/370.12_grid_win10_server2016_64bit_international.exe')]",
+        "sasToken": "[parameters('_artifactsLocationSasToken')]",
         "registrationCode": "[parameters('registrationCode')]"
     },
     "resources": [
@@ -245,7 +266,6 @@
               "configurationArguments": {
                 "pcoipAgentInstallerUrl": "[variables('pcoipAgentInstallerUrl')]",
                 "videoDriverUrl": "[variables('videoDriverUrl')]",
-                "gitLocation": "[parameters('_artifactsLocation')]",
                 "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId)]",
                 "domainGroupToJoin": "[parameters('domainGroupToJoin')]",
                 "enableAutoShutdown": "[parameters('enableAutoShutdown')]"
@@ -255,6 +275,7 @@
               }
             },
             "protectedSettings": {
+              "configurationUrlSasToken": "[variables('sasToken')]",
               "configurationArguments": {
                 "registrationCodeCredential": {
                   "userName": "dummyUser",
@@ -263,6 +284,10 @@
                 "domainJoinCredential": {
                     "UserName": "[concat(parameters('domainToJoin'), '\\', parameters('domainUsername'))]",
                     "Password": "[parameters('domainPassword')]"
+                },
+                "sasTokenAsCred": {
+                    "UserName": "[parameters('_artifactsLocation')]",
+                    "Password": "[variables('sasToken')]"
                 }
               }
             }
