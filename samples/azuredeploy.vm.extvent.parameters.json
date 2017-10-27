@@ -1,0 +1,15 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "userName": {
+      "value": "adminTest"
+    },
+    "password": {
+      "value": "GEN-VALUE"
+    },
+    "subnetId": {
+      "value": "GET-VALUE-FROM"
+    }
+  }
+}
