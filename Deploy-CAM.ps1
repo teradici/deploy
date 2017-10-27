@@ -1171,7 +1171,7 @@ if($subscriptionsToDisplay.Length -lt 1) {
 		$domainName = Read-Host "Please enter new fully qualified domain name including a '.' such as example.com"
 		if($domainName -notlike "*.*") {
 			#too short- try again.
-			Write-Host "The domain name must include two components separated by a '.'"
+			Write-Host "The domain name must include two or more components separated by a '.'"
 			$domainName = $null
 		}
 	}
@@ -1195,10 +1195,10 @@ Deploy-CAM `
  -domainAdminCredential $domainAdminCredential `
  -domainName $domainName `
  -registrationCode $registrationCode `
- -camSaasUri $camSaasUri `
+ -camSaasUri $camSaasUri.Trim().TrimEnd('/') `
  -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
  -CAMDeploymentTemplateURI $CAMDeploymentTemplateURI `
- -CAMDeploymentBlobSource $CAMDeploymentBlobSource `
+ -CAMDeploymentBlobSource $CAMDeploymentBlobSource.Trim().TrimEnd('/') `
  -outputParametersFileName $outputParametersFileName `
  -subscriptionId $selectedSubcriptionId `
  -RGName $rgMatch.ResourceGroupName `

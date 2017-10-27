@@ -772,20 +772,6 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 
 				$kvId = $using:keyVaultId
 
-======================= master
-				Write-Host "Creating Azure KeyVault $kvName"
-
-				$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGNameLocal
-				Write-Host "RGNameLocal: $RGNameLocal. Found ResourceGroup: $rg"
-				
-				New-AzureRmKeyVault -VaultName $kvName -ResourceGroupName $RGNameLocal -Location $rg.Location -EnabledForTemplateDeployment -EnabledForDeployment
-
-				Write-Host "Populating Azure KeyVault $kvName"
-				
-				$rcCred = $using:registrationCodeAsCred
-				$registrationCode = $rcCred.Password
-========================= master
-
 				$rcSecretName = 'cloudAccessRegistrationCode'
 				$djSecretName = 'domainJoinPassword'
 
@@ -874,7 +860,7 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 		"userStorageAccountName": {
 			"reference": {
 			  "keyVault": {
-				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+				"id": "$kvId"
 			  },
 			  "secretName": "$storageAccountSecretName"
 			}		
@@ -882,7 +868,7 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 		"userStorageAccountKey": {
 			"reference": {
 			  "keyVault": {
-				"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+				"id": "$kvId"
 			  },
 			  "secretName": "$storageAccountKeyName"
 			}		
@@ -921,12 +907,12 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 		"_artifactsLocationSasToken": {
 			"reference": {
 			  "keyVault": {
-					"id": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
+					"id": "$kvId"
 			  },
 			  "secretName": "$saSasTokenSecretName"
-			} ===================== check kvid and bracket count
-}
-   }
+			}
+		}
+	}
 }
 
 "@
@@ -1265,7 +1251,7 @@ brokerLocale=en_US
 					[System.Environment]::SetEnvironmentVariable($_.Name, $_.Value, "Machine")
 				}
 
-========================== review everything
+<# ========================== review everything - this should all go to different files
 				$camSaasBaseUri = $using:camSaasUri
 				$camSaasBaseUri = $camSaasBaseUri.Trim().TrimEnd('/')
 				$camRegistrationError = ""
@@ -1466,7 +1452,7 @@ brokerLocale=en_US
 				# restore CertificatePolicy 
 				[System.Net.ServicePointManager]::CertificatePolicy = $certificatePolicy
 ==========================
-
+#>
 				# Reboot machine to ensure all changes are picked up by all services.
 				$global:DSCMachineStatus = 1
 			}
