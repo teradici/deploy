@@ -2,6 +2,18 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "localAdminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the local Virtual Machine adminstrator"
+      }
+    },
+    "localAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password of the local virtual machine adminstrator"
+      }
+    },
     "domainAdminUsername": {
       "type": "string",
       "defaultValue": "adminUser",
@@ -36,40 +48,40 @@
       }
     },
     "tenantID": {
-        "type": "string",
-        "defaultValue": "null",
-        "metadata": {
-            "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave as 'null' if a standard user (non-SP) account is being used."
-        }
+      "type": "string",
+      "defaultValue": "null",
+      "metadata": {
+        "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave as 'null' if a standard user (non-SP) account is being used."
+      }
     },
     "virtualNetworkName": {
       "type": "string",
       "metadata": {
-          "description": "Existing VNET that contains the domain controller"
+        "description": "Existing VNET that contains the domain controller"
       }
     },
     "adSubnetName": {
       "type": "string",
       "metadata": {
-          "description": "Existing subnet that contains the domain controller"
+        "description": "Existing subnet that contains the domain controller"
       }
     },
     "adminDesktopVMName": {
       "type": "string",
       "metadata": {
-          "description": "admin desktop VM name"
+        "description": "admin desktop VM name"
       }
     },
     "gatewaySubnetName": {
       "type": "string",
       "metadata": {
-          "description": "gateway subnet name"
+        "description": "gateway subnet name"
       }
     },
     "cmnsgName": {
       "type": "string",
       "metadata": {
-          "description": "Connection Manager Network Security Group Name"
+        "description": "Connection Manager Network Security Group Name"
       }
     },
     "registrationCode": {
@@ -82,7 +94,7 @@
     "camSaasUri": {
       "type": "string",
       "metadata": {
-          "description": "URI for the CAM SAAS"
+        "description": "URI for the CAM SAAS"
       }
     },
     "verifyCAMSaaSCertificate": {
@@ -106,7 +118,7 @@
     "_agentArtifactsLocation": {
       "type": "string",
       "metadata": {
-          "description": "The location of resources, such as templates and DSC modules, specific to the PCoIP Agent"
+        "description": "The location of resources, such as templates and DSC modules, specific to the PCoIP Agent"
       }
     },
     "_artifactsLocation": {
@@ -203,10 +215,10 @@
             "value": 3
           },
           "vmAdminUsername": {
-            "value": "[parameters('domainAdminUsername')]"
+            "value": "[parameters('localAdminUsername')]"
           },
           "vmAdminPassword": {
-            "value": "[parameters('domainAdminPassword')]"
+            "value": "[parameters('localAdminPassword')]"
           },
           "storageAccountName": {
             "value": "[variables('storageAccountName')]"
@@ -262,10 +274,10 @@
             "value": 3
           },
           "vmAdminUsername": {
-            "value": "[parameters('domainAdminUsername')]"
+            "value": "[parameters('localAdminUsername')]"
           },
           "vmAdminPassword": {
-            "value": "[parameters('domainAdminPassword')]"
+            "value": "[parameters('localAdminPassword')]"
           },
           "registrationCode": {
             "value": "[parameters('registrationCode')]"
@@ -343,10 +355,10 @@
             "value": "Standard_A1_v2"
           },
           "vmAdminUsername": {
-            "value": "[parameters('domainAdminUsername')]"
+            "value": "[parameters('localAdminUsername')]"
           },
           "vmAdminPassword": {
-            "value": "[parameters('domainAdminPassword')]"
+            "value": "[parameters('localAdminPassword')]"
           },
           "brokerFQDN": {
             "value": "[concat(variables('serverRootName'), '-au','.',parameters('domainName'),':',variables('brokerPort'))]"

@@ -86,7 +86,7 @@
         "apiVersion": "2015-06-15",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
         "publicIPName": "[concat(parameters('dnsLabelPrefix'),'Pip')]",
-        "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
+        "vnetID": "[parameters('existingVNETName')]",
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
         "scriptFileName":  "cm_setup_0.1.sh",
         "scriptFileURI":  "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'), parameters('_artifactsLocationSasToken'))]",

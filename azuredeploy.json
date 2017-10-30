@@ -2,24 +2,40 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "domainAdminUsername": {
+    "vnetId": {
       "type": "string",
-      "defaultValue": "adminUser",
       "metadata": {
-        "description": "The name of the administrator account of the new VM and domain"
-      }
-    },
-    "domainAdminPassword": {
-      "type": "securestring",
-      "metadata": {
-        "description": "The password for the administrator account of the new VM and domain"
+        "description": "the Id of the virtual network"
       }
     },
     "domainName": {
       "type": "string",
-      "defaultValue": "example.com",
       "metadata": {
         "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
+      }
+    },
+    "serviceAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the service account that join computers to domain"
+      }
+    },
+    "serviceAccountPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password for the service account"
+      }
+    },
+    "localAdminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the local Virtual Machine adminstrator"
+      }
+    },
+    "localAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password of the local virtual machine adminstrator"
       }
     },
     "AzureAdminUsername": {
@@ -35,11 +51,11 @@
       }
     },
     "tenantID": {
-        "type": "string",
-        "defaultValue": "null",
-        "metadata": {
-            "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave as 'null' if a standard user (non-SP) account is being used."
-        }
+      "type": "string",
+      "defaultValue": "null",
+      "metadata": {
+        "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave as 'null' if a standard user (non-SP) account is being used."
+      }
     },
     "registrationCode": {
       "type": "securestring",
@@ -85,41 +101,24 @@
     }
   },
   "variables": {
+    "templateStorageAccountName": "[concat(uniquestring(resourceGroup().id), 'data')]",
     "domainGroupAppServersJoin": "Remote Workstations",
-    "adminDesktopVMName": "admin-rws"
+    "adminDesktopVMName": "admin-rws",
+    "adSubnetName": "Subnet-CloudAccessManager",
+    "gwSubnetName": "Subnet-gateway",
+    "cmnsgName": "cmNSG"
   },
   "resources": [
     {
-      "type": "Microsoft.Resources/deployments",
-      "name": "Root",
-      "apiVersion": "2016-02-01",
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/root/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "domainName": {
-            "value": "[parameters('domainName')]"
-          },
-          "domainAdminUsername": {
-            "value": "[parameters('domainAdminUsername')]"
-          },
-          "domainAdminPassword": {
-            "value": "[parameters('domainAdminPassword')]"
-          },
-          "CAMDeploymentBlobSource": {
-            "value": "[parameters('CAMDeploymentBlobSource')]"
-          },
-          "_artifactsLocation": {
-            "value": "[concat(parameters('_artifactsLocation'), '/root')]"
-          },
-          "_artifactsLocationSasToken": {
-            "value": "[parameters('_artifactsLocationSasToken')]"
-          }
-        }
-      }
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[variables('templateStorageAccountName')]",
+      "apiVersion": "2016-01-01",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "Storage",
+      "properties": {}
     },
 
     {
@@ -136,31 +135,37 @@
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          
-          "virtualNetworkName" : {
-            "value" : "[reference('Root').outputs.virtualNetworkName.value]"
+
+          "virtualNetworkName": {
+            "value": "[parameters('vnetId')]"
           },
           "adSubnetName": {
-            "value": "[reference('Root').outputs.adSubnetName.value]"
+            "value": "[variables('adSubnetName')]"
           },
           "gatewaySubnetName": {
-            "value": "[reference('Root').outputs.gatewaySubnetName.value]"
+            "value": "[variables('gwSubnetName')]"
           },
-          "adminDesktopVMName" : {
-            "value" : "[variables('adminDesktopVMName')]"
+          "adminDesktopVMName": {
+            "value": "[variables('adminDesktopVMName')]"
           },
-          "cmnsgName" : {
-            "value" : "[reference('Root').outputs.cmnsgName.value]"
+          "cmnsgName": {
+            "value": "[variables('cmnsgName')]"
           },
-          
+
           "domainName": {
             "value": "[parameters('domainName')]"
           },
           "domainAdminUsername": {
-            "value": "[parameters('domainAdminUsername')]"
+            "value": "[parameters('serviceAccountName')]"
           },
           "domainAdminPassword": {
-            "value": "[parameters('domainAdminPassword')]"
+            "value": "[parameters('serviceAccountPassword')]"
+          },
+          "localAdminUsername": {
+            "value": "[parameters('localAdminUsername')]"
+          },
+          "localAdminPassword": {
+            "value": "[parameters('localAdminPassword')]"
           },
           "AzureAdminUsername": {
             "value": "[parameters('AzureAdminUsername')]"
@@ -213,13 +218,13 @@
         },
         "parameters": {
           "existingVNETName": {
-            "value": "[reference('Root').outputs.virtualNetworkName.value]"
-          },          
+            "value": "[parameters('vnetId')]"
+          },
           "existingSubnetName": {
-            "value": "[reference('Root').outputs.adSubnetName.value]"
+            "value": "[variables('adSubnetName')]"
           },
           "dnsLabelPrefix": {
-            "value" : "[variables('adminDesktopVMName')]"
+            "value": "[variables('adminDesktopVMName')]"
           },
           "vmSize": {
             "value": "Standard_D2_v2"
@@ -228,19 +233,19 @@
             "value": "[parameters('domainName')]"
           },
           "domainUsername": {
-            "value": "[parameters('domainAdminUsername')]"
+            "value": "[parameters('serviceAccountName')]"
           },
           "domainPassword": {
-            "value": "[parameters('domainAdminPassword')]"
+            "value": "[parameters('serviceAccountPassword')]"
           },
           "domainJoinOptions": {
             "value": 3
           },
           "vmAdminUsername": {
-            "value": "[parameters('domainAdminUsername')]"
+            "value": "[parameters('localAdminUsername')]"
           },
           "vmAdminPassword": {
-            "value": "[parameters('domainAdminPassword')]"
+            "value": "[parameters('localAdminPassword')]"
           },
           "domainGroupToJoin": {
             "value": "[variables('domainGroupAppServersJoin')]"
