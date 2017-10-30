@@ -304,7 +304,7 @@
               "value": "[parameters('_agentArtifactsLocation')]"
           },
           "AGsubnetRef": {
-              "value": "[concat(resourceId('Microsoft.Network/virtualNetworks',parameters('virtualNetworkName')),'/subnets/',parameters('gatewaySubnetName'))]"
+              "value": "[concat(parameters('virtualNetworkName'),'/subnets/',parameters('gatewaySubnetName'))]"
           },
           "AGbackendIpAddressDefault": {
               "value": "[variables('auPrivateIP')]"
