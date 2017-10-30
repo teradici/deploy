@@ -126,7 +126,7 @@
       "name": "Frontend",
       "apiVersion": "2016-02-01",
       "dependsOn": [
-        "Root"
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('templateStorageAccountName'))]"
       ],
       "properties": {
         "mode": "Incremental",
@@ -183,7 +183,7 @@
             "value": "[parameters('camSaasUri')]"
           },
           "userDataStorageAccount": {
-            "value": "[reference('Root').outputs.templateStorageAccountName.value]"
+            "value": "[variables('templateStorageAccountName')]"
           },
           "verifyCAMSaaSCertificate": {
             "value": "[parameters('verifyCAMSaaSCertificate')]"
@@ -208,7 +208,7 @@
       "name": "CreateEndUserApplicationMachine",
       "apiVersion": "2016-02-01",
       "dependsOn": [
-        "Microsoft.Resources/deployments/Root"
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('templateStorageAccountName'))]"
       ],
       "properties": {
         "mode": "Incremental",
