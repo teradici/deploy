@@ -1007,7 +1007,7 @@ function Deploy-CAM()
 			-RGName $RGName `
 			-kvName $kvInfo.VaultName
 
-		$userDataStorageAccountName = $userDataStorageAccount.StorageAccountName
+		#$userDataStorageAccountName = $userDataStorageAccount.StorageAccountName
 
 		Write-Host "Registering CAM Deployment to CAM Service"
 		
@@ -1123,9 +1123,6 @@ graphURL=https\://graph.windows.net/
 		},
 		"keyVaultId": {
 			"value": "$kvId"
-		},
-		"userDataStorageAccount": {
-			"value": "$userDataStorageAccountName"
 		},
 		"CAMDeploymentInfo": {
 			"reference": {
@@ -1303,8 +1300,8 @@ if($subscriptionsToDisplay.Length -lt 1) {
 				Write-Host("Available Azure Locations")
 				Write-Host (Get-AzureRMLocation | Select-Object -Property Location, DisplayName | Format-Table | Out-String )
 
-                $newRGRegion = Read-Host "`nPlease enter resource group location"
-                $newRgResult = New-AzureRmResourceGroup -Name $rgName -Location $newRGRegion
+                $newRGLocation = Read-Host "`nPlease enter resource group location"
+                $newRgResult = New-AzureRmResourceGroup -Name $rgName -Location $newRGLocation
                 if($newRgResult) {
                     # Success!
                     $selectedRGName = $true
