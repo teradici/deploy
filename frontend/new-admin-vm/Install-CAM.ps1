@@ -777,69 +777,6 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 
 				$laSecretName = 'localAdminPassword'
 
-				################################
-				Write-Host "Populating user blob"
-				################################
-				$container_name = "cloudaccessmanager"
-				$acct_name = $using:userDataStorageAccount
-				$new_agent_vm_files = @(
-					"Install-PCoIPAgent.ps1", 
-					"Install-PCoIPAgent.sh", 
-					"$using:linuxAgentARM", 
-					"$using:gaAgentARM",
-					"$using:agentARM", 
-					"$using:sumoAgentApplicationVM",
-					"$using:sumoConf",
-					"Install-PCoIPAgent.ps1.zip",
-					"$using:idleShutdownLinux"
-					)
-				Write-Host "Will upload these files: $new_agent_vm_files"
-				$acctKey = (Get-AzureRmStorageAccountKey -ResourceGroupName $using:RGName -AccountName $acct_name).Value[0]
-				$ctx = New-AzureStorageContext -StorageAccountName $acct_name -StorageAccountKey $acctKey
-				try {
-						Get-AzureStorageContainer -Name $container_name -Context $ctx -ErrorAction Stop
-				} Catch {
-						# -Permission needs to be off to allow only owner read and to require access key!
-						New-AzureStorageContainer -Name $container_name -Context $ctx -Permission "Off"
-				}
-				Write-Host "Uploading files to private blob"
-				ForEach($file in $new_agent_vm_files) {
-						$filepath = Join-Path $using:LocalDLPath $file
-						try {
-							Get-AzureStorageBlob -Context $ctx -Container $container_name -Blob "remote-workstation/$file" -ErrorAction Stop
-						# file already exists do nothing
-						} Catch {
-							Write-Host "Uploading $filepath to blob.."
-							Set-AzureStorageBlobContent -File $filepath -Container $container_name -Blob "remote-workstation\$file" -Context $ctx
-						}
-				}
-
-				$blobUri = (((Get-AzureStorageBlob -Context $ctx -Container $container_name)[0].ICloudBlob.uri.AbsoluteUri) -split '/')[0..4] -join '/'
-
-				# this is the url to access the blob account
-				$blobUriSecretName = "userStorageAccountUri"
-				Set-AzureKeyVaultSecret -VaultName $kvName -Name $blobUriSecretName -SecretValue (ConvertTo-SecureString $blobUri -AsPlainText -Force) -ErrorAction stop
-
-				$storageAccountSecretName = "userStorageName"
-				Set-AzureKeyVaultSecret -VaultName $kvName -Name $storageAccountSecretName -SecretValue (ConvertTo-SecureString $acct_name -AsPlainText -Force) -ErrorAction stop
-				$storageAccountKeyName = "userStorageAccountKey"
-				Set-AzureKeyVaultSecret -VaultName $kvName -Name $storageAccountKeyName -SecretValue (ConvertTo-SecureString $acctKey -AsPlainText -Force) -ErrorAction stop
-
-				$saSasToken = New-AzureStorageAccountSASToken -Service Blob -Resource Object -Context $ctx -ExpiryTime ((Get-Date).AddYears(2)) -Permission "racwdlup" 
-				$saSasTokenSecretName = 'userStorageAccountSaasToken'
-				Set-AzureKeyVaultSecret -VaultName $kvName -Name $saSasTokenSecretName -SecretValue (ConvertTo-SecureString $saSasToken -AsPlainText -Force) -ErrorAction stop
-
-				# These environment variables will kick in when the admin ui vm is up and running. do not refer to them within this script.
-				# using the blob uri + the token from the key vault will allow the web interface to retrieve required information from private blob
-				[System.Environment]::SetEnvironmentVariable("CAM_KEY_VAULT_NAME", $kvName, "Machine")
-
-				# these two are used to retrieve files via http. Their values need to be retrieved from the key vault
-				[System.Environment]::SetEnvironmentVariable("CAM_USER_BLOB_URI", $blobUriSecretName, "Machine")
-				[System.Environment]::SetEnvironmentVariable("CAM_USER_BLOB_TOKEN", $saSasTokenSecretName, "Machine")
-
-				# these two are used to upload files using cli or sdk. Their values need to be retrieved from the key vault
-				[System.Environment]::SetEnvironmentVariable("CAM_USER_STORAGE_ACCOUNT_NAME", $storageAccountSecretName, "Machine")
-				[System.Environment]::SetEnvironmentVariable("CAM_USER_STORAGE_ACCOUNT_KEY", $storageAccountKeyName, "Machine")
 
 				################################
 

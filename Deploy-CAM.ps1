@@ -463,8 +463,9 @@ function Populate-UserBlob
 		try {
 			Get-AzureStorageContainer -Name $container_name -Context $ctx -ErrorAction Stop
 		} Catch {
+			# No container - make one.
 			# -Permission needs to be off to allow only owner read and to require access key!
-			New-AzureStorageContainer -Name $container_name -Context $ctx -Permission "Off"
+			New-AzureStorageContainer -Name $container_name -Context $ctx -Permission "Off" -ErrorAction Stop
 		}
 	
 		Write-Host "Uploading files to private blob"
@@ -1034,26 +1035,21 @@ graphURL=https\://graph.windows.net/
 "@
 		
 			$authFileContentURL = [System.Web.HttpUtility]::UrlEncode($authFileContent) 
-		
-			Write-Host $camDeploymenRegInfo.GetType()
-			Write-Host $camDeploymenRegInfo
-			Write-Host $userBlobInfo.GetType()
-			Write-Host $userBlobInfo
-			
+
 			$camDeploymenInfo = @{};
 			$camDeploymenInfo.Add("registrationInfo",($camDeploymenRegInfo + $userBlobInfo))
 			$camDeploymenInfo.Add("AzureAuthFile",$authFileContentURL)
-		
+
 			$camDeploymenInfoJSON = ConvertTo-JSON $camDeploymenInfo -Depth 16 -Compress
 			$camDeploymenInfoURL = [System.Web.HttpUtility]::UrlEncode($camDeploymenInfoJSON)
-		
+
 			$camDeploymenInfoURLSecure = ConvertTo-SecureString $camDeploymenInfoURL -AsPlainText -Force
 			$camDeploySecretName = 'CAMDeploymentInfo'
 			$camDeploySecret = Set-AzureKeyVaultSecret -VaultName $kvInfo.VaultName -Name $camDeploySecretName -SecretValue $camDeploymenInfoURLSecure
-		
+
 			$SPKeySecretName = 'SPKey'
 			$SPKeySecret = Set-AzureKeyVaultSecret -VaultName $kvInfo.VaultName -Name $SPKeySecretName -SecretValue $spInfo.spCreds.Password
-		
+
 			<# Test code for encoding/decoding
 			$camDeploymenInfoURL
 			$camDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($camDeploymenInfoURL)
