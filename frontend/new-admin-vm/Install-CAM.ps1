@@ -129,9 +129,6 @@ Configuration InstallCAM
 		[Parameter(Mandatory=$true)]
 		[string]$camSaasUri,
 
-		[Parameter(Mandatory=$true)]
-		[string]$userDataStorageAccount,
-
 		[Parameter(Mandatory=$false)]
 		[bool]$verifyCAMSaaSCertificate=$true,
 

@@ -121,12 +121,6 @@
         "description": "The location of the blobs for admin GUI machine installation"
       }
     },
-    "userDataStorageAccount": {
-      "type": "string",
-      "metadata": {
-        "description": "The private location to store artifacts, templates, and various dependencies used to ensure stable and reliable deployments."
-      }
-    },
     "_agentArtifactsLocation": {
       "type": "string",
       "metadata": {
@@ -302,9 +296,6 @@
           },
           "storageAccountName": {
             "value": "[variables('storageAccountName')]"
-          },
-          "userDataStorageAccount": {
-            "value": "[parameters('userDataStorageAccount')]"
           },
           "adminDesktopVMName": {
             "value": "[parameters('adminDesktopVMName')]"
