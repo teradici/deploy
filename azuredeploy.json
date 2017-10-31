@@ -48,6 +48,12 @@
         "description": "PCoIP Agent License Registration Code."
       }
     },
+    "userDataStorageAccount": {
+      "type": "string",
+      "metadata": {
+        "description": "The account where user blob data is stored for CAM deployments."
+      }
+    },
     "camSaasUri": {
       "type": "string",
       "metadata": {
@@ -202,7 +208,7 @@
             "value": "[parameters('camSaasUri')]"
           },
           "userDataStorageAccount": {
-            "value": "[reference('Root').outputs.templateStorageAccountName.value]"
+            "value": "[parameters('userDataStorageAccount')]"
           },
           "verifyCAMSaaSCertificate": {
             "value": "[parameters('verifyCAMSaaSCertificate')]"

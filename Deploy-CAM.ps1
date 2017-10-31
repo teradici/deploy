@@ -401,6 +401,141 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 
 
 
+function Create-UserStorageAccount
+{
+	Param(
+		$RGName,
+		$location
+	)
+
+	$saName = 	-join ((97..122) | Get-Random -Count 18 | % {[char]$_})
+
+	Write-Host "Creating user data storage account $saName in resource group $RGName and location $location."
+
+	$acct = New-AzureRmStorageAccount `
+		-ResourceGroupName $RGName `
+		-AccountName $saName `
+		-Location $location `
+		-SkuName "Standard_LRS"
+
+	return $acct
+}
+
+function Populate-UserBlob
+{
+	Param(
+		$artifactsLocation,
+		$userDataStorageAccount,
+		$CAMDeploymentBlobSource,
+		$linuxAgentARM,
+		$gaAgentARM,
+		$agentARM,
+		$sumoAgentApplicationVM,
+		$sumoConf,
+		$idleShutdownLinux,
+		$RGName,
+		$kvName
+		)
+		
+	################################
+	Write-Host "Populating user blob"
+	################################
+	$container_name = "cloudaccessmanager"
+	$acct_name = $userDataStorageAccount.StorageAccountName
+	$new_agent_vm_files = @(
+		"$artifactsLocation/end-user-application-machines/new-agent-vm/Install-PCoIPAgent.ps1", 
+		"$artifactsLocation/end-user-application-machines/new-agent-vm/Install-PCoIPAgent.sh",
+		"$CAMDeploymentBlobSource\Install-PCoIPAgent.ps1.zip",
+		"$artifactsLocation/end-user-application-machines/new-agent-vm/rhel-standard-agent.json", 
+		"$artifactsLocation/end-user-application-machines/new-agent-vm/server2016-graphics-agent.json",
+		"$artifactsLocation/end-user-application-machines/new-agent-vm/server2016-standard-agent.json", 
+		"$artifactsLocation/end-user-application-machines/new-agent-vm/sumo-agent-vm.json",
+		"$artifactsLocation/end-user-application-machines/new-agent-vm/sumo.conf",
+		"$artifactsLocation/end-user-application-machines/new-agent-vm/Install-Idle-Shutdown.sh"
+	)
+
+	# Suppress outputting to pipeline so the return value of the function is the one
+	# hash table we want.
+	$null = @(
+		Write-Host "Will upload these files: $new_agent_vm_files"
+		$acctKey = (Get-AzureRmStorageAccountKey -ResourceGroupName $RGName -AccountName $acct_name).Value[0]
+		$ctx = New-AzureStorageContext -StorageAccountName $acct_name -StorageAccountKey $acctKey
+		try {
+			Get-AzureStorageContainer -Name $container_name -Context $ctx -ErrorAction Stop
+		} Catch {
+			# -Permission needs to be off to allow only owner read and to require access key!
+			New-AzureStorageContainer -Name $container_name -Context $ctx -Permission "Off"
+		}
+	
+		Write-Host "Uploading files to private blob"
+		ForEach($fileURI in $new_agent_vm_files) {
+			$fileName = $fileURI.Substring($fileURI.lastIndexOf('/') + 1)
+			try {
+				Get-AzureStorageBlob `
+					-Context $ctx `
+					-Container $container_name `
+					-Blob "remote-workstation/$fileName" `
+					-ErrorAction Stop
+			# file already exists do nothing
+			} Catch {
+				Write-Host "Uploading $fileURI to blob.."
+				Start-AzureStorageBlobCopy `
+					-AbsoluteUri $fileURI `
+					-DestContainer $container_name `
+					-DestBlob "remote-workstation/$fileName" `
+					-DestContext $ctx
+			}
+		}
+	
+		#TODO: Check for errors...
+		Write-Host "Waiting for blob copy completion"
+		ForEach($fileURI in $new_agent_vm_files) {
+			$fileName = $fileURI.Substring($fileURI.lastIndexOf('/') + 1)
+			Write-Host "Waiting for $fileName"
+			Get-AzureStorageBlobCopyState `
+				-Blob "remote-workstation/$fileName" `
+				-Container $container_name `
+				-Context $ctx `
+				-WaitForComplete
+			Write-Host "$fileName complete"
+		}
+	
+		$blobUri = (((Get-AzureStorageBlob -Context $ctx -Container $container_name)[0].ICloudBlob.uri.AbsoluteUri) -split '/')[0..4] -join '/'
+	
+		# this is the url to access the blob account
+		$blobUriSecretName = "userStorageAccountUri"
+		Set-AzureKeyVaultSecret -VaultName $kvName -Name $blobUriSecretName -SecretValue (ConvertTo-SecureString $blobUri -AsPlainText -Force) -ErrorAction stop
+	
+		$storageAccountSecretName = "userStorageName"
+		Set-AzureKeyVaultSecret -VaultName $kvName -Name $storageAccountSecretName -SecretValue (ConvertTo-SecureString $acct_name -AsPlainText -Force) -ErrorAction stop
+		$storageAccountKeyName = "userStorageAccountKey"
+		Set-AzureKeyVaultSecret -VaultName $kvName -Name $storageAccountKeyName -SecretValue (ConvertTo-SecureString $acctKey -AsPlainText -Force) -ErrorAction stop
+	
+		$saSasToken = New-AzureStorageAccountSASToken -Service Blob -Resource Object -Context $ctx -ExpiryTime ((Get-Date).AddYears(2)) -Permission "racwdlup" 
+		$saSasTokenSecretName = 'userStorageAccountSaasToken'
+		Set-AzureKeyVaultSecret -VaultName $kvName -Name $saSasTokenSecretName -SecretValue (ConvertTo-SecureString $saSasToken -AsPlainText -Force) -ErrorAction stop
+	
+		$userBlobInfo = @{}
+	
+	
+		# using the blob uri + the token from the key vault will allow the web interface to retrieve required information from private blob
+		$userBlobInfo.Add("CAM_KEY_VAULT_NAME", $kvName)
+		
+		# these two are used to retrieve files via http. Their values need to be retrieved from the key vault
+		$userBlobInfo.Add("CAM_USER_BLOB_URI", $blobUriSecretName)
+		$userBlobInfo.Add("CAM_USER_BLOB_TOKEN", $saSasTokenSecretName)
+	
+		# these two are used to upload files using cli or sdk. Their values need to be retrieved from the key vault
+		$userBlobInfo.Add("CAM_USER_STORAGE_ACCOUNT_NAME", $storageAccountSecretName)
+		$userBlobInfo.Add("CAM_USER_STORAGE_ACCOUNT_KEY", $storageAccountKeyName)
+	)
+
+	return $userBlobInfo
+}
+
+
+
+
 function createAndPopulateKeyvault()
 {
 	Param(
@@ -845,6 +980,7 @@ function Deploy-CAM()
 
 	#cache the current context
 	$azureContext = Get-AzureRMContext
+	$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName
 
 	try {
 		Add-AzureRmAccount `
@@ -858,18 +994,31 @@ function Deploy-CAM()
 			-registrationCode $registrationCode `
 			-DomainJoinPassword $CAMConfig.parameters.domainAdminPassword.value `
 			-spName $spInfo.spCreds.UserName
+
+		$userDataStorageAccount = Create-UserStorageAccount `
+			-RGName $RGName `
+			-Location $rg.Location
 		
-			Write-Host "Registering CAM Deployment to CAM Service"
+		$userBlobInfo = Populate-UserBlob `
+			-artifactsLocation $artifactsLocation `
+			-userDataStorageAccount	$userDataStorageAccount `
+			-CAMDeploymentBlobSource $CAMDeploymentBlobSource `
+			-RGName $RGName `
+			-kvName $kvInfo.VaultName
+
+		$userDataStorageAccountName = $userDataStorageAccount.StorageAccountName
+
+		Write-Host "Registering CAM Deployment to CAM Service"
 		
-			$camDeploymenRegInfo = Register-CAM `
-				-SubscriptionId $subscriptionID `
-				-client $client `
-				-key $key `
-				-tenant $tenant `
-				-RGName $RGName `
-				-registrationCode $registrationCode `
-				-camSaasBaseUri $camSaasUri `
-				-verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
+		$camDeploymenRegInfo = Register-CAM `
+			-SubscriptionId $subscriptionID `
+			-client $client `
+			-key $key `
+			-tenant $tenant `
+			-RGName $RGName `
+			-registrationCode $registrationCode `
+			-camSaasBaseUri $camSaasUri `
+			-verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
 		
 			Write-Host "Create auth file information for the CAM frontend."
 		
@@ -886,8 +1035,13 @@ graphURL=https\://graph.windows.net/
 		
 			$authFileContentURL = [System.Web.HttpUtility]::UrlEncode($authFileContent) 
 		
+			Write-Host $camDeploymenRegInfo.GetType()
+			Write-Host $camDeploymenRegInfo
+			Write-Host $userBlobInfo.GetType()
+			Write-Host $userBlobInfo
+			
 			$camDeploymenInfo = @{};
-			$camDeploymenInfo.Add("registrationInfo",$camDeploymenRegInfo)
+			$camDeploymenInfo.Add("registrationInfo",($camDeploymenRegInfo + $userBlobInfo))
 			$camDeploymenInfo.Add("AzureAuthFile",$authFileContentURL)
 		
 			$camDeploymenInfoJSON = ConvertTo-JSON $camDeploymenInfo -Depth 16 -Compress
@@ -974,6 +1128,9 @@ graphURL=https\://graph.windows.net/
 		"keyVaultId": {
 			"value": "$kvId"
 		},
+		"userDataStorageAccount": {
+			"value": "$userDataStorageAccountName"
+		},
 		"CAMDeploymentInfo": {
 			"reference": {
 				"keyVault": {
@@ -987,8 +1144,6 @@ graphURL=https\://graph.windows.net/
         }
 	}
 "@
-		
-		
 		
 		$CAMConfigTable = ConvertPSObjectToHashtable -InputObject $CAMConfig
 	
@@ -1005,18 +1160,23 @@ graphURL=https\://graph.windows.net/
 		Write-Host "Please feel free to watch here for early errors for a few minutes and then go do something else. Or go for coffee!"
 		Write-Host "If this script is running in Azure Cloud Shell then you may let the shell timeout and the deployment will continue."
 		Write-Host "Please watch the resource group $RGName in the Azure Portal for current status."
-		
-#		Test-AzureRmResourceGroupDeployment
-#			-ResourceGroupName $RGName `
-#			-TemplateFile "azuredeploy.json" `
-#			-TemplateParameterFile $outputParametersFileName  `
-#			-Verbose
 
-		New-AzureRmResourceGroupDeployment `
-			-DeploymentName "CAM" `
-			-ResourceGroupName $RGName `
-			-TemplateFile $CAMDeploymentTemplateURI `
-			-TemplateParameterFile $outputParametersFileName 
+		if($false) {
+ 			# just do a test if $true
+ 			Test-AzureRmResourceGroupDeployment `
+				-ResourceGroupName $RGName `
+				-TemplateFile "azuredeploy.json" `
+				-TemplateParameterFile $outputParametersFileName  `
+				-Verbose
+		}
+		else {
+			New-AzureRmResourceGroupDeployment `
+				-DeploymentName "CAM" `
+				-ResourceGroupName $RGName `
+				-TemplateFile $CAMDeploymentTemplateURI `
+				-TemplateParameterFile $outputParametersFileName 
+		}
+
 
 	}
 	finally {
@@ -1144,7 +1304,10 @@ if($subscriptionsToDisplay.Length -lt 1) {
                 $rgName = $rgIdentifier
                 $newRgResult = $null
 
-                $newRGRegion = Read-Host "Please enter resource group region"
+				Write-Host("Available Azure Locations")
+				Write-Host (Get-AzureRMLocation | Select-Object -Property Location, DisplayName | Format-Table | Out-String )
+
+                $newRGRegion = Read-Host "`nPlease enter resource group location"
                 $newRgResult = New-AzureRmResourceGroup -Name $rgName -Location $newRGRegion
                 if($newRgResult) {
                     # Success!
