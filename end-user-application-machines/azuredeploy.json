@@ -166,10 +166,10 @@
             "value": 3
           },
           "vmAdminUsername": {
-            "value": "[parameters('domainUsername')]"
+            "value": "[parameters('vmAdminUsername')]"
           },
           "vmAdminPassword": {
-            "value": "[parameters('domainPassword')]"
+            "value": "[parameters('vmAdminPassword')]"
           },
           "domainGroupToJoin": {
             "value": "[parameters('domainGroupToJoin')]"
