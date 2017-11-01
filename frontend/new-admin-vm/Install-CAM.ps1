@@ -727,13 +727,18 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 				$regInfo = $camDeploymenInfoDecoded.RegistrationInfo
 
 				$spName = $regInfo.CAM_USERNAME
-				$spPass = $regInfo.CAM_PASSWORD
+				$spPass = ConvertTo-SecureString $regInfo.CAM_PASSWORD -AsPlainText -Force
 				$tenantID = $regInfo.CAM_TENANTID
 
 				Write-Host "Logging in SP $spName with tenantID $tenantID"
 
 				$spCreds = New-Object -TypeName pscredential -ArgumentList  $spName, $spPass
-				Add-AzureRmAccount -ServicePrincipal -Credential $spCreds -TenantId $tenantID -ErrorAction Stop
+
+				Add-AzureRmAccount `
+					-ServicePrincipal `
+					-Credential $spCreds `
+					-TenantId $tenantID `
+					-ErrorAction Stop
 
 				# Now get Keyvault Secrets
 				$kvName = $regInfo.CAM_KEY_VAULT_NAME

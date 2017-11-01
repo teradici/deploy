@@ -1374,7 +1374,7 @@ graphURL=https\://graph.windows.net/
 		Set-Content $outputParametersFileName  $outParametersFileContent
 	
 	
-		Write-Host "Deploying Cloud Access Manager Connection Service. This process can take up to 90 minutes."
+		Write-Host "`nDeploying Cloud Access Manager Connection Service. This process can take up to 90 minutes."
 		Write-Host "Please feel free to watch here for early errors for a few minutes and then go do something else. Or go for coffee!"
 		Write-Host "If this script is running in Azure Cloud Shell then you may let the shell timeout and the deployment will continue."
 		Write-Host "Please watch the resource group $RGName in the Azure Portal for current status."
