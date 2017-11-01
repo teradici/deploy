@@ -573,7 +573,7 @@ function Create-RemoteWorstationTemplates
 			Get-AzureStorageBlob `
 				-Context $storageAccountContext `
 				-Container $storageAccountContainerName `
-				-Blob "remote-workstation\$file" `
+				-Blob "remote-workstation-template/$file" `
 				-ErrorAction Stop
 			# file already exists do nothing
 		} Catch {
@@ -581,7 +581,7 @@ function Create-RemoteWorstationTemplates
 			Set-AzureStorageBlobContent `
 				-File $filepath `
 				-Container $storageAccountContainerName `
-				-Blob "remote-workstation\$file" `
+				-Blob "remote-workstation-template/$file" `
 				-Context $storageAccountContext
 		}
 	}
@@ -613,22 +613,23 @@ function Populate-UserBlob
 	################################
 	$container_name = "cloudaccessmanager"
 	$acct_name = $userDataStorageAccount.StorageAccountName
+
+	#source, targetdir pairs
 	$new_agent_vm_files = @(
-		"$artifactsLocation/end-user-application-machines/new-agent-vm/Install-PCoIPAgent.ps1", 
-		"$artifactsLocation/end-user-application-machines/new-agent-vm/Install-PCoIPAgent.sh",
-		"$CAMDeploymentBlobSource/Install-PCoIPAgent.ps1.zip",
-		"$artifactsLocation/end-user-application-machines/new-agent-vm/rhel-standard-agent.json", 
-		"$artifactsLocation/end-user-application-machines/new-agent-vm/server2016-graphics-agent.json",
-		"$artifactsLocation/end-user-application-machines/new-agent-vm/server2016-standard-agent.json", 
-		"$artifactsLocation/end-user-application-machines/new-agent-vm/sumo-agent-vm.json",
-		"$artifactsLocation/end-user-application-machines/new-agent-vm/sumo.conf",
-		"$artifactsLocation/end-user-application-machines/new-agent-vm/Install-Idle-Shutdown.sh"
+		@("$artifactsLocation/end-user-application-machines/new-agent-vm/Install-PCoIPAgent.ps1","remote-workstation"),
+		@("$artifactsLocation/end-user-application-machines/new-agent-vm/Install-PCoIPAgent.sh","remote-workstation"),
+		@("$CAMDeploymentBlobSource/Install-PCoIPAgent.ps1.zip","remote-workstation"),
+		@("$artifactsLocation/end-user-application-machines/new-agent-vm/sumo-agent-vm.json","remote-workstation"),
+		@("$artifactsLocation/end-user-application-machines/new-agent-vm/sumo.conf","remote-workstation"),
+		@("$artifactsLocation/end-user-application-machines/new-agent-vm/Install-Idle-Shutdown.sh","remote-workstation"),
+		@("$artifactsLocation/end-user-application-machines/new-agent-vm/rhel-standard-agent.json","remote-workstation-template"),
+		@("$artifactsLocation/end-user-application-machines/new-agent-vm/server2016-graphics-agent.json","remote-workstation-template"),
+		@("$artifactsLocation/end-user-application-machines/new-agent-vm/server2016-standard-agent.json","remote-workstation-template")
 	)
 
-	# Suppress outputting to pipeline so the return value of the function is the one
+	# Suppress output to pipeline so the return value of the function is the one
 	# hash table we want.
 	$null = @(
-		Write-Host "Will upload these files: $new_agent_vm_files"
 		$acctKey = (Get-AzureRmStorageAccountKey -ResourceGroupName $RGName -AccountName $acct_name).Value[0]
 		$ctx = New-AzureStorageContext -StorageAccountName $acct_name -StorageAccountKey $acctKey
 		try {
@@ -640,13 +641,15 @@ function Populate-UserBlob
 		}
 	
 		Write-Host "Uploading files to private blob"
-		ForEach($fileURI in $new_agent_vm_files) {
+		ForEach($fileRecord in $new_agent_vm_files) {
+			$fileURI = $fileRecord[0]
+			$targetDir = $fileRecord[1]
 			$fileName = $fileURI.Substring($fileURI.lastIndexOf('/') + 1)
 			try {
 				Get-AzureStorageBlob `
 					-Context $ctx `
 					-Container $container_name `
-					-Blob "remote-workstation/$fileName" `
+					-Blob "$targetDir/$fileName" `
 					-ErrorAction Stop
 			# file already exists do nothing
 			} Catch {
@@ -654,24 +657,26 @@ function Populate-UserBlob
 				Start-AzureStorageBlobCopy `
 					-AbsoluteUri $fileURI `
 					-DestContainer $container_name `
-					-DestBlob "remote-workstation/$fileName" `
+					-DestBlob "$targetDir/$fileName" `
 					-DestContext $ctx
 			}
 		}
 	
 		#TODO: Check for errors...
 		Write-Host "Waiting for blob copy completion"
-		ForEach($fileURI in $new_agent_vm_files) {
+		ForEach($fileRecord in $new_agent_vm_files) {
+			$fileURI = $fileRecord[0]
+			$targetDir = $fileRecord[1]
 			$fileName = $fileURI.Substring($fileURI.lastIndexOf('/') + 1)
 			Write-Host "Waiting for $fileName"
 			Get-AzureStorageBlobCopyState `
-				-Blob "remote-workstation/$fileName" `
+				-Blob "$targetDir/$fileName" `
 				-Container $container_name `
 				-Context $ctx `
 				-WaitForComplete
-			Write-Host "$fileName complete"
 		}
-
+		Write-Host "Blob copy complete"
+		
 		$blobUri = (((Get-AzureStorageBlob -Context $ctx -Container $container_name)[0].ICloudBlob.uri.AbsoluteUri) -split '/')[0..4] -join '/'
 	
 		# Setup Keyvault secrets
@@ -703,8 +708,8 @@ function Populate-UserBlob
 
 		# Now generate and upload the parameters files
 
-# binaryLocation is the original binaries source location hosted by Teradici
-# blobUri is the new per-deployment blob storage location 
+		# binaryLocation is the original binaries source location hosted by Teradici
+		# blobUri is the new per-deployment blob storage location 
  		Create-RemoteWorstationTemplates `
 			-CAMConfig $CAMConfig `
 			-binaryLocation $CAMDeploymentBlobSource `

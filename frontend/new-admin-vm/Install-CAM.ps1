@@ -136,9 +136,6 @@ Configuration InstallCAM
 		[string]$keyVaultId
 	)
 
-	$standardVMSize = "Standard_D2_v2"
-	$graphicsVMSize = "Standard_NV6"
-
 	$dcvmfqdn = "$DCVMName.$domainFQDN"
 	$pbvmfqdn = "$env:computername.$domainFQDN"
 	$family   = "Windows Server 2016"
@@ -201,27 +198,6 @@ Configuration InstallCAM
 		{
 			Uri = "$sourceURI/$adminWAR"
 			DestinationPath = "$LocalDLPath\$adminWAR"
-			MatchSource = $false
-		}
-
-		xRemoteFile Download_Agent_ARM
-		{
-			Uri = "$templateAgentURI/$agentARM"
-			DestinationPath = "$LocalDLPath\$agentARM"
-			MatchSource = $false
-		}
-
-		xRemoteFile Download_Ga_Agent_ARM
-		{
-			Uri = "$templateAgentURI/$gaAgentARM"
-			DestinationPath = "$LocalDLPath\$gaAgentARM"
-			MatchSource = $false
-		}
-
-		xRemoteFile Download_Linux_Agent_ARM
-		{
-			Uri = "$templateAgentURI/$linuxAgentARM"
-			DestinationPath = "$LocalDLPath\$linuxAgentARM"
 			MatchSource = $false
 		}
 
@@ -581,10 +557,7 @@ Configuration InstallCAM
         Script Install_AUI
         {
             DependsOn  = @("[xRemoteFile]Download_Admin_WAR",
-						   "[xRemoteFile]Download_Agent_ARM",
-						   "[Script]Setup_AUI_Service",
-						   "[xRemoteFile]Download_Ga_Agent_ARM",
-						   "[xRemoteFile]Download_Linux_Agent_ARM")
+						   "[Script]Setup_AUI_Service")
 
             GetScript  = { @{ Result = "Install_AUI" } }
 
@@ -599,9 +572,6 @@ Configuration InstallCAM
             SetScript  = {
 		        $LocalDLPath = $using:LocalDLPath
 				$adminWAR = $using:adminWAR
-                $agentARM = $using:agentARM
-                $gaAgentARM = $using:gaAgentARM
-				$linuxAgentARM = $using:linuxAgentARM
 				$localtomcatpath = $using:localtomcatpath
 				$CatalinaHomeLocation = $using:CatalinaHomeLocation
 				$catalinaBase = "$CatalinaHomeLocation" #\$using:AUIServiceName"
@@ -686,24 +656,6 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 
 				Set-Content $indexFileName $redirectString -Force
 
-
-
-		        Write-Host "Pulling in Agent machine deployment script."
-
-				$templateLoc = "$CatalinaHomeLocation\ARMtemplateFiles"
-				
-				if(-not (Test-Path $templateLoc))
-				{
-					New-Item $templateLoc -type directory
-				}
-
-				#clear out whatever was stuffed in from the deployment WAR file
-				Remove-Item "$templateLoc\*" -Recurse
-				
-				copy "$LocalDLPath\$agentARM" $templateLoc
-				copy "$LocalDLPath\$gaAgentARM" $templateLoc
-				copy "$LocalDLPath\$linuxAgentARM" $templateLoc
-
 			}
 		}
 
@@ -724,22 +676,15 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 
 				Write-Host "Writing auth file."
 
-# File format as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
-
-
-				$localAzureCreds = $using:AzureCreds   # can delete?
-				$RGNameLocal     = $using:RGName       # can delete?
-				$tenantID        = $using:tenantID
-
-				Write-Host "Create auth file."
-				
+				# File format as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
 
 				$CAMDeploymentInfoCred = $using:CAMDeploymentInfo;
 				$CAMDeploymentInfo = $CAMDeploymentInfoCred.GetNetworkCredential().Password
 				$CAMDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($CAMDeploymentInfo)
 				$CAMDeploymenInfoDecoded = ConvertFrom-Json $CAMDeploymenInfoJSONDecoded
+				$regInfo = $camDeploymenInfoDecoded.RegistrationInfo
 				$authFileContent = [System.Web.HttpUtility]::UrlDecode($CAMDeploymenInfoDecoded.AzureAuthFile)
-				
+
 				$targetDir = "$env:CATALINA_HOME\adminproperty"
 				$authFilePath = "$targetDir\authfile.txt"
 
@@ -777,84 +722,31 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 
 				################################
 
+				#login to Azure and get storage context so we can pull the right files out of the blob storage
 
-				Write-Host "Creating default template parameters file data"
+				$regInfo = $camDeploymenInfoDecoded.RegistrationInfo
 
+				$spName = $regInfo.CAM_USERNAME
+				$spPass = $regInfo.CAM_PASSWORD
+				$tenantID = $regInfo.CAM_TENANTID
 
-				$armParamContent = @"
-{
-    "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
-		"vmSize": { "value": "%vmSize%" },
-		"CAMDeploymentBlobSource": { "value": "$blobUri" },
-		"binaryLocation": { "value": "$using:sourceURI" },
-        "existingSubnetName": { "value": "$using:existingSubnetName" },
-        "domainUsername": { "value": "$DomainAdminUsername" },
-		"userStorageAccountName": {
-			"reference": {
-			  "keyVault": {
-				"id": "$kvId"
-			  },
-			  "secretName": "$storageAccountSecretName"
-			}		
-		},
-		"userStorageAccountKey": {
-			"reference": {
-			  "keyVault": {
-				"id": "$kvId"
-			  },
-			  "secretName": "$storageAccountKeyName"
-			}		
-		},
-        "domainPassword": {
-			"reference": {
-			  "keyVault": {
-				"id": "$kvId"
-			  },
-			  "secretName": "$djSecretName"
-			}		
-		},
-        "registrationCode": {
-			"reference": {
-			  "keyVault": {
-				"id": "$kvId"
-			  },
-			  "secretName": "$rcSecretName"
-			}
-		},
-        "dnsLabelPrefix": { "value": "tbd-vmname" },
-        "existingVNETName": { "value": "$using:existingVNETName" },
-        "vmAdminUsername": { "value": "$VMAdminUsername" },
-        "vmAdminPassword": {
-			"reference": {
-			  "keyVault": {
-				"id": "$kvId"
-			  },
-			  "secretName": "$laSecretName"
-			}
-		},
-        "domainToJoin": { "value": "$using:domainFQDN" },
-        "domainGroupToJoin": { "value": "$using:domainGroupAppServersJoin" },
-        "storageAccountName": { "value": "$using:storageAccountName" },
-		"_artifactsLocation": { "value": "$blobUri" },
-		"_artifactsLocationSasToken": {
-			"reference": {
-			  "keyVault": {
-					"id": "$kvId"
-			  },
-			  "secretName": "$saSasTokenSecretName"
-			}
-		}
-	}
-}
+				Write-Host "Logging in SP $spName with tenantID $tenantID"
 
-"@
+				$spCreds = New-Object -TypeName pscredential -ArgumentList  $spName, $spPass
+				Add-AzureRmAccount -ServicePrincipal -Credential $spCreds -TenantId $tenantID -ErrorAction Stop
 
+				# Now get Keyvault Secrets
+				$kvName = $regInfo.CAM_KEY_VAULT_NAME
+				$saSecretName = $regInfo.CAM_USER_STORAGE_ACCOUNT_NAME
+				$sakeySecretName = $regInfo.CAM_USER_STORAGE_ACCOUNT_KEY
 
-				$standardArmParamContent = $armParamContent -replace "%vmSize%",$using:standardVMSize
-				$graphicsArmParamContent = $armParamContent -replace "%vmSize%",$using:graphicsVMSize
-				$linuxArmParamContent = $armParamContent -replace "%vmSize%",$using:standardVMSize
+				$container_name = "cloudaccessmanager"
+				$storageAccount = Get-AzureKeyVaultSecret -VaultName $kvName -Name $saSecretName
+				$storageAccountKey = Get-AzureKeyVaultSecret -VaultName $kvName -Name $sakeySecretName
+
+				$ctx = New-AzureStorageContext `
+					-StorageAccountName $storageAccount.SecretValueText `
+					-StorageAccountKey $storageAccountKey.SecretValueText
 
 				Write-Host "Creating default template parameters files"
 
@@ -862,6 +754,19 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
                 $agentARM = $using:agentARM
                 $gaAgentARM = $using:gaAgentARM
 				$linuxAgentARM = $using:linuxAgentARM
+
+		        Write-Host "Pulling in Agent machine deployment templates."
+
+				$templateLoc = "$using:CatalinaHomeLocation\ARMtemplateFiles"
+				
+				if(-not (Test-Path $templateLoc))
+				{
+					New-Item $templateLoc -type directory
+				}
+
+				#clear out whatever was stuffed in from the deployment WAR file
+				Remove-Item "$templateLoc\*" -Recurse
+				
 
 				$agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
 				$gaAgentARMparam = ($gaAgentARM.split('.')[0]) + ".customparameters.json"
@@ -871,6 +776,9 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 				$ParamTargetFilePath = "$ParamTargetDir\$agentARMparam"
 				$GaParamTargetFilePath = "$ParamTargetDir\$gaAgentARMparam"
 				$LinuxParamTargetFilePath = "$ParamTargetDir\$linuxAgentARMparam"
+                $ARMTargetFilePath = "$templateLoc\$agentARM"
+                $GaARMTargetFilePath = "$templateLoc\$gaAgentARM"
+                $linuxARMTargetFilePath = "$templateLoc\$linuxAgentARM"
 
 				if(-not (Test-Path $ParamTargetDir))
 				{
@@ -880,29 +788,25 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 				#clear out whatever was stuffed in from the deployment WAR file
 				Remove-Item "$ParamTargetDir\*" -Recurse
 
-				# upload the param files to the blob
-				$paramFiles = @(
-					@($ParamTargetFilePath, $standardArmParamContent),
-					@($GaParamTargetFilePath, $graphicsArmParamContent),
-					@($LinuxParamTargetFilePath, $linuxArmParamContent)
+				$ARMFiles = @(
+					$ParamTargetFilePath,
+					$GaParamTargetFilePath,
+					$LinuxParamTargetFilePath,
+	                $ARMTargetFilePath,
+	                $GaARMTargetFilePath,
+	                $linuxARMTargetFilePath
 				)
-				ForEach($item in $paramFiles) {
-					$filepath = $item[0]
-					$content = $item[1]
-					if (-not (Test-Path $filepath)) 
-					{
-						New-Item $filepath -type file
-					}
-					Set-Content $filepath $content -Force
 
-					$file = Split-Path $filepath -leaf
-					try {
-						Get-AzureStorageBlob -Context $ctx -Container $container_name -Blob "remote-workstation\$file" -ErrorAction Stop
-					# file already exists do nothing
-					} Catch {
-						Write-Host "Uploading $filepath to blob.."
-						Set-AzureStorageBlobContent -File $filepath -Container $container_name -Blob "remote-workstation\$file" -Context $ctx
-					}
+
+				# download the files from the blob
+
+				ForEach($item in $ARMFiles) {
+					$targetpath = $item
+					$filename = Split-Path $targetpath -leaf
+					$sourcepath = "remote-workstation-template/$filename"
+
+					Write-Host "Downloading $sourcepath from blob container $container_name.."
+					Get-AzureStorageBlobContent -Destination $filepath -Container $container_name -Blob $sourcepath -Context $ctx
 				}
 
 		        Write-Host "Finished Creating default template parameters file data."
