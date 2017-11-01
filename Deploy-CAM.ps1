@@ -12,6 +12,11 @@ param(
 	$domainName,
 	[SecureString]$registrationCode,
 	[bool] $verifyCAMSaaSCertificate = $true,
+
+	[parameter(Mandatory=$false)]
+	[bool]
+	$testDeployment = $false,
+
 	$camSaasUri = "https://cam-antar.teradici.com",
 	$CAMDeploymentTemplateURI ="https://raw.githubusercontent.com/teradici/deploy/bd/azuredeploy.json",
 	$CAMDeploymentBlobSource = "https://teradeploy.blob.core.windows.net/bdbinaries",
@@ -422,22 +427,187 @@ function Create-UserStorageAccount
 	return $acct
 }
 
+
+function Create-RemoteWorstationTemplates
+{
+	param (
+		$CAMConfig,
+		$binaryLocation,
+		$blobUri,
+		$kvId,
+		$storageAccountContext,
+		$storageAccountContainerName,
+		$storageAccountSecretName,
+		$storageAccountKeyName
+	)
+
+	Write-Host "Creating default remote workstation template parameters file data"
+
+	#Setup internal variables from config structure
+	$existingSubnetName = $CAMConfig.internal.existingSubnetName
+	$DomainAdminUsername = $CAMConfig.ARMParameters.parameters.domainAdminUsername.value
+	$djSecretName = $CAMConfig.internal.djSecretName
+	$rcSecretName = $CAMConfig.internal.rcSecretName
+	$laSecretName = $CAMConfig.internal.laSecretName
+	$existingVNETName = $CAMConfig.internal.existingVNETName
+	$VMAdminUsername = $CAMConfig.ARMParameters.parameters.domainAdminUsername.value
+	$domainFQDN = 	$CAMConfig.ARMParameters.parameters.domainName.value
+	$domainGroupAppServersJoin = $CAMConfig.internal.domainGroupAppServersJoin
+	$saSasTokenSecretName = $CAMConfig.internal.saSasTokenSecretName
+	$standardVMSize = $CAMConfig.internal.standardVMSize
+	$graphicsVMSize = $CAMConfig.internal.graphicsVMSize
+	$agentARM = $CAMConfig.internal.agentARM
+	$gaAgentARM = $CAMConfig.internal.gaAgentARM
+	$linuxAgentARM = $CAMConfig.internal.linuxAgentARM
+
+	$armParamContent = @"
+{
+	"`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"vmSize": { "value": "%vmSize%" },
+		"CAMDeploymentBlobSource": { "value": "$blobUri" },
+		"binaryLocation": { "value": "$binaryLocation" },
+		"existingSubnetName": { "value": "$existingSubnetName" },
+		"domainUsername": { "value": "$DomainAdminUsername" },
+		"userStorageAccountName": {
+			"reference": {
+				"keyVault": {
+				"id": "$kvId"
+				},
+				"secretName": "$storageAccountSecretName"
+			}
+		},
+		"userStorageAccountKey": {
+			"reference": {
+				"keyVault": {
+				"id": "$kvId"
+				},
+				"secretName": "$storageAccountKeyName"
+			}		
+		},
+		"domainPassword": {
+			"reference": {
+				"keyVault": {
+				"id": "$kvId"
+				},
+				"secretName": "$djSecretName"
+			}		
+		},
+		"registrationCode": {
+			"reference": {
+				"keyVault": {
+				"id": "$kvId"
+				},
+				"secretName": "$rcSecretName"
+			}
+		},
+		"dnsLabelPrefix": { "value": "tbd-vmname" },
+		"existingVNETName": { "value": "$existingVNETName" },
+		"vmAdminUsername": { "value": "$VMAdminUsername" },
+		"vmAdminPassword": {
+			"reference": {
+				"keyVault": {
+				"id": "$kvId"
+				},
+				"secretName": "$laSecretName"
+			}
+		},
+		"domainToJoin": { "value": "$domainFQDN" },
+		"domainGroupToJoin": { "value": "$domainGroupAppServersJoin" },
+		"storageAccountName": { "value": "$storageAccountName" },
+		"_artifactsLocation": { "value": "$blobUri" },
+		"_artifactsLocationSasToken": {
+			"reference": {
+				"keyVault": {
+					"id": "$kvId"
+				},
+				"secretName": "$saSasTokenSecretName"
+			}
+		}
+	}
+}
+
+"@
+
+	$standardArmParamContent = $armParamContent -replace "%vmSize%",$standardVMSize
+	$graphicsArmParamContent = $armParamContent -replace "%vmSize%",$graphicsVMSize
+	$linuxArmParamContent = $armParamContent -replace "%vmSize%",$standardVMSize
+
+	Write-Host "Creating default template parameters files"
+
+	#now make the default parameters filenames - same root name but different suffix as the templates
+	$agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
+	$gaAgentARMparam = ($gaAgentARM.split('.')[0]) + ".customparameters.json"
+	$linuxAgentARMparam = ($linuxAgentARM.split('.')[0]) + ".customparameters.json"
+
+	# put things in a new random temp directory to avoid conflicts
+	$folderName = 	-join ((97..122) | Get-Random -Count 18 | % {[char]$_})
+	$ParamTargetDir = "$env:TEMP\$folderName"
+	$ParamTargetFilePath = "$ParamTargetDir\$agentARMparam"
+	$GaParamTargetFilePath = "$ParamTargetDir\$gaAgentARMparam"
+	$LinuxParamTargetFilePath = "$ParamTargetDir\$linuxAgentARMparam"
+
+	if(-not (Test-Path $ParamTargetDir))
+	{
+		New-Item $ParamTargetDir -type directory
+	}
+
+	# upload the param files to the blob
+	$paramFiles = @(
+		@($ParamTargetFilePath, $standardArmParamContent),
+		@($GaParamTargetFilePath, $graphicsArmParamContent),
+		@($LinuxParamTargetFilePath, $linuxArmParamContent)
+	)
+	ForEach($item in $paramFiles) {
+		$filepath = $item[0]
+		$content = $item[1]
+		if (-not (Test-Path $filepath)) 
+		{
+			New-Item $filepath -type file
+		}
+		Set-Content $filepath $content -Force
+
+		$file = Split-Path $filepath -leaf
+		try {
+			Get-AzureStorageBlob `
+				-Context $storageAccountContext `
+				-Container $storageAccountContainerName `
+				-Blob "remote-workstation\$file" `
+				-ErrorAction Stop
+			# file already exists do nothing
+		} Catch {
+			Write-Host "Uploading $filepath to blob.."
+			Set-AzureStorageBlobContent `
+				-File $filepath `
+				-Container $storageAccountContainerName `
+				-Blob "remote-workstation\$file" `
+				-Context $storageAccountContext
+		}
+	}
+
+	Write-Host "Finished Creating default template parameters file data."
+}
+
+
+
 function Populate-UserBlob
 {
 	Param(
+		$CAMConfig,
 		$artifactsLocation,
 		$userDataStorageAccount,
 		$CAMDeploymentBlobSource,
-		$linuxAgentARM,
-		$gaAgentARM,
-		$agentARM,
 		$sumoAgentApplicationVM,
 		$sumoConf,
 		$idleShutdownLinux,
 		$RGName,
-		$kvName
+		$kvInfo
 		)
-		
+
+	$kvName = $kvInfo.VaultName
+	$kvId = $kvInfo.ResourceId
+	
 	################################
 	Write-Host "Populating user blob"
 	################################
@@ -446,7 +616,7 @@ function Populate-UserBlob
 	$new_agent_vm_files = @(
 		"$artifactsLocation/end-user-application-machines/new-agent-vm/Install-PCoIPAgent.ps1", 
 		"$artifactsLocation/end-user-application-machines/new-agent-vm/Install-PCoIPAgent.sh",
-		"$CAMDeploymentBlobSource\Install-PCoIPAgent.ps1.zip",
+		"$CAMDeploymentBlobSource/Install-PCoIPAgent.ps1.zip",
 		"$artifactsLocation/end-user-application-machines/new-agent-vm/rhel-standard-agent.json", 
 		"$artifactsLocation/end-user-application-machines/new-agent-vm/server2016-graphics-agent.json",
 		"$artifactsLocation/end-user-application-machines/new-agent-vm/server2016-standard-agent.json", 
@@ -501,9 +671,10 @@ function Populate-UserBlob
 				-WaitForComplete
 			Write-Host "$fileName complete"
 		}
-	
+
 		$blobUri = (((Get-AzureStorageBlob -Context $ctx -Container $container_name)[0].ICloudBlob.uri.AbsoluteUri) -split '/')[0..4] -join '/'
 	
+		# Setup Keyvault secrets
 		# this is the url to access the blob account
 		$blobUriSecretName = "userStorageAccountUri"
 		Set-AzureKeyVaultSecret -VaultName $kvName -Name $blobUriSecretName -SecretValue (ConvertTo-SecureString $blobUri -AsPlainText -Force) -ErrorAction stop
@@ -517,9 +688,8 @@ function Populate-UserBlob
 		$saSasTokenSecretName = 'userStorageAccountSaasToken'
 		Set-AzureKeyVaultSecret -VaultName $kvName -Name $saSasTokenSecretName -SecretValue (ConvertTo-SecureString $saSasToken -AsPlainText -Force) -ErrorAction stop
 	
+		#populate userBlobInfo return value
 		$userBlobInfo = @{}
-	
-	
 		# using the blob uri + the token from the key vault will allow the web interface to retrieve required information from private blob
 		$userBlobInfo.Add("CAM_KEY_VAULT_NAME", $kvName)
 		
@@ -530,7 +700,19 @@ function Populate-UserBlob
 		# these two are used to upload files using cli or sdk. Their values need to be retrieved from the key vault
 		$userBlobInfo.Add("CAM_USER_STORAGE_ACCOUNT_NAME", $storageAccountSecretName)
 		$userBlobInfo.Add("CAM_USER_STORAGE_ACCOUNT_KEY", $storageAccountKeyName)
-	)
+
+		# Now generate and upload the parameters files
+
+		Create-RemoteWorstationTemplates `
+			-CAMConfig $CAMConfig `
+			-binaryLocation $CAMDeploymentBlobSource ` # binaryLocation is the original binaries source location hosted by Teradici
+			-blobUri $blobUri ` # the new per-deployment blob storage location 
+			-kvId $kvId `
+			-storageAccountContext $ctx `
+			-storageAccountContainerName $container_name `
+			-storageAccountSecretName $storageAccountSecretName `
+			-storageAccountKeyName	$storageAccountKeyName
+		)
 
 	return $userBlobInfo
 }
@@ -555,7 +737,16 @@ function createAndPopulateKeyvault()
 		
 		[parameter(Mandatory=$true)]
 		[String]
-		$DomainJoinPassword
+		$DomainJoinPassword,
+
+		[parameter(Mandatory=$true)]
+		[String]
+		$rcSecretName,
+
+		[parameter(Mandatory=$true)]
+		[String]
+		$djSecretName
+
 	)
 
 	try{
@@ -578,9 +769,6 @@ function createAndPopulateKeyvault()
 		Write-Host "Populating Azure KeyVault $kvName"
 		
 		$domainJoinPasswordSecure = ConvertTo-SecureString $domainJoinPassword -AsPlainText -Force
-
-		$rcSecretName = 'cloudAccessRegistrationCode'
-		$djSecretName = 'domainJoinPassword'
 
 		$rcSecret = $null
 		$djSecret = $null
@@ -881,7 +1069,12 @@ function Deploy-CAM()
 
 		[parameter(Mandatory=$false)] #required if $spCredential is provided
 		[string]
-		$tenantId
+		$tenantId,
+
+		[parameter(Mandatory=$false)]
+		[bool]
+		$testDeployment = $false
+
 	)
 
 	#artifacts location 'folder' is where the template is stored
@@ -925,7 +1118,27 @@ function Deploy-CAM()
 	}
 "@
 	
-    $CAMConfig = ConvertFrom-Json ([string]$camConfigurationJson)
+	# Setup CAMConfig as a hash table of ARM parameters for Azure
+	# and internal parameters for this script
+	$CAMConfig = @{} 
+	$CAMConfig.ARMParameters = ConvertPSObjectToHashtable `
+		-InputObject (ConvertFrom-Json ([string]$camConfigurationJson))
+
+	#TODO: All the strings in here need to be reviewed for dual sourcing in the entire solution
+	# including ARM templates
+	$CAMConfig.internal = @{}
+	$CAMConfig.internal.rcSecretName = 'cloudAccessRegistrationCode'
+	$CAMConfig.internal.djSecretName = 'domainJoinPassword'
+	$CAMConfig.internal.laSecretName = 'localAdminPassword'
+	$CAMConfig.internal.saSasTokenSecretName = "userStorageAccountSaasToken"
+	$CAMConfig.internal.standardVMSize = "Standard_D2_v2"
+	$CAMConfig.internal.graphicsVMSize = "Standard_NV6"
+	$CAMConfig.internal.existingSubnetName = "Subnet-CloudAccessManager"
+	$CAMConfig.internal.existingVNETName = "vnet-CloudAccessManager"
+	$CAMConfig.internal.agentARM = "server2016-standard-agent.json"
+	$CAMConfig.internal.gaAgentARM = "server2016-graphics-agent.json"
+	$CAMConfig.internal.linuxAgentARM = "rhel-standard-agent.json"
+	$CAMConfig.internal.domainGroupAppServersJoin = "Remote Workstations"
 
 	$spInfo = $null
 	if(-not $spCredential)	{
@@ -994,19 +1207,22 @@ function Deploy-CAM()
 		$kvInfo = createAndPopulateKeyvault `
 			-RGName $RGName `
 			-registrationCode $registrationCode `
-			-DomainJoinPassword $CAMConfig.parameters.domainAdminPassword.value `
-			-spName $spInfo.spCreds.UserName
+			-DomainJoinPassword $CAMConfig.ARMParameters.parameters.domainAdminPassword.value `
+			-spName $spInfo.spCreds.UserName `
+			-rcSecretName $CAMConfig.internal.rcSecretName `
+			-djSecretName $CAMConfig.internal.djSecretName
 
 		$userDataStorageAccount = Create-UserStorageAccount `
 			-RGName $RGName `
 			-Location $rg.Location
 		
 		$userBlobInfo = Populate-UserBlob `
+			-CAMConfig $CAMConfig `
 			-artifactsLocation $artifactsLocation `
 			-userDataStorageAccount	$userDataStorageAccount `
 			-CAMDeploymentBlobSource $CAMDeploymentBlobSource `
 			-RGName $RGName `
-			-kvName $kvInfo.VaultName
+			-kvInfo $kvInfo
 
 		#$userDataStorageAccountName = $userDataStorageAccount.StorageAccountName
 
@@ -1139,14 +1355,15 @@ graphURL=https\://graph.windows.net/
 	}
 "@
 		
-		$CAMConfigTable = ConvertPSObjectToHashtable -InputObject $CAMConfig
-	
 		$deploymentParametersObj = ConvertFrom-Json $generatedDeploymentParameters
 		$deploymentParametersTable = ConvertPSObjectToHashtable -InputObject $deploymentParametersObj
 	
-		$CAMConfigTable.parameters += $deploymentParametersTable
+		$CAMConfig.ARMParameters.parameters += $deploymentParametersTable
 	
-		$outParametersFileContent = ConvertTo-Json -InputObject $CAMConfigTable -Depth 99
+		$outParametersFileContent = ConvertTo-Json `
+			-InputObject $CAMConfig.ARMParameters `
+			-Depth 99
+
 		Set-Content $outputParametersFileName  $outParametersFileContent
 	
 	
@@ -1155,7 +1372,7 @@ graphURL=https\://graph.windows.net/
 		Write-Host "If this script is running in Azure Cloud Shell then you may let the shell timeout and the deployment will continue."
 		Write-Host "Please watch the resource group $RGName in the Azure Portal for current status."
 
-		if($false) {
+		if($testDeployment) {
  			# just do a test if $true
  			Test-AzureRmResourceGroupDeployment `
 				-ResourceGroupName $RGName `
@@ -1360,5 +1577,5 @@ Deploy-CAM `
  -subscriptionId $selectedSubcriptionId `
  -RGName $rgMatch.ResourceGroupName `
  -spCredential $spCredential `
- -tenantId $selectedTenantId
-
+ -tenantId $selectedTenantId `
+ -testDeployment $testDeployment
