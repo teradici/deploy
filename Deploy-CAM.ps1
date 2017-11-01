@@ -703,16 +703,18 @@ function Populate-UserBlob
 
 		# Now generate and upload the parameters files
 
-		Create-RemoteWorstationTemplates `
+# binaryLocation is the original binaries source location hosted by Teradici
+# blobUri is the new per-deployment blob storage location 
+ 		Create-RemoteWorstationTemplates `
 			-CAMConfig $CAMConfig `
-			-binaryLocation $CAMDeploymentBlobSource ` # binaryLocation is the original binaries source location hosted by Teradici
-			-blobUri $blobUri ` # the new per-deployment blob storage location 
+			-binaryLocation $CAMDeploymentBlobSource `
+			-blobUri $blobUri `
 			-kvId $kvId `
 			-storageAccountContext $ctx `
 			-storageAccountContainerName $container_name `
 			-storageAccountSecretName $storageAccountSecretName `
 			-storageAccountKeyName	$storageAccountKeyName
-		)
+	)
 
 	return $userBlobInfo
 }
