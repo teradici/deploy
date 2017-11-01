@@ -249,7 +249,9 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 			$camDeploymentInfo.Add("CAM_TENANTID",$userRequest.tenantId)
 			$camDeploymentInfo.Add("CAM_URI",$camSaasBaseUri)
 			$camDeploymentInfo.Add("CAM_DEPLOYMENTID",$deploymentId)
-
+			$camDeploymentInfo.Add("CAM_SUBSCRIPTIONID",$subscriptionId)
+			$camDeploymentInfo.Add("CAM_RESOURCEGROUP",$RGName)
+			
 			Write-Host "Deployment has been registered successfully with Cloud Access Manager"
 
 			break;
@@ -270,13 +272,13 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 
 
 
-function Register-RemoteAccessWorkstation()
+function Register-RemoteWorkstation()
 {
 	Param(
 		[bool]
 		$verifyCAMSaaSCertificate = $true,
 		
-		# Retry for MAchine Registration
+		# Retry for Remote Workstation Registration
 		$retryCount = 3,
 		$retryDelay = 10,
 
@@ -304,8 +306,6 @@ function Register-RemoteAccessWorkstation()
 		[parameter(Mandatory=$true)]
 		$camSaasBaseUri
 	)
-
-	# Register Agent Machine
 
 
 	$userRequest = @{
@@ -343,9 +343,10 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 
 				[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
 			}
-			####################
 
+			####################
 			# Get a Sign-in token
+
 			$signInResult = ""
 			try {
 				$signInResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/signin") -Body $userRequest
@@ -1068,7 +1069,7 @@ graphURL=https\://graph.windows.net/
 		
 			#keyvault ID of the form: /subscriptions/$subscriptionID/resourceGroups/$azureRGName/providers/Microsoft.KeyVault/vaults/$kvName
 		
-			Register-RemoteAccessWorkstation `
+			Register-RemoteWorkstation `
 					-subscription $subscriptionID `
 					-client $client `
 					-key $key `
