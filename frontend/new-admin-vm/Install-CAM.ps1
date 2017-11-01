@@ -876,6 +876,7 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 				{
 					New-Item $ParamTargetDir -type directory
 				}
+
 				#clear out whatever was stuffed in from the deployment WAR file
 				Remove-Item "$ParamTargetDir\*" -Recurse
 
@@ -886,22 +887,22 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 					@($LinuxParamTargetFilePath, $linuxArmParamContent)
 				)
 				ForEach($item in $paramFiles) {
-						$filepath = $item[0]
-						$content = $item[1]
-						if (-not (Test-Path $filepath)) 
-				{
-							New-Item $filepath -type file
-				}
-						Set-Content $filepath $content -Force
+					$filepath = $item[0]
+					$content = $item[1]
+					if (-not (Test-Path $filepath)) 
+					{
+						New-Item $filepath -type file
+					}
+					Set-Content $filepath $content -Force
 
-						$file = Split-Path $filepath -leaf
-						try {
-							Get-AzureStorageBlob -Context $ctx -Container $container_name -Blob "remote-workstation\$file" -ErrorAction Stop
-						# file already exists do nothing
-						} Catch {
-							Write-Host "Uploading $filepath to blob.."
-							Set-AzureStorageBlobContent -File $filepath -Container $container_name -Blob "remote-workstation\$file" -Context $ctx
-				}
+					$file = Split-Path $filepath -leaf
+					try {
+						Get-AzureStorageBlob -Context $ctx -Container $container_name -Blob "remote-workstation\$file" -ErrorAction Stop
+					# file already exists do nothing
+					} Catch {
+						Write-Host "Uploading $filepath to blob.."
+						Set-AzureStorageBlobContent -File $filepath -Container $container_name -Blob "remote-workstation\$file" -Context $ctx
+					}
 				}
 
 		        Write-Host "Finished Creating default template parameters file data."
