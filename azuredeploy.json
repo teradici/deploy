@@ -2,12 +2,6 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "vnetId": {
-      "type": "string",
-      "metadata": {
-        "description": "the Id of the virtual network"
-      }
-    },
     "domainName": {
       "type": "string",
       "metadata": {
@@ -31,6 +25,19 @@
       "type": "securestring",
       "metadata": {
         "description": "The password for the service account"
+      }
+    },
+    "subVnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "the Id of the sub virtual network which CAM VM resides"
+      }
+    },
+    "cmIPAddresses": {
+      "type": "array",
+      "minLength": 2,
+      "metadata": {
+        "description": "two IP addresses which used by CAM Connect Manager. Those two ipaddress should be within the range of the provided subVnet address space"
       }
     },
     "localAdminUsername": {
@@ -111,8 +118,9 @@
     "templateStorageAccountName": "[concat(uniquestring(resourceGroup().id), 'data')]",
     "domainGroupAppServersJoin": "[parameters('domainGroupToJoin')]",
     "adminDesktopVMName": "admin-rws",
-    "adSubnetName": "Subnet-CloudAccessManager",
-    "gwSubnetName": "Subnet-gateway",
+    "vnetId": "[first(split(parameters('subVnetId'), '/subnets/'))]",
+    "adSubnetName": "[last(split(parameters('subVnetId'), '/subnets/'))]",    
+    "gwSubnetName": "[variables('adSubnetName')]",
     "cmnsgName": "cmNSG"
   },
   "resources": [
@@ -144,13 +152,16 @@
         "parameters": {
 
           "virtualNetworkName": {
-            "value": "[parameters('vnetId')]"
+            "value": "[variables('vnetId')]"
           },
           "adSubnetName": {
             "value": "[variables('adSubnetName')]"
           },
           "gatewaySubnetName": {
             "value": "[variables('gwSubnetName')]"
+          },
+          "cmIPAddresses": {
+            "value": "[parameters('cmIPAddresses')]"
           },
           "adminDesktopVMName": {
             "value": "[variables('adminDesktopVMName')]"

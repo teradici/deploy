@@ -85,6 +85,13 @@
         "description": "gateway subnet name"
       }
     },
+    "cmIPAddresses": {
+      "type": "array",
+      "minLength": 2,
+      "metadata": {
+        "description": "two IP addresses which used by CAM Connect Manager. Those two ipaddress should be within the range of the provided subVnet address space"
+      }
+    },
     "cmnsgName": {
       "type": "string",
       "metadata": {
@@ -144,8 +151,8 @@
   },
   "variables": {
     "storageAccountName": "[concat(uniquestring(resourceGroup().id),'fe')]",
-    "cmPrivateIP": "10.0.0.10",
-    "auPrivateIP": "10.0.0.11",
+    "cmPrivateIP": "[first(parameters('cmIPAddresses'))]",
+    "auPrivateIP": "[last(parameters('cmIPAddresses'))]",
     "brokerPort": "8444",
     "serverRootName": "vm",
     "domainGroupAppServersJoin": "[parameters('domainGroupToJoin')]"
