@@ -747,7 +747,7 @@ function createAndPopulateKeyvault()
 		$registrationCode,
 		
 		[parameter(Mandatory=$true)]
-		[String]
+		[SecureString]
 		$DomainJoinPassword,
 
 		[parameter(Mandatory=$true)]
@@ -779,8 +779,6 @@ function createAndPopulateKeyvault()
 
 		Write-Host "Populating Azure KeyVault $kvName"
 		
-		$domainJoinPasswordSecure = ConvertTo-SecureString $domainJoinPassword -AsPlainText -Force
-
 		$rcSecret = $null
 		$djSecret = $null
 
@@ -801,7 +799,7 @@ function createAndPopulateKeyvault()
                     -ErrorAction stop
 
 				$rcSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $rcSecretName -SecretValue $registrationCode -ErrorAction stop
-				$djSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $djSecretName -SecretValue $domainJoinPasswordSecure -ErrorAction stop
+				$djSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $djSecretName -SecretValue $domainJoinPassword -ErrorAction stop
 				break
 			}
 			catch
@@ -1092,7 +1090,6 @@ function Deploy-CAM()
 	$artifactsLocation = $CAMDeploymentTemplateURI.Substring(0, $CAMDeploymentTemplateURI.lastIndexOf('/'))
 
 	$domainAdminUsername = $domainAdminCredential.UserName
-	$domainAdminPassword = $domainAdminCredential.GetNetworkCredential().Password
 
 	# Need plaintext registration code
 	$userName = "Domain\DummyUser"
@@ -1106,9 +1103,6 @@ function Deploy-CAM()
 		"parameters": {
 			"domainAdminUsername": {
 				"value": "$domainAdminUsername"
-			},
-			"domainAdminPassword": {
-				  "value": "$domainAdminPassword"
 			},
 			"domainName": {
 				  "value": "$domainName"
@@ -1218,7 +1212,7 @@ function Deploy-CAM()
 		$kvInfo = createAndPopulateKeyvault `
 			-RGName $RGName `
 			-registrationCode $registrationCode `
-			-DomainJoinPassword $CAMConfig.ARMParameters.parameters.domainAdminPassword.value `
+			-DomainJoinPassword $domainAdminCredential.Password `
 			-spName $spInfo.spCreds.UserName `
 			-rcSecretName $CAMConfig.internal.rcSecretName `
 			-djSecretName $CAMConfig.internal.djSecretName
@@ -1317,6 +1311,7 @@ graphURL=https\://graph.windows.net/
 				$verifyCAMSaaSCertificateText = "true"
 			}
 
+		$djSecretName = $CAMConfig.internal.djSecretName 
 		$generatedDeploymentParameters = @"
 	{
 		"AzureAdminUsername": {
@@ -1328,6 +1323,14 @@ graphURL=https\://graph.windows.net/
 				  "id": "$kvId"
 				},
 				"secretName": "$SPKeySecretName"
+			  }
+		},
+		"DomainAdminPassword": {
+			"reference": {
+				"keyVault": {
+				  "id": "$kvId"
+				},
+				"secretName": "$djSecretName"
 			  }
 		},
 		"tenantID": {
