@@ -34,6 +34,13 @@
         "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
       }
     },
+    "domainGroupToJoin": {
+      "type": "string",
+      "defaultValue": "Remote Workstations",
+      "metadata": {
+        "description": "The domain Group name which pcoip virtual machines join"
+      }
+    },
     "AzureAdminUsername": {
       "type": "string",
       "defaultValue": "adminuser@example.com",
@@ -139,10 +146,10 @@
     "storageAccountName": "[concat(uniquestring(resourceGroup().id),'fe')]",
     "cmPrivateIP": "10.0.0.10",
     "auPrivateIP": "10.0.0.11",
-    "brokerPort":  "8444",
+    "brokerPort": "8444",
     "adVMName": "vm-dc",
     "serverRootName": "vm",
-    "domainGroupAppServersJoin": "Cloud Access Application Servers"
+    "domainGroupAppServersJoin": "[parameters('domainGroupToJoin')]"
   },
   "resources": [
     {

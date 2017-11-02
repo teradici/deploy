@@ -14,6 +14,13 @@
         "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
       }
     },
+    "domainGroupToJoin": {
+      "type": "string",
+      "defaultValue": "Remote Workstations",
+      "metadata": {
+        "description": "The domain Group name which pcoip virtual machines join"
+      }
+    },
     "serviceAccountName": {
       "type": "string",
       "metadata": {
@@ -102,7 +109,7 @@
   },
   "variables": {
     "templateStorageAccountName": "[concat(uniquestring(resourceGroup().id), 'data')]",
-    "domainGroupAppServersJoin": "Remote Workstations",
+    "domainGroupAppServersJoin": "[parameters('domainGroupToJoin')]",
     "adminDesktopVMName": "admin-rws",
     "adSubnetName": "Subnet-CloudAccessManager",
     "gwSubnetName": "Subnet-gateway",
@@ -151,9 +158,11 @@
           "cmnsgName": {
             "value": "[variables('cmnsgName')]"
           },
-
           "domainName": {
             "value": "[parameters('domainName')]"
+          },
+          "domainGroupToJoin": {
+            "value": "[variables('domainGroupAppServersJoin')]"
           },
           "domainAdminUsername": {
             "value": "[parameters('serviceAccountName')]"
