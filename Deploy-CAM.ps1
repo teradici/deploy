@@ -20,7 +20,7 @@ param(
 	$camSaasUri = "https://cam-antar.teradici.com",
 	$CAMDeploymentTemplateURI ="https://raw.githubusercontent.com/teradici/deploy/bd/azuredeploy.json",
 	$CAMDeploymentBlobSource = "https://teradeploy.blob.core.windows.net/bdbinaries",
-	$outputParametersFileName = "cam-output.parameters.json"  #fix me - remove credential, make file unique and delete after.
+	$outputParametersFileName = "cam-output.parameters.json"
 )
 
 
@@ -438,7 +438,8 @@ function Create-RemoteWorstationTemplates
 		$storageAccountContext,
 		$storageAccountContainerName,
 		$storageAccountSecretName,
-		$storageAccountKeyName
+		$storageAccountKeyName,
+		$tempDir
 	)
 
 	Write-Host "Creating default remote workstation template parameters file data"
@@ -545,17 +546,10 @@ function Create-RemoteWorstationTemplates
 	$gaAgentARMparam = ($gaAgentARM.split('.')[0]) + ".customparameters.json"
 	$linuxAgentARMparam = ($linuxAgentARM.split('.')[0]) + ".customparameters.json"
 
-	# put things in a new random temp directory to avoid conflicts
-	$folderName = 	-join ((97..122) | Get-Random -Count 18 | % {[char]$_})
-	$ParamTargetDir = "$env:TEMP\$folderName"
-	$ParamTargetFilePath = "$ParamTargetDir\$agentARMparam"
-	$GaParamTargetFilePath = "$ParamTargetDir\$gaAgentARMparam"
-	$LinuxParamTargetFilePath = "$ParamTargetDir\$linuxAgentARMparam"
-
-	if(-not (Test-Path $ParamTargetDir))
-	{
-		New-Item $ParamTargetDir -type directory
-	}
+	#these will be put in the random temp directory to avoid filename conflicts
+	$ParamTargetFilePath = "$tempDir\$agentARMparam"
+	$GaParamTargetFilePath = "$tempDir\$gaAgentARMparam"
+	$LinuxParamTargetFilePath = "$tempDir\$linuxAgentARMparam"
 
 	# upload the param files to the blob
 	$paramFiles = @(
@@ -606,7 +600,8 @@ function Populate-UserBlob
 		$sumoConf,
 		$idleShutdownLinux,
 		$RGName,
-		$kvInfo
+		$kvInfo,
+		$tempDir
 		)
 
 	$kvName = $kvInfo.VaultName
@@ -722,7 +717,8 @@ function Populate-UserBlob
 			-storageAccountContext $ctx `
 			-storageAccountContainerName $container_name `
 			-storageAccountSecretName $storageAccountSecretName `
-			-storageAccountKeyName	$storageAccountKeyName
+			-storageAccountKeyName	$storageAccountKeyName `
+			-tempDir $tempDir
 	)
 
 	return $userBlobInfo
@@ -899,6 +895,7 @@ function createAndPopulateKeyvault()
 	}
 	finally {
 		#done with files
+		#TODO - should we delete certificate out of cert store as well?
 		if(Test-Path $certPfx) { Remove-Item $certPfx -ErrorAction SilentlyContinue }
 		if(Test-Path $certPath) { Remove-Item $certPath -ErrorAction SilentlyContinue }
 	}
@@ -1145,6 +1142,14 @@ function Deploy-CAM()
 	$CAMConfig.internal.linuxAgentARM = "rhel-standard-agent.json"
 	$CAMConfig.internal.domainGroupAppServersJoin = "Remote Workstations"
 
+	# make temporary directory for intermediate files
+	$folderName = 	-join ((97..122) | Get-Random -Count 18 | % {[char]$_})
+	$tempDir = "$env:TEMP\$folderName"
+	if(-not (Test-Path $tempDir))
+	{
+		New-Item $tempDir -type directory
+	}
+
 	$spInfo = $null
 	if(-not $spCredential)	{
 
@@ -1201,7 +1206,6 @@ function Deploy-CAM()
 	#cache the current context
 	$azureContext = Get-AzureRMContext
 	$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName
-
 	try {
 		Add-AzureRmAccount `
 			-Credential $spInfo.spCreds `
@@ -1227,7 +1231,8 @@ function Deploy-CAM()
 			-userDataStorageAccount	$userDataStorageAccount `
 			-CAMDeploymentBlobSource $CAMDeploymentBlobSource `
 			-RGName $RGName `
-			-kvInfo $kvInfo
+			-kvInfo $kvInfo `
+			-tempDir $tempDir
 
 		#$userDataStorageAccountName = $userDataStorageAccount.StorageAccountName
 
@@ -1256,60 +1261,59 @@ authURL=https\://login.windows.net/
 graphURL=https\://graph.windows.net/
 "@
 		
-			$authFileContentURL = [System.Web.HttpUtility]::UrlEncode($authFileContent) 
+		$authFileContentURL = [System.Web.HttpUtility]::UrlEncode($authFileContent) 
 
-			$camDeploymenInfo = @{};
-			$camDeploymenInfo.Add("registrationInfo",($camDeploymenRegInfo + $userBlobInfo))
-			$camDeploymenInfo.Add("AzureAuthFile",$authFileContentURL)
+		$camDeploymenInfo = @{};
+		$camDeploymenInfo.Add("registrationInfo",($camDeploymenRegInfo + $userBlobInfo))
+		$camDeploymenInfo.Add("AzureAuthFile",$authFileContentURL)
 
-			$camDeploymenInfoJSON = ConvertTo-JSON $camDeploymenInfo -Depth 16 -Compress
-			$camDeploymenInfoURL = [System.Web.HttpUtility]::UrlEncode($camDeploymenInfoJSON)
+		$camDeploymenInfoJSON = ConvertTo-JSON $camDeploymenInfo -Depth 16 -Compress
+		$camDeploymenInfoURL = [System.Web.HttpUtility]::UrlEncode($camDeploymenInfoJSON)
 
-			$camDeploymenInfoURLSecure = ConvertTo-SecureString $camDeploymenInfoURL -AsPlainText -Force
-			$camDeploySecretName = 'CAMDeploymentInfo'
-			$camDeploySecret = Set-AzureKeyVaultSecret -VaultName $kvInfo.VaultName -Name $camDeploySecretName -SecretValue $camDeploymenInfoURLSecure
+		$camDeploymenInfoURLSecure = ConvertTo-SecureString $camDeploymenInfoURL -AsPlainText -Force
+		$camDeploySecretName = 'CAMDeploymentInfo'
+		$camDeploySecret = Set-AzureKeyVaultSecret -VaultName $kvInfo.VaultName -Name $camDeploySecretName -SecretValue $camDeploymenInfoURLSecure
 
-			$SPKeySecretName = 'SPKey'
-			$SPKeySecret = Set-AzureKeyVaultSecret -VaultName $kvInfo.VaultName -Name $SPKeySecretName -SecretValue $spInfo.spCreds.Password
+		$SPKeySecretName = 'SPKey'
+		$SPKeySecret = Set-AzureKeyVaultSecret -VaultName $kvInfo.VaultName -Name $SPKeySecretName -SecretValue $spInfo.spCreds.Password
 
-			<# Test code for encoding/decoding
-			$camDeploymenInfoURL
-			$camDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($camDeploymenInfoURL)
-			$camDeploymenInfoDecoded = ConvertFrom-Json $camDeploymenInfoJSONDecoded
-		
-		
-			[System.Web.HttpUtility]::UrlDecode($camDeploymenInfoDecoded.AzureAuthFile)
-		
-			$regInfo = $camDeploymenInfoDecoded.RegistrationInfo
-		
-			$regInfo.psobject.properties | Foreach-Object {
-				Write-Host "Name: " $_.Name " Value: " $_.Value
-		
-			#>
-		
-		
-			#keyvault ID of the form: /subscriptions/$subscriptionID/resourceGroups/$azureRGName/providers/Microsoft.KeyVault/vaults/$kvName
-		
-			Register-RemoteWorkstation `
-					-subscription $subscriptionID `
-					-client $client `
-					-key $key `
-					-tenant $tenant `
-					-RGName $RGName `
-					-deploymentId $camDeploymenRegInfo.CAM_DEPLOYMENTID `
-					-camSaasBaseUri $camDeploymenRegInfo.CAM_URI `
-					-adminDesktopVMName "admin-rws" `
-					-verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
+		<# Test code for encoding/decoding
+		$camDeploymenInfoURL
+		$camDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($camDeploymenInfoURL)
+		$camDeploymenInfoDecoded = ConvertFrom-Json $camDeploymenInfoJSONDecoded
+	
+	
+		[System.Web.HttpUtility]::UrlDecode($camDeploymenInfoDecoded.AzureAuthFile)
+	
+		$regInfo = $camDeploymenInfoDecoded.RegistrationInfo
+	
+		$regInfo.psobject.properties | Foreach-Object {
+			Write-Host "Name: " $_.Name " Value: " $_.Value
+	
+		#>
+	
+	
+		#keyvault ID of the form: /subscriptions/$subscriptionID/resourceGroups/$azureRGName/providers/Microsoft.KeyVault/vaults/$kvName
+	
+		Register-RemoteWorkstation `
+				-subscription $subscriptionID `
+				-client $client `
+				-key $key `
+				-tenant $tenant `
+				-RGName $RGName `
+				-deploymentId $camDeploymenRegInfo.CAM_DEPLOYMENTID `
+				-camSaasBaseUri $camDeploymenRegInfo.CAM_URI `
+				-adminDesktopVMName "admin-rws" `
+				-verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
+	
 
-		
-		
-			$kvId = $kvInfo.ResourceId
+				$kvId = $kvInfo.ResourceId
 
-			$verifyCAMSaaSCertificateText = "false"
-			if($verifyCAMSaaSCertificate)
-			{
-				$verifyCAMSaaSCertificateText = "true"
-			}
+		$verifyCAMSaaSCertificateText = "false"
+		if($verifyCAMSaaSCertificate)
+		{
+			$verifyCAMSaaSCertificateText = "true"
+		}
 
 		$djSecretName = $CAMConfig.internal.djSecretName 
 		$generatedDeploymentParameters = @"
@@ -1378,7 +1382,8 @@ graphURL=https\://graph.windows.net/
 			-InputObject $CAMConfig.ARMParameters `
 			-Depth 99
 
-		Set-Content $outputParametersFileName  $outParametersFileContent
+		$outputParametersFilePath = Join-Path $tempDir $outputParametersFileName
+		Set-Content $outputParametersFilePath  $outParametersFileContent
 	
 	
 		Write-Host "`nDeploying Cloud Access Manager Connection Service. This process can take up to 90 minutes."
@@ -1391,7 +1396,7 @@ graphURL=https\://graph.windows.net/
  			Test-AzureRmResourceGroupDeployment `
 				-ResourceGroupName $RGName `
 				-TemplateFile "azuredeploy.json" `
-				-TemplateParameterFile $outputParametersFileName  `
+				-TemplateParameterFile $outputParametersFilePath `
 				-Verbose
 		}
 		else {
@@ -1399,7 +1404,7 @@ graphURL=https\://graph.windows.net/
 				-DeploymentName "CAM" `
 				-ResourceGroupName $RGName `
 				-TemplateFile $CAMDeploymentTemplateURI `
-				-TemplateParameterFile $outputParametersFileName 
+				-TemplateParameterFile $outputParametersFilePath 
 		}
 
 
