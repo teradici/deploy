@@ -460,6 +460,10 @@ function Create-RemoteWorstationTemplates
 	$gaAgentARM = $CAMConfig.internal.gaAgentARM
 	$linuxAgentARM = $CAMConfig.internal.linuxAgentARM
 
+	#Put the VHD's in the user storage account until we move to managed storage... 
+	$VHDStorageAccountName = $storageAccountContext.StorageAccountName
+	
+
 	$armParamContent = @"
 {
 	"`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
@@ -515,7 +519,7 @@ function Create-RemoteWorstationTemplates
 		},
 		"domainToJoin": { "value": "$domainFQDN" },
 		"domainGroupToJoin": { "value": "$domainGroupAppServersJoin" },
-		"storageAccountName": { "value": "$storageAccountName" },
+		"storageAccountName": { "value": "$VHDStorageAccountName" },
 		"_artifactsLocation": { "value": "$blobUri" },
 		"_artifactsLocationSasToken": {
 			"reference": {
@@ -676,8 +680,8 @@ function Populate-UserBlob
 				-WaitForComplete
 		}
 		Write-Host "Blob copy complete"
-		
-		$blobUri = (((Get-AzureStorageBlob -Context $ctx -Container $container_name)[0].ICloudBlob.uri.AbsoluteUri) -split '/')[0..4] -join '/'
+	
+		$blobUri = $ctx.BlobEndPoint + $container_name + '/'
 	
 		# Setup Keyvault secrets
 		# this is the url to access the blob account
@@ -709,11 +713,11 @@ function Populate-UserBlob
 		# Now generate and upload the parameters files
 
 		# binaryLocation is the original binaries source location hosted by Teradici
-		# blobUri is the new per-deployment blob storage location 
+		# blobUri is the new per-deployment blob storage location of the binaries (so a sub-directory in the container)
  		Create-RemoteWorstationTemplates `
 			-CAMConfig $CAMConfig `
 			-binaryLocation $CAMDeploymentBlobSource `
-			-blobUri $blobUri `
+			-blobUri ($blobUri + 'remote-workstation/') `
 			-kvId $kvId `
 			-storageAccountContext $ctx `
 			-storageAccountContainerName $container_name `
@@ -1300,7 +1304,7 @@ graphURL=https\://graph.windows.net/
 					-RGName $RGName `
 					-deploymentId $camDeploymenRegInfo.CAM_DEPLOYMENTID `
 					-camSaasBaseUri $camDeploymenRegInfo.CAM_URI `
-					-adminDesktopVMName "vm-desk" `
+					-adminDesktopVMName "admin-rws" `
 					-verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
 
 		
