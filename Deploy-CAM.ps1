@@ -752,8 +752,11 @@ function createAndPopulateKeyvault()
 
 		[parameter(Mandatory=$true)]
 		[String]
-		$djSecretName
+		$djSecretName,
 
+		[parameter(Mandatory=$true)]
+		[String]
+		$tempDir
 	)
 
 	try{
@@ -855,10 +858,7 @@ function createAndPopulateKeyvault()
 		#generate pfx file from certificate
 		$certPath = $certLoc + '\' + $cert.Thumbprint
 
-		$pfxPath = $env:temp
-		$pfxFileRoot = -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})
-
-		$certPfx = $pfxPath + "\$pfxFileRoot.pfx"
+		$certPfx = Join-Path $tempDir "self-signed-cert.pfx"
 
 		#generate password for pfx file
 		$certPswd = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
@@ -895,7 +895,6 @@ function createAndPopulateKeyvault()
 	}
 	finally {
 		#done with files
-		#TODO - should we delete certificate out of cert store as well?
 		if(Test-Path $certPfx) { Remove-Item $certPfx -ErrorAction SilentlyContinue }
 		if(Test-Path $certPath) { Remove-Item $certPath -ErrorAction SilentlyContinue }
 	}
@@ -1144,10 +1143,11 @@ function Deploy-CAM()
 
 	# make temporary directory for intermediate files
 	$folderName = 	-join ((97..122) | Get-Random -Count 18 | % {[char]$_})
-	$tempDir = "$env:TEMP\$folderName"
+	$tempDir = Join-Path $env:TEMP $folderName
+	Write-Host "Using temporary directory $tempDir for intermediate files"
 	if(-not (Test-Path $tempDir))
 	{
-		New-Item $tempDir -type directory
+		New-Item $tempDir -type directory > $null
 	}
 
 	$spInfo = $null
@@ -1219,7 +1219,8 @@ function Deploy-CAM()
 			-DomainJoinPassword $domainAdminCredential.Password `
 			-spName $spInfo.spCreds.UserName `
 			-rcSecretName $CAMConfig.internal.rcSecretName `
-			-djSecretName $CAMConfig.internal.djSecretName
+			-djSecretName $CAMConfig.internal.djSecretName `
+			-tempDir $tempDir
 
 		$userDataStorageAccount = Create-UserStorageAccount `
 			-RGName $RGName `
