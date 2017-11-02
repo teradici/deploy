@@ -777,7 +777,7 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 				$gaAgentARMparam = ($gaAgentARM.split('.')[0]) + ".customparameters.json"
 				$linuxAgentARMparam = ($linuxAgentARM.split('.')[0]) + ".customparameters.json"
 
-				$ParamTargetDir = "$using:CatalinaHomeLocation\ARMParametertemplateFiles"
+				$ParamTargetDir = $using:CatalinaHomeLocation + "\ARMParametertemplateFiles"
 				$ParamTargetFilePath = "$ParamTargetDir\$agentARMparam"
 				$GaParamTargetFilePath = "$ParamTargetDir\$gaAgentARMparam"
 				$LinuxParamTargetFilePath = "$ParamTargetDir\$linuxAgentARMparam"
@@ -811,7 +811,11 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 					$sourcepath = "remote-workstation-template/$filename"
 
 					Write-Host "Downloading $sourcepath from blob container $container_name.."
-					Get-AzureStorageBlobContent -Destination $filepath -Container $container_name -Blob $sourcepath -Context $ctx
+					Get-AzureStorageBlobContent `
+						-Destination $targetpath `
+						-Container $container_name `
+						-Blob $sourcepath `
+						-Context $ctx
 				}
 
 		        Write-Host "Finished Creating default template parameters file data."
