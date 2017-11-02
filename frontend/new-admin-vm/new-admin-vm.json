@@ -27,12 +27,6 @@
                 "description": "The size of the virtual machines"
             }
         },
-        "domainToJoin": {
-            "type": "string",
-            "metadata": {
-                "description": "The FQDN of the AD domain"
-            }
-        },
         "domainGroupAppServersJoin": {
             "type": "string",
             "metadata": {
@@ -67,19 +61,6 @@
             "type": "string",
             "metadata": {
                 "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave blank or 'null' if a non SP account is being used."
-            }
-        },
-        "domainJoinOptions": {
-            "defaultValue": 3,
-            "type": "int",
-            "metadata": {
-                "description": "Set of bit flags that define the join options. Default value of 3 is a combination of NETSETUP_JOIN_DOMAIN (0x00000001) & NETSETUP_ACCT_CREATE (0x00000002) i.e. will join the domain and create the account on the domain. For more information see https://msdn.microsoft.com/en-us/library/aa392154(v=vs.85).aspx"
-            }
-        },
-        "domainControllerName": {
-            "type": "string",
-            "metadata": {
-                "description": "The network name of the domain controller (without domain suffix)"
             }
         },
         "vmAdminUsername": {
@@ -208,7 +189,6 @@
                     },
                     "configurationFunction": "Install-CAM.ps1\\InstallCAM",
                     "Properties": {
-                        "domainFQDN":  "[parameters('domainToJoin')]",
                         "domainGroupAppServersJoin": "[parameters('domainGroupAppServersJoin')]",
                         "sourceURI": "[parameters('blobSource')]",
 						"templateURI": "[parameters('_artifactsLocation')]",
@@ -232,7 +212,6 @@
                         "adminDesktopVMName" : "[parameters('adminDesktopVMName')]",
                         "camSaasUri" : "[parameters('camSaasUri')]",
                         "verifyCAMSaaSCertificate": "[parameters('verifyCAMSaaSCertificate')]",
-                        "DCVMName": "[parameters('domainControllerName')]",
                         "RGName": "[resourceGroup().name]",
                         "existingVNETName": "[parameters('existingVNETName')]",
                         "existingSubnetName": "[parameters('existingSubnetName')]",

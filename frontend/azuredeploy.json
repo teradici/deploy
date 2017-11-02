@@ -147,7 +147,6 @@
     "cmPrivateIP": "10.0.0.10",
     "auPrivateIP": "10.0.0.11",
     "brokerPort": "8444",
-    "adVMName": "vm-dc",
     "serverRootName": "vm",
     "domainGroupAppServersJoin": "[parameters('domainGroupToJoin')]"
   },
@@ -256,9 +255,6 @@
           "dnsLabelPrefix": {
             "value": "[concat(variables('serverRootName'), '-au')]"
           },
-          "domainToJoin": {
-            "value": "[parameters('domainName')]"
-          },
           "domainGroupAppServersJoin": {
             "value": "[variables('domainGroupAppServersJoin')]"
           },
@@ -277,9 +273,6 @@
           "tenantID": {
             "value": "[parameters('tenantID')]"
           },
-          "domainJoinOptions": {
-            "value": 3
-          },
           "vmAdminUsername": {
             "value": "[parameters('localAdminUsername')]"
           },
@@ -288,9 +281,6 @@
           },
           "registrationCode": {
             "value": "[parameters('registrationCode')]"
-          },
-          "domainControllerName": {
-            "value": "[variables('adVMName')]"
           },
           "blobSource": {
             "value": "[parameters('CAMDeploymentBlobSource')]"

@@ -66,9 +66,6 @@ Configuration InstallCAM
 		$linuxAgentARM = "rhel-standard-agent.json",
 
 		[Parameter(Mandatory)]
-		[String]$domainFQDN,
-
-		[Parameter(Mandatory)]
 		[String]$adminDesktopVMName,
 
 		[Parameter(Mandatory)]
@@ -94,9 +91,6 @@ Configuration InstallCAM
 
 		[Parameter(Mandatory=$false)]
 		[String]$tenantID,
-
-		[Parameter(Mandatory)]
-		[String]$DCVMName, #without the domain suffix
 
 		[Parameter(Mandatory)]
 		[String]$RGName, #Azure resource group name
@@ -135,6 +129,10 @@ Configuration InstallCAM
 
 	$standardVMSize = "Standard_D2_v2"
 	$graphicsVMSize = "Standard_NV6"
+
+	$domainFQDN = (gwmi win32_computersystem).domain
+	$myDomainInfo = (Get-WMIObject Win32_NTDomain) | Where-Object {$_.DnsForestName -eq $domainFQDN} | Select -First 1
+	$DCVMName = ($myDomainInfo.DomainControllerName -replace "\\", "")
 
 	$dcvmfqdn = "$DCVMName.$domainFQDN"
 	$pbvmfqdn = "$env:computername.$domainFQDN"
@@ -1449,8 +1447,8 @@ brokerLocale=en_US
 
 				#second, get the certificate file
 
-				$ldapCertFileName = "ldapcert.cert"
-				$certStoreLocationOnDC = "c:\" + $ldapCertFileName
+				# $ldapCertFileName = "ldapcert.cert"
+				# $certStoreLocationOnDC = "c:\" + $ldapCertFileName
 
 				$issuerCertFileName = "issuercert.cert"
 				$issuerCertStoreLocationOnDC = "c:\" + $issuerCertFileName
@@ -1459,73 +1457,35 @@ brokerLocale=en_US
 
 				Write-Host "Looking for cert with $certSubject on $dcvmfqdn"
 
-				$foundCert = $false
-				$loopCountRemaining = 180
-				#loop until it's created
-				while(-not $foundCert)
-				{
-					Write-Host "Waiting for LDAP certificate. Seconds remaining: $loopCountRemaining"
+				$DCSession = New-PSSession $using:dcvmfqdn -Credential $using:DomainAdminCreds
 
-					$DCSession = New-PSSession $using:dcvmfqdn -Credential $using:DomainAdminCreds
+				$certs = invoke-command {get-childItem -Path "Cert:\LocalMachine\My"} -Session $DCSession
 
-					$foundCert = `
-						Invoke-Command -Session $DCSession -ArgumentList $certSubject, $certStoreLocationOnDC, $issuerCertStoreLocationOnDC `
-						  -ScriptBlock {
-								$cs = $args[0]
-								$cloc = $args[1]
-								$icloc = $args[2]
+				Remove-PSSession $DCSession
 
-								$cert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cs }
-								if(-not $cert)
-								{
-									Write-Host "Did not find LDAP certificate."
-									#maybe a certutil -pulse will help?
-									# NOTE - must redirect stdout to $null otherwise the success return here pollutes the return value of $foundCert
-									& "certutil" -pulse > $null
-									return $false
-								}
-								else
-								{
-									Export-Certificate -Cert $cert -filepath  $cloc -force
-									Write-Host "Exported LDAP certificate."
+				$cert = $certs | Where-Object { $_.Subject -eq $certSubject }
 
-									#Now export issuer Certificate
-									$issuerCert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cert.Issuer }
-									Export-Certificate -Cert $issuerCert -filepath	$icloc -force
-
-									return $true
-								}
-							}
-
-					if(-not $foundCert)
-					{
-						Start-Sleep -Seconds 10
-						$loopCountRemaining = $loopCountRemaining - 1
-						if ($loopCountRemaining -eq 0)
-						{
-							Remove-PSSession $DCSession
-							throw "No LDAP certificate!"
-						}
-					}
-					else
-					{
-						#found it! copy
-						Write-Host "Copying certs and exiting DC Session"
-						Copy-Item -Path $certStoreLocationOnDC -Destination "$env:systemdrive\$ldapCertFileName" -FromSession $DCSession
-						Copy-Item -Path $issuerCertStoreLocationOnDC -Destination "$env:systemdrive\$issuerCertFileName" -FromSession $DCSession
-					}
-					Remove-PSSession $DCSession
+				if($cert -eq $null) {
+					throw "No LDAP certificate!"
 				}
+				
+				$issuerCert = $certs | Where-Object { $_.Subject -eq $cert.Issuer }
 
-				# Have the certificate file, add to keystore
+				if($issuerCert -ne $null) {
+					Export-Certificate -Cert $issuerCert -filepath	$issuerCertStoreLocationOnDC -force
+					# Have the certificate file, add to keystore
 
-				# keytool seems to be causing an error but succeeding. Ignore and continue.
-				$eap = $ErrorActionPreference
-				$ErrorActionPreference = 'SilentlyContinue'
-				& "keytool" -import -file "$env:systemdrive\$issuerCertFileName" -keystore ($env:classpath + "\security\cacerts") -storepass changeit -noprompt
-				$ErrorActionPreference = $eap
+					# keytool seems to be causing an error but succeeding. Ignore and continue.
+					$eap = $ErrorActionPreference
+					$ErrorActionPreference = 'SilentlyContinue'
+					& "keytool" -import -file "$env:systemdrive\$issuerCertFileName" -keystore ($env:classpath + "\security\cacerts") -storepass changeit -noprompt
+					$ErrorActionPreference = $eap
 
-				Write-Host "Finished importing LDAP certificate to keystore."
+					Write-Host "Finished importing Issuer's certificate of LDAP certificate to keystore."
+				} else {
+					# Non Self-signed Well known CA's certificate case
+					Write-Host "No Issuer certificate of LDAP certificate found."
+				}
 			}
 		}
 		
