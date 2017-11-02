@@ -712,7 +712,7 @@ function Populate-UserBlob
  		Create-RemoteWorstationTemplates `
 			-CAMConfig $CAMConfig `
 			-binaryLocation $CAMDeploymentBlobSource `
-			-blobUri ($blobUri + 'remote-workstation/') `
+			-blobUri ($blobUri + 'remote-workstation') `
 			-kvId $kvId `
 			-storageAccountContext $ctx `
 			-storageAccountContainerName $container_name `
