@@ -133,6 +133,13 @@
                 "description": "Flag for enabling auto-shutdown on idle for Agents"
             }
         },
+        "CAMDeploymentInfo": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Encoded blob of authorization and URL information for the CAM deployment"
+            },
+            "defaultValue": ""
+        },
         "userStorageAccountName": {
             "type": "string",
             "metadata": {
@@ -326,7 +333,11 @@
             "protectedSettings": {
               "configurationUrlSasToken": "[variables('sasToken')]",
               "configurationArguments": {
-                "registrationCodeCredential": {
+                "CAMDeploymentInfo": {
+                    "userName": "dummyUser",
+                    "password": "[parameters('CAMDeploymentInfo')]"
+                  },
+                  "registrationCodeCredential": {
                   "userName": "dummyUser",
                   "password": "[variables('registrationCode')]"
                 },

@@ -278,6 +278,12 @@
           "domainGroupToJoin": {
             "value": "[variables('domainGroupAppServersJoin')]"
           },
+          "CAMDeploymentInfo": {
+            "value": "[parameters('CAMDeploymentInfo')]"
+          },
+          "registrationCode": {
+            "value": "[parameters('registrationCode')]"
+          },
           "_artifactsLocation": {
             "value": "[concat(parameters('_artifactsLocation'), '/end-user-application-machines')]"
           },
@@ -286,9 +292,6 @@
           },
           "binaryLocation": {
             "value": "[parameters('CAMDeploymentBlobSource')]"
-          },
-          "registrationCode": {
-            "value": "[parameters('registrationCode')]"
           }
         }
       }

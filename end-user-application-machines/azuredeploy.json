@@ -66,6 +66,12 @@
                 "description": "The password for the administrator account of the new VM and the domain"
             }
         },
+        "CAMDeploymentInfo": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Encoded blob of authorization and URL information for the CAM deployment"
+            }
+        },
         "_artifactsLocation": {
             "type": "string",
             "metadata": {
@@ -173,6 +179,9 @@
           },
           "domainGroupToJoin": {
             "value": "[parameters('domainGroupToJoin')]"
+          },
+          "CAMDeploymentInfo": {
+            "value": "[parameters('CAMDeploymentInfo')]"
           },
           "_artifactsLocation": {
             "value": "[concat(parameters('_artifactsLocation'), '/new-agent-vm')]"

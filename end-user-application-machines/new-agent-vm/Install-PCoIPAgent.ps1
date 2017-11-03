@@ -23,17 +23,11 @@ Configuration InstallPCoIPAgent
         [Parameter(Mandatory=$false)]
 		[string] $domainGroupToJoin,
 
-        [Parameter(Mandatory=$false)]
-		[string] $usernameToRegister,
-
 		[Parameter(Mandatory=$false)]
 		[bool]$enableAutoShutdown,
 
-        [Parameter(Mandatory)]
+        [Parameter(Mandatory=$false)]
 		[System.Management.Automation.PSCredential]$CAMDeploymentInfo,
-
-		[Parameter(Mandatory=$true)]
-		[string]$camSaasUri,
 
 		[Parameter(Mandatory=$false)]
 		[bool]$verifyCAMSaaSCertificate=$true
@@ -480,14 +474,14 @@ Configuration InstallPCoIPAgent
 				$domainGroupToJoin = $using:domainGroupToJoin
 				$machineToJoin = $env:computername
 
-				if( -not ((gwmi win32_computersystem).partofdomain))
+				if( -not ((Get-WmiObject win32_computersystem).partofdomain))
 				{
 					Write-Host "$machineToJoin is not part of a domain so is not joining domain group $domainGroupToJoin."
 				}
 				else
 				{
-					$domain = (gwmi win32_computersystem).domain
-					$domainInfo = (Get-WMIObject Win32_NTDomain) | Where-Object {$_.DnsForestName -eq $domain} | Select -First 1
+					$domain = (Get-WmiObject win32_computersystem).domain
+					$domainInfo = (Get-WMIObject Win32_NTDomain) | Where-Object {$_.DnsForestName -eq $domain} | Select-Object -First 1
 					$dcname = ($domainInfo.DomainControllerName -replace "\\", "")
 
 					#create a PSSession with the domain controller that we used to login
@@ -527,17 +521,22 @@ Configuration InstallPCoIPAgent
 			GetScript  = { return 'RegisterUserEntitlement'}
 
 			TestScript = { 
-				if( -not $using:usernameToRegister )
-				{
-					Write-Host "No user to register to remote workstation."
+				if( -not $using:CAMDeploymentInfo ) {
+					Write-Host "No CAM info to register user to remote workstation."
 					return $true
+				} else {
+					$CAMDeploymentInfoCred = $using:CAMDeploymentInfo;
+					$CAMDeploymentInfo = $CAMDeploymentInfoCred.GetNetworkCredential().Password
+					if( -not $CAMDeploymentInfo) {
+						Write-Host "No CAM info to register user to remote workstation."
+						return $true
+					}
 				}
+				# Otherwise check marker file if complete
 				Test-Path "$using:agentInstallerDLDirectory\RegisterUserEntitlementFile.txt"
 			}
 
 			SetScript  = {
-
-				$usernameToRegister = $using:usernameToRegister
 				$machineToJoin = $env:computername
 
 				if( -not ((Get-WmiObject win32_computersystem).partofdomain))
@@ -569,8 +568,6 @@ Configuration InstallPCoIPAgent
 				
 				$camSaasBaseUri = $regInfo.CAM_URI
 				$camSaasBaseUri = $camSaasBaseUri.Trim().TrimEnd('/')
-
-
 
 				$camRegistrationError = ""
 				for($idx = 0; $idx -lt $using:retryCount; $idx++) {
@@ -708,9 +705,6 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 					throw $camRegistrationError
 				}
 
-				# restore CertificatePolicy 
-				[System.Net.ServicePointManager]::CertificatePolicy = $certificatePolicy
-					
 				#make placeholder file so this is only run once
 				New-Item "$using:agentInstallerDLDirectory\RegisterUserEntitlementFile.txt" -type file
 			}

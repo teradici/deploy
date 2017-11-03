@@ -256,6 +256,9 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 			$camDeploymentInfo.Add("CAM_DEPLOYMENTID",$deploymentId)
 			$camDeploymentInfo.Add("CAM_SUBSCRIPTIONID",$subscriptionId)
 			$camDeploymentInfo.Add("CAM_RESOURCEGROUP",$RGName)
+			# When we have the admin as a service account:
+			# $camDeploymentInfo.Add("CAM_DOMAINACCOUNTNAME",$CAMConfig.ARMParameters.parameters.domainAdminUsername.value)
+			# We'll want to pass through CAM_VERIFYCERT at some point.
 			
 			Write-Host "Deployment has been registered successfully with Cloud Access Manager"
 
@@ -1296,6 +1299,7 @@ graphURL=https\://graph.windows.net/
 	
 		#keyvault ID of the form: /subscriptions/$subscriptionID/resourceGroups/$azureRGName/providers/Microsoft.KeyVault/vaults/$kvName
 	
+<# First convenience workstation is now registering itself.
 		Register-RemoteWorkstation `
 				-subscription $subscriptionID `
 				-client $client `
@@ -1306,9 +1310,9 @@ graphURL=https\://graph.windows.net/
 				-camSaasBaseUri $camDeploymenRegInfo.CAM_URI `
 				-adminDesktopVMName "admin-rws" `
 				-verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
-	
+	#>
 
-				$kvId = $kvInfo.ResourceId
+		$kvId = $kvInfo.ResourceId
 
 		$verifyCAMSaaSCertificateText = "false"
 		if($verifyCAMSaaSCertificate)
