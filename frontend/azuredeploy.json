@@ -109,6 +109,12 @@
         "description": "Password for .pfx certificate"
       }
     },
+    "domainGroupAppServersJoin": {
+      "type": "string",
+      "metadata": {
+          "description": "The domain group the application servers should join"
+      }
+    },
     "keyVaultId": {
       "type": "string",
       "metadata": {
@@ -143,12 +149,13 @@
   },
   "variables": {
     "storageAccountName": "[concat(uniquestring(resourceGroup().id),'fe')]",
-    "cmPrivateIP": "10.0.0.10",
     "auPrivateIP": "10.0.0.11",
     "brokerPort":  "8444",
     "adVMName": "vm-dc",
     "serverRootName": "vm",
-    "domainGroupAppServersJoin": "Cloud Access Application Servers"
+    "appGwName": "CAM-ApplicationGateway",
+    "appGwBePoolName": "SGBackendPool",
+    "appGwId": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/applicationGateways/', variables('appGwName'), '/backendAddressPools/', variables('appGwBePoolName'))]"
   },
   "resources": [
     {
@@ -259,7 +266,7 @@
             "value": "[parameters('domainName')]"
           },
           "domainGroupAppServersJoin": {
-            "value": "[variables('domainGroupAppServersJoin')]"
+            "value": "[parameters('domainGroupAppServersJoin')]"
           },
           "domainUsername": {
             "value": "[parameters('domainAdminUsername')]"
@@ -312,9 +319,6 @@
           "AGbackendIpAddressDefault": {
               "value": "[variables('auPrivateIP')]"
           },
-          "AGbackendIpAddressForPathRule1": {
-              "value": "[variables('cmPrivateIP')]"
-          },
           "AGtemplateUri": {
               "value": "[concat(parameters('_artifactsLocation'), '/new-app-gateway/azuredeploy.json', parameters('_artifactsLocationSasToken'))]"
           },
@@ -360,9 +364,6 @@
           "backendIpAddressDefault": {
               "value": "[variables('auPrivateIP')]"
           },
-          "backendIpAddressForPathRule1": {
-              "value": "[variables('cmPrivateIP')]"
-          },
           "pathMatch1": {
             "value": "/pcoip-broker/*"
           },
@@ -371,13 +372,19 @@
           },
           "certPassword": {
             "value": "[parameters('certPassword')]"
+          },
+          "SGBackendPoolName": {
+            "value": "[parameters('appGwBePoolName')]"
+          },
+          "applicationGatewayName": {
+            "value": "[parameters('appGwName')]"
           }
         }
       }
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "name": "CreateCM",
+      "name": "Create-SG-VMSS",
       "apiVersion": "2016-02-01",
       "dependsOn": [
         "Microsoft.Resources/deployments/CreateNetworkSGs",
@@ -402,8 +409,17 @@
           "dnsLabelPrefix": {
             "value": "[concat(variables('serverRootName'), '-cm')]"
           },
-          "vmSize": {
+          "vmSku": {
             "value": "Standard_A1_v2"
+          },
+          "vmssName": {
+            "value": "SG-VMSS"
+          },
+          "instanceCount": {
+            "value": 1
+          },
+          "appGwbackendAddressPoolId": {
+            "value": "[parameters('appGwId')]"
           },
           "vmAdminUsername": {
             "value": "[parameters('domainAdminUsername')]"
@@ -413,12 +429,6 @@
           },
           "brokerFQDN": {
             "value": "[concat(variables('serverRootName'), '-au','.',parameters('domainName'),':',variables('brokerPort'))]"
-          },
-          "privateIP": {
-            "value": "[variables('cmPrivateIP')]"
-          },
-          "storageAccountName": {
-            "value": "[variables('storageAccountName')]"
           },
           "_artifactsLocation": {
             "value": "[concat(parameters('_artifactsLocation'), '/new-cm-sg-ls-vm')]"

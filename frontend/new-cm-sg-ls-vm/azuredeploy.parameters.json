@@ -8,11 +8,20 @@
         "vmAdminPassword": {
             "value": ""
         },
-        "dnsLabelPrefix": {
-            "value": "bdallad3-cm1"
+        "vmSku": {
+            "value": "Standard_D1_v2"
         },
-        "vmSize": {
-            "value": "Standard_A2"
+        "vmssName": {
+            "value": "sg-vmss"
+        },
+        "instanceCount": {
+            "value": 1
+        },
+        "cmnsgName": {
+            "value": "networkSecurityGroup"
+        },
+        "appGwbackendAddressPoolId": {
+            "value": "/resources/blah/blah"
         },
         "existingVNETName": {
             "value": "adVNET"
@@ -22,6 +31,9 @@
         },
         "brokerFQDN": {
             "value": "10.0.0.5"
+        },
+        "_artifactsLocation": {
+            "value": "https://raw.githubusercontent.com/teradici/deploy/master/frontend/new-cm-sg-ls-vm"
         }
     }
 }

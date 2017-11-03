@@ -14,9 +14,6 @@
         "backendIpAddressDefault": {
             "value": "10.0.1.10"
         },
-        "backendIpAddressForPathRule1": {
-            "value": "10.0.1.11"
-        },
         "pathMatch1": {
             "value": "/images*"
         },
@@ -25,6 +22,12 @@
         },
         "certPassword": {
             "value": "changeit"
+        },
+        "SGBackendPoolName": {
+            "value": "swimming"
+        },
+        "applicationGatewayName": {
+            "value": "gatekeeper"
         }
     }
 }

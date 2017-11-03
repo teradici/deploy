@@ -2,6 +2,27 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+	    "vmSku": {
+	      "type": "string",
+	      "defaultValue": "Standard_D1_v2",
+	      "metadata": {
+	        "description": "Size of VMs in the VM Scale Set."
+	      }
+	    },
+	    "vmssName": {
+	      "type":"string",
+	      "metadata":{
+	        "description":"String used as a base for naming resources. Must be 3-57 characters in length and globally unique across Azure. A hash is prepended to this string for some resources, and resource-specific information is appended."
+	      },
+	      "maxLength": 57
+	    },
+	    "instanceCount": {
+	      "type": "int",
+	      "metadata": {
+	        "description": "Number of VM instances (1000 or less)."
+	      },
+	      "maxValue": 1000
+	    },
         "existingVNETName": {
             "type": "string",
             "metadata": {
@@ -22,47 +43,28 @@
                 "maxLength": 80
             }
         },
-        "dnsLabelPrefix": {
+        "appGwbackendAddressPoolId": {
             "type": "string",
             "metadata": {
-                "description": "Unique machine name used for naming the machine in the Azure resource group and also for local DNS. Up to ?15? chars, digits or dashes, lowercase, should start with a letter: must conform to '^[a-z][a-z0-9-]{1,61}[a-z0-9]$'."
-            }
-        },
-        "vmSize": {
-            "defaultValue": "Standard_D1_v2",
-            "type": "string",
-            "metadata": {
-                "description": "The size of the virtual machines"
+                "description": "The ID of the app gateway backend pool to attach to"
             }
         },
         "vmAdminUsername": {
             "type": "string",
             "metadata": {
-                "description": "The name of the administrator of the new VM and the domain. Exclusion list: 'admin','administrator"
+                "description": "The name of the administrator of the new VM's. Exclusion list: 'admin','administrator"
             }
         },
         "vmAdminPassword": {
             "type": "securestring",
             "metadata": {
-                "description": "The password for the administrator account of the new VM and the domain"
+                "description": "The password for the administrator account of the new VM's"
             }
         },
         "brokerFQDN": {
             "type": "string",
             "metadata": {
                 "description": "IP or FQDN of the broker machine from the CM's perspective"
-            }
-        },
-        "privateIP": {
-            "type": "string",
-            "metadata": {
-                "description": "private IP of the instance to create"
-            }
-        },
-        "storageAccountName": {
-            "type": "string",
-            "metadata": {
-                "description": "Storage account to use for VM data and VHD's"
             }
         },
         "_artifactsLocation": {
@@ -80,118 +82,112 @@
         }
     },
     "variables": {
-        "imagePublisher": "MicrosoftWindowsServer",
-        "imageOffer": "WindowsServer",
-        "windowsOSVersion": "2016-Datacenter",
-        "apiVersion": "2015-06-15",
-        "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
-        "publicIPName": "[concat(parameters('dnsLabelPrefix'),'Pip')]",
-        "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
-        "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
-        "scriptFileName":  "cm_setup_0.1.sh",
-        "scriptFileURI":  "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'), parameters('_artifactsLocationSasToken'))]",
-        "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-CM-',subscription().subscriptionId)]",
-        "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',variables('sumoCollectorID'))]"
+    "namingInfix": "[toLower(substring(concat(parameters('vmssName'), uniqueString(resourceGroup().id)), 0, 9))]",
+    "longNamingInfix": "[toLower(parameters('vmssName'))]",
+    "publicIPAddressName": "[concat(variables('namingInfix'), 'pip')]",
+    "nicName": "[concat(variables('namingInfix'), 'nic')]",
+    "ipConfigName": "[concat(variables('namingInfix'), 'ipconfig')]",
+    "imageReference": {
+        "publisher": "OpenLogic",
+        "offer": "CentOS",
+        "sku": "6.6",
+        "version": "latest"
+    },
+    "computeApiVersion": "2017-03-30",
+    "networkApiVersion": "2017-04-01",
+    "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
+    "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
+    "scriptFileName":  "cm_setup_0.1.sh",
+    "scriptFileURI":  "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'), parameters('_artifactsLocationSasToken'))]",
+    "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-CM-',subscription().subscriptionId)]",
+    "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',variables('sumoCollectorID'))]",
     },
     "resources": [
-        {
-            "type": "Microsoft.Network/publicIPAddresses",
-            "name": "[variables('publicIPName')]",
-            "apiVersion": "[variables('apiVersion')]",
-            "location": "[resourceGroup().location]",
-            "properties": {
-                "publicIPAllocationMethod": "Static"
-            }
+    {
+      "type": "Microsoft.Compute/virtualMachineScaleSets",
+      "name": "[variables('namingInfix')]",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "[variables('computeApiVersion')]",
+      "sku": {
+        "name": "[parameters('vmSku')]",
+        "tier": "Standard",
+        "capacity": "[parameters('instanceCount')]"
+      },
+      "properties": {
+        "overprovision": "true",
+	    	"singlePlacementGroup": "false",
+        "upgradePolicy": {
+          "mode": "Automatic"
         },
-        {
-            "type": "Microsoft.Network/networkInterfaces",
-            "name": "[variables('nicName')]",
-            "apiVersion": "[variables('apiVersion')]",
-            "location": "[resourceGroup().location]",
-            "properties": {
-                "networkSecurityGroup": {
-                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('cmnsgName'))]"
-                },
-                "ipConfigurations": [
+        "virtualMachineProfile": {
+          "storageProfile": {
+            "osDisk": {
+              "caching": "ReadWrite",
+              "createOption": "FromImage"
+            },
+            "dataDisks": [ ],
+            "imageReference": "[variables('imageReference')]"
+          },
+          "osProfile": {
+            "computerNamePrefix": "[variables('namingInfix')]",
+			      "adminUsername": "[parameters('vmAdminUsername')]",
+            "adminPassword": "[parameters('vmAdminPassword')]"
+          },
+          "networkProfile": {
+            "networkInterfaceConfigurations": [
+              {
+                "name": "[variables('nicName')]",
+                "properties": {
+                  "networkSecurityGroup": {
+                      "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('cmnsgName'))]"
+                  },
+                  "primary": true,
+                  "ipConfigurations": [
                     {
-                        "name": "ipconfig",
-                        "properties": {
-                            "privateIPAllocationMethod": "Static",
-                            "publicIPAddress": {
-                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPName'))]"
-                            },
-                            "subnet": {
-                                "id": "[variables('subnetId')]"
-                            },
-                            "privateIPAddress": "[parameters('privateIP')]"
-                        }
-                    }
-                ]
-            },
-            "dependsOn": [
-                "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPName'))]"
-            ]
-        },
-        {
-            "type": "Microsoft.Compute/virtualMachines",
-            "name": "[parameters('dnsLabelPrefix')]",
-            "apiVersion": "[variables('apiVersion')]",
-            "location": "[resourceGroup().location]",
-            "properties": {
-                "hardwareProfile": {
-                    "vmSize": "[parameters('vmSize')]"
-                },
-                "osProfile": {
-                    "computerName": "[parameters('dnsLabelPrefix')]",
-                    "adminUsername": "[parameters('vmAdminUsername')]",
-                    "adminPassword": "[parameters('vmAdminPassword')]"
-                },
-                "storageProfile": {
-                    "imageReference": {
-                        "publisher": "OpenLogic",
-                        "offer": "CentOS",
-                        "sku": "7.4",
-                        "version": "latest"
-                    },
-                    "osDisk": {
-                        "name": "osdisk",
-                        "vhd": {
-                            "uri": "[concat('http://',parameters('storageAccountName'),'.blob.core.windows.net/vhds/',parameters('dnsLabelPrefix'), 'disk0.vhd')]"
+                      "name": "[variables('ipConfigName')]",
+                      "properties": {
+                        "subnet": {
+                          "id": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'), '/subnets/', variables('subnetName'))]"
                         },
-                        "caching": "ReadWrite",
-                        "createOption": "FromImage"
+                        "publicipaddressconfiguration": {
+                            "name": "pub1",
+                            "properties": {
+                              "idleTimeoutInMinutes": 15
+                            }
+                          },
+                        "ApplicationGatewayBackendAddressPools": [
+                          {
+                            "id": "[parameters('appGwbackendAddressPoolId')]"
+                          }
+                        ]
+                      }
                     }
-                },
-                "networkProfile": {
-                    "networkInterfaces": [
-                        {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
-                        }
-                    ]
+                  ]
                 }
-            },
-            "dependsOn": [
-                "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+              }
             ]
-        },
-        {
-            "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(parameters('dnsLabelPrefix'),'/installcustomscript')]",
-            "apiVersion": "[variables('apiVersion')]",
-            "location": "[resourceGroup().location]",
-            "dependsOn": [
-                "[concat('Microsoft.Compute/virtualMachines/', parameters('dnsLabelPrefix'))]"
-            ],
-            "properties": {
-                "publisher": "Microsoft.OSTCExtensions",
-                "type": "CustomScriptForLinux",
-                "typeHandlerVersion": "1.0",
-                "autoUpgradeMinorVersion": true,
-                "settings": {
-                    "fileUris": "[split(variables('scriptFileURI'), ' ')]",
+          },
+          "extensionProfile": {
+            "extensions": [
+              {
+                "name": "customScript",
+                "properties": {
+                  "publisher": "Microsoft.OSTCExtensions",
+                  "type": "CustomScriptForLinux",
+                  "typeHandlerVersion": "1.0",
+                  "autoUpgradeMinorVersion": true,
+                  "settings": {
+                    "fileUris": "[split(variables('scriptFileURI'), ' ')]"
+                },
+                  "protectedSettings": {
                     "commandToExecute": "[variables('commandToExecute')]"
                 }
-            }
+                }
+              }
+            ]
+          }
         }
-    ]
+      }
+    }
+  ]
 }
