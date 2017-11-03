@@ -124,12 +124,6 @@
                 "description": "Backend IP the application gateway will use for HTTP requests (for the Admin UI)"
             }
         },
-        "AGbackendIpAddressForPathRule1": {
-            "type": "string",
-            "metadata": {
-                "description": "Backend IP the application gateway will use for Broker Protocol HTTP requests"
-            }
-        },
         "AGtemplateUri": {
             "type": "securestring",
             "metadata": {
