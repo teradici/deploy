@@ -527,7 +527,7 @@ Configuration InstallPCoIPAgent
 				} else {
 					$CAMDeploymentInfoCred = $using:CAMDeploymentInfo;
 					$CAMDeploymentInfo = $CAMDeploymentInfoCred.GetNetworkCredential().Password
-					if( -not $CAMDeploymentInfo) {
+					if( (-not $CAMDeploymentInfo) -or ($CAMDeploymentInfo -eq "null")) {
 						Write-Host "No CAM info to register user to remote workstation."
 						return $true
 					}
@@ -596,6 +596,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 						
 							[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
 						}
+						[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 						
 						# Get a Sign-in token
 						$signInResult = ""

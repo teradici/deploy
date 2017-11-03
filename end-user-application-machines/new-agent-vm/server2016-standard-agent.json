@@ -138,7 +138,7 @@
             "metadata": {
                 "description": "Encoded blob of authorization and URL information for the CAM deployment"
             },
-            "defaultValue": ""
+            "defaultValue": "null"
         },
         "userStorageAccountName": {
             "type": "string",
