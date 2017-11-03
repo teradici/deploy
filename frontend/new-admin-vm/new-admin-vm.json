@@ -253,7 +253,7 @@
                         "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-AdminUI-',subscription().subscriptionId)]",
                         "AGsubnetRef": "[parameters('AGsubnetRef')]",
                         "AGbackendIpAddressDefault": "[parameters('AGbackendIpAddressDefault')]",
-                        "AGbackendIpAddressForPathRule1": "[parameters('AGbackendIpAddressForPathRule1')]",
+                        "AGbackendIpAddressForPathRule1": "TODO: Delete Me!",
                         "AGtemplateUri": {
                             "UserName": "dummy",
                             "Password": "PrivateSettingsRef:PrivateAGtemplateUri"

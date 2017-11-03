@@ -35,6 +35,24 @@
         "camSaasUri": {
             "value": "https://cam.teradici.com"
         },
+        "virtualNetworkName": {
+            "value": "virtualPackets"
+        },
+        "adSubnetName": {
+            "value": "subVirtualPackets"
+        },
+        "adminDesktopVMName": {
+            "value": "pixeley"
+        },
+        "gatewaySubnetName": {
+            "value": "subGatekeeper"
+        },
+        "cmnsgName": {
+            "value": "securityOfNetwork"
+        },
+        "domainGroupAppServersJoin": {
+            "value": "Remote Workstations"
+        },
         "verifyCAMSaaSCertificate": {
             "value": true
         },
@@ -45,10 +63,10 @@
             "value": "This+would+be+a+URI+encoded+string"
         },
         "_agentArtifactsLocation": {
-            "value": "https://raw.githubusercontent.com/teradici/deploy/master/end-user-application-machines/new-agent-vm"
+            "value": "https://raw.githubusercontent.com/teradici/deploy/vmss/end-user-application-machines/new-agent-vm"
         },
         "_artifactsLocation": {
-            "value": "https://raw.githubusercontent.com/teradici/deploy/master/frontend"
+            "value": "https://raw.githubusercontent.com/teradici/deploy/vmss/frontend"
         }
     }
 }
