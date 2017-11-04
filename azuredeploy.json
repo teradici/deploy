@@ -186,6 +186,9 @@
           "domainAdminPassword": {
             "value": "[parameters('domainAdminPassword')]"
           },
+          "domainGroupAppServersJoin": {
+            "value": "[variables('domainGroupAppServersJoin')]"
+          },
           "AzureAdminUsername": {
             "value": "[parameters('AzureAdminUsername')]"
           },
