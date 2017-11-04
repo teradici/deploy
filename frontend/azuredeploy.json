@@ -374,7 +374,7 @@
             "value": "[parameters('certPassword')]"
           },
           "SGBackendPoolName": {
-            "value": "[parameters('appGwBePoolName')]"
+            "value": "[variables('appGwBePoolName')]"
           },
           "applicationGatewayName": {
             "value": "[parameters('appGwName')]"
@@ -419,7 +419,7 @@
             "value": 1
           },
           "appGwbackendAddressPoolId": {
-            "value": "[parameters('appGwId')]"
+            "value": "[variables('appGwId')]"
           },
           "vmAdminUsername": {
             "value": "[parameters('domainAdminUsername')]"
