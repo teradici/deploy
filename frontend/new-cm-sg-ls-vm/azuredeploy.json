@@ -82,25 +82,25 @@
         }
     },
     "variables": {
-    "namingInfix": "[toLower(substring(concat(parameters('vmssName'), uniqueString(resourceGroup().id)), 0, 9))]",
-    "longNamingInfix": "[toLower(parameters('vmssName'))]",
-    "publicIPAddressName": "[concat(variables('namingInfix'), 'pip')]",
-    "nicName": "[concat(variables('namingInfix'), 'nic')]",
-    "ipConfigName": "[concat(variables('namingInfix'), 'ipconfig')]",
-    "imageReference": {
-        "publisher": "OpenLogic",
-        "offer": "CentOS",
-        "sku": "6.6",
-        "version": "latest"
-    },
-    "computeApiVersion": "2017-03-30",
-    "networkApiVersion": "2017-04-01",
-    "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
-    "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
-    "scriptFileName":  "cm_setup_0.1.sh",
-    "scriptFileURI":  "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'), parameters('_artifactsLocationSasToken'))]",
-    "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-CM-',subscription().subscriptionId)]",
-    "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',variables('sumoCollectorID'))]",
+      "namingInfix": "[toLower(substring(concat(parameters('vmssName'), uniqueString(resourceGroup().id)), 0, 9))]",
+      "longNamingInfix": "[toLower(parameters('vmssName'))]",
+      "publicIPAddressName": "[concat(variables('namingInfix'), 'pip')]",
+      "nicName": "[concat(variables('namingInfix'), 'nic')]",
+      "ipConfigName": "[concat(variables('namingInfix'), 'ipconfig')]",
+      "imageReference": {
+          "publisher": "OpenLogic",
+          "offer": "CentOS",
+          "sku": "6.6",
+          "version": "latest"
+      },
+      "computeApiVersion": "2017-03-30",
+      "networkApiVersion": "2017-04-01",
+      "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
+      "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
+      "scriptFileName":  "cm_setup_0.1.sh",
+      "scriptFileURI":  "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'), parameters('_artifactsLocationSasToken'))]",
+      "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-CM-',subscription().subscriptionId)]",
+      "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',variables('sumoCollectorID'))]"
     },
     "resources": [
     {
@@ -114,8 +114,8 @@
         "capacity": "[parameters('instanceCount')]"
       },
       "properties": {
-        "overprovision": "true",
-	    	"singlePlacementGroup": "false",
+        "overprovision": true,
+	    	"singlePlacementGroup": false,
         "upgradePolicy": {
           "mode": "Automatic"
         },
@@ -147,7 +147,7 @@
                       "name": "[variables('ipConfigName')]",
                       "properties": {
                         "subnet": {
-                          "id": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'), '/subnets/', variables('subnetName'))]"
+                          "id": "[variables('subnetId')]"
                         },
                         "publicipaddressconfiguration": {
                             "name": "pub1",
