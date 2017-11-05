@@ -388,7 +388,8 @@
       "apiVersion": "2016-02-01",
       "dependsOn": [
         "Microsoft.Resources/deployments/CreateNetworkSGs",
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+        "Microsoft.Resources/deployments/CreateAppGateway"
       ],
       "properties": {
         "mode": "Incremental",
