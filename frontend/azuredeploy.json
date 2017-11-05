@@ -155,7 +155,7 @@
     "serverRootName": "vm",
     "appGwName": "CAM-ApplicationGateway",
     "appGwBePoolName": "SGBackendPool",
-    "appGwId": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/applicationGateways/', variables('appGwName'), '/backendAddressPools/', variables('appGwBePoolName'))]"
+    "appGwBePoolID": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/applicationGateways/', variables('appGwName'), '/backendAddressPools/', variables('appGwBePoolName'))]"
   },
   "resources": [
     {
@@ -377,7 +377,7 @@
             "value": "[variables('appGwBePoolName')]"
           },
           "applicationGatewayName": {
-            "value": "[parameters('appGwName')]"
+            "value": "[variables('appGwName')]"
           }
         }
       }
@@ -406,9 +406,6 @@
           "cmnsgName": {
             "value": "[parameters('cmnsgName')]"
           },
-          "dnsLabelPrefix": {
-            "value": "[concat(variables('serverRootName'), '-cm')]"
-          },
           "vmSku": {
             "value": "Standard_A1_v2"
           },
@@ -419,7 +416,7 @@
             "value": 1
           },
           "appGwbackendAddressPoolId": {
-            "value": "[variables('appGwId')]"
+            "value": "[variables('appGwBePoolID')]"
           },
           "vmAdminUsername": {
             "value": "[parameters('domainAdminUsername')]"
