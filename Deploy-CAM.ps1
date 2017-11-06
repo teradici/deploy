@@ -1417,7 +1417,7 @@ graphURL=https\://graph.windows.net/
 	finally {
 		if ($azureContext)
 		{
-			Set-AzureRMContext -Context $azureContext
+			Set-AzureRMContext -Context $azureContext > $null
 		}
 	}
 }
