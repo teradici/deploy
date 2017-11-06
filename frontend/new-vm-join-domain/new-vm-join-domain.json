@@ -99,13 +99,13 @@
                         "properties": {
                             "subnet": {
                                 "id": "[variables('subnetId')]"
-                            }
-                        },
-                        "ApplicationGatewayBackendAddressPools": [
-                            {
-                                "id": "[parameters('applicationGatewayPoolReference')]"
-                            }
-                        ]
+                            },
+                            "ApplicationGatewayBackendAddressPools": [
+                                {
+                                    "id": "[parameters('applicationGatewayPoolReference')]"
+                                }
+                            ]
+                        }
                     }
                 ]
             }
