@@ -149,13 +149,14 @@
   },
   "variables": {
     "storageAccountName": "[concat(uniquestring(resourceGroup().id),'fe')]",
-    "auPrivateIP": "10.0.0.11",
     "brokerPort":  "8444",
     "adVMName": "vm-dc",
     "serverRootName": "vm",
     "appGwName": "CAM-ApplicationGateway",
-    "appGwBePoolName": "SGBackendPool",
-    "appGwBePoolID": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/applicationGateways/', variables('appGwName'), '/backendAddressPools/', variables('appGwBePoolName'))]"
+    "appGwSGPoolName": "SGBackendPool",
+    "appGwSGPoolID": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/applicationGateways/', variables('appGwName'), '/backendAddressPools/', variables('appGwSGPoolName'))]",
+    "appGwCSPoolName": "SGBackendPool",
+    "appGwCSPoolID": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/applicationGateways/', variables('appGwName'), '/backendAddressPools/', variables('appGwCSPoolName'))]"
   },
   "resources": [
     {
@@ -191,7 +192,8 @@
       "name": "CreateAdminMachine",
       "apiVersion": "2016-02-01",
       "dependsOn": [
-          "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+          "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+	      "Microsoft.Resources/deployments/CreateAppGateway"
       ],
       "properties": {
         "mode": "Incremental",
@@ -212,9 +214,6 @@
           "vmSize": {
             "value": "Standard_A2_v2"
           },
-          "privateIP": {
-            "value": "[variables('auPrivateIP')]"
-          },
           "domainToJoin": {
             "value": "[parameters('domainName')]"
           },
@@ -232,6 +231,9 @@
           },
           "vmAdminPassword": {
             "value": "[parameters('domainAdminPassword')]"
+          },
+          "applicationGatewayPoolReference": {
+            "value": "[variables('appGwCSPoolID')]"
           },
           "storageAccountName": {
             "value": "[variables('storageAccountName')]"
@@ -374,7 +376,10 @@
             "value": "[parameters('certPassword')]"
           },
           "SGBackendPoolName": {
-            "value": "[variables('appGwBePoolName')]"
+            "value": "[variables('appGwSGPoolName')]"
+          },
+          "CSBackendPoolName": {
+            "value": "[variables('appGwCSPoolName')]"
           },
           "applicationGatewayName": {
             "value": "[variables('appGwName')]"
@@ -417,7 +422,7 @@
             "value": 1
           },
           "appGwbackendAddressPoolId": {
-            "value": "[variables('appGwBePoolID')]"
+            "value": "[variables('appGwSGPoolID')]"
           },
           "vmAdminUsername": {
             "value": "[parameters('domainAdminUsername')]"

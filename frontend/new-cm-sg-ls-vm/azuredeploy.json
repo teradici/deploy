@@ -154,7 +154,7 @@
                             "properties": {
                               "idleTimeoutInMinutes": 15
                             }
-                          },
+                         },
                         "ApplicationGatewayBackendAddressPools": [
                           {
                             "id": "[parameters('appGwbackendAddressPoolId')]"

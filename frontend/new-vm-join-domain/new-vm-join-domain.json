@@ -27,10 +27,10 @@
                 "description": "The size of the virtual machines"
             }
         },
-        "privateIP": {
+        "applicationGatewayPoolReference": {
             "type": "string",
             "metadata": {
-                "description": "private IP of the instance to create"
+                "description": "Application gateway backend pool this machine is a member of"
             }
         },
         "domainToJoin": {
@@ -97,12 +97,15 @@
                     {
                         "name": "ipconfig",
                         "properties": {
-                            "privateIPAllocationMethod": "Static",
                             "subnet": {
                                 "id": "[variables('subnetId')]"
-                            },
-                            "privateIPAddress": "[parameters('privateIP')]"
-                        }
+                            }
+                        },
+                        "ApplicationGatewayBackendAddressPools": [
+                            {
+                                "id": "[parameters('applicationGatewayPoolReference')]"
+                            }
+                        ]
                     }
                 ]
             }
