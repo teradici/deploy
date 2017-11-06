@@ -29,12 +29,6 @@
         "description": "Number of instances"
       }
     },
-    "backendIpAddressDefault": {
-      "type": "string",
-      "metadata": {
-        "description": "IP Address of Default Backend Server"
-      }
-    },
     "pathMatch1": {
       "type": "string",
       "metadata": {

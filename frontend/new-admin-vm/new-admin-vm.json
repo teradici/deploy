@@ -118,12 +118,6 @@
                 "description": "Reference to the application gateway subnet"
             }
         },
-        "AGbackendIpAddressDefault": {
-            "type": "string",
-            "metadata": {
-                "description": "Backend IP the application gateway will use for HTTP requests (for the Admin UI)"
-            }
-        },
         "AGtemplateUri": {
             "type": "securestring",
             "metadata": {
@@ -246,7 +240,7 @@
                         "gitLocation": "[parameters('_artifactsLocation')]",
                         "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-AdminUI-',subscription().subscriptionId)]",
                         "AGsubnetRef": "[parameters('AGsubnetRef')]",
-                        "AGbackendIpAddressDefault": "[parameters('AGbackendIpAddressDefault')]",
+                        "AGbackendIpAddressDefault": "TODO: Delete Me!",
                         "AGbackendIpAddressForPathRule1": "TODO: Delete Me!",
                         "AGtemplateUri": {
                             "UserName": "dummy",
