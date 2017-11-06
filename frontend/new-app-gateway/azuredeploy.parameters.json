@@ -11,8 +11,8 @@
         "capacity": {
             "value": 2
         },
-        "backendIpAddressDefault": {
-            "value": "10.0.1.10"
+        "CSBackendPoolName": {
+            "value": "ConnectorServicePool"
         },
         "pathMatch1": {
             "value": "/images*"
