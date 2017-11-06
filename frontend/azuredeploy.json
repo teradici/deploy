@@ -155,7 +155,7 @@
     "appGwName": "CAM-ApplicationGateway",
     "appGwSGPoolName": "SGBackendPool",
     "appGwSGPoolID": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/applicationGateways/', variables('appGwName'), '/backendAddressPools/', variables('appGwSGPoolName'))]",
-    "appGwCSPoolName": "SGBackendPool",
+    "appGwCSPoolName": "CSBackendPool",
     "appGwCSPoolID": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/applicationGateways/', variables('appGwName'), '/backendAddressPools/', variables('appGwCSPoolName'))]"
   },
   "resources": [
