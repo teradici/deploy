@@ -452,9 +452,10 @@ function Create-RemoteWorstationTemplates
 	$DomainAdminUsername = $CAMConfig.ARMParameters.parameters.domainAdminUsername.value
 	$djSecretName = $CAMConfig.internal.djSecretName
 	$rcSecretName = $CAMConfig.internal.rcSecretName
-	$laSecretName = $CAMConfig.internal.laSecretName
+	$rwLaSecretName = $CAMConfig.internal.rwLaSecretName
+	$csLaSecretName = $CAMConfig.internal.csLaSecretName
 	$existingVNETName = $CAMConfig.internal.existingVNETName
-	$VMAdminUsername = $CAMConfig.ARMParameters.parameters.domainAdminUsername.value
+	$VMAdminUsername = "localadmin"
 	$domainFQDN = 	$CAMConfig.ARMParameters.parameters.domainName.value
 	$domainGroupAppServersJoin = $CAMConfig.internal.domainGroupAppServersJoin
 	$saSasTokenSecretName = $CAMConfig.internal.saSasTokenSecretName
@@ -518,7 +519,7 @@ function Create-RemoteWorstationTemplates
 				"keyVault": {
 				"id": "$kvId"
 				},
-				"secretName": "$laSecretName"
+				"secretName": "$rwLaSecretName"
 			}
 		},
 		"domainToJoin": { "value": "$domainFQDN" },
@@ -750,17 +751,18 @@ function createAndPopulateKeyvault()
 		$DomainJoinPassword,
 
 		[parameter(Mandatory=$true)]
-		[String]
-		$rcSecretName,
-
-		[parameter(Mandatory=$true)]
-		[String]
-		$djSecretName,
+		$CAMConfig,
 
 		[parameter(Mandatory=$true)]
 		[String]
 		$tempDir
 	)
+
+	$rcSecretName = $CAMConfig.internal.rcSecretName
+	$djSecretName = $CAMConfig.internal.djSecretName
+	$rwLocalSecretName = $CAMConfig.internal.rwLocalSecretName
+	$csLocalSecretName = $CAMConfig.internal.csLocalSecretName
+	
 
 	try{
 
@@ -823,16 +825,33 @@ function createAndPopulateKeyvault()
 		$djSecretURL = $djSecretVersionedURL.Substring(0, $djSecretVersionedURL.lastIndexOf('/'))
 
 
-		Write-Host "Creating Local Admin Password for new machines"
+		Write-Host "Creating Local Admin Password for new remote workstations"
 
-		$localAdminPasswordStr =  "5!" + (-join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})) # "5!" is to ensure numbers and symbols
+		$rwLocalAdminPasswordStr =  "5!" + (-join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})) # "5!" is to ensure numbers and symbols
 
-		$localAdminPassword = ConvertTo-SecureString $localAdminPasswordStr -AsPlainText -Force
+		$rwLocalAdminPassword = ConvertTo-SecureString $rwLocalAdminPasswordStr -AsPlainText -Force
 
-		$laSecretName = 'localAdminPassword'
-		$laSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $laSecretName -SecretValue $localAdminPassword
-		$laSecretVersionedURL = $laSecret.Id
-		$laSecretURL = $laSecretVersionedURL.Substring(0, $laSecretVersionedURL.lastIndexOf('/'))
+		$rwLaSecret = Set-AzureKeyVaultSecret `
+			 -VaultName $kvName `
+			 -Name $rwLocalSecretName `
+			 -SecretValue $rwLocalAdminPassword
+
+	    $rwLaSecretVersionedURL = $rwLaSecret.Id
+		$rwLaSecretURL = $rwLaSecretVersionedURL.Substring(0, $rwLaSecretVersionedURL.lastIndexOf('/'))
+
+		Write-Host "Creating Local Admin Password for Connection Service servers"
+		
+		$csLocalAdminPasswordStr =  "5!" + (-join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})) # "5!" is to ensure numbers and symbols
+
+		$csLocalAdminPassword = ConvertTo-SecureString $csLocalAdminPasswordStr -AsPlainText -Force
+
+		$csLaSecret = Set-AzureKeyVaultSecret `
+				-VaultName $kvName `
+				-Name $csLocalSecretName `
+				-SecretValue $csLocalAdminPassword
+
+		$csLaSecretVersionedURL = $csLaSecret.Id
+		$csLaSecretURL = $csLaSecretVersionedURL.Substring(0, $csLaSecretVersionedURL.lastIndexOf('/'))
 
 		# create self signed certificate for Application Gateway.
 		# System Administrators can override the self signed certificate if desired in future.
@@ -905,7 +924,8 @@ function createAndPopulateKeyvault()
 		$secretHash = @{}
 		$secretHash.Add($rcSecretName,$rcSecretURL)
 		$secretHash.Add($djSecretName,$djSecretURL)
-		$secretHash.Add($laSecretName,$laSecretURL)
+		$secretHash.Add($rwLaSecretName,$rwLaSecretURL)
+		$secretHash.Add($csLaSecretName,$csLaSecretURL)
 		$secretHash.Add($FECertSecretName,$FECertSecretURL)
 		$secretHash.Add($FECertPasswordSecretName,$FECertPasswordSecretURL)
 	}
@@ -1146,7 +1166,8 @@ function Deploy-CAM()
 	$CAMConfig.internal = @{}
 	$CAMConfig.internal.rcSecretName = 'cloudAccessRegistrationCode'
 	$CAMConfig.internal.djSecretName = 'domainJoinPassword'
-	$CAMConfig.internal.laSecretName = 'localAdminPassword'
+	$CAMConfig.internal.rwLocalSecretName = 'remoteWorkstationLocalAdminPassword'
+	$CAMConfig.internal.csLocalSecretName = 'connectionServiceLocalAdminPassword'
 	$CAMConfig.internal.saSasTokenSecretName = "userStorageAccountSaasToken"
 	$CAMConfig.internal.standardVMSize = "Standard_D2_v2"
 	$CAMConfig.internal.graphicsVMSize = "Standard_NV6"
@@ -1234,8 +1255,7 @@ function Deploy-CAM()
 			-registrationCode $registrationCode `
 			-DomainJoinPassword $domainAdminCredential.Password `
 			-spName $spInfo.spCreds.UserName `
-			-rcSecretName $CAMConfig.internal.rcSecretName `
-			-djSecretName $CAMConfig.internal.djSecretName `
+			-CAMConfig $CAMConfig `
 			-tempDir $tempDir
 
 		$userDataStorageAccount = Create-UserStorageAccount `
@@ -1334,17 +1354,19 @@ graphURL=https\://graph.windows.net/
 		}
 
 		$djSecretName = $CAMConfig.internal.djSecretName 
+		$csLocalSecretName = $CAMConfig.internal.csLocalSecretName
+
 		$generatedDeploymentParameters = @"
 	{
-		"AzureAdminUsername": {
-			"value": "$client"
+		"LocalAdminUsername": {
+			"value": "localadmin"
 		},
-		"AzureAdminPassword": {
+		"LocalAdminPassword": {
 			"reference": {
 				"keyVault": {
 				  "id": "$kvId"
 				},
-				"secretName": "$SPKeySecretName"
+				"secretName": "$csLocalSecretName"
 			  }
 		},
 		"DomainAdminPassword": {
@@ -1354,9 +1376,6 @@ graphURL=https\://graph.windows.net/
 				},
 				"secretName": "$djSecretName"
 			  }
-		},
-		"tenantID": {
-			"value": "$tenant"
 		},
 		"certData": {
 			"reference": {

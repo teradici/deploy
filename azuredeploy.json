@@ -22,24 +22,17 @@
         "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
       }
     },
-    "AzureAdminUsername": {
+    "localAdminUsername": {
       "type": "string",
       "metadata": {
-        "description": "The name of the Azure account/service principal with contributor access to the subscription. This account cannot require MFA."
+        "description": "The name of the local admin account for connection service VM's"
       }
     },
-    "AzureAdminPassword": {
+    "localAdminPassword": {
       "type": "securestring",
       "metadata": {
-        "description": "The password of the Azure account/service principal with contributor access to the subscription. This account cannot require MFA."
+        "description": "The password/key for the local VM accounts."
       }
-    },
-    "tenantID": {
-        "type": "string",
-        "defaultValue": "null",
-        "metadata": {
-            "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave as 'null' if a standard user (non-SP) account is being used."
-        }
     },
     "registrationCode": {
       "type": "securestring",
@@ -166,9 +159,6 @@
           "GWsubnetId": {
             "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', reference('Root').outputs.virtualNetworkName.value, reference('Root').outputs.gatewaySubnetName.value)]"
           },
-          "cmnsgName" : {
-            "value" : "[reference('Root').outputs.cmnsgName.value]"
-          },
           "domainName": {
             "value": "[parameters('domainName')]"
           },
@@ -181,17 +171,14 @@
           "domainGroupAppServersJoin": {
             "value": "[variables('domainGroupAppServersJoin')]"
           },
-          "AzureAdminUsername": {
-            "value": "[parameters('AzureAdminUsername')]"
+          "domainControllerName": {
+            "value": "vm-dc"
           },
-          "AzureAdminPassword": {
-            "value": "[parameters('AzureAdminPassword')]"
+          "localAdminUsername": {
+            "value": "[parameters('localAdminUsername')]"
           },
-          "tenantID": {
-            "value": "[parameters('tenantID')]"
-          },
-          "registrationCode": {
-            "value": "[parameters('registrationCode')]"
+          "localAdminPassword": {
+            "value": "[parameters('localAdminPassword')]"
           },
           "camSaasUri": {
             "value": "[parameters('camSaasUri')]"

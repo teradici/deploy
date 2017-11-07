@@ -33,9 +33,6 @@ Configuration InstallCAM
 		[String]$templateAgentURI,
 
         [Parameter(Mandatory)]
-		[System.Management.Automation.PSCredential]$registrationCodeAsCred,
-
-        [Parameter(Mandatory)]
 		[System.Management.Automation.PSCredential]$CAMDeploymentInfo,
 
         [string]
@@ -78,16 +75,7 @@ Configuration InstallCAM
         [String]$storageAccountName,
 
         [Parameter(Mandatory)]
-        [System.Management.Automation.PSCredential]$VMAdminCreds,
-
-        [Parameter(Mandatory)]
         [System.Management.Automation.PSCredential]$DomainAdminCreds,
-
-        [Parameter(Mandatory)]
-        [System.Management.Automation.PSCredential]$AzureCreds,
-
-        [Parameter(Mandatory=$false)]
-		[String]$tenantID,
 
         [Parameter(Mandatory)]
         [String]$DCVMName, #without the domain suffix
@@ -571,9 +559,9 @@ Configuration InstallCAM
 
                 Write-Verbose "Install_CAM"
 
-				copy "$LocalDLPath\$adminWAR" ($catalinaBase + "\webapps")
+				Copy-Item "$LocalDLPath\$adminWAR" ($catalinaBase + "\webapps")
 
-				$svc = get-service $using:AUIServiceName
+				$svc = Get-Service $using:AUIServiceName
 				if ($svc.Status -ne "Stopped") {$svc.stop()}
 
 				Write-Host "Re-generating CAM configuration file."
@@ -678,24 +666,6 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 
 				[System.Environment]::SetEnvironmentVariable("AZURE_AUTH_LOCATION", $authFilePath, "Machine")
 				$env:AZURE_AUTH_LOCATION = $authFilePath
-
-
-
-				#Get local version of passed-in credentials
-				$localVMAdminCreds = $using:VMAdminCreds
-				$VMAdminUsername = $localVMAdminCreds.GetNetworkCredential().Username
-
-				$localDomainAdminCreds = $using:DomainAdminCreds
-				$DomainAdminUsername = $localDomainAdminCreds.GetNetworkCredential().Username
-
-
-
-				$kvId = $using:keyVaultId
-
-				$rcSecretName = 'cloudAccessRegistrationCode'
-				$djSecretName = 'domainJoinPassword'
-
-				$laSecretName = 'localAdminPassword'
 
 
 				################################

@@ -64,8 +64,7 @@
         }
       },
       "networkSecurityGroups" : {
-        "dcnsgName" : "dcNSG",
-        "cmnsgName" : "cmNSG"
+        "dcnsgName" : "dcNSG"
       }
     }
   },
@@ -324,10 +323,6 @@
     "dcnsgName" : {
       "type": "string",
       "value": "[variables('networkSettings').networkSecurityGroups.dcnsgName]"
-    },
-    "cmnsgName" : {
-      "type": "string",
-      "value": "[variables('networkSettings').networkSecurityGroups.cmnsgName]"
     },
     "templateStorageAccountName" : {
       "type": "string",

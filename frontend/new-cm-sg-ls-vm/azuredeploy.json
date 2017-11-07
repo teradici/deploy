@@ -76,8 +76,7 @@
       }
     },
     "variables": {
-      "namingInfix": "[toLower(substring(concat(parameters('vmssName'), uniqueString(resourceGroup().id)), 0, 9))]",
-      "longNamingInfix": "[toLower(parameters('vmssName'))]",
+      "namingInfix": "[toLower(parameters('vmssName'))]",
       "publicIPAddressName": "[concat(variables('namingInfix'), 'pip')]",
       "nicName": "[concat(variables('namingInfix'), 'nic')]",
       "ipConfigName": "[concat(variables('namingInfix'), 'ipconfig')]",

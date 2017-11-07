@@ -17,28 +17,34 @@
     },
     "domainName": {
       "type": "string",
-      "defaultValue": "example.com",
       "metadata": {
         "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
       }
     },
-    "AzureAdminUsername": {
+    "domainControllerName": {
       "type": "string",
       "metadata": {
-        "description": "The name of the service principal with contributor access to the CAM deployment resource group(s)."
+        "description": "FQDN of the domain controller to interface with in the domain"
       }
     },
-    "AzureAdminPassword": {
+    "localAdminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the local admin account for connection service VM's"
+      }
+    },
+    "localAdminPassword": {
       "type": "securestring",
       "metadata": {
-        "description": "The password/key for the SP."
+        "description": "The password/key for the local VM accounts."
       }
     },
-    "tenantID": {
-        "type": "string",
-        "metadata": {
-            "description": "Tenant ID for the SP."
-        }
+    "CSUniqueSuffix": {
+      "type": "string",
+      "defaultValue": "1",
+      "metadata": {
+          "description": "Suffix to add to connection service resources to ensure uniqueness."
+      }
     },
     "CSsubnetId": {
       "type": "string",
@@ -50,19 +56,6 @@
       "type": "string",
       "metadata": {
           "description": "ID of the subnet that the Conection Service gateway(s) attach to"
-      }
-    },
-    "cmnsgName": {
-      "type": "string",
-      "metadata": {
-          "description": "Connection Manager Network Security Group Name"
-      }
-    },
-    "registrationCode": {
-      "type": "securestring",
-      "minLength": 21,
-      "metadata": {
-        "description": "PCoIP Agent License Registration Code."
       }
     },
     "camSaasUri": {
@@ -134,16 +127,17 @@
     }
   },
   "variables": {
-    "storageAccountName": "[concat(uniquestring(resourceGroup().id),'fe')]",
+    "storageAccountName": "[concat(uniquestring(resourceGroup().id),'cs',parameters('CSUniqueSuffix'))]",
     "brokerPort":  "8444",
-    "adVMName": "vm-dc",
-    "serverRootName": "vm",
-    "appGwName": "CAM-ApplicationGateway",
+    "appGwName": "[concat('CAM-ApplicationGateway',parameters('CSUniqueSuffix'))]",
     "appGwSGPoolName": "SGBackendPool",
     "appGwSGPoolID": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/applicationGateways/', variables('appGwName'), '/backendAddressPools/', variables('appGwSGPoolName'))]",
     "appGwCSPoolName": "CSBackendPool",
-    "appGwCSPoolID": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/applicationGateways/', variables('appGwName'), '/backendAddressPools/', variables('appGwCSPoolName'))]"
-  },
+    "appGwCSPoolID": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/applicationGateways/', variables('appGwName'), '/backendAddressPools/', variables('appGwCSPoolName'))]",
+    "cmnsgName": "[concat('cmNSG',parameters('CSUniqueSuffix'))]",
+    "connectionServerName": "[concat('ConnectionServer',parameters('CSUniqueSuffix'))]",
+    "connectionServerBrokerFQDN": "[concat(variables('connectionServerName'),'.',parameters('domainName'),':',variables('brokerPort'))]"
+},
   "resources": [
     {
       "type": "Microsoft.Storage/storageAccounts",
@@ -168,17 +162,17 @@
         },
         "parameters": {
           "cmnsgName": {
-            "value": "[parameters('cmnsgName')]"
+            "value": "[variables('cmnsgName')]"
           }
         }
       }
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "name": "CreateAdminMachine",
+      "name": "CreateConnectionServer",
       "apiVersion": "2016-02-01",
       "dependsOn": [
-          "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
 	      "Microsoft.Resources/deployments/CreateAppGateway"
       ],
       "properties": {
@@ -192,7 +186,7 @@
             "value": "[parameters('CSsubnetId')]"
           },
           "dnsLabelPrefix": {
-            "value": "[concat(variables('serverRootName'), '-au')]"
+            "value": "[variables('connectionServerName')]"
           },
           "vmSize": {
             "value": "Standard_A2_v2"
@@ -210,10 +204,10 @@
             "value": 3
           },
           "vmAdminUsername": {
-            "value": "[parameters('domainAdminUsername')]"
+            "value": "[parameters('localAdminUsername')]"
           },
           "vmAdminPassword": {
-            "value": "[parameters('domainAdminPassword')]"
+            "value": "[parameters('localAdminPassword')]"
           },
           "applicationGatewayPoolReference": {
             "value": "[variables('appGwCSPoolID')]"
@@ -226,10 +220,10 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "name": "ConfigureAdminMachine",
+      "name": "ConfigureConnectionServer",
       "apiVersion": "2016-02-01",
       "dependsOn": [
-        "Microsoft.Resources/deployments/CreateAdminMachine"
+        "Microsoft.Resources/deployments/CreateConnectionServer"
       ],
       "properties": {
         "mode": "Incremental",
@@ -239,7 +233,7 @@
         },
         "parameters": {
           "dnsLabelPrefix": {
-            "value": "[concat(variables('serverRootName'), '-au')]"
+            "value": "[variables('connectionServerName')]"
           },
           "domainToJoin": {
             "value": "[parameters('domainName')]"
@@ -253,26 +247,8 @@
           "domainPassword": {
             "value": "[parameters('domainAdminPassword')]"
           },
-          "AzureAdminUsername": {
-            "value": "[parameters('AzureAdminUsername')]"
-          },
-          "AzureAdminPassword": {
-            "value": "[parameters('AzureAdminPassword')]"
-          },
-          "tenantID": {
-            "value": "[parameters('tenantID')]"
-          },
-          "vmAdminUsername": {
-            "value": "[parameters('domainAdminUsername')]"
-          },
-          "vmAdminPassword": {
-            "value": "[parameters('domainAdminPassword')]"
-          },
-          "registrationCode": {
-            "value": "[parameters('registrationCode')]"
-          },
           "domainControllerName": {
-            "value": "[variables('adVMName')]"
+            "value": "[parameters('domainControllerName')]"
           },
           "CAMDeploymentBlobSource": {
             "value": "[parameters('CAMDeploymentBlobSource')]"
@@ -366,13 +342,13 @@
             "value": "[parameters('CSsubnetId')]"
           },
           "cmnsgName": {
-            "value": "[parameters('cmnsgName')]"
+            "value": "[variables('cmnsgName')]"
           },
           "vmSku": {
             "value": "Standard_A1_v2"
           },
           "vmssName": {
-            "value": "SG-VMSS"
+            "value": "[concat('SG-VMSS',parameters('CSUniqueSuffix'))]"
           },
           "instanceCount": {
             "value": 1
@@ -381,13 +357,13 @@
             "value": "[variables('appGwSGPoolID')]"
           },
           "vmAdminUsername": {
-            "value": "[parameters('domainAdminUsername')]"
+            "value": "[parameters('localAdminUsername')]"
           },
           "vmAdminPassword": {
-            "value": "[parameters('domainAdminPassword')]"
+            "value": "[parameters('localAdminPassword')]"
           },
           "brokerFQDN": {
-            "value": "[concat(variables('serverRootName'), '-au','.',parameters('domainName'),':',variables('brokerPort'))]"
+            "value": "[variables('connectionServerBrokerFQDN')]"
           },
           "_artifactsLocation": {
             "value": "[concat(parameters('_artifactsLocation'), '/new-cm-sg-ls-vm')]"

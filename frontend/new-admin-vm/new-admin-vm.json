@@ -32,46 +32,10 @@
                 "description": "Password of the account on the domain"
             }
         },
-        "AzureAdminUsername": {
-            "type": "string",
-            "metadata": {
-                "description": "Username of the Azure admin or service principal account"
-            }
-        },
-        "AzureAdminPassword": {
-            "type": "securestring",
-            "metadata": {
-                "description": "Password of the Azure admin or service principal account"
-            }
-        },
-        "tenantID": {
-            "type": "string",
-            "metadata": {
-                "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave blank or 'null' if a non SP account is being used."
-            }
-        },
         "domainControllerName": {
             "type": "string",
             "metadata": {
                 "description": "The network name of the domain controller (without domain suffix)"
-            }
-        },
-        "vmAdminUsername": {
-            "type": "string",
-            "metadata": {
-                "description": "The name of the administrator of the new VM and the domain. Exclusion list: 'admin','administrator"
-            }
-        },
-        "vmAdminPassword": {
-            "type": "securestring",
-            "metadata": {
-                "description": "The password for the administrator account of the new VM and the domain"
-            }
-        },
-        "registrationCode": {
-            "type": "securestring",
-            "metadata": {
-                "description": "The registration code for Cloud Access Software"
             }
         },
         "storageAccountName": {
@@ -161,21 +125,9 @@
                         "sourceURI": "[parameters('CAMDeploymentBlobSource')]",
 						"templateURI": "[parameters('_artifactsLocation')]",
 						"templateAgentURI": "[parameters('_agentArtifactsLocation')]",
-                        "VMAdminCreds": {
-                            "UserName": "[parameters('vmAdminUsername')]",
-                            "Password": "PrivateSettingsRef:vmAdminPassword"
-                        },
                         "DomainAdminCreds": {
                             "UserName": "[parameters('domainUsername')]",
                             "Password": "PrivateSettingsRef:DomainAdminPassword"
-                        },
-                        "AzureCreds": {
-                            "UserName": "[parameters('AzureAdminUsername')]",
-                            "Password": "PrivateSettingsRef:AzureAdminPassword"
-                        },
-                        "registrationCodeAsCred": {
-                            "UserName": "dummy",
-                            "Password": "PrivateSettingsRef:registrationCode"
                         },
                         "CAMDeploymentInfo": {
                             "UserName": "dummy",
@@ -187,7 +139,6 @@
                         "DCVMName": "[parameters('domainControllerName')]",
                         "RGName": "[resourceGroup().name]",
                         "storageAccountName": "[parameters('storageAccountName')]",
-                        "tenantID": "[parameters('tenantID')]",
                         "gitLocation": "[parameters('_artifactsLocation')]",
                         "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-AdminUI-',subscription().subscriptionId)]"
                     }
@@ -195,9 +146,6 @@
                 "protectedSettings": {
                     "Items": {
                         "DomainAdminPassword": "[parameters('domainPassword')]",
-                        "vmAdminPassword": "[parameters('vmAdminPassword')]",
-                        "AzureAdminPassword": "[parameters('AzureAdminPassword')]",
-                        "registrationCode": "[parameters('registrationCode')]",
                         "CAMDeploymentInfo": "[parameters('CAMDeploymentInfo')]"
                     }
                 }
