@@ -2,16 +2,10 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "existingVNETName": {
+        "subnetId": {
             "type": "string",
             "metadata": {
-                "description": "Existing VNET that contains the domain controller"
-            }
-        },
-        "existingSubnetName": {
-            "type": "string",
-            "metadata": {
-                "description": "Existing subnet that contains the domain controller"
+                "description": "ID of the subnet that the Conection Service Machines' NIC's attach to"
             }
         },
         "dnsLabelPrefix": {
@@ -83,8 +77,6 @@
         "windowsOSVersion": "2016-Datacenter",
         "apiVersion": "2015-06-15",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
-        "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
-        "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]"
     },
     "resources": [
         {
@@ -98,7 +90,7 @@
                         "name": "ipconfig",
                         "properties": {
                             "subnet": {
-                                "id": "[variables('subnetId')]"
+                                "id": "[parameters('subnetId')]"
                             },
                             "ApplicationGatewayBackendAddressPools": [
                                 {
