@@ -48,22 +48,16 @@
           "description": "Existing VNET that contains the domain controller"
       }
     },
-    "adSubnetName": {
+    "CSsubnetId": {
       "type": "string",
       "metadata": {
-          "description": "Existing subnet that contains the domain controller"
+          "description": "ID of the subnet that the Conection Service Machines' NIC's attach to"
       }
     },
-    "adminDesktopVMName": {
+    "GWsubnetId": {
       "type": "string",
       "metadata": {
-          "description": "admin desktop VM name"
-      }
-    },
-    "gatewaySubnetName": {
-      "type": "string",
-      "metadata": {
-          "description": "gateway subnet name"
+          "description": "ID of the subnet that the Conection Service gateway(s) attach to"
       }
     },
     "cmnsgName": {
@@ -82,7 +76,7 @@
     "camSaasUri": {
       "type": "string",
       "metadata": {
-          "description": "URI for the CAM SAAS"
+          "description": "URI for the CAM Service"
       }
     },
     "verifyCAMSaaSCertificate": {
@@ -202,11 +196,8 @@
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          "existingVNETName": {
-            "value": "[parameters('virtualNetworkName')]"
-          },
-          "existingSubnetName": {
-            "value": "[parameters('adSubnetName')]"
+          "subnetId": {
+            "value": "[parameters('CSsubnetId')]"
           },
           "dnsLabelPrefix": {
             "value": "[concat(variables('serverRootName'), '-au')]"
@@ -255,12 +246,6 @@
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          "existingVNETName": {
-            "value": "[parameters('virtualNetworkName')]"
-          },
-          "existingSubnetName": {
-            "value": "[parameters('adSubnetName')]"
-          },
           "dnsLabelPrefix": {
             "value": "[concat(variables('serverRootName'), '-au')]"
           },
@@ -285,9 +270,6 @@
           "tenantID": {
             "value": "[parameters('tenantID')]"
           },
-          "domainJoinOptions": {
-            "value": 3
-          },
           "vmAdminUsername": {
             "value": "[parameters('domainAdminUsername')]"
           },
@@ -306,20 +288,11 @@
           "storageAccountName": {
             "value": "[variables('storageAccountName')]"
           },
-          "adminDesktopVMName": {
-            "value": "[parameters('adminDesktopVMName')]"
-          },
           "_artifactsLocation": {
             "value": "[concat(parameters('_artifactsLocation'), '/new-admin-vm')]"
           },
           "_agentArtifactsLocation": {
               "value": "[parameters('_agentArtifactsLocation')]"
-          },
-          "AGsubnetRef": {
-              "value": "[concat(resourceId('Microsoft.Network/virtualNetworks',parameters('virtualNetworkName')),'/subnets/',parameters('gatewaySubnetName'))]"
-          },
-          "AGtemplateUri": {
-              "value": "[concat(parameters('_artifactsLocation'), '/new-app-gateway/azuredeploy.json', parameters('_artifactsLocationSasToken'))]"
           },
           "camSaasUri": {
             "value": "[parameters('camSaasUri')]"

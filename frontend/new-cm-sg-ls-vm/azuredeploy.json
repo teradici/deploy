@@ -23,63 +23,57 @@
 	      },
 	      "maxValue": 1000
 	    },
-        "existingVNETName": {
-            "type": "string",
-            "metadata": {
-                "description": "Existing VNET that contains the domain controller"
-            }
-        },
-        "existingSubnetName": {
-            "type": "string",
-            "metadata": {
-                "description": "Existing subnet that contains the domain controller"
-            }
-        },
-        "cmnsgName": {
-            "type": "string",
-            "metadata": {
-                "description": "Name of the network security group.",
-                "minLength": 1,
-                "maxLength": 80
-            }
-        },
-        "appGwbackendAddressPoolId": {
-            "type": "string",
-            "metadata": {
-                "description": "The ID of the app gateway backend pool to attach to"
-            }
-        },
-        "vmAdminUsername": {
-            "type": "string",
-            "metadata": {
-                "description": "The name of the administrator of the new VM's. Exclusion list: 'admin','administrator"
-            }
-        },
-        "vmAdminPassword": {
-            "type": "securestring",
-            "metadata": {
-                "description": "The password for the administrator account of the new VM's"
-            }
-        },
-        "brokerFQDN": {
-            "type": "string",
-            "metadata": {
-                "description": "IP or FQDN of the broker machine from the CM's perspective"
-            }
-        },
-        "_artifactsLocation": {
-            "type": "string",
-            "metadata": {
-                "description": "The location of resources, such as templates and DSC modules, that the template depends on"
-            }
-        },
-        "_artifactsLocationSasToken": {
-            "type": "securestring",
-            "metadata": {
-                "description": "Auto-generated token to access _artifactsLocation"
-            },
-            "defaultValue": ""
-        }
+      "subnetId": {
+          "type": "string",
+          "metadata": {
+              "description": "ID of the subnet that the SG's NIC's attach to"
+          }
+      },
+      "cmnsgName": {
+          "type": "string",
+          "metadata": {
+              "description": "Name of the network security group.",
+              "minLength": 1,
+              "maxLength": 80
+          }
+      },
+      "appGwbackendAddressPoolId": {
+          "type": "string",
+          "metadata": {
+              "description": "The ID of the app gateway backend pool to attach to"
+          }
+      },
+      "vmAdminUsername": {
+          "type": "string",
+          "metadata": {
+              "description": "The name of the administrator of the new VM's. Exclusion list: 'admin','administrator"
+          }
+      },
+      "vmAdminPassword": {
+          "type": "securestring",
+          "metadata": {
+              "description": "The password for the administrator account of the new VM's"
+          }
+      },
+      "brokerFQDN": {
+          "type": "string",
+          "metadata": {
+              "description": "IP or FQDN of the broker machine from the CM's perspective"
+          }
+      },
+      "_artifactsLocation": {
+          "type": "string",
+          "metadata": {
+              "description": "The location of resources, such as templates and DSC modules, that the template depends on"
+          }
+      },
+      "_artifactsLocationSasToken": {
+          "type": "securestring",
+          "metadata": {
+              "description": "Auto-generated token to access _artifactsLocation"
+          },
+          "defaultValue": ""
+      }
     },
     "variables": {
       "namingInfix": "[toLower(substring(concat(parameters('vmssName'), uniqueString(resourceGroup().id)), 0, 9))]",
@@ -95,8 +89,6 @@
       },
       "computeApiVersion": "2017-03-30",
       "networkApiVersion": "2017-04-01",
-      "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
-      "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
       "scriptFileName":  "cm_setup_0.1.sh",
       "scriptFileURI":  "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'), parameters('_artifactsLocationSasToken'))]",
       "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-CM-',subscription().subscriptionId)]",
@@ -147,7 +139,7 @@
                       "name": "[variables('ipConfigName')]",
                       "properties": {
                         "subnet": {
-                          "id": "[variables('subnetId')]"
+                          "id": "[parameters('subnetId')]"
                         },
                         "publicipaddressconfiguration": {
                             "name": "pub1",

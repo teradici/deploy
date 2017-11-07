@@ -23,6 +23,12 @@
         "tenantID": {
             "value": "null"
         },
+        "CSsubnetId": {
+            "value": "/resources/etc"
+        },
+        "GWsubnetId": {
+            "value": "/resources/etc"
+        },
         "CAMDeploymentBlobSource": {
             "value": "https://teradeploy.blob.core.windows.net/binaries"
         },
@@ -37,15 +43,6 @@
         },
         "virtualNetworkName": {
             "value": "virtualPackets"
-        },
-        "adSubnetName": {
-            "value": "subVirtualPackets"
-        },
-        "adminDesktopVMName": {
-            "value": "pixeley"
-        },
-        "gatewaySubnetName": {
-            "value": "subGatekeeper"
         },
         "cmnsgName": {
             "value": "securityOfNetwork"

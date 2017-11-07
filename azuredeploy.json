@@ -170,9 +170,6 @@
           "gatewaySubnetName": {
             "value": "[reference('Root').outputs.gatewaySubnetName.value]"
           },
-          "adminDesktopVMName" : {
-            "value" : "[variables('adminDesktopVMName')]"
-          },
           "cmnsgName" : {
             "value" : "[reference('Root').outputs.cmnsgName.value]"
           },

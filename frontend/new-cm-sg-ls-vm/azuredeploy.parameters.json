@@ -23,11 +23,8 @@
         "appGwbackendAddressPoolId": {
             "value": "/resources/blah/blah"
         },
-        "existingVNETName": {
-            "value": "adVNET"
-        },
-        "existingSubnetName": {
-            "value": "adSubnet"
+        "subnetId": {
+            "value": "/resources/blah/blah"
         },
         "brokerFQDN": {
             "value": "10.0.0.5"

@@ -47,7 +47,6 @@
     "templateStorageAccountName": "[concat(uniquestring(resourceGroup().id), 'data')]",
     "adVMName": "vm-dc",
     "serverRootName": "vm",
-    "adminDesktopVMName": "[concat(variables('serverRootName'), '-desk')]",
     "networkSettings" : {
       "vnetName" : "vnet-CloudAccessManager",
       "addressPrefix" : "10.0.0.0/16",
@@ -329,10 +328,6 @@
     "cmnsgName" : {
       "type": "string",
       "value": "[variables('networkSettings').networkSecurityGroups.cmnsgName]"
-    },
-    "adminDesktopVMName" : {
-      "type": "string",
-      "value": "[variables('adminDesktopVMName')]"
     },
     "templateStorageAccountName" : {
       "type": "string",
