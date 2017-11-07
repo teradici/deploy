@@ -924,8 +924,8 @@ function createAndPopulateKeyvault()
 		$secretHash = @{}
 		$secretHash.Add($rcSecretName,$rcSecretURL)
 		$secretHash.Add($djSecretName,$djSecretURL)
-		$secretHash.Add($rwLaSecretName,$rwLaSecretURL)
-		$secretHash.Add($csLaSecretName,$csLaSecretURL)
+		$secretHash.Add($rwLocalSecretName,$rwLaSecretURL)
+		$secretHash.Add($csLocalSecretName,$csLaSecretURL)
 		$secretHash.Add($FECertSecretName,$FECertSecretURL)
 		$secretHash.Add($FECertPasswordSecretName,$FECertPasswordSecretURL)
 	}
@@ -1244,12 +1244,12 @@ function Deploy-CAM()
 	$azureContext = Get-AzureRMContext
 	$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName
 	try {
-		Add-AzureRmAccount `
+		$spContext = Add-AzureRmAccount `
 			-Credential $spInfo.spCreds `
 			-ServicePrincipal `
 			-TenantId $spInfo.tenantId `
 			-ErrorAction Stop 
-		
+
 		$kvInfo = createAndPopulateKeyvault `
 			-RGName $RGName `
 			-registrationCode $registrationCode `
