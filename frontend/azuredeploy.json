@@ -24,29 +24,21 @@
     },
     "AzureAdminUsername": {
       "type": "string",
-      "defaultValue": "adminuser@example.com",
       "metadata": {
-        "description": "The name of the Azure account/service principal with contributor access to the subscription. This account cannot require MFA."
+        "description": "The name of the service principal with contributor access to the CAM deployment resource group(s)."
       }
     },
     "AzureAdminPassword": {
       "type": "securestring",
       "metadata": {
-        "description": "The password of the Azure account/service principal with contributor access to the subscription. This account cannot require MFA."
+        "description": "The password/key for the SP."
       }
     },
     "tenantID": {
         "type": "string",
-        "defaultValue": "null",
         "metadata": {
-            "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave as 'null' if a standard user (non-SP) account is being used."
+            "description": "Tenant ID for the SP."
         }
-    },
-    "virtualNetworkName": {
-      "type": "string",
-      "metadata": {
-          "description": "Existing VNET that contains the domain controller"
-      }
     },
     "CSsubnetId": {
       "type": "string",
@@ -325,7 +317,7 @@
         },
         "parameters": {
           "subnetRef": {
-              "value": "[concat(resourceId('Microsoft.Network/virtualNetworks',parameters('virtualNetworkName')),'/subnets/',parameters('gatewaySubnetName'))]"
+              "value": "[parameters('GWsubnetId')]"
           },
           "skuName": {
             "value": "Standard_Small"
