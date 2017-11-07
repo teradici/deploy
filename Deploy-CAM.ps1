@@ -853,10 +853,23 @@ function createAndPopulateKeyvault()
 
 		$certLoc = 'cert:Localmachine\My'
 		$startDate = [DateTime]::Now.AddDays(-1)
-		$subject = "CN=localhost,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"
-		$cert = New-SelfSignedCertificate -certstorelocation $certLoc -DnsName "*.cloudapp.net" -Subject $subject -KeyLength 3072 `
-			-FriendlyName "PCoIP Application Gateway" -NotBefore $startDate -TextExtension @("2.5.29.19={critical}{text}ca=1") `
-			-HashAlgorithm SHA384 -KeyUsage DigitalSignature, CertSign, CRLSign, KeyEncipherment
+
+		# add some randomization to the subject to get around the Firefox TLS issue referenced here:
+		# https://www.thesslstore.com/blog/troubleshoot-firefoxs-tls-handshake-message/
+		# (all lower case letters)
+		$randomString = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
+		
+		$subject = "CN=localhost,O=Teradici Corporation,OU=$randomString,L=Burnaby,ST=BC,C=CA"
+		$cert = New-SelfSignedCertificate `
+			-certstorelocation $certLoc `
+			-DnsName "*.cloudapp.net" `
+			-Subject $subject `
+			-KeyLength 3072 `
+			-FriendlyName "PCoIP Application Gateway" `
+			-NotBefore $startDate `
+			-TextExtension @("2.5.29.19={critical}{text}ca=1") `
+			-HashAlgorithm SHA384 `
+			-KeyUsage DigitalSignature, CertSign, CRLSign, KeyEncipherment
 
 		#generate pfx file from certificate
 		$certPath = $certLoc + '\' + $cert.Thumbprint
