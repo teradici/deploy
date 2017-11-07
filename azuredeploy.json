@@ -160,20 +160,15 @@
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          
-          "virtualNetworkName" : {
-            "value" : "[reference('Root').outputs.virtualNetworkName.value]"
+          "CSsubnetId": {
+            "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', reference('Root').outputs.virtualNetworkName.value, reference('Root').outputs.adSubnetName.value)]"
           },
-          "adSubnetName": {
-            "value": "[reference('Root').outputs.adSubnetName.value]"
-          },
-          "gatewaySubnetName": {
-            "value": "[reference('Root').outputs.gatewaySubnetName.value]"
+          "GWsubnetId": {
+            "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', reference('Root').outputs.virtualNetworkName.value, reference('Root').outputs.gatewaySubnetName.value)]"
           },
           "cmnsgName" : {
             "value" : "[reference('Root').outputs.cmnsgName.value]"
           },
-          
           "domainName": {
             "value": "[parameters('domainName')]"
           },
