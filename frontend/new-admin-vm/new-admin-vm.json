@@ -150,11 +150,11 @@
                 "typeHandlerVersion": "2.9",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "modulesUrl": "[concat(parameters('CAMDeploymentBlobSource'),'/Install-CAM.ps1.zip')]",
+                    "modulesUrl": "[concat(parameters('CAMDeploymentBlobSource'),'/Install-CAM-CS.ps1.zip')]",
                     "privacy": {
                         "DataCollection": "Disable"
                     },
-                    "configurationFunction": "Install-CAM.ps1\\InstallCAM",
+                    "configurationFunction": "Install-CAM-CS.ps1\\InstallCAM",
                     "Properties": {
                         "domainFQDN":  "[parameters('domainToJoin')]",
                         "domainGroupAppServersJoin": "[parameters('domainGroupAppServersJoin')]",

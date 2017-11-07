@@ -1,6 +1,6 @@
-# Install-CAM.ps1
+# Install-CAM-CS.ps1
 # Compile to a local .zip file via this command:
-# Publish-AzureVMDscConfiguration -ConfigurationPath .\Install-CAM.ps1 -ConfigurationArchivePath .\Install-CAM.ps1.zip
+# Publish-AzureVMDscConfiguration -ConfigurationPath .\Install-CAM-CS.ps1 -ConfigurationArchivePath .\Install-CAM.ps1.zip
 # And then push to GitHUB.
 #
 # Or to push to Azure Storage:
@@ -12,7 +12,7 @@
 # $StorageContainer = 'binaries'
 # 
 # $StorageContext = New-AzureStorageContext -StorageAccountName $StorageAccount -StorageAccountKey $StorageKey
-# Publish-AzureVMDscConfiguration -ConfigurationPath .\Install-CAM.ps1  -ContainerName $StorageContainer -StorageContext $StorageContext
+# Publish-AzureVMDscConfiguration -ConfigurationPath .\Install-CAM-CS.ps1  -ContainerName $StorageContainer -StorageContext $StorageContext
 #
 #
 Configuration InstallCAM
