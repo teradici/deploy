@@ -370,11 +370,8 @@
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          "existingVNETName": {
-            "value": "[parameters('virtualNetworkName')]"
-          },
-          "existingSubnetName": {
-            "value": "[parameters('adSubnetName')]"
+          "subnetId": {
+            "value": "[parameters('CSsubnetId')]"
           },
           "cmnsgName": {
             "value": "[parameters('cmnsgName')]"
