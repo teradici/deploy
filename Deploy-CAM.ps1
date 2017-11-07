@@ -857,9 +857,9 @@ function createAndPopulateKeyvault()
 		# add some randomization to the subject to get around the Firefox TLS issue referenced here:
 		# https://www.thesslstore.com/blog/troubleshoot-firefoxs-tls-handshake-message/
 		# (all lower case letters)
-		$randomString = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
-		
-		$subject = "CN=localhost,O=Teradici Corporation,OU=$randomString,L=Burnaby,ST=BC,C=CA"
+		#$subjectOU = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
+		$subjectOU="SoftPCoIP"
+		$subject = "CN=localhost,O=Teradici Corporation,OU=$subjectOU,L=Burnaby,ST=BC,C=CA"
 		$cert = New-SelfSignedCertificate `
 			-certstorelocation $certLoc `
 			-DnsName "*.cloudapp.net" `
