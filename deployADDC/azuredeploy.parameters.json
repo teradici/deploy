@@ -1,0 +1,24 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+    "parameters": {
+        "domainName": {
+            "value": "dcdemo.com"
+        },
+        "adminUser": {
+            "value": "dcAdminUser"
+        },
+        "adminPassword": {
+            "value": "GEN-PASSWORD"
+        },
+        "serviceAccountName": {
+            "value": "svcJoiningDomain"
+        },
+      "serviceAccountPassword": {
+            "value": "GEN-PASSWORD"
+      },
+      "_artifactsLocation": {
+        "value": "https://raw.githubusercontent.com/teradici/deploy/TSW-67106-use-external-ad"
+      }
+    }
+}
