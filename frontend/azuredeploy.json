@@ -135,7 +135,7 @@
     "appGwCSPoolName": "CSBackendPool",
     "appGwCSPoolID": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/applicationGateways/', variables('appGwName'), '/backendAddressPools/', variables('appGwCSPoolName'))]",
     "cmnsgName": "[concat('cmNSG',parameters('CSUniqueSuffix'))]",
-    "connectionServerName": "[concat('ConnectionServer',parameters('CSUniqueSuffix'))]",
+    "connectionServerName": "[concat('conn-srvr',parameters('CSUniqueSuffix'))]",
     "connectionServerBrokerFQDN": "[concat(variables('connectionServerName'),'.',parameters('domainName'),':',variables('brokerPort'))]"
 },
   "resources": [
