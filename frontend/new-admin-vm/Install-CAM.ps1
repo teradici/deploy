@@ -1470,8 +1470,20 @@ brokerLocale=en_US
 				if($cert -eq $null) {
 					throw "No LDAP certificate!"
 				}
+
+				$foundCert = $cert
+				if ($cert.length -gt 1) {
+					Write-Host "found more than 1 certificates"
+					$foundCert = $cert[0]
+					for($idx=0; $idx -lt $cert.length; $idx++) {
+						if($cert[$idx].Subject -ne $cert.Issuer) {
+							$foundCert = $cert[$idx]
+							break;
+						}
+					}
+				}
 				
-				$issuerCert = $certs | Where-Object { $_.Subject -eq $cert.Issuer }
+				$issuerCert = $certs | Where-Object { $_.Subject -eq $foundCert.Issuer }
 
 				if($issuerCert -ne $null) {
 					Export-Certificate -Cert $issuerCert -filepath	$issuerCertStoreLocationOnDC -force
