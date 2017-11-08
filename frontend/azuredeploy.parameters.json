@@ -11,17 +11,17 @@
         "domainName": {
             "value": "mydomain.com"
         },
-        "registrationCode": {
-            "value": "xxxxxxxxxxxx@nnnn-nnnn-nnnn-nnnn"
+        "domainControllerName": {
+            "value": "dc.mydomain.com"
         },
-        "AzureAdminUsername": {
-            "value": "username@example.com"
+        "LocalAdminUsername": {
+            "value": "localadmin"
         },
-        "AzureAdminPassword": {
+        "LocalAdminPassword": {
             "value": "GEN-PASSWORD"
         },
-        "tenantID": {
-            "value": "null"
+        "CSUniqueSuffix": {
+            "value": "2"
         },
         "CSsubnetId": {
             "value": "/resources/etc"
@@ -40,12 +40,6 @@
         },
         "camSaasUri": {
             "value": "https://cam.teradici.com"
-        },
-        "virtualNetworkName": {
-            "value": "virtualPackets"
-        },
-        "cmnsgName": {
-            "value": "securityOfNetwork"
         },
         "domainGroupAppServersJoin": {
             "value": "Remote Workstations"
