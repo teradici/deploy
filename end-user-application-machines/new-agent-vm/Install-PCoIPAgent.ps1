@@ -477,9 +477,11 @@ Configuration InstallPCoIPAgent
 					$domain = (gwmi win32_computersystem).domain
 					$domainInfo = (Get-WMIObject Win32_NTDomain) | Where-Object {$_.DnsForestName -eq $domain} | Select -First 1
 					$dcname = ($domainInfo.DomainControllerName -replace "\\", "")
+					$dcvmfqdn = "$dcname.$domain"
+					$so = New-PsSessionOption  -SkipCACheck -SkipCNCheck
 
 					#create a PSSession with the domain controller that we used to login
-					$psSession = New-PSSession -ComputerName $dcname -Credential $using:domainJoinCredential
+					$psSession = New-PSSession -ComputerName $dcvmfqdn -Credential $using:domainJoinCredential -SessionOption $so -UseSSL
 
 					Invoke-Command -Session $psSession -ArgumentList $domainGroupToJoin, $machineToJoin `
 					-ScriptBlock {

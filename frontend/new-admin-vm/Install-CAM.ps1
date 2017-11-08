@@ -1457,7 +1457,9 @@ brokerLocale=en_US
 
 				Write-Host "Looking for cert with $certSubject on $dcvmfqdn"
 
-				$DCSession = New-PSSession $using:dcvmfqdn -Credential $using:DomainAdminCreds
+				$so = New-PsSessionOption -SkipCACheck -SkipCNCheck
+
+				$DCSession = New-PSSession $using:dcvmfqdn -Credential $using:DomainAdminCreds  -SessionOption $so -UseSSL
 
 				$certs = invoke-command {get-childItem -Path "Cert:\LocalMachine\My"} -Session $DCSession
 
@@ -1690,7 +1692,10 @@ brokerLocale=en_US
 						
 						# Register User Entitlement to Machine
 						# Get User Guid for Domain User
-						$DCSession = New-PSSession $using:dcvmfqdn -Credential $using:DomainAdminCreds
+						$so = New-PsSessionOption -SkipCACheck -SkipCNCheck
+
+						$DCSession = New-PSSession $using:dcvmfqdn -Credential $using:DomainAdminCreds  -SessionOption $so -UseSSL
+
 						$userGuid = Invoke-Command -Session $DCSession -ScriptBlock {
 							Add-Type -AssemblyName System.DirectoryServices.AccountManagement
 							[System.DirectoryServices.AccountManagement.UserPrincipal]::Current.Guid.Guid

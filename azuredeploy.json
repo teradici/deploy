@@ -27,19 +27,32 @@
         "description": "The password for the service account"
       }
     },
-    "subVnetId": {
+    "vnetId": {
       "type": "string",
       "metadata": {
-        "description": "the Id of the sub virtual network which CAM VM resides"
+        "description": "the Id of the virtual network of the DC machine resides"
+      }
+    },
+    "vmSubnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "the subnetwork which the PCoIP VM resides"
+      }
+    },
+    "gwSubnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "the subnetwork which the application gateway resides"
       }
     },
     "cmIPAddresses": {
       "type": "array",
       "minLength": 2,
       "metadata": {
-        "description": "two IP addresses which used by CAM Connect Manager. Those two ipaddress should be within the range of the provided subVnet address space"
+        "description": "two IP addresses which used by CAM Connect Manager. Those two ipaddress should be within the range of the provided vmSubnetName address space"
       }
     },
+
     "localAdminUsername": {
       "type": "string",
       "metadata": {
@@ -118,9 +131,9 @@
     "templateStorageAccountName": "[concat(uniquestring(resourceGroup().id), 'data')]",
     "domainGroupAppServersJoin": "[parameters('domainGroupToJoin')]",
     "adminDesktopVMName": "admin-rws",
-    "vnetId": "[first(split(parameters('subVnetId'), '/subnets/'))]",
-    "adSubnetName": "[last(split(parameters('subVnetId'), '/subnets/'))]",    
-    "gwSubnetName": "[variables('adSubnetName')]",
+    "vnetId": "[parameters('vnetId')]",
+    "adSubnetName": "[parameters('vmSubnetName')]",
+    "gwSubnetName": "[parameters('gwSubnetName')]",
     "cmnsgName": "cmNSG"
   },
   "resources": [
@@ -238,7 +251,7 @@
         },
         "parameters": {
           "existingVNETName": {
-            "value": "[parameters('vnetId')]"
+            "value": "[variables('vnetId')]"
           },
           "existingSubnetName": {
             "value": "[variables('adSubnetName')]"

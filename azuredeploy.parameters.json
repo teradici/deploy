@@ -1,39 +1,60 @@
 {
   "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
-    "parameters": {
-        "domainAdminUsername": {
-            "value": "GEN-USER"
-        },
-        "domainAdminPassword": {
-            "value": "GEN-PASSWORD"
-        },
-        "domainName": {
-            "value": "mydomain.com"
-        },
-        "registrationCode": {
-            "value": "xxxxxxxxxxxx@nnnn-nnnn-nnnn-nnnn"
-        },
-        "AzureAdminUsername": {
-            "value": "username@example.com"
-        },
-        "AzureAdminPassword": {
-            "value": "GEN-PASSWORD"
-        },
-        "tenantID": {
-            "value": "null"
-        },
-        "CAMDeploymentBlobSource": {
-            "value": "https://teradeploy.blob.core.windows.net/binaries"
-        },
-        "_artifactsLocation": {
-            "value": "https://raw.githubusercontent.com/teradici/deploy/master"
-        },
-        "camSaasUri": {
-            "value": "https://cam-antar.teradici.com"
-        },
-        "verifyCAMSaaSCertificate": {
-            "value": true
-        }
+  "parameters": {
+    "vnetId": {
+      "value": "GEN-VALUE"
+    },
+    "vmSubnetName": {
+      "value": "Subnet-vm"
+    },
+    "gwSubnetName": {
+      "value": "Subnet-gateway"
+    },
+    "cmIPAddresses": {
+      "value": [
+        "10.0.2.10",
+        "10.0.2.11"
+      ]
+    },
+    "serviceAccountName": {
+      "value": "svcJoiningDomain"
+    },
+    "serviceAccountPassword": {
+      "value": "GET-VALUE"
+    },
+    "localAdminUsername": {
+      "value": "testAdmin"
+    },
+    "localAdminPassword": {
+      "value": "GEN-VALUE"
+    },
+    "domainName": {
+      "value": "dcdemo.com"
+    },
+    "registrationCode": {
+      "value": "GET-VALUE"
+    },
+    "AzureAdminUsername": {
+      "value": "GET-VALUE"
+    },
+    "AzureAdminPassword": {
+      "value": "GET-VALUE"
+    },
+    "tenantID": {
+      "value": "GET-VALUE"
+    },
+    "CAMDeploymentBlobSource": {
+      "value": "https://teradeploy.blob.core.windows.net/binaries"
+    },
+    "_artifactsLocation": {
+      "value": "https://raw.githubusercontent.com/teradici/deploy/TSW-67106-use-external-ad"
+    },
+    "camSaasUri": {
+      "value": "https://cam-staging.teradici.com"
+    },
+    "verifyCAMSaaSCertificate": {
+      "value": true
     }
+  }
 }
