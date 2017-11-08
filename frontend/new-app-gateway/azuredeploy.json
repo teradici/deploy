@@ -62,13 +62,18 @@
     "applicationGatewayName": {
       "type": "string",
       "metadata": {
-        "description": "Application Gateway Name"
+        "description": "Application Gateway Name including the unique CS suffix"
+      }
+    },
+    "CSUniqueSuffix": {
+      "type": "string",
+      "metadata": {
+          "description": "Suffix to add to connection service resources to ensure uniqueness."
       }
     }
   },
   "variables": {
-    "publicIPAddressName": "publicIp1",
-    "virtualNetworkName": "virtualNetwork1",
+    "publicIPAddressName": "[concat('publicIp1',parameters('CSUniqueSuffix'))]",
     "publicIPRef": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]",
     "applicationGatewayID": "[resourceId('Microsoft.Network/applicationGateways',parameters('applicationGatewayName'))]",
     "apiVersion": "2015-06-15",

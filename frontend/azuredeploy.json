@@ -318,6 +318,9 @@
           },
           "applicationGatewayName": {
             "value": "[variables('appGwName')]"
+          },
+          "CSUniqueSuffix": {
+            "value": "[parameters('CSUniqueSuffix')]"
           }
         }
       }
