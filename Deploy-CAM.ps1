@@ -172,10 +172,10 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 			Write-Verbose (ConvertTo-Json $registerUserResult)
 			# Check if registration succeeded or if it has been registered previously
 			if( !(($registerUserResult.code -eq 201) -or ($registerUserResult.data.reason.ToLower().Contains("already exist"))) ) {
-				throw ("Failed to register with CAM. Result was: " + (ConvertTo-Json $registerUserResult))
+				throw ("Failed to register with Cloud Access Manager service. Result was: " + (ConvertTo-Json $registerUserResult))
 			}
 
-			Write-Host "Cloud Access Manager Frontend has been registered successfully"
+			Write-Host "Cloud Access Manager Connection Service has been registered successfully"
 
 			# Get a Sign-in token
 			$signInResult = ""
@@ -260,7 +260,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 			# $camDeploymentInfo.Add("CAM_DOMAINACCOUNTNAME",$CAMConfig.ARMParameters.parameters.domainAdminUsername.value)
 			# We'll want to pass through CAM_VERIFYCERT at some point.
 			
-			Write-Host "Deployment has been registered successfully with Cloud Access Manager"
+			Write-Host "Deployment has been registered successfully with Cloud Access Manager service"
 
 			break;
 		} catch {
@@ -878,6 +878,7 @@ function createAndPopulateKeyvault()
 		# (all lower case letters)
 		#$subjectOU = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
 		$subjectOU="SoftPCoIP"
+		$subjectOU="fluffybun"
 		$subject = "CN=localhost,O=Teradici Corporation,OU=$subjectOU,L=Burnaby,ST=BC,C=CA"
 		$cert = New-SelfSignedCertificate `
 			-certstorelocation $certLoc `
@@ -1204,7 +1205,7 @@ function Deploy-CAM()
 			Write-Host "Please make a service principal through the Azure Portal or other means and provide here."
 		}
 		else {
-			Write-Host "The CAM deployment script was not passed service principal credentials. It will attempt to create a service principal."
+			Write-Host "The Cloud Access Manager deployment script was not passed service principal credentials. It will attempt to create a service principal."
 			$requestSPGeneration = Read-Host `
 			"Please hit enter to continue or 'no' to manually enter service principal credentials from a pre-made service principal"
 		}
@@ -1273,7 +1274,7 @@ function Deploy-CAM()
 
 		#$userDataStorageAccountName = $userDataStorageAccount.StorageAccountName
 
-		Write-Host "Registering CAM Deployment to CAM Service"
+		Write-Host "Registering Cloud Access Manager Deployment to Cloud Access Manager Service"
 		
 		$camDeploymenRegInfo = Register-CAM `
 			-SubscriptionId $subscriptionID `
@@ -1285,7 +1286,7 @@ function Deploy-CAM()
 			-camSaasBaseUri $camSaasUri `
 			-verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
 		
-			Write-Host "Create auth file information for the CAM frontend."
+			Write-Host "Create auth file information for the Cloud Access Manager Connection Service."
 		
 			$authFileContent = @"
 subscription=$subscriptionID
@@ -1540,7 +1541,8 @@ if($subscriptionsToDisplay.Length -lt 1) {
     $rgIsInt = $false
     $rgMatch = $null
     while(-not $selectedRGName) {
-        Write-Host "Please select the resource group of the CAM deployment root by number or type in a new resource group name for a new CAM deployment."
+		Write-Host ("`nPlease select the resource group of the Cloud Access Mananger deployment root by number`n" +
+			"or type in a new resource group name for a new Cloud Access Mananger deployment.")
         $rgIdentifier = Read-Host "Resource group"
 
         $rgIsInt = [int]::TryParse($rgIdentifier,[ref]$rgIndex) #rgIndex will be 0 on parse failure
