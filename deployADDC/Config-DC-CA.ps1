@@ -130,5 +130,23 @@
 			Password = $serviceAccountCreds
 			DependsOn  = '[xADDomain]FirstDS'
 		}
+
+        Script Reboot_DC
+        {
+            DependsOn  = @("[xADUser]CreateServiceAccount")
+            GetScript  = { @{ Result = "Reboot_DC" } }
+
+            TestScript = {
+                Test-Path -Path "C:\rebootmarker"
+                }
+            SetScript  = {
+                $file = New-Item "C:\rebootmarker" -type File
+                Set-Content -Path $file -Value "DSC reboot initiated"
+
+                # Reboot machine - might help getting a certificate made???
+				$global:DSCMachineStatus = 1
+			}
+		}
+
 	}
 }
