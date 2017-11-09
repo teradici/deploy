@@ -410,7 +410,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 
 
 
-function Create-UserStorageAccount
+function New-UserStorageAccount
 {
 	Param(
 		$RGName,
@@ -431,7 +431,7 @@ function Create-UserStorageAccount
 }
 
 
-function Create-RemoteWorstationTemplates
+function New-RemoteWorstationTemplates
 {
 	param (
 		$CAMConfig,
@@ -713,7 +713,7 @@ function Populate-UserBlob
 
 		# binaryLocation is the original binaries source location hosted by Teradici
 		# blobUri is the new per-deployment blob storage location of the binaries (so a sub-directory in the container)
- 		Create-RemoteWorstationTemplates `
+ 		New-RemoteWorstationTemplates `
 			-CAMConfig $CAMConfig `
 			-binaryLocation $CAMDeploymentBlobSource `
 			-blobUri ($blobUri + 'remote-workstation') `
@@ -731,7 +731,7 @@ function Populate-UserBlob
 
 
 
-function createAndPopulateKeyvault()
+function New-PopulatedKeyvault()
 {
 	Param(
 		[parameter(Mandatory=$true)] 
@@ -952,7 +952,7 @@ function createAndPopulateKeyvault()
 
 
 
-function Create-CAMAppSP()
+function New-CAMAppSP()
 {
 	param(
 		$RGName
@@ -1234,7 +1234,7 @@ function Deploy-CAM()
 			}
 		else {
 			# generate SP
-			$spInfo = Create-CAMAppSP `
+			$spInfo = New-CAMAppSP `
 				-RGName $RGName
 		}
 	}
@@ -1265,7 +1265,7 @@ function Deploy-CAM()
 			-TenantId $spInfo.tenantId `
 			-ErrorAction Stop 
 
-		$kvInfo = createAndPopulateKeyvault `
+		$kvInfo = New-PopulatedKeyvault `
 			-RGName $RGName `
 			-registrationCode $registrationCode `
 			-DomainJoinPassword $domainAdminCredential.Password `
@@ -1273,7 +1273,7 @@ function Deploy-CAM()
 			-CAMConfig $CAMConfig `
 			-tempDir $tempDir
 
-		$userDataStorageAccount = Create-UserStorageAccount `
+		$userDataStorageAccount = New-UserStorageAccount `
 			-RGName $RGName `
 			-Location $rg.Location
 		
@@ -1460,6 +1460,9 @@ graphURL=https\://graph.windows.net/
 		}
 
 
+	}
+	catch {
+		throw
 	}
 	finally {
 		if ($azureContext)
