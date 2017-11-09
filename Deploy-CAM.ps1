@@ -860,16 +860,21 @@ function createAndPopulateKeyvault()
 
 		Write-Host "Creating Self-signed certificate for Application Gateway"
 
+		#TODO - this is broken??? No maybe fixed with new catch block below. Should re-test.
 		$currentPrincipal = New-Object Security.Principal.WindowsPrincipal( [Security.Principal.WindowsIdentity]::GetCurrent())
         $isAdminSession = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-		if(!$isAdminSession) { throw "You must be running as administrator to create the self-signed certificate for the application gateway" }
-		
-		if(! (Get-Command New-SelfSignedCertificates -ErrorAction SilentlyContinue) )
-		{
-			{ throw "New-SelfSignedCertificate cmdlet must be available - please ensure you are running on a supported OS such as Windows 10 or Server 2016." }
+		if(!$isAdminSession) {
+			$errStr = "You must be running as administrator to create the self-signed certificate for the application gateway"
+			Write-error $errStr
+		 	throw $errStr
 		}
-
-
+		
+		if(! (Get-Command New-SelfSignedCertificate -ErrorAction SilentlyContinue) ) {
+			$errStr = "New-SelfSignedCertificate cmdlet must be available - please ensure you are running on a supported OS such as Windows 10 or Server 2016."
+			Write-error $errStr
+		 	throw $errStr
+		}
+		
 		$certLoc = 'cert:Localmachine\My'
 		$startDate = [DateTime]::Now.AddDays(-1)
 
@@ -879,7 +884,9 @@ function createAndPopulateKeyvault()
 		#$subjectOU = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
 		$subjectOU="SoftPCoIP"
 		$subjectOU="fluffybun"
+
 		$subject = "CN=localhost,O=Teradici Corporation,OU=$subjectOU,L=Burnaby,ST=BC,C=CA"
+
 		$cert = New-SelfSignedCertificate `
 			-certstorelocation $certLoc `
 			-DnsName "*.cloudapp.net" `
@@ -890,6 +897,8 @@ function createAndPopulateKeyvault()
 			-TextExtension @("2.5.29.19={critical}{text}ca=1") `
 			-HashAlgorithm SHA384 `
 			-KeyUsage DigitalSignature, CertSign, CRLSign, KeyEncipherment
+
+		Write-Host "Certificate generated. Formatting as .pfx file."
 
 		#generate pfx file from certificate
 		$certPath = $certLoc + '\' + $cert.Thumbprint
@@ -908,17 +917,17 @@ function createAndPopulateKeyvault()
 		#read from pfx file and convert to base64 string
 		$fileContentEncoded = [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes($certPfx))
 
-		$FECertificate = ConvertTo-SecureString $fileContentEncoded -AsPlainText -Force
+		$CSCertificate = ConvertTo-SecureString $fileContentEncoded -AsPlainText -Force
 
-		$FECertSecretName = 'CAMFECertificate'
-		$FECertSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $FECertSecretName -SecretValue $FECertificate
-		$FECertSecretVersionedURL = $FECertSecret.Id
-		$FECertSecretURL = $FECertSecretVersionedURL.Substring(0, $FECertSecretVersionedURL.lastIndexOf('/'))
+		$CSCertSecretName = $CAMConfig.internal.CSCertSecretName
+		$CSCertSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $CSCertSecretName -SecretValue $CSCertificate
+		$CSCertSecretVersionedURL = $CSCertSecret.Id
+		$CSCertSecretURL = $CSCertSecretVersionedURL.Substring(0, $CSCertSecretVersionedURL.lastIndexOf('/'))
 
-		$FECertPasswordSecretName = 'CAMFECertificatePassword'
-		$FECertPasswordSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $FECertPasswordSecretName -SecretValue $secureCertPswd
-		$FECertPasswordSecretVersionedURL = $FECertPasswordSecret.Id
-		$FECertPasswordSecretURL = $FECertPasswordSecretVersionedURL.Substring(0, $FECertPasswordSecretVersionedURL.lastIndexOf('/'))
+		$CSCertPasswordSecretName = $CAMConfig.internal.CSCertPasswordSecretName
+		$CSCertPasswordSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $CSCertPasswordSecretName -SecretValue $secureCertPswd
+		$CSCertPasswordSecretVersionedURL = $CSCertPasswordSecret.Id
+		$CSCertPasswordSecretURL = $CSCertPasswordSecretVersionedURL.Substring(0, $CSCertPasswordSecretVersionedURL.lastIndexOf('/'))
 
 		Write-Host "Successfully put certificate in Key Vault."
 		
@@ -927,8 +936,11 @@ function createAndPopulateKeyvault()
 		$secretHash.Add($djSecretName,$djSecretURL)
 		$secretHash.Add($rwLocalSecretName,$rwLaSecretURL)
 		$secretHash.Add($csLocalSecretName,$csLaSecretURL)
-		$secretHash.Add($FECertSecretName,$FECertSecretURL)
-		$secretHash.Add($FECertPasswordSecretName,$FECertPasswordSecretURL)
+		$secretHash.Add($CSCertSecretName,$CSCertSecretURL)
+		$secretHash.Add($CSCertPasswordSecretName,$CSCertPasswordSecretURL)
+	}
+	catch {
+		throw
 	}
 	finally {
 		#done with files
@@ -1167,6 +1179,8 @@ function Deploy-CAM()
 	$CAMConfig.internal = @{}
 	$CAMConfig.internal.rcSecretName = 'cloudAccessRegistrationCode'
 	$CAMConfig.internal.djSecretName = 'domainJoinPassword'
+	$CAMConfig.internal.CSCertSecretName = 'CAMCSCertificate'
+	$CAMConfig.internal.CSCertPasswordSecretName = 'CAMCSCertificatePassword'
 	$CAMConfig.internal.rwLocalSecretName = 'remoteWorkstationLocalAdminPassword'
 	$CAMConfig.internal.csLocalSecretName = 'connectionServiceLocalAdminPassword'
 	$CAMConfig.internal.saSasTokenSecretName = "userStorageAccountSaasToken"
@@ -1383,7 +1397,7 @@ graphURL=https\://graph.windows.net/
 				"keyVault": {
 				  "id": "$kvId"
 				},
-				"secretName": "CAMFECertificate"
+				"secretName": "$($CAMConfig.internal.CSCertSecretName)"
 			  }		
 		},
 		"certPassword": {
@@ -1391,7 +1405,7 @@ graphURL=https\://graph.windows.net/
 				"keyVault": {
 				  "id": "$kvId"
 				},
-				"secretName": "CAMFECertificatePassword"
+				"secretName": "$($CAMConfig.internal.CSCertPasswordSecretName)"
 			  }		
 		},
 		"keyVaultId": {
@@ -1410,7 +1424,7 @@ graphURL=https\://graph.windows.net/
         }
 	}
 "@
-		
+
 		$deploymentParametersObj = ConvertFrom-Json $generatedDeploymentParameters
 		$deploymentParametersTable = ConvertPSObjectToHashtable -InputObject $deploymentParametersObj
 	
