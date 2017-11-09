@@ -612,7 +612,8 @@ Configuration InstallCAM
 				If(-not [bool](Get-InstalledModule | where {$_.Name -eq "AzureRM"}))
 				{
 					Write-Verbose "Installing AzureRM"
-					Install-Module -Name AzureRM -Force
+					# Install-Module -Name AzureRM -Force
+					Install-Module -Name AzureRM -MaximumVersion 4.4.1 -Force
 				}
 				
 
