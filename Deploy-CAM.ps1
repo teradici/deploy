@@ -20,7 +20,8 @@ param(
 	$camSaasUri = "https://cam-antar.teradici.com",
 	$CAMDeploymentTemplateURI ="https://raw.githubusercontent.com/teradici/deploy/bd/azuredeploy.json",
 	$CAMDeploymentBlobSource = "https://teradeploy.blob.core.windows.net/bdbinaries",
-	$outputParametersFileName = "cam-output.parameters.json"
+	$outputParametersFileName = "cam-output.parameters.json",
+	$location
 )
 
 
@@ -1215,7 +1216,7 @@ function Deploy-CAM()
 			-ServicePrincipal `
 			-TenantId $spInfo.tenantId `
 			-ErrorAction Stop 
-		
+
 		$kvInfo = createAndPopulateKeyvault `
 			-RGName $RGName `
 			-registrationCode $registrationCode `
@@ -1484,75 +1485,88 @@ if($subscriptionsToDisplay.Length -lt 1) {
     Write-Host ($subscriptionsToDisplay[$chosenSubscriptionIndex] | Select-Object -Property Current, Number, Name, SubscriptionId, TenantId | Format-Table | Out-String)
     $rmContext = Set-AzureRmContext -SubscriptionId $subscriptionsToDisplay[$chosenSubscriptionIndex].SubscriptionId -TenantId $subscriptionsToDisplay[$chosenSubscriptionIndex].TenantId
 
-	# The Context doesn't always seem to take the tenant depending on who is logged in - so making a copy from the selected subscription
-	$selectedTenantId = $subscriptionsToDisplay[$chosenSubscriptionIndex].TenantId
-	$selectedSubcriptionId = $subscriptionsToDisplay[$chosenSubscriptionIndex].SubscriptionId
-	
-	# Now we have the subscription set. Time to find the CAM root RG.
+		# The Context doesn't always seem to take the tenant depending on who is logged in - so making a copy from the selected subscription
+		$selectedTenantId = $subscriptionsToDisplay[$chosenSubscriptionIndex].TenantId
+		$selectedSubcriptionId = $subscriptionsToDisplay[$chosenSubscriptionIndex].SubscriptionId
+		
+		# Now we have the subscription set. Time to find the CAM root RG.
+		$resouceGroups = Get-AzureRmResourceGroup
 
-    $resouceGroups = Get-AzureRmResourceGroup
+		# if a user has provided ResourceGroupName as parameter:
+		# - Check if user group exists. If it does deploy there.
+		# - If it doesnt, create it in which case location parameter must be provided 
+		if ($ResourceGroupName) 
+		{
+			Write-Host "RGNAME PROVIDED: $ResourceGroupName"
+			if (-not (Get-AzureRMResourceGroup -name $ResourceGroupName)) {
+				Write-Host "Resource group $ResourceGroupName does not exist! Creating in location: $location"
+				New-AzureRmResourceGroup -Name $ResourceGroupName -Location $location
+			} 
+			$rgMatch = Get-AzureRmResourceGroup -Name $ResourceGroupName
+		}
+		else 
+		{
+			$rgIndex = 0
+			ForEach($r in $resouceGroups) {
+					if(-not (Get-Member -inputobject $r -name "Number")) {
+							Add-Member -InputObject $r -Name "Number" -Value "" -MemberType NoteProperty
+					}
 
-    $rgIndex = 0
-    ForEach($r in $resouceGroups) {
-        if(-not (Get-Member -inputobject $r -name "Number")) {
-            Add-Member -InputObject $r -Name "Number" -Value "" -MemberType NoteProperty
-        }
+					$r.Number = ($rgIndex++) + 1
+			}
 
-        $r.Number = ($rgIndex++) + 1
-    }
+			Write-Host "`nAvailable Resource Groups"
+			Write-Host ($resouceGroups | Select-Object -Property Number, ResourceGroupName, Location | Format-Table | Out-String)
 
-    Write-Host "`nAvailable Resource Groups"
-    Write-Host ($resouceGroups | Select-Object -Property Number, ResourceGroupName, Location | Format-Table | Out-String)
+			$selectedRGName = $false
+			$rgIsInt = $false
+			$rgMatch = $null
+			while(-not $selectedRGName) {
+					Write-Host "Please select the resource group of the CAM deployment root by number or type in a new resource group name for a new CAM deployment."
+					$rgIdentifier = Read-Host "Resource group"
 
-    $selectedRGName = $false
-    $rgIsInt = $false
-    $rgMatch = $null
-    while(-not $selectedRGName) {
-        Write-Host "Please select the resource group of the CAM deployment root by number or type in a new resource group name for a new CAM deployment."
-        $rgIdentifier = Read-Host "Resource group"
+					$rgIsInt = [int]::TryParse($rgIdentifier,[ref]$rgIndex) #rgIndex will be 0 on parse failure
 
-        $rgIsInt = [int]::TryParse($rgIdentifier,[ref]$rgIndex) #rgIndex will be 0 on parse failure
+					if($rgIsInt) {
+							# entered an integer - we are not supporting integer names here for new resource groups
+							$rgArrayLength = $resouceGroups.Length
+							if( -not (( $rgIndex -ge 1) -and ( $rgIndex -le $rgArrayLength))) {
+									#invalid range 
+									Write-Host "Please enter a range between 1 and $rgArrayLength or the name of a new resource group."
+							}
+							else {
+									$rgMatch = $resouceGroups[$rgIndex - 1]
+									$selectedRGName = $true
+							}
+							continue
+					}
+					else {
+							# entered a name. Let's see if it matches any resource groups first
+							$rgMatch = $resouceGroups | Where-Object {$_.ResourceGroupName -eq $rgIdentifier}
+							if ($rgMatch) {
+									$rgName = $rgMatch.ResourceGroupName
+									Write-Host ("Resource group `"$rgName`" already exists. The current one will be used.")
+									$selectedRGName = $true
+							}
+							else {
+									# make a new resource group and on failure go back to RG selection.
+									$rgName = $rgIdentifier
+									$newRgResult = $null
 
-        if($rgIsInt) {
-            # entered an integer - we are not supporting integer names here for new resource groups
-            $rgArrayLength = $resouceGroups.Length
-            if( -not (( $rgIndex -ge 1) -and ( $rgIndex -le $rgArrayLength))) {
-                #invalid range 
-                Write-Host "Please enter a range between 1 and $rgArrayLength or the name of a new resource group."
-            }
-            else {
-                $rgMatch = $resouceGroups[$rgIndex - 1]
-                $selectedRGName = $true
-            }
-            continue
-        }
-        else {
-            # entered a name. Let's see if it matches any resource groups first
-            $rgMatch = $resouceGroups | Where-Object {$_.ResourceGroupName -eq $rgIdentifier}
-            if ($rgMatch) {
-                $rgName = $rgMatch.ResourceGroupName
-                Write-Host ("Resource group `"$rgName`" already exists. The current one will be used.")
-                $selectedRGName = $true
-            }
-            else {
-                # make a new resource group and on failure go back to RG selection.
-                $rgName = $rgIdentifier
-                $newRgResult = $null
+									Write-Host("Available Azure Locations")
+									Write-Host (Get-AzureRMLocation | Select-Object -Property Location, DisplayName | Format-Table | Out-String )
 
-				Write-Host("Available Azure Locations")
-				Write-Host (Get-AzureRMLocation | Select-Object -Property Location, DisplayName | Format-Table | Out-String )
-
-                $newRGLocation = Read-Host "`nPlease enter resource group location"
-                $newRgResult = New-AzureRmResourceGroup -Name $rgName -Location $newRGLocation
-                if($newRgResult) {
-                    # Success!
-                    $selectedRGName = $true
-                    $rgMatch = Get-AzureRmResourceGroup -Name $rgName
-                }
-            }
-        }
-	}
-	
+									$newRGLocation = Read-Host "`nPlease enter resource group location"
+									$newRgResult = New-AzureRmResourceGroup -Name $rgName -Location $newRGLocation
+									if($newRgResult) {
+											# Success!
+											$selectedRGName = $true
+											$rgMatch = Get-AzureRmResourceGroup -Name $rgName
+									}
+							}
+					}
+				}
+		}
 
 	# allow interactive input of a bunch of parameters. spCredential is handled in the SP functions (above) so it can be quickly validated
 	while (-not $domainAdminCredential ) {
@@ -1587,6 +1601,8 @@ if($subscriptionsToDisplay.Length -lt 1) {
 			$registrationCode = $null
 		}
 	}
+
+Write-Host "ResourceGroupName: $ResourceGroupName"
 
 # Not using splat because of bad handling of default values.
 Deploy-CAM `
