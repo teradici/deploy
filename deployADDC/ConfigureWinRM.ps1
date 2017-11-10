@@ -183,9 +183,9 @@ Import-Module ActiveDirectory
 
 $winrmHttpsPort=5986
 
-Configure-WinRMHttpsListener $hostname
+# Configure-WinRMHttpsListener $hostname
 
-Add-FirewallException -port $winrmHttpsPort
+# Add-FirewallException -port $winrmHttpsPort
 
 Enable-PSRemoting -SkipNetworkProfileCheck -Force | Out-Null
 Set-NetFirewallRule -Name "WINRM-HTTP-In-TCP-PUBLIC" -RemoteAddress Any | Out-Null
