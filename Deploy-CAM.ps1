@@ -881,11 +881,12 @@ function New-PopulatedKeyvault()
 		# add some randomization to the subject to get around the Firefox TLS issue referenced here:
 		# https://www.thesslstore.com/blog/troubleshoot-firefoxs-tls-handshake-message/
 		# (all lower case letters)
+		# (However this is causing issues with the software PCoIP Client so we need some more
+		# investigation on what is changable in the certificate.
 		#$subjectOU = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
 		$subjectOU="SoftPCoIP"
-		$subjectOU="fluffybun"
 
-		$subject = "CN=localhost,O=Teradici Corporation,OU=$subjectOU,L=Burnaby,ST=BC,C=CA"
+		$subject = "CN=localhost,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"
 
 		$cert = New-SelfSignedCertificate `
 			-certstorelocation $certLoc `
@@ -1604,31 +1605,48 @@ if($subscriptionsToDisplay.Length -lt 1) {
         }
 	}
 	
+	# allow interactive input of a bunch of parameters. spCredential is handled in the SP functions elsewhere in this file
+	do {
+		if( -not $domainAdminCredential ) {
+			$domainAdminCredential = Get-Credential -Message "Please enter admin credential for new domain"
+			$confirmedPassword = Read-Host -AsSecureString "Please re-enter the password"
 
-	# allow interactive input of a bunch of parameters. spCredential is handled in the SP functions (above) so it can be quickly validated
-	while (-not $domainAdminCredential ) {
-		$domainAdminCredential = Get-Credential -Message "Please enter admin credential for new domain"
+			# Need plaintext password to check if same
+			$userName = "Domain\DummyUser"
+			$passwordCreds = New-Object -TypeName pscredential -ArgumentList  $userName, $confirmedPassword
+			$clearPassword = $passwordCreds.GetNetworkCredential().Password
+			if(-not ($domainAdminCredential.GetNetworkCredential().Password -ceq $clearPassword)) {
+				# don't match- try again.
+				Write-Host "The entered passwords do not match."
+				$domainAdminCredential = $null
+				continue
+			}
+		}
 		
 		if ($domainAdminCredential.GetNetworkCredential().Password.Length -lt 12) {
-			#too short- try again.
-			Write-Host "The admin password must be at least 12 characters long"
+			# too short- try again.
+			Write-Host "The domain service account/admin password must be at least 12 characters long"
 			$domainAdminCredential = $null
 		}
-	}
+	} while ( -not $domainAdminCredential )
 
-	while(-not $domainName ) {
-		$domainName = Read-Host "Please enter new fully qualified domain name including a '.' such as example.com"
+	do {
+		if( -not $domainName ) {
+			$domainName = Read-Host "Please enter new fully qualified domain name including a '.' such as example.com"
+		}
 		if($domainName -notlike "*.*") {
-			#too short- try again.
+			# too short- try again.
 			Write-Host "The domain name must include two or more components separated by a '.'"
 			$domainName = $null
 		}
-	}
+	} while (-not $domainName)
 
-	while(-not $registrationCode ) {
-		$registrationCode = Read-Host -AsSecureString "Please enter your Cloud Access registration code"
-
-		# Need plaintext registration code
+	do {
+		if (-not $registrationCode ) {
+			$registrationCode = Read-Host -AsSecureString "Please enter your Cloud Access registration code"
+		}
+		
+		# Need plaintext registration code to check length
 		$userName = "Domain\DummyUser"
 		$regCreds = New-Object -TypeName pscredential -ArgumentList  $userName, $registrationCode
 		$clearRegCode = $regCreds.GetNetworkCredential().Password
@@ -1637,7 +1655,7 @@ if($subscriptionsToDisplay.Length -lt 1) {
 			Write-Host "The registration code is at least 21 characters long"
 			$registrationCode = $null
 		}
-	}
+	} while(-not $registrationCode )
 
 # Not using splat because of bad handling of default values.
 Deploy-CAM `
