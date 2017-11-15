@@ -1372,6 +1372,7 @@ graphURL=https\://graph.windows.net/
 
 		$djSecretName = $CAMConfig.internal.djSecretName 
 		$csLocalSecretName = $CAMConfig.internal.csLocalSecretName
+		$rwLocalSecretName = $CAMConfig.internal.rwLocalSecretName
 
 		$generatedDeploymentParameters = @"
 	{
@@ -1384,6 +1385,17 @@ graphURL=https\://graph.windows.net/
 				  "id": "$kvId"
 				},
 				"secretName": "$csLocalSecretName"
+			  }
+		},
+		"rwsLocalAdminUsername": {
+			"value": "localadmin"
+		},
+		"rwsLocalAdminPassword": {
+			"reference": {
+				"keyVault": {
+				  "id": "$kvId"
+				},
+				"secretName": "$rwLocalSecretName"
 			  }
 		},
 		"DomainAdminPassword": {
