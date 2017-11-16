@@ -453,8 +453,8 @@ function New-RemoteWorstationTemplates
 	$DomainAdminUsername = $CAMConfig.ARMParameters.parameters.domainAdminUsername.value
 	$djSecretName = $CAMConfig.internal.djSecretName
 	$rcSecretName = $CAMConfig.internal.rcSecretName
-	$rwLaSecretName = $CAMConfig.internal.rwLaSecretName
-	$csLaSecretName = $CAMConfig.internal.csLaSecretName
+	$rwLocalSecretName = $CAMConfig.internal.rwLocalSecretName
+	$csLaSecretName = $CAMConfig.internal.csLocalSecretName
 	$existingVNETName = $CAMConfig.internal.existingVNETName
 	$VMAdminUsername = "localadmin"
 	$domainFQDN = 	$CAMConfig.ARMParameters.parameters.domainName.value
@@ -520,7 +520,7 @@ function New-RemoteWorstationTemplates
 				"keyVault": {
 				"id": "$kvId"
 				},
-				"secretName": "$rwLaSecretName"
+				"secretName": "$rwLocalSecretName"
 			}
 		},
 		"domainToJoin": { "value": "$domainFQDN" },
