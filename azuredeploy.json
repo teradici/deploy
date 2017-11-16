@@ -34,6 +34,18 @@
         "description": "The password/key for the local VM accounts."
       }
     },
+    "rwsLocalAdminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the local admin account for remote workstation VM's"
+      }
+    },
+    "rwsLocalAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password/key for the local remote workstation accounts."
+      }
+    },
     "registrationCode": {
       "type": "securestring",
       "minLength": 21,
@@ -252,10 +264,10 @@
             "value": 3
           },
           "vmAdminUsername": {
-            "value": "[parameters('domainAdminUsername')]"
+            "value": "[parameters('rwsLocalAdminUsername')]"
           },
           "vmAdminPassword": {
-            "value": "[parameters('domainAdminPassword')]"
+            "value": "[parameters('rwsLocalAdminPassword')]"
           },
           "domainGroupToJoin": {
             "value": "[variables('domainGroupAppServersJoin')]"

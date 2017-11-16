@@ -453,8 +453,8 @@ function New-RemoteWorstationTemplates
 	$DomainAdminUsername = $CAMConfig.ARMParameters.parameters.domainAdminUsername.value
 	$djSecretName = $CAMConfig.internal.djSecretName
 	$rcSecretName = $CAMConfig.internal.rcSecretName
-	$rwLaSecretName = $CAMConfig.internal.rwLaSecretName
-	$csLaSecretName = $CAMConfig.internal.csLaSecretName
+	$rwLocalSecretName = $CAMConfig.internal.rwLocalSecretName
+	$csLaSecretName = $CAMConfig.internal.csLocalSecretName
 	$existingVNETName = $CAMConfig.internal.existingVNETName
 	$VMAdminUsername = "localadmin"
 	$domainFQDN = 	$CAMConfig.ARMParameters.parameters.domainName.value
@@ -520,7 +520,7 @@ function New-RemoteWorstationTemplates
 				"keyVault": {
 				"id": "$kvId"
 				},
-				"secretName": "$rwLaSecretName"
+				"secretName": "$rwLocalSecretName"
 			}
 		},
 		"domainToJoin": { "value": "$domainFQDN" },
@@ -1372,6 +1372,7 @@ graphURL=https\://graph.windows.net/
 
 		$djSecretName = $CAMConfig.internal.djSecretName 
 		$csLocalSecretName = $CAMConfig.internal.csLocalSecretName
+		$rwLocalSecretName = $CAMConfig.internal.rwLocalSecretName
 
 		$generatedDeploymentParameters = @"
 	{
@@ -1384,6 +1385,17 @@ graphURL=https\://graph.windows.net/
 				  "id": "$kvId"
 				},
 				"secretName": "$csLocalSecretName"
+			  }
+		},
+		"rwsLocalAdminUsername": {
+			"value": "localadmin"
+		},
+		"rwsLocalAdminPassword": {
+			"reference": {
+				"keyVault": {
+				  "id": "$kvId"
+				},
+				"secretName": "$rwLocalSecretName"
 			  }
 		},
 		"DomainAdminPassword": {
