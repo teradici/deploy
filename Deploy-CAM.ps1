@@ -17,6 +17,14 @@ param(
 	[bool]
 	$testDeployment = $false,
 
+	[parameter(Mandatory=$false)]
+	[String]
+	$certificateFile = $null,
+	
+	[parameter(Mandatory=$false)]
+	[SecureString]
+	$certificateFilePassword = $null,
+
 	$camSaasUri = "https://cam-antar.teradici.com",
 	$CAMDeploymentTemplateURI ="https://raw.githubusercontent.com/teradici/deploy/bd/azuredeploy.json",
 	$CAMDeploymentBlobSource = "https://teradeploy.blob.core.windows.net/bdbinaries",
@@ -129,8 +137,8 @@ function Register-CAM()
 	)
 
     $camDeploymentInfo = @{} #start with an empty hash map
-	$camRegistrationError = ""
 	for($idx = 0; $idx -lt $retryCount; $idx++) {
+		$camRegistrationError = ""
 		try {
 			$certificatePolicy = [System.Net.ServicePointManager]::CertificatePolicy
 
@@ -331,8 +339,9 @@ function Register-RemoteWorkstation()
 		subscriptionId = $subscription
 	}
 
-	$machineRegistrationError = ""
 	for($idx = 0; $idx -lt $retryCount; $idx++) {
+		$machineRegistrationError = ""
+
 		try {
 			$certificatePolicy = [System.Net.ServicePointManager]::CertificatePolicy
 
@@ -754,6 +763,14 @@ function New-PopulatedKeyvault()
 		[parameter(Mandatory=$true)]
 		$CAMConfig,
 
+		[parameter(Mandatory=$false)]
+		[String]
+		$certificateFile = $null,
+	
+		[parameter(Mandatory=$false)]
+		[SecureString]
+		$certificateFilePassword = $null,
+
 		[parameter(Mandatory=$true)]
 		[String]
 		$tempDir
@@ -854,6 +871,67 @@ function New-PopulatedKeyvault()
 		$csLaSecretVersionedURL = $csLaSecret.Id
 		$csLaSecretURL = $csLaSecretVersionedURL.Substring(0, $csLaSecretVersionedURL.lastIndexOf('/'))
 
+		$certInfo = Get-CertificateInfoForAppGateway -certificateFile $certificateFile -certificateFilePassword $certificateFilePassword -tempDir $tempDir
+
+		$CSCertSecretName = $CAMConfig.internal.CSCertSecretName
+		$CSCertSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $CSCertSecretName -SecretValue $certInfo.cert
+		$CSCertSecretVersionedURL = $CSCertSecret.Id
+		$CSCertSecretURL = $CSCertSecretVersionedURL.Substring(0, $CSCertSecretVersionedURL.lastIndexOf('/'))
+
+		$CSCertPasswordSecretName = $CAMConfig.internal.CSCertPasswordSecretName
+		$CSCertPasswordSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $CSCertPasswordSecretName -SecretValue $certInfo.passwd
+		$CSCertPasswordSecretVersionedURL = $CSCertPasswordSecret.Id
+		$CSCertPasswordSecretURL = $CSCertPasswordSecretVersionedURL.Substring(0, $CSCertPasswordSecretVersionedURL.lastIndexOf('/'))
+
+		Write-Host "Successfully put certificate in Key Vault."
+		
+		$secretHash = @{}
+		$secretHash.Add($rcSecretName,$rcSecretURL)
+		$secretHash.Add($djSecretName,$djSecretURL)
+		$secretHash.Add($rwLocalSecretName,$rwLaSecretURL)
+		$secretHash.Add($csLocalSecretName,$csLaSecretURL)
+		$secretHash.Add($CSCertSecretName,$CSCertSecretURL)
+		$secretHash.Add($CSCertPasswordSecretName,$CSCertPasswordSecretURL)
+	}
+	catch {
+		throw
+	}
+
+	return $secretHash
+}
+
+function Get-CertificateInfoForAppGateway() {
+	Param(
+		[parameter(Mandatory=$false)]
+		[String]
+		$certificateFile = $null,
+	
+		[parameter(Mandatory=$false)]
+		[SecureString]
+		$certificateFilePassword = $null,
+
+		[parameter(Mandatory=$false)]
+		[String]
+		$tempDir
+	)
+
+	# default to create self-signed certificate
+	$needToCreateSelfCert = $true
+	# check if the certificateFile and certificatePassword is null or empty
+	# A variable that is null or empty string evaluates to false.
+	if ( $certificateFile -and $certificateFilePassword )  {
+		Write-Host "using provided certificate $certificateFile for Application Gateway"
+		try{
+			$cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
+			$cert.Import($certificateFile, $certificateFilePassword, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]"DefaultKeySet")
+			$needToCreateSelfCert = $false
+		} catch {
+			$errStr = "Could not read certificate from certificate file: " + $certificateFile
+			throw $errStr
+		}
+	} 
+	
+	if ($needToCreateSelfCert) {
 		# create self signed certificate for Application Gateway.
 		# System Administrators can override the self signed certificate if desired in future.
 		# In order to create the certificate you must be running as Administrator on a Windows 10/Server 2016 machine
@@ -869,7 +947,7 @@ function New-PopulatedKeyvault()
 			Write-error $errStr
 		 	throw $errStr
 		}
-		
+
 		if(! (Get-Command New-SelfSignedCertificate -ErrorAction SilentlyContinue) ) {
 			$errStr = "New-SelfSignedCertificate cmdlet must be available - please ensure you are running on a supported OS such as Windows 10 or Server 2016."
 			Write-error $errStr
@@ -885,7 +963,6 @@ function New-PopulatedKeyvault()
 		# (However this is causing issues with the software PCoIP Client so we need some more
 		# investigation on what is changable in the certificate.
 		#$subjectOU = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
-		$subjectOU="SoftPCoIP"
 
 		$subject = "CN=localhost,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"
 
@@ -905,54 +982,45 @@ function New-PopulatedKeyvault()
 		#generate pfx file from certificate
 		$certPath = $certLoc + '\' + $cert.Thumbprint
 
-		$certPfx = Join-Path $tempDir "self-signed-cert.pfx"
+		if (-not $tempDir) {
+			$tempDir = $env:TEMP
+		}
+
+		$certificateFile = Join-Path $tempDir "self-signed-cert.pfx"
+        if (Test-Path $certificateFile) {
+			Remove-Item $certificateFile
+		}
 
 		#generate password for pfx file
 		$certPswd = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
-		$secureCertPswd = ConvertTo-SecureString -String $certPswd -AsPlainText -Force
+		$certificateFilePassword = ConvertTo-SecureString -String $certPswd -AsPlainText -Force
 
 		#export pfx file
-		Export-PfxCertificate -Cert $certPath -FilePath $certPfx -Password $secureCertPswd
+		Export-PfxCertificate -Cert $certPath -FilePath $certificateFile -Password $certificateFilePassword
 
-		Write-Host "Putting certificate in Key Vault."
+        #delete self-signed certificate
+		if(Test-Path $certPath) { 
+			Remove-Item $certPath -ErrorAction SilentlyContinue
+		}
+	} 
 
-		#read from pfx file and convert to base64 string
-		$fileContentEncoded = [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes($certPfx))
+	#read from pfx file and convert to base64 string
+	$fileContentEncoded = [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes($certificateFile))
 
-		$CSCertificate = ConvertTo-SecureString $fileContentEncoded -AsPlainText -Force
+	$CSCertificate = ConvertTo-SecureString $fileContentEncoded -AsPlainText -Force
 
-		$CSCertSecretName = $CAMConfig.internal.CSCertSecretName
-		$CSCertSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $CSCertSecretName -SecretValue $CSCertificate
-		$CSCertSecretVersionedURL = $CSCertSecret.Id
-		$CSCertSecretURL = $CSCertSecretVersionedURL.Substring(0, $CSCertSecretVersionedURL.lastIndexOf('/'))
-
-		$CSCertPasswordSecretName = $CAMConfig.internal.CSCertPasswordSecretName
-		$CSCertPasswordSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $CSCertPasswordSecretName -SecretValue $secureCertPswd
-		$CSCertPasswordSecretVersionedURL = $CSCertPasswordSecret.Id
-		$CSCertPasswordSecretURL = $CSCertPasswordSecretVersionedURL.Substring(0, $CSCertPasswordSecretVersionedURL.lastIndexOf('/'))
-
-		Write-Host "Successfully put certificate in Key Vault."
-		
-		$secretHash = @{}
-		$secretHash.Add($rcSecretName,$rcSecretURL)
-		$secretHash.Add($djSecretName,$djSecretURL)
-		$secretHash.Add($rwLocalSecretName,$rwLaSecretURL)
-		$secretHash.Add($csLocalSecretName,$csLaSecretURL)
-		$secretHash.Add($CSCertSecretName,$CSCertSecretURL)
-		$secretHash.Add($CSCertPasswordSecretName,$CSCertPasswordSecretURL)
+	$certInfo = @{
+		"cert" = $CSCertificate;
+		"passwd" = $certificateFilePassword
 	}
-	catch {
-		throw
+
+	#delete certificate file if it is generated
+	if ($needToCreateSelfCert -and	(Test-Path  $certificateFile) ) { 
+		Remove-Item $certificateFile -ErrorAction SilentlyContinue 
 	}
-	finally {
-		#done with files
-		if(Test-Path $certPfx) { Remove-Item $certPfx -ErrorAction SilentlyContinue }
-		if(Test-Path $certPath) { Remove-Item $certPath -ErrorAction SilentlyContinue }
-	}
-	return $secretHash
+
+	return $certInfo
 }
-
-
 
 function New-CAMAppSP()
 {
@@ -1128,6 +1196,14 @@ function Deploy-CAM()
 		$tenantId,
 
 		[parameter(Mandatory=$false)]
+		[String]
+		$certificateFile = $null,
+	
+		[parameter(Mandatory=$false)]
+		[SecureString]
+		$certificateFilePassword = $null,
+
+		[parameter(Mandatory=$false)]
 		[bool]
 		$testDeployment = $false
 
@@ -1201,7 +1277,7 @@ function Deploy-CAM()
 	Write-Host "Using temporary directory $tempDir for intermediate files"
 	if(-not (Test-Path $tempDir))
 	{
-		New-Item $tempDir -type directory > $null
+		New-Item $tempDir -type directory | Out-Null
 	}
 
 	$spInfo = $null
@@ -1273,7 +1349,9 @@ function Deploy-CAM()
 			-DomainJoinPassword $domainAdminCredential.Password `
 			-spName $spInfo.spCreds.UserName `
 			-CAMConfig $CAMConfig `
-			-tempDir $tempDir
+			-tempDir $tempDir `
+		    -certificateFile $certificateFile `
+			-certificateFilePassword $certificateFilePassword
 
 		$userDataStorageAccount = New-UserStorageAccount `
 			-RGName $RGName `
@@ -1489,7 +1567,6 @@ graphURL=https\://graph.windows.net/
 ##############################################
 ############# Script starts here #############
 ##############################################
-
 $rmContext = Get-AzureRmContext
 $subscriptions = Get-AzureRmSubscription -WarningAction Ignore
 $subscriptionsToDisplay = $subscriptions | Where-Object { $_.State -eq 'Enabled' }
@@ -1700,4 +1777,6 @@ Deploy-CAM `
  -RGName $rgMatch.ResourceGroupName `
  -spCredential $spCredential `
  -tenantId $selectedTenantId `
- -testDeployment $testDeployment
+ -testDeployment $testDeployment `
+ -certificateFile $certificateFile `
+ -certificateFilePassword $certificateFilePassword
