@@ -965,7 +965,7 @@ function New-CAMAppSP()
 	Write-Host "Calling Azure Active Directory to make app $appName and a service principal."
 
 	# 16 letter password
-	$generatedPassword = -join ((65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
+	$generatedPassword = ConvertTo-SecureString -String (-join ((65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})) -AsPlainText -Force
 	$generatedID = -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})
 	$appURI = "https://www.$generatedID.com"
 
@@ -1081,7 +1081,7 @@ function New-CAMAppSP()
 	}
 
 	# get SP credentials
-	$spPass = ConvertTo-SecureString $generatedPassword -AsPlainText -Force
+	$spPass = $generatedPassword
 	$spCreds = New-Object -TypeName pscredential -ArgumentList  $sp.ApplicationId, $spPass
 
 	# get tenant ID for this subscription
