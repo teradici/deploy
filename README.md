@@ -79,7 +79,7 @@ Click the **Deploy Azure** button to  begin.
 
 **NOTE:** In general it takes over an hour for the deployment to complete.
 
-<a target="_blank" href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fteradici%2Fdeploy%2Fmaster%2Fazuredeploy.json">
+<a target="_blank" href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fteradici%2Fdeploy%2FTSW-67106-use-external-ad%2Fazuredeploy.json">
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
@@ -140,7 +140,7 @@ Install-Module -Name AzureRM -Force
  1. Run Microsoft Powershell.
  1. Create the local parameters file by calling
    ```
-   Invoke-Webrequest -Uri "https://raw.githubusercontent.com/teradici/deploy/master/azuredeploy.parameters.json" -OutFile "my.azuredeploy.parameters.json"
+   Invoke-Webrequest -Uri "https://https://raw.githubusercontent.com/teradici/deploy/TSW-67106-use-external-ad/azuredeploy.parameters.json" -OutFile "my.azuredeploy.parameters.json"
    ```
  3. Modify <samp>my.azuredeploy.parameters.json</samp> to include the necessary deployment parameters.
  1. Run the following script, substituting username, password, resource group name, and desired region:
@@ -153,7 +153,7 @@ Login-AzureRMAccount -Credential $cred
 
 $azureRGName = "<rgname>"
 New-AzureRMResourceGroup -Name $azureRGName -Location "East US"
-New-AzureRMResourceGroupDeployment -DeploymentName "ad1" -ResourceGroupName $azureRGName -TemplateFile "https://raw.githubusercontent.com/teradici/deploy/master/azuredeploy.json" -TemplateParameterFile "my.azuredeploy.parameters.json"
+New-AzureRMResourceGroupDeployment -DeploymentName "ad1" -ResourceGroupName $azureRGName -TemplateFile "https://https://raw.githubusercontent.com/teradici/deploy/TSW-67106-use-external-ad/azuredeploy.json" -TemplateParameterFile "my.azuredeploy.parameters.json"
 
 ```
 
