@@ -992,7 +992,10 @@ function Get-CertificateInfoForAppGateway() {
 		}
 
 		#generate password for pfx file
-		$certPswd = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
+        #https://docs.microsoft.com/en-us/azure/application-gateway/application-gateway-ssl
+		#The certificate password must be between 4 to 12 characters made up of letters or numbers. Special characters are not accepted.
+		$certPswd = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 10 | % {[char]$_})
+
 		$certificateFilePassword = ConvertTo-SecureString -String $certPswd -AsPlainText -Force
 
 		#export pfx file
