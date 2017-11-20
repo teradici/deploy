@@ -121,7 +121,7 @@
             DependsOn = '[WindowsFeature]ADCS-Web-Enrollment','[xADCSCertificationAuthority]ADCS'
         }
 
-		xADUser CreateServiceAccount
+		xADUser   CreateServiceAccount
 		{
             Ensure = "Present"
             DomainName = $DomainName
