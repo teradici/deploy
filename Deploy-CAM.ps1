@@ -281,136 +281,6 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 
 
 
-function Register-RemoteWorkstation()
-{
-	Param(
-		[bool]
-		$verifyCAMSaaSCertificate = $true,
-		
-		# Retry for Remote Workstation Registration
-		$retryCount = 3,
-		$retryDelay = 10,
-
-		[parameter(Mandatory=$true)] 
-		$subscription,
-		
-		[parameter(Mandatory=$true)]
-		$client,
-		
-		[parameter(Mandatory=$true)]
-		$key,
-		
-		[parameter(Mandatory=$true)]
-		$tenant,
-		
-		[parameter(Mandatory=$true)]
-		$adminDesktopVMName,
-
-		[parameter(Mandatory=$true)]
-		$RGName,
-
-		[parameter(Mandatory=$true)]
-		$deploymentId,
-
-		[parameter(Mandatory=$true)]
-		$camSaasBaseUri
-	)
-
-
-	$userRequest = @{
-		username = $client
-		password = $key
-		tenantId = $tenant
-	}
-
-
-	$machineRequest = @{
-		deploymentId = $deploymentId
-		resourceGroup = $RGName
-		machineName = $adminDesktopVMName
-		subscriptionId = $subscription
-	}
-
-	$machineRegistrationError = ""
-	for($idx = 0; $idx -lt $retryCount; $idx++) {
-		try {
-			$certificatePolicy = [System.Net.ServicePointManager]::CertificatePolicy
-
-			if (!$verifyCAMSaaSCertificate) {
-				# Do this so SSL Errors are ignored
-				add-type @"
-using System.Net;
-using System.Security.Cryptography.X509Certificates;
-public class TrustAllCertsPolicy : ICertificatePolicy {
-	public bool CheckValidationResult(
-		ServicePoint srvPoint, X509Certificate certificate,
-		WebRequest request, int certificateProblem) {
-		return true;
-	}
-}
-"@
-
-				[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
-			}
-
-			####################
-			# Get a Sign-in token
-
-			$signInResult = ""
-			try {
-				$signInResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/signin") -Body $userRequest
-			} catch {
-				if ($_.ErrorDetails.Message) {
-					$signInResult = ConvertFrom-Json $_.ErrorDetails.Message
-				} else {
-					throw $_
-				}							
-			}
-			Write-Verbose ((ConvertTo-Json $signInResult) -replace "\.*token.*", 'Token": "Sanitized"')
-			# Check if signIn succeded
-			if ($signInResult.code -ne 200) {
-				throw ("Signing in failed. Result was: " + (ConvertTo-Json $signInResult))
-			}
-			$tokenHeader = @{
-				authorization=$signInResult.data.token
-			}
-			Write-Host "Cloud Access Manager sign in succeeded"
-
-			$registerMachineResult = ""
-			try {
-				$registerMachineResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/machines") -Body $machineRequest -Headers $tokenHeader
-			} catch {
-				if ($_.ErrorDetails.Message) {
-					$registerMachineResult = ConvertFrom-Json $_.ErrorDetails.Message
-				} else {
-					throw $_
-				}
-			}
-			Write-Verbose (ConvertTo-Json $registerMachineResult)
-			# Check if registration succeeded
-			if( !(($registerMachineResult.code -eq 201) -or ($registerMachineResult.data.reason.ToLower().Contains("exists")))) {
-				throw ("Registering Machine failed. Result was: " + (ConvertTo-Json $registerMachineResult))
-			}
-			Write-Host ("Machine " + $machineRequest.machineName + " has been registered successfully with Cloud Access Manager.")
-
-			break;
-		} catch {
-			$machineRegistrationError = $_
-			Write-Verbose ( "Attempt {0} of $retryCount failed due to Error: {1}" -f ($idx+1), $machineRegistrationError )
-			Start-Sleep -s $retryDelay
-		} finally {
-			# restore CertificatePolicy 
-			[System.Net.ServicePointManager]::CertificatePolicy = $certificatePolicy
-		}
-	}
-
-	if($machineRegistrationError) {
-		throw $machineRegistrationError
-	}
-}
-
-
-
 function New-UserStorageAccount
 {
 	Param(
@@ -626,10 +496,12 @@ function Populate-UserBlob
 		@("$artifactsLocation/end-user-application-machines/new-agent-vm/sumo-agent-vm.json","remote-workstation"),
 		@("$artifactsLocation/end-user-application-machines/new-agent-vm/sumo.conf","remote-workstation"),
 		@("$artifactsLocation/end-user-application-machines/new-agent-vm/Install-Idle-Shutdown.sh","remote-workstation"),
-		@("$artifactsLocation/end-user-application-machines/new-agent-vm/rhel-standard-agent.json","remote-workstation-template"),
-		@("$artifactsLocation/end-user-application-machines/new-agent-vm/server2016-graphics-agent.json","remote-workstation-template"),
-		@("$artifactsLocation/end-user-application-machines/new-agent-vm/server2016-standard-agent.json","remote-workstation-template")
+		@("$artifactsLocation/end-user-application-machines/new-agent-vm/$($CAMConfig.internal.linuxAgentARM)","remote-workstation-template"),
+		@("$artifactsLocation/end-user-application-machines/new-agent-vm/$($CAMConfig.internal.gaAgentARM)","remote-workstation-template"),
+		@("$artifactsLocation/end-user-application-machines/new-agent-vm/$($CAMConfig.internal.agentARM)","remote-workstation-template")
 	)
+
+
 
 	# Suppress output to pipeline so the return value of the function is the one
 	# hash table we want.
@@ -685,16 +557,16 @@ function Populate-UserBlob
 	
 		# Setup Keyvault secrets
 		# this is the url to access the blob account
-		$blobUriSecretName = "userStorageAccountUri"
+		$blobUriSecretName = $CAMConfig.internal.blobUriSecretName
 		Set-AzureKeyVaultSecret -VaultName $kvName -Name $blobUriSecretName -SecretValue (ConvertTo-SecureString $blobUri -AsPlainText -Force) -ErrorAction stop
 	
-		$storageAccountSecretName = "userStorageName"
+		$storageAccountSecretName = $CAMConfig.internal.storageAccountSecretName
 		Set-AzureKeyVaultSecret -VaultName $kvName -Name $storageAccountSecretName -SecretValue (ConvertTo-SecureString $acct_name -AsPlainText -Force) -ErrorAction stop
-		$storageAccountKeyName = "userStorageAccountKey"
+		$storageAccountKeyName = $CAMConfig.internal.storageAccountKeyName
 		Set-AzureKeyVaultSecret -VaultName $kvName -Name $storageAccountKeyName -SecretValue (ConvertTo-SecureString $acctKey -AsPlainText -Force) -ErrorAction stop
 	
 		$saSasToken = New-AzureStorageAccountSASToken -Service Blob -Resource Object -Context $ctx -ExpiryTime ((Get-Date).AddYears(2)) -Permission "racwdlup" 
-		$saSasTokenSecretName = 'userStorageAccountSaasToken'
+		$saSasTokenSecretName = $CAMConfig.internal.saSasTokenSecretName
 		Set-AzureKeyVaultSecret -VaultName $kvName -Name $saSasTokenSecretName -SecretValue (ConvertTo-SecureString $saSasToken -AsPlainText -Force) -ErrorAction stop
 	
 		#populate userBlobInfo return value
@@ -1095,6 +967,77 @@ function New-CAMAppSP()
 	return $spInfo
 }
 
+#creates cam deployment info structures and populates keyvault
+function New-CamDeploymentInfo()
+{
+	param(
+	    [parameter(Mandatory=$true)] 
+	    $subscriptionId, # Azure subscription being operated on
+
+		[parameter(Mandatory=$true)] 
+		$deploymentRegistrationInfo, # Deployment and user data storage account info
+		
+	    [parameter(Mandatory=$true)] 
+		$spInfo, # Service Principal info structure
+
+	    [parameter(Mandatory=$true)] 
+		$kvInfo, # Key Vault info
+
+	    [parameter(Mandatory=$true)] 
+		$CAMConfig # CAM Configuration info structure
+		)
+
+
+	$client = $spInfo.spCreds.UserName
+	$key = $spInfo.spCreds.GetNetworkCredential().Password
+	$tenant = $spInfo.tenantId
+
+
+	$authFileContent = @"
+subscription=$subscriptionID
+client=$client
+key=$key
+tenant=$tenant
+managementURI=https\://management.core.windows.net/
+baseURL=https\://management.azure.com/
+authURL=https\://login.windows.net/
+graphURL=https\://graph.windows.net/
+"@
+
+	$authFileContentURL = [System.Web.HttpUtility]::UrlEncode($authFileContent) 
+
+	$camDeploymenInfo = @{};
+	$camDeploymenInfo.Add("registrationInfo",$deploymentRegistrationInfo)
+	$camDeploymenInfo.Add("AzureAuthFile",$authFileContentURL)
+
+	$camDeploymenInfoJSON = ConvertTo-JSON $camDeploymenInfo -Depth 16 -Compress
+	$camDeploymenInfoURL = [System.Web.HttpUtility]::UrlEncode($camDeploymenInfoJSON)
+
+	$camDeploymenInfoURLSecure = ConvertTo-SecureString $camDeploymenInfoURL -AsPlainText -Force
+	$camDeploySecretName = $CAMConfig.internal.camDeploySecretName
+	$camDeploySecret = Set-AzureKeyVaultSecret -VaultName $kvInfo.VaultName -Name $camDeploySecretName -SecretValue $camDeploymenInfoURLSecure
+
+	$SPKeySecretName = $CAMConfig.internal.SPKeySecretName
+	$SPKeySecret = Set-AzureKeyVaultSecret -VaultName $kvInfo.VaultName -Name $SPKeySecretName -SecretValue $spInfo.spCreds.Password
+
+	<# Test code for encoding/decoding
+	$camDeploymenInfoURL
+	$camDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($camDeploymenInfoURL)
+	$camDeploymenInfoDecoded = ConvertFrom-Json $camDeploymenInfoJSONDecoded
+
+
+	[System.Web.HttpUtility]::UrlDecode($camDeploymenInfoDecoded.AzureAuthFile)
+
+	$regInfo = $camDeploymenInfoDecoded.RegistrationInfo
+
+	$regInfo.psobject.properties | Foreach-Object {
+		Write-Host "Name: " $_.Name " Value: " $_.Value
+
+	#>
+
+}
+
+
 
 function Deploy-CAM()
 {
@@ -1186,6 +1129,11 @@ function Deploy-CAM()
 	$CAMConfig.internal.rwLocalSecretName = 'remoteWorkstationLocalAdminPassword'
 	$CAMConfig.internal.csLocalSecretName = 'connectionServiceLocalAdminPassword'
 	$CAMConfig.internal.saSasTokenSecretName = "userStorageAccountSaasToken"
+	$CAMConfig.internal.blobUriSecretName = "userStorageAccountUri"
+	$CAMConfig.internal.storageAccountSecretName = "userStorageName"
+	$CAMConfig.internal.storageAccountKeyName = "userStorageAccountKey"
+	$CAMConfig.internal.camDeploySecretName = "CAMDeploymentInfo"
+	$CAMConfig.internal.SPKeySecretName = "SPKey"
 	$CAMConfig.internal.standardVMSize = "Standard_D2_v2"
 	$CAMConfig.internal.graphicsVMSize = "Standard_NV6"
 	$CAMConfig.internal.existingSubnetName = "Subnet-CloudAccessManager"
@@ -1257,7 +1205,7 @@ function Deploy-CAM()
 	# Login with SP since some Powershell contexts (with token auth - like Azure Cloud PowerShell or Visual Studio)
 	# can't do operations on keyvaults
 
-	#cache the current context
+	# cache the current context
 	$azureContext = Get-AzureRMContext
 	$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName
 	try {
@@ -1301,67 +1249,16 @@ function Deploy-CAM()
 			-registrationCode $registrationCode `
 			-camSaasBaseUri $camSaasUri `
 			-verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
-		
-			Write-Host "Create auth file information for the Cloud Access Manager Connection Service."
-		
-			$authFileContent = @"
-subscription=$subscriptionID
-client=$client
-key=$key
-tenant=$tenant
-managementURI=https\://management.core.windows.net/
-baseURL=https\://management.azure.com/
-authURL=https\://login.windows.net/
-graphURL=https\://graph.windows.net/
-"@
-		
-		$authFileContentURL = [System.Web.HttpUtility]::UrlEncode($authFileContent) 
 
-		$camDeploymenInfo = @{};
-		$camDeploymenInfo.Add("registrationInfo",($camDeploymenRegInfo + $userBlobInfo))
-		$camDeploymenInfo.Add("AzureAuthFile",$authFileContentURL)
+		Write-Host "Populating keyvault with deployment information for the Cloud Access Manager Connection Service."
+		New-CamDeploymentInfo `
+			-subscriptionId $subscriptionId `
+			-deploymentRegistrationInfo ($camDeploymenRegInfo + $userBlobInfo) `
+			-spInfo $spInfo `
+			-kvInfo $kvInfo `
+			-CAMConfig $CAMConfig
 
-		$camDeploymenInfoJSON = ConvertTo-JSON $camDeploymenInfo -Depth 16 -Compress
-		$camDeploymenInfoURL = [System.Web.HttpUtility]::UrlEncode($camDeploymenInfoJSON)
-
-		$camDeploymenInfoURLSecure = ConvertTo-SecureString $camDeploymenInfoURL -AsPlainText -Force
-		$camDeploySecretName = 'CAMDeploymentInfo'
-		$camDeploySecret = Set-AzureKeyVaultSecret -VaultName $kvInfo.VaultName -Name $camDeploySecretName -SecretValue $camDeploymenInfoURLSecure
-
-		$SPKeySecretName = 'SPKey'
-		$SPKeySecret = Set-AzureKeyVaultSecret -VaultName $kvInfo.VaultName -Name $SPKeySecretName -SecretValue $spInfo.spCreds.Password
-
-		<# Test code for encoding/decoding
-		$camDeploymenInfoURL
-		$camDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($camDeploymenInfoURL)
-		$camDeploymenInfoDecoded = ConvertFrom-Json $camDeploymenInfoJSONDecoded
-	
-	
-		[System.Web.HttpUtility]::UrlDecode($camDeploymenInfoDecoded.AzureAuthFile)
-	
-		$regInfo = $camDeploymenInfoDecoded.RegistrationInfo
-	
-		$regInfo.psobject.properties | Foreach-Object {
-			Write-Host "Name: " $_.Name " Value: " $_.Value
-	
-		#>
-	
-	
 		#keyvault ID of the form: /subscriptions/$subscriptionID/resourceGroups/$azureRGName/providers/Microsoft.KeyVault/vaults/$kvName
-	
-<# First convenience workstation is now registering itself.
-		Register-RemoteWorkstation `
-				-subscription $subscriptionID `
-				-client $client `
-				-key $key `
-				-tenant $tenant `
-				-RGName $RGName `
-				-deploymentId $camDeploymenRegInfo.CAM_DEPLOYMENTID `
-				-camSaasBaseUri $camDeploymenRegInfo.CAM_URI `
-				-adminDesktopVMName "admin-rws" `
-				-verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
-	#>
-
 		$kvId = $kvInfo.ResourceId
 
 		$verifyCAMSaaSCertificateText = "false"
@@ -1420,7 +1317,7 @@ graphURL=https\://graph.windows.net/
 				  "id": "$kvId"
 				},
 				"secretName": "$($CAMConfig.internal.CSCertPasswordSecretName)"
-			  }		
+			  }
 		},
 		"keyVaultId": {
 			"value": "$kvId"
@@ -1430,7 +1327,7 @@ graphURL=https\://graph.windows.net/
 				"keyVault": {
 				  "id": "$kvId"
 				},
-				"secretName": "$camDeploySecretName"
+				"secretName": "$($CAMConfig.internal.camDeploySecretName)"
 			}
 		},
         "verifyCAMSaaSCertificate": {
@@ -1472,8 +1369,6 @@ graphURL=https\://graph.windows.net/
 				-TemplateFile $CAMDeploymentTemplateURI `
 				-TemplateParameterFile $outputParametersFilePath 
 		}
-
-
 	}
 	catch {
 		throw
