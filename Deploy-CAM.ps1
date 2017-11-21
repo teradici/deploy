@@ -648,6 +648,10 @@ function New-PopulatedKeyvault()
 
 		[parameter(Mandatory=$true)]
 		[String]
+		$creatingUserId,
+
+		[parameter(Mandatory=$true)]
+		[String]
 		$tempDir
 	)
 
@@ -694,6 +698,13 @@ function New-PopulatedKeyvault()
                     -ServicePrincipalName $spName `
                     -PermissionsToSecrets Get, Set `
                     -ErrorAction stop
+
+				Write-Host "Set access policy for vault $kvName for user $creatingUserId"
+				Set-AzureRmKeyVaultAccessPolicy `
+					-VaultName $kvName `
+					-UserPrincipalName $creatingUserId `
+					-PermissionsToSecrets Get, Set `
+					-ErrorAction stop
 
 				$rcSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $rcSecretName -SecretValue $registrationCode -ErrorAction stop
 				$djSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $djSecretName -SecretValue $domainJoinPassword -ErrorAction stop
@@ -1158,7 +1169,7 @@ function Deploy-CAM()
 
 	)
 
-	#artifacts location 'folder' is where the template is stored
+	# Artifacts location 'folder' is where the template is stored
 	$artifactsLocation = $CAMDeploymentTemplateURI.Substring(0, $CAMDeploymentTemplateURI.lastIndexOf('/'))
 
 	$domainAdminUsername = $domainAdminCredential.UserName
@@ -1226,7 +1237,7 @@ function Deploy-CAM()
 	$CAMConfig.internal.domainGroupAppServersJoin = "Remote Workstations"
 
 	# make temporary directory for intermediate files
-	$folderName = 	-join ((97..122) | Get-Random -Count 18 | % {[char]$_})
+	$folderName = 	-join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
 	$tempDir = Join-Path $env:TEMP $folderName
 	Write-Host "Using temporary directory $tempDir for intermediate files"
 	if(-not (Test-Path $tempDir))
@@ -1302,6 +1313,7 @@ function Deploy-CAM()
 			-registrationCode $registrationCode `
 			-DomainJoinPassword $domainAdminCredential.Password `
 			-spName $spInfo.spCreds.UserName `
+			-creatingUserId $azureContext.Account.Id `
 			-CAMConfig $CAMConfig `
 			-tempDir $tempDir `
 		    -certificateFile $certificateFile `
