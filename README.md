@@ -75,7 +75,7 @@ Click the **Deploy Azure** button to  begin.
 1. Change to your Cloud Drive directory. 
 
 ```
-cd $HOME\\CloudDrive\\
+cd $HOME\CloudDrive\
 ```
 
 5. Download the CAM Deployment script.
