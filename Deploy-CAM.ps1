@@ -1193,9 +1193,6 @@ function Deploy-CAM()
 			"registrationCode": {
 				  "value": "$clearRegCode"
 			},
-			"camSaasUri": {
-				"value": "$camSaasUri"
-			},
 			"CAMDeploymentBlobSource": {
 				"value": "$CAMDeploymentBlobSource"
 			},
@@ -1357,12 +1354,6 @@ function Deploy-CAM()
 		#keyvault ID of the form: /subscriptions/$subscriptionID/resourceGroups/$azureRGName/providers/Microsoft.KeyVault/vaults/$kvName
 		$kvId = $kvInfo.ResourceId
 
-		$verifyCAMSaaSCertificateText = "false"
-		if($verifyCAMSaaSCertificate)
-		{
-			$verifyCAMSaaSCertificateText = "true"
-		}
-
 		$djSecretName = $CAMConfig.internal.djSecretName 
 		$csLocalSecretName = $CAMConfig.internal.csLocalSecretName
 		$rwLocalSecretName = $CAMConfig.internal.rwLocalSecretName
@@ -1415,9 +1406,6 @@ function Deploy-CAM()
 				"secretName": "$($CAMConfig.internal.CSCertPasswordSecretName)"
 			  }
 		},
-		"keyVaultId": {
-			"value": "$kvId"
-		},
 		"CAMDeploymentInfo": {
 			"reference": {
 				"keyVault": {
@@ -1425,10 +1413,7 @@ function Deploy-CAM()
 				},
 				"secretName": "$($CAMConfig.internal.camDeploySecretName)"
 			}
-		},
-        "verifyCAMSaaSCertificate": {
-            "value": $verifyCAMSaaSCertificateText
-        }
+		}
 	}
 "@
 
