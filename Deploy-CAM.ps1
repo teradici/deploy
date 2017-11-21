@@ -698,13 +698,14 @@ function New-PopulatedKeyvault()
                     -ServicePrincipalName $spName `
                     -PermissionsToSecrets Get, Set `
                     -ErrorAction stop
-
+<# Access right issue... would be great to have some solution!
 				Write-Host "Set access policy for vault $kvName for user $creatingUserId"
 				Set-AzureRmKeyVaultAccessPolicy `
 					-VaultName $kvName `
 					-UserPrincipalName $creatingUserId `
 					-PermissionsToSecrets Get, Set `
 					-ErrorAction stop
+#>
 
 				$rcSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $rcSecretName -SecretValue $registrationCode -ErrorAction stop
 				$djSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $djSecretName -SecretValue $domainJoinPassword -ErrorAction stop
@@ -1659,7 +1660,6 @@ if($subscriptionsToDisplay.Length -lt 1) {
 		}
 	} while(-not $registrationCode )
 
-Write-Host "ResourceGroupName: $ResourceGroupName"
 
 # Not using splat because of bad handling of default values.
 Deploy-CAM `
