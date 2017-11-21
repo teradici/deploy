@@ -27,19 +27,10 @@ Configuration InstallCAM
 		[String]$sourceURI,
 
         [Parameter(Mandatory)]
-		[String]$templateURI,
-
-        [Parameter(Mandatory)]
 		[System.Management.Automation.PSCredential]$CAMDeploymentInfo,
 
         [string]
 		$javaInstaller = "jdk-8u144-windows-x64.exe",
-
-        [string]
-		$idleShutdownLinux = "Install-Idle-Shutdown.sh",
-
-        [string]
-		$sumoAgentApplicationVM = "sumo-agent-vm.json",
 
 		[string]
 		$sumoConf = "sumo.conf",
@@ -63,9 +54,6 @@ Configuration InstallCAM
         $linuxAgentARM = "rhel-standard-agent.json",
 
         [Parameter(Mandatory)]
-        [String]$domainFQDN,
-
-        [Parameter(Mandatory)]
         [String]$domainGroupAppServersJoin,
 
         [Parameter(Mandatory)]
@@ -73,9 +61,6 @@ Configuration InstallCAM
 
         [Parameter(Mandatory)]
         [System.Management.Automation.PSCredential]$DomainAdminCreds,
-
-        [Parameter(Mandatory)]
-        [String]$DCVMName, #without the domain suffix
 
         [Parameter(Mandatory)]
         [String]$RGName, #Azure resource group name
@@ -87,17 +72,15 @@ Configuration InstallCAM
         [String]$sumoCollectorID,
 
 		[Parameter(Mandatory=$false)]
-        [String]$brokerPort = "8444",
-
-		[Parameter(Mandatory=$true)]
-		[string]$camSaasUri,
-
-		[Parameter(Mandatory=$false)]
-		[bool]$verifyCAMSaaSCertificate=$true,
-
-		[Parameter(Mandatory=$true)]
-		[string]$keyVaultId
+        [String]$brokerPort = "8444"
 	)
+
+	# Get domain information
+	$domainFQDN = (Get-WmiObject win32_computersystem).domain
+	$myDomainInfo = (Get-WMIObject Win32_NTDomain) `
+					| Where-Object {$_.DnsForestName -eq $domainFQDN} `
+					| Select-Object -First 1
+	$DCVMName = ($myDomainInfo.DomainControllerName -replace "\\", "")
 
 	$dcvmfqdn = "$DCVMName.$domainFQDN"
 	$pbvmfqdn = "$env:computername.$domainFQDN"
@@ -516,9 +499,8 @@ Configuration InstallCAM
 				If(-not [bool](Get-InstalledModule | where {$_.Name -eq "AzureRM"}))
 				{
 	                Write-Verbose "Installing AzureRM"
-					Install-Module -Name AzureRM -Force
+					Install-Module -Name AzureRM -MaximumVersion 4.4.1 -Force
 				}
-				
 
                 Write-Verbose "Install_CAM"
 
@@ -837,7 +819,7 @@ domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
 				$catalinaHome = $using:CatalinaHomeLocation
 				$catalinaBase = "$catalinaHome\$using:brokerServiceName"
 
-				copy "$using:LocalDLPath\$using:brokerWAR" ($catalinaBase + "\webapps")
+				Copy-Item "$using:LocalDLPath\$using:brokerWAR" ($catalinaBase + "\webapps")
 
 				# $svc = get-service $using:brokerServiceName
 				# if ($svc.Status -ne "Stopped") {$svc.stop()}
@@ -886,7 +868,7 @@ ldapAdminUsername=$adminUsername
 ldapAdminPassword=$adminPassword
 ldapDomain=$Using:domainFQDN
 brokerHostName=$Using:pbvmfqdn
-brokerProductName=CAS Connection Broker
+brokerProductName=CAM Connection Broker
 brokerPlatform=$Using:family
 brokerProductVersion=1.0
 brokerIpaddress=$ipaddressString
@@ -901,99 +883,97 @@ brokerLocale=en_US
 
 				#second, get the certificate file
 
-				$ldapCertFileName = "ldapcert.cert"
-				$certStoreLocationOnDC = "c:\" + $ldapCertFileName
-
-				$issuerCertFileName = "issuercert.cert"
-				$issuerCertStoreLocationOnDC = "c:\" + $issuerCertFileName
-
 				$certSubject = "CN=$using:dcvmfqdn"
 
 				Write-Host "Looking for cert with $certSubject on $dcvmfqdn"
 
-				$foundCert = $false
-				$loopCountRemaining = 180
+				$loopCountRemaining = 60
+				$sleepTime = 10 #seconds
 				#loop until it's created
-				while(-not $foundCert)
+				while($loopCountRemaining)
 				{
-					Write-Host "Waiting for LDAP certificate. Seconds remaining: $loopCountRemaining"
+					$secondsRemaining = $loopCountRemaining * $sleepTime
+					Write-Host "Waiting for LDAP certificate. Seconds remaining: $secondsRemaining"
 
 					$DCSession = New-PSSession $using:dcvmfqdn -Credential $using:DomainAdminCreds
+					
+					$certs = Invoke-Command {Get-ChildItem -Path "Cert:\LocalMachine\My"} -Session $DCSession
+					Remove-PSSession $DCSession
 
-					$foundCert = `
-						Invoke-Command -Session $DCSession -ArgumentList $certSubject, $certStoreLocationOnDC, $issuerCertStoreLocationOnDC `
-						  -ScriptBlock {
-								$cs = $args[0]
-								$cloc = $args[1]
-								$icloc = $args[2]
-
-				  				$cert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cs }
-								if(-not $cert)
-								{
-									Write-Host "Did not find LDAP certificate."
-									#maybe a certutil -pulse will help?
-									# NOTE - must redirect stdout to $null otherwise the success return here pollutes the return value of $foundCert
-									& "certutil" -pulse > $null
-									return $false
+					$cert = $certs | Where-Object { $_.Subject -eq $certSubject }
+					if($cert) {
+						$foundCert = $cert
+						if ($cert.length -gt 1) {
+							Write-Host "Found more than 1 certificate"
+							$foundCert = $cert[0]
+							for($idx=0; $idx -lt $cert.length; $idx++) {
+								$sub = $cert[$idx].Subject
+								$issuer = $cert.Issuer
+								if($sub -ne $issuer) {
+									$foundCert = $cert[$idx]
+									Write-Host "Subject: $sub Issuer: $issuer - using"
+									break;
 								}
-								else
-								{
-									Export-Certificate -Cert $cert -filepath  $cloc -force
-									Write-Host "Exported LDAP certificate."
-
-									#Now export issuer Certificate
-									$issuerCert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cert.Issuer }
-									Export-Certificate -Cert $issuerCert -filepath  $icloc -force
-
-									return $true
+								else {
+									Write-Host "Subject: $sub Issuer: $issuer - not using"
 								}
 							}
-
-					if(-not $foundCert)
-					{
-						Start-Sleep -Seconds 10
-						$loopCountRemaining = $loopCountRemaining - 1
-						if ($loopCountRemaining -eq 0)
-						{
-							Remove-PSSession $DCSession
-							throw "No LDAP certificate!"
 						}
+
+						$issuerCert = $certs | Where-Object { $_.Subject -eq $foundCert.Issuer }
+
+						if($issuerCert) {
+							$certFileName = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
+
+							$certFilePath = Join-Path $env:TEMP $certFileName
+
+							Export-Certificate -Cert $issuerCert -filepath $certFilePath -force | Out-Null
+							# Have the certificate file, add to keystore
+
+							# keytool seems to be causing an error but succeeding. Ignore and continue.
+							$eap = $ErrorActionPreference
+							$ErrorActionPreference = 'SilentlyContinue'
+							& "keytool" -import -file "$certFilePath" -keystore ($env:classpath + "\security\cacerts") -storepass changeit -noprompt
+							$ErrorActionPreference = $eap
+
+							if (Test-Path $certFilePath) {
+								Remove-Item $certFilePath  | Out-Null
+							}
+
+							Write-Host "Finished importing issuer's certificate of LDAP certificate to keystore."
+							break;
+						} else {
+							# Non Self-signed Well known CA's certificate case
+							Write-Host "No Issuer certificate of LDAP certificate found."
+						}
+
 					}
-					else
+
+					# No certificate (or issuer certificate) yet.
+					# Wait and retry in case it's because the DC is still warming up/initializing.
+					Start-Sleep -Seconds $sleepTime
+					$loopCountRemaining = $loopCountRemaining - 1
+					if ($loopCountRemaining -eq 0)
 					{
-						#found it! copy
-						Write-Host "Copying certs and exiting DC Session"
-						Copy-Item -Path $certStoreLocationOnDC -Destination "$env:systemdrive\$ldapCertFileName" -FromSession $DCSession
-						Copy-Item -Path $issuerCertStoreLocationOnDC -Destination "$env:systemdrive\$issuerCertFileName" -FromSession $DCSession
+						throw "No LDAP certificate!"
 					}
-					Remove-PSSession $DCSession
 				}
-
-				# Have the certificate file, add to keystore
-
-                # keytool seems to be causing an error but succeeding. Ignore and continue.
-                $eap = $ErrorActionPreference
-                $ErrorActionPreference = 'SilentlyContinue'
-				& "keytool" -import -file "$env:systemdrive\$issuerCertFileName" -keystore ($env:classpath + "\security\cacerts") -storepass changeit -noprompt
-                $ErrorActionPreference = $eap
-
 		        Write-Host "Finished importing LDAP certificate to keystore."
             }
 		}
-		
-		Script RegisterCam
+
+		Script Set_CAM_Envionment_And_Reboot
 		{
-			DependsOn  = @("[Script]Install_Auth_file", "[Script]Install_Broker")  # depends on both services being installed to ensure the reboot at the end will start both services properly.
-			GetScript  = { @{ Result = "RegisterCam" } }
+		    # depends on both services being installed to ensure the reboot at the end will start both services properly.
+			DependsOn  = @("[Script]Install_Auth_file", "[Script]Install_Broker")
+			GetScript  = { @{ Result = "Set_CAM_Envionment_And_Reboot" } }
 
             TestScript = { 
-
-				if ( $env:CAM_USERNAME -and $env:CAM_PASSWORD -and $env:CAM_TENANTID -and $env:CAM_URI -and $env:CAM_DEPLOYMENTID)
-				{
-					return $true
-				} else {
-					return $false
-				}
+				[bool]( $env:CAM_USERNAME `
+				   -and $env:CAM_PASSWORD `
+				   -and $env:CAM_TENANTID `
+				   -and $env:CAM_URI `
+				   -and $env:CAM_DEPLOYMENTID)
 			}
 
             SetScript  = {
@@ -1005,7 +985,7 @@ brokerLocale=en_US
 				$CAMDeploymenInfoDecoded = ConvertFrom-Json $CAMDeploymenInfoJSONDecoded
 				$regInfo = $camDeploymenInfoDecoded.RegistrationInfo
 
-				# now have an object with key value pairs - set environment to be active after reboot
+				# now have an object with key value pairs - set environment (to be active after reboot)
 				$regInfo.psobject.properties | Foreach-Object {
 					[System.Environment]::SetEnvironmentVariable($_.Name, $_.Value, "Machine")
 				}
