@@ -616,7 +616,8 @@ function Populate-UserBlob
 
 
 
-function New-PopulatedKeyvault()
+# Creates a key vault in the target resource group and gives the current SP access to the secrets.
+function New-CAM-KeyVault()
 {
 	Param(
 		[parameter(Mandatory=$true)] 
@@ -626,6 +627,86 @@ function New-PopulatedKeyvault()
 		[parameter(Mandatory=$true)] 
 		[String]
 		$spName,
+
+		[parameter(Mandatory=$true)]
+		[String]
+		$creatingUserId
+	)
+
+
+	$keyVault = $null
+	try{
+
+		#KeyVault names must be globally (or at least regionally) unique, so make a unique string
+		$generatedKVID = -join ((65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
+		$kvName = "CAM-$generatedKVID"
+
+		Write-Host "Creating Azure KeyVault $kvName"
+
+		$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName
+		$keyVault = New-AzureRmKeyVault `
+			-VaultName $kvName `
+			-ResourceGroupName $RGName `
+			-Location $rg.Location `
+			-EnabledForTemplateDeployment `
+			-EnabledForDeployment `
+			-WarningAction Ignore
+
+		Write-Host "Setting Access Policy on Azure KeyVault $kvName"
+		
+		#keyvault populate retry is to catch the case where the DNS has not been updated
+		#from the keyvault creation by the time we get here
+		$keyVaultPopulateRetry = 60
+		while($keyVaultPopulateRetry -ne 0)
+		{
+			$keyVaultPopulateRetry--
+
+			try
+			{
+                Write-Host "Set access policy for vault $kvName for user $spName"
+				Set-AzureRmKeyVaultAccessPolicy `
+                    -VaultName $kvName `
+                    -ServicePrincipalName $spName `
+                    -PermissionsToSecrets Get, Set `
+                    -ErrorAction stop | Out-Null
+<# Access right issue... would be great to have some solution! Arrgh - perhaps can change context to admin if that account
+ has correct rights (and only try once and fail with a log message but no side-effects.)
+				Write-Host "Set access policy for vault $kvName for user $creatingUserId"
+				Set-AzureRmKeyVaultAccessPolicy `
+					-VaultName $kvName `
+					-UserPrincipalName $creatingUserId `
+					-PermissionsToSecrets Get, Set `
+					-ErrorAction stop
+#>
+				break
+			}
+			catch
+			{
+				Write-Host "Waiting for key vault: $keyVaultPopulateRetry"
+				if ( $keyVaultPopulateRetry -eq 0)
+				{
+					#TODO: be smarter - we should only retry if the vault doesn't exist yet not on rights issues...
+					#re-throw whatever the original exception was
+					throw
+				}
+				Start-sleep -Seconds 1 | Out-Null
+			}
+		}
+	}
+	catch {
+		throw
+	}
+
+	return $keyVault
+}
+
+# Populates the vault with many of the needed CAM deployment parameters
+function Populate-CAM-Keyvault()
+{
+	Param(
+		[parameter(Mandatory=$true)]
+		[String]
+		$kvName,
 
 		[parameter(Mandatory=$true)]
 		[SecureString]
@@ -648,84 +729,18 @@ function New-PopulatedKeyvault()
 
 		[parameter(Mandatory=$true)]
 		[String]
-		$creatingUserId,
-
-		[parameter(Mandatory=$true)]
-		[String]
 		$tempDir
 	)
-
-	$rcSecretName = $CAMConfig.internal.rcSecretName
-	$djSecretName = $CAMConfig.internal.djSecretName
-	$rwLocalSecretName = $CAMConfig.internal.rwLocalSecretName
-	$csLocalSecretName = $CAMConfig.internal.csLocalSecretName
+		$rcSecretName = $CAMConfig.internal.rcSecretName
+		$djSecretName = $CAMConfig.internal.djSecretName
+		$rwLocalSecretName = $CAMConfig.internal.rwLocalSecretName
+		$csLocalSecretName = $CAMConfig.internal.csLocalSecretName
 	
-
-	try{
-
-		#KeyVault names must be globally (or at least regionally) unique, so make a unique string
-		$generatedKVID = -join ((65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
-		$kvName = "CAM-$generatedKVID"
-
-		Write-Host "Creating Azure KeyVault $kvName"
-
-		$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName
-		New-AzureRmKeyVault `
-			-VaultName $kvName `
-			-ResourceGroupName $RGName `
-			-Location $rg.Location `
-			-EnabledForTemplateDeployment `
-			-EnabledForDeployment `
-			-WarningAction Ignore
-
-		Write-Host "Populating Azure KeyVault $kvName"
-		
-		$rcSecret = $null
-		$djSecret = $null
-
-		#keyvault populate retry is to catch the case where the DNS has not been updated
-		#from the keyvault creation by the time we get here
-		$keyVaultPopulateRetry = 60
-		while($keyVaultPopulateRetry -ne 0)
-		{
-			$keyVaultPopulateRetry--
-
-			try
-			{
-                Write-Host "Set access policy for vault $kvName for user $spName"
-				Set-AzureRmKeyVaultAccessPolicy `
-                    -VaultName $kvName `
-                    -ServicePrincipalName $spName `
-                    -PermissionsToSecrets Get, Set `
-                    -ErrorAction stop
-<# Access right issue... would be great to have some solution!
-				Write-Host "Set access policy for vault $kvName for user $creatingUserId"
-				Set-AzureRmKeyVaultAccessPolicy `
-					-VaultName $kvName `
-					-UserPrincipalName $creatingUserId `
-					-PermissionsToSecrets Get, Set `
-					-ErrorAction stop
-#>
-
-				$rcSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $rcSecretName -SecretValue $registrationCode -ErrorAction stop
-				$djSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $djSecretName -SecretValue $domainJoinPassword -ErrorAction stop
-				break
-			}
-			catch
-			{
-				Write-Host "Waiting for key vault: $keyVaultPopulateRetry"
-				if ( $keyVaultPopulateRetry -eq 0)
-				{
-					#re-throw whatever the original exception was
-					throw
-				}
-				Start-sleep -Seconds 1
-			}
-		}
-
+		$rcSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $rcSecretName -SecretValue $registrationCode -ErrorAction stop
 		$rcSecretVersionedURL = $rcSecret.Id
 		$rcSecretURL = $rcSecretVersionedURL.Substring(0, $rcSecretVersionedURL.lastIndexOf('/'))
 
+		$djSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $djSecretName -SecretValue $domainJoinPassword -ErrorAction stop
 		$djSecretVersionedURL = $djSecret.Id
 		$djSecretURL = $djSecretVersionedURL.Substring(0, $djSecretVersionedURL.lastIndexOf('/'))
 
@@ -771,20 +786,6 @@ function New-PopulatedKeyvault()
 		$CSCertPasswordSecretURL = $CSCertPasswordSecretVersionedURL.Substring(0, $CSCertPasswordSecretVersionedURL.lastIndexOf('/'))
 
 		Write-Host "Successfully put certificate in Key Vault."
-		
-		$secretHash = @{}
-		$secretHash.Add($rcSecretName,$rcSecretURL)
-		$secretHash.Add($djSecretName,$djSecretURL)
-		$secretHash.Add($rwLocalSecretName,$rwLaSecretURL)
-		$secretHash.Add($csLocalSecretName,$csLaSecretURL)
-		$secretHash.Add($CSCertSecretName,$CSCertSecretURL)
-		$secretHash.Add($CSCertPasswordSecretName,$CSCertPasswordSecretURL)
-	}
-	catch {
-		throw
-	}
-
-	return $secretHash
 }
 
 function Get-CertificateInfoForAppGateway() {
@@ -1306,16 +1307,19 @@ function Deploy-CAM()
 			-TenantId $spInfo.tenantId `
 			-ErrorAction Stop 
 
-		$kvInfo = New-PopulatedKeyvault `
+		$kvInfo = New-CAM-KeyVault `
 			-RGName $RGName `
+			-spName $spInfo.spCreds.UserName `
+			-creatingUserId $azureContext.Account.Id
+
+		Populate-CAM-KeyVault `
+			-kvName $kvInfo.VaultName `
 			-registrationCode $registrationCode `
 			-DomainJoinPassword $domainAdminCredential.Password `
-			-spName $spInfo.spCreds.UserName `
-			-creatingUserId $azureContext.Account.Id `
 			-CAMConfig $CAMConfig `
 			-tempDir $tempDir `
-		    -certificateFile $certificateFile `
-			-certificateFilePassword $certificateFilePassword
+			-certificateFile $certificateFile `
+			-certificateFilePassword $certificateFilePassword | Out-Null
 
 		$userDataStorageAccount = New-UserStorageAccount `
 			-RGName $RGName `
