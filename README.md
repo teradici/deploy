@@ -71,37 +71,32 @@ Click the **Deploy Azure** button to  begin.
 
 1. Select the Microsoft Azure account you want to access.
 1. Enter your Password and click **Sign in.**
-1. Launch an Azure Cloud Shell Powershell instance. See [Overiew of Azure Cloud Shell](https://docs.microsoft.com/en-ca/azure/cloud-shell/overview?view=azurermps-5.0.0) for details on how to set this up. The rest of the setup steps will be run in the Azure Cloud Shell. It is recomended to maximize the Cloud Shell window so promts can be properly seen.
+1. Launch an Azure Cloud Shell Powershell instance. See [Overiew of Azure Cloud Shell](https://docs.microsoft.com/en-ca/azure/cloud-shell/overview?view=azurermps-5.0.0) for details on how to set this up. The rest of the setup steps will be run in the Azure Cloud Shell. It is recomended to maximize the Cloud Shell window so prompts can be properly seen.
 1. Change to your Cloud Drive directory. 
-
-```
-cd $HOME\CloudDrive\
-```
-
-5. Download the CAM Deployment script.
-
-```
-Invoke-WebRequest -URI https://raw.githubusercontent.com/teradici/deploy/bd/Deploy-CAM.ps1 -OutFile .\Deploy-CAM.ps1
-```
-
-6. Run the CAM Deployment script.
-
-```
-.\Deploy-CAM.ps1
-```
-
-7. You may now be prompted to select a subscription to use to deploy CAM in. Choose the number accordingly.
+    ```
+    cd $HOME\CloudDrive\
+    ```
+1. Download the CAM Deployment script.
+    ```
+    Invoke-WebRequest -URI https://raw.githubusercontent.com/teradici/deploy/bd/Deploy-CAM.ps1 -OutFile .\Deploy-CAM.ps1
+    ```
+1. Run the CAM Deployment script.
+    ```
+    .\Deploy-CAM.ps1
+    ```
+1. You may now be prompted to select a subscription to use to deploy CAM in. Choose the number accordingly.
 1. Exisiting Resource Groups will be listed if there are Resource Groups available for CAM to be deployed into. Either select an existing Resource Group by selecting the number next to desired Resource Group or create a new Resource Group by providing a name for the new Resource Group.
 1. Available deployment locations will be listed. Select a location from one of the listed options by typing in the *Location* field for the desired location.
 1. Enter the desired credentials for the **Administrative Domain User**. This is a new account that will be created.
-1. Enter a **Domain Name** and ensure it finishes in **.com**.
-1. Enter the CAS license registration code for the **registrationCode**.
+1. Enter a **Domain Name** and ensure it finishes in *.com*.
+1. Enter the CAS license registration code for the **Registration Code**.
 1. When prompted for Service Principal credentials, either press 'Enter' to continue and let the script generate them or enter 'no' to provide manually generated credentials.
 
 The deployment will now begin to run. 
 
 You can track it through the notifications icon or for a more detailed view of your deployment click the **Resource Groups** icon in the Azure portal and click on your resource group.
 
+**NOTE:** The Azure Cloud Shell will disconnect after 20 minutes of inactivity. This is expected behaviour. Once the deployment has begun, Azure will handle processing the deployment and the Azure Cloud Shell is no longer needed.
 
 ## Known Issues with Deploying the Solution
 
@@ -137,27 +132,20 @@ Install-packageProvider -Name NuGet -Force
 Install-Module -Name AzureRM -Force
 ```
 
- 1. Run Microsoft Powershell.
- 1. Create the local parameters file by calling
-   ```
-   Invoke-Webrequest -Uri "https://raw.githubusercontent.com/teradici/deploy/master/azuredeploy.parameters.json" -OutFile "my.azuredeploy.parameters.json"
-   ```
- 3. Modify <samp>my.azuredeploy.parameters.json</samp> to include the necessary deployment parameters.
- 1. Run the following script, substituting username, password, resource group name, and desired region:
+1. Run Microsoft Powershell.
+1. Log into Azure using one of the following methods
 
-```
-$spUsername = "<username>@<example>.com"
-$spPass = ConvertTo-SecureString "<password>" -AsPlainText -Force
-$cred = New-Object -TypeName pscredential -ArgumentList $spUsername, $spPass
-Login-AzureRMAccount -Credential $cred
-
-$azureRGName = "<rgname>"
-New-AzureRMResourceGroup -Name $azureRGName -Location "East US"
-New-AzureRMResourceGroupDeployment -DeploymentName "ad1" -ResourceGroupName $azureRGName -TemplateFile "https://raw.githubusercontent.com/teradici/deploy/master/azuredeploy.json" -TemplateParameterFile "my.azuredeploy.parameters.json"
-
-```
-
-If you do not want credentials in the file just go directly to <samp>Login-AzureAccount</samp> without the <samp>-Credential</samp> parameter and it will give you a prompt.
+    a. Log in using Service Principal Account credentials:
+    ```
+    $spTenantId = "<Service-Principal-Tenant-ID>"
+    $cred = Get-Credentials
+    Login-AzureRMAccount -Credential $cred -tenantId $spTenantId
+    ```
+    b. Log in using Azure Credentials
+    ```
+    Login-AzureRMAccount
+    ```
+1. Follow the instructions from step 5 of the Azure Cloud Shell deployments instructions above.
 
 Copyright 2017 Teradici Corporation. All Rights Reserved.
 
