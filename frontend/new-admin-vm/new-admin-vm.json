@@ -80,12 +80,6 @@
                 "description": "The location of resources, such as templates and DSC modules, that the template depends on"
             }
         },
-        "_agentArtifactsLocation": {
-            "type": "string",
-            "metadata": {
-                "description": "The location of resources, such as templates and DSC modules, specific to the PCoIP Agent"
-            }
-        },
         "_artifactsLocationSasToken": {
             "type": "securestring",
             "metadata": {
@@ -124,7 +118,6 @@
                         "domainGroupAppServersJoin": "[parameters('domainGroupAppServersJoin')]",
                         "sourceURI": "[parameters('CAMDeploymentBlobSource')]",
 						"templateURI": "[parameters('_artifactsLocation')]",
-						"templateAgentURI": "[parameters('_agentArtifactsLocation')]",
                         "DomainAdminCreds": {
                             "UserName": "[parameters('domainUsername')]",
                             "Password": "PrivateSettingsRef:DomainAdminPassword"

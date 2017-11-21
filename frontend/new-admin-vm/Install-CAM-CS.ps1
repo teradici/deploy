@@ -30,9 +30,6 @@ Configuration InstallCAM
 		[String]$templateURI,
 
         [Parameter(Mandatory)]
-		[String]$templateAgentURI,
-
-        [Parameter(Mandatory)]
 		[System.Management.Automation.PSCredential]$CAMDeploymentInfo,
 
         [string]
@@ -167,45 +164,10 @@ Configuration InstallCAM
 			MatchSource = $false
 		}
 
-		xRemoteFile Download_Install_Agent.ps1
-		{
-				Uri = "$templateAgentURI/Install-PCoIPAgent.ps1"
-				DestinationPath = "$LocalDLPath\Install-PCoIPAgent.ps1"
-				MatchSource = $false
-		}
-
-		xRemoteFile Download_Install_Agent.sh
-		{
-				Uri = "$templateAgentUri/Install-PCoIPAgent.sh"
-				DestinationPath = "$LocalDLPath\Install-PCoIPAgent.sh"
-				MatchSource = $false
-		}
-
-		xRemoteFile DownloadIdleShutdown.sh
-		{
-				Uri = "$templateAgentUri/$idleShutdownLinux"
-				DestinationPath = "$LocalDLPath\$idleShutdownLinux"
-				MatchSource = $false
-		}
-
-		xRemoteFile sumoagent 
-		{
-				Uri = "$templateAgentUri/$sumoAgentApplicationVM"
-				DestinationPath = "$LocalDLPath\$sumoAgentApplicationVM"
-				MatchSource = $false
-		}
-
-		xRemoteFile sumo 
+		xRemoteFile Download_Sumo_Conf 
 		{
 				Uri = "$gitLocation/$sumoConf"
 				DestinationPath = "$LocalDLPath\$sumoConf"
-				MatchSource = $false
-		}
-
-		xRemoteFile Download_Install_Agent.ps1.zip
-		{
-				Uri = "$sourceURI/Install-PCoIPAgent.ps1.zip"
-				DestinationPath = "$LocalDLPath\Install-PCoIPAgent.ps1.zip"
 				MatchSource = $false
 		}
 
@@ -220,11 +182,11 @@ Configuration InstallCAM
         # other applications are installed.
         Script Install_SumoCollector
         {
-            DependsOn  = "[File]Sumo_Directory"
+            DependsOn  = @("[xRemoteFile]Download_Sumo_Conf","[File]Sumo_Directory")
             GetScript  = { @{ Result = "Install_SumoCollector" } }
 
             TestScript = { 
-                return Test-Path "C:\sumo\sumo.conf" -PathType leaf
+                return Test-Path "C:\sumo\$using:sumoConf" -PathType leaf
                 }
 
             SetScript  = {
@@ -234,22 +196,23 @@ Configuration InstallCAM
                 $sumo_package = "$using:sourceURI/$installerFileName"
 				$sumo_config = "$using:gitLocation/$using:sumoConf"
                 $sumo_collector_json = "$using:gitLocation/sumo-admin-vm.json"
-                $dest = "C:\sumo"
+				$dest = "C:\sumo"
+				$destConf = "$dest\$using:sumoConf"
 
-				Write-Host "Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile $dest\sumo.conf"
-                Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile "$dest\sumo.conf"
+				Write-Host "Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile $destConf"
+                Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile $destConf
 
 				Write-Host "Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile $dest\sumo-admin-vm.conf"
                 Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile "$dest\sumo-admin-vm.json"
 				
-                #Insert unique ID
+                # Insert unique ID
                 $collectorID = "$using:sumoCollectorID"
-                (Get-Content -Path "$dest\sumo.conf").Replace("collectorID", $collectorID) | Set-Content -Path "$dest\sumo.conf"
+                (Get-Content -Path $destConf).Replace("collectorID", $collectorID) | Set-Content -Path $destConf
                 
 				Write-Host "Before Invoke-WebRequest $sumo_package -Outfile $dest\$installerFileName"
                 Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
                 
-                #install the collector
+                # Install the collector
 				Write-Host "Installing the collector"
                 $command = "$dest\$installerFileName -console -q"
                 Invoke-Expression $command

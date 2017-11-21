@@ -53,9 +53,6 @@
         "CAMDeploymentInfo": {
             "value": "This+would+be+a+URI+encoded+string"
         },
-        "_agentArtifactsLocation": {
-            "value": "https://raw.githubusercontent.com/teradici/deploy/vmss/end-user-application-machines/new-agent-vm"
-        },
         "_artifactsLocation": {
             "value": "https://raw.githubusercontent.com/teradici/deploy/vmss/frontend"
         }

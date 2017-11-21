@@ -106,12 +106,6 @@
         "description": "The location of the blobs for admin GUI machine installation"
       }
     },
-    "_agentArtifactsLocation": {
-      "type": "string",
-      "metadata": {
-          "description": "The location of resources, such as templates and DSC modules, specific to the PCoIP Agent"
-      }
-    },
     "_artifactsLocation": {
       "type": "string",
       "metadata": {
@@ -258,9 +252,6 @@
           },
           "_artifactsLocation": {
             "value": "[concat(parameters('_artifactsLocation'), '/new-admin-vm')]"
-          },
-          "_agentArtifactsLocation": {
-              "value": "[parameters('_agentArtifactsLocation')]"
           },
           "camSaasUri": {
             "value": "[parameters('camSaasUri')]"
