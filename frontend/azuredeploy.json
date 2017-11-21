@@ -21,12 +21,6 @@
         "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
       }
     },
-    "domainControllerName": {
-      "type": "string",
-      "metadata": {
-        "description": "FQDN of the domain controller to interface with in the domain"
-      }
-    },
     "localAdminUsername": {
       "type": "string",
       "metadata": {
@@ -58,18 +52,6 @@
           "description": "ID of the subnet that the Conection Service gateway(s) attach to"
       }
     },
-    "camSaasUri": {
-      "type": "string",
-      "metadata": {
-          "description": "URI for the CAM Service"
-      }
-    },
-    "verifyCAMSaaSCertificate": {
-      "type": "bool",
-      "metadata": {
-        "description": "a flag to indicate whether to verify CAM SaaS Server certificate. True means to verify."
-      }
-    },
     "CAMDeploymentInfo": {
       "type": "securestring",
       "metadata": {
@@ -92,12 +74,6 @@
       "type": "string",
       "metadata": {
           "description": "The domain group the application servers should join"
-      }
-    },
-    "keyVaultId": {
-      "type": "string",
-      "metadata": {
-          "description": "Id of the keyvault where user credentials for the deployment are stored."
       }
     },
     "CAMDeploymentBlobSource": {
@@ -229,9 +205,6 @@
           "dnsLabelPrefix": {
             "value": "[variables('connectionServerName')]"
           },
-          "domainToJoin": {
-            "value": "[parameters('domainName')]"
-          },
           "domainGroupAppServersJoin": {
             "value": "[parameters('domainGroupAppServersJoin')]"
           },
@@ -241,26 +214,11 @@
           "domainPassword": {
             "value": "[parameters('domainAdminPassword')]"
           },
-          "domainControllerName": {
-            "value": "[parameters('domainControllerName')]"
-          },
           "CAMDeploymentBlobSource": {
             "value": "[parameters('CAMDeploymentBlobSource')]"
           },
-          "storageAccountName": {
-            "value": "[variables('storageAccountName')]"
-          },
           "_artifactsLocation": {
             "value": "[concat(parameters('_artifactsLocation'), '/new-admin-vm')]"
-          },
-          "camSaasUri": {
-            "value": "[parameters('camSaasUri')]"
-          },
-          "verifyCAMSaaSCertificate": {
-            "value": "[parameters('verifyCAMSaaSCertificate')]"
-          },
-          "keyVaultId": {
-            "value": "[parameters('keyVaultId')]"
           },
           "CAMDeploymentInfo": {
             "value": "[parameters('CAMDeploymentInfo')]"

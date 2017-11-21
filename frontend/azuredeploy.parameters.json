@@ -11,9 +11,6 @@
         "domainName": {
             "value": "mydomain.com"
         },
-        "domainControllerName": {
-            "value": "dc.mydomain.com"
-        },
         "LocalAdminUsername": {
             "value": "localadmin"
         },
@@ -38,17 +35,8 @@
         "certPassword": {
             "value": "changeit"
         },
-        "camSaasUri": {
-            "value": "https://cam.teradici.com"
-        },
         "domainGroupAppServersJoin": {
             "value": "Remote Workstations"
-        },
-        "verifyCAMSaaSCertificate": {
-            "value": true
-        },
-        "keyVaultId": {
-            "value": "/subscriptions/$subID/resourceGroups/$RGNameLocal/providers/Microsoft.KeyVault/vaults/$kvName"
         },
         "CAMDeploymentInfo": {
             "value": "This+would+be+a+URI+encoded+string"
