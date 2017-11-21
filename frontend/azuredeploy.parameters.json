@@ -54,7 +54,7 @@
             "value": "This+would+be+a+URI+encoded+string"
         },
         "_artifactsLocation": {
-            "value": "https://raw.githubusercontent.com/teradici/deploy/vmss/frontend"
+            "value": "https://raw.githubusercontent.com/teradici/deploy/bddc2/frontend"
         }
     }
 }

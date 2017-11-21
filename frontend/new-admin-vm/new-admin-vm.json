@@ -8,12 +8,6 @@
                 "description": "Unique public DNS prefix for the deployment. The fqdn will look something like '<dnsname>.westus.cloudapp.azure.com'. Up to 62 chars, digits or dashes, lowercase, should start with a letter: must conform to '^[a-z][a-z0-9-]{1,61}[a-z0-9]$'."
             }
         },
-        "domainToJoin": {
-            "type": "string",
-            "metadata": {
-                "description": "The FQDN of the AD domain"
-            }
-        },
         "domainGroupAppServersJoin": {
             "type": "string",
             "metadata": {
@@ -30,36 +24,6 @@
             "type": "securestring",
             "metadata": {
                 "description": "Password of the account on the domain"
-            }
-        },
-        "domainControllerName": {
-            "type": "string",
-            "metadata": {
-                "description": "The network name of the domain controller (without domain suffix)"
-            }
-        },
-        "storageAccountName": {
-            "type": "string",
-            "metadata": {
-                "description": "Storage account to use for VM data and VHD's"
-            }
-        },
-        "camSaasUri": {
-            "type": "string",
-            "metadata": {
-                "description": "URI for the CAM SAAS"
-            }
-        },
-        "verifyCAMSaaSCertificate": {
-            "type": "bool",
-            "metadata": {
-                "description": "a flag to indicate whether to verify CAM SaaS Server certificate. True means to verify."
-            }
-        },
-        "keyVaultId": {
-            "type": "string",
-            "metadata": {
-                "description": "Id of the keyvault where user credentials for the deployment are stored."
             }
         },
         "CAMDeploymentInfo": {
@@ -114,10 +78,8 @@
                     },
                     "configurationFunction": "Install-CAM-CS.ps1\\InstallCAM",
                     "Properties": {
-                        "domainFQDN":  "[parameters('domainToJoin')]",
                         "domainGroupAppServersJoin": "[parameters('domainGroupAppServersJoin')]",
                         "sourceURI": "[parameters('CAMDeploymentBlobSource')]",
-						"templateURI": "[parameters('_artifactsLocation')]",
                         "DomainAdminCreds": {
                             "UserName": "[parameters('domainUsername')]",
                             "Password": "PrivateSettingsRef:DomainAdminPassword"
@@ -126,12 +88,7 @@
                             "UserName": "dummy",
                             "Password": "PrivateSettingsRef:CAMDeploymentInfo"
                         },
-                        "camSaasUri" : "[parameters('camSaasUri')]",
-                        "keyVaultId" : "[parameters('keyVaultId')]",
-                        "verifyCAMSaaSCertificate": "[parameters('verifyCAMSaaSCertificate')]",
-                        "DCVMName": "[parameters('domainControllerName')]",
                         "RGName": "[resourceGroup().name]",
-                        "storageAccountName": "[parameters('storageAccountName')]",
                         "gitLocation": "[parameters('_artifactsLocation')]",
                         "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-AdminUI-',subscription().subscriptionId)]"
                     }

@@ -57,9 +57,6 @@ Configuration InstallCAM
         [String]$domainGroupAppServersJoin,
 
         [Parameter(Mandatory)]
-        [String]$storageAccountName,
-
-        [Parameter(Mandatory)]
         [System.Management.Automation.PSCredential]$DomainAdminCreds,
 
         [Parameter(Mandatory)]
