@@ -53,20 +53,6 @@
         "description": "PCoIP Agent License Registration Code."
       }
     },
-    "camSaasUri": {
-      "type": "string",
-      "metadata": {
-        "description": "URI for the CAM SAAS"
-      },
-      "defaultValue": "https://cam-antar.teradici.com"
-    },
-    "verifyCAMSaaSCertificate": {
-      "type": "bool",
-      "defaultValue": true,
-      "metadata": {
-        "description": "a flag to indicate whether to verify CAM SaaS Server certificate. True means to verify."
-      }
-    },
     "certData": {
       "type": "string",
       "metadata": {
@@ -79,16 +65,10 @@
         "description": "Password for .pfx certificate"
       }
     },
-    "keyVaultId": {
-      "type": "string",
-      "metadata": {
-          "description": "Id of the keyvault where user credentials for the deployment are stored."
-      }
-    },
     "CAMDeploymentInfo": {
       "type": "securestring",
       "metadata": {
-          "description": "Encoded blob of authorization and URL information for the CAM Frontend."
+          "description": "Encoded blob of authorization and URL information for the CAM Connection Service."
       }
     },
     "CAMDeploymentBlobSource": {
@@ -153,7 +133,7 @@
 
     {
       "type": "Microsoft.Resources/deployments",
-      "name": "Frontend",
+      "name": "ConnectionService",
       "apiVersion": "2016-02-01",
       "dependsOn": [
         "Root"
@@ -183,29 +163,17 @@
           "domainGroupAppServersJoin": {
             "value": "[variables('domainGroupAppServersJoin')]"
           },
-          "domainControllerName": {
-            "value": "vm-dc"
-          },
           "localAdminUsername": {
             "value": "[parameters('localAdminUsername')]"
           },
           "localAdminPassword": {
             "value": "[parameters('localAdminPassword')]"
           },
-          "camSaasUri": {
-            "value": "[parameters('camSaasUri')]"
-          },
-          "verifyCAMSaaSCertificate": {
-            "value": "[parameters('verifyCAMSaaSCertificate')]"
-          },
           "certData": {
             "value": "[parameters('certData')]"
           },
           "certPassword": {
             "value": "[parameters('certPassword')]"
-          },
-          "keyVaultId": {
-            "value": "[parameters('keyVaultId')]"
           },
           "CAMDeploymentInfo": {
             "value": "[parameters('CAMDeploymentInfo')]"
