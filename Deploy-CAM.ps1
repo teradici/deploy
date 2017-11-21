@@ -137,7 +137,11 @@ function Register-CAM()
 	)
 
     $camDeploymentInfo = @{} #start with an empty hash map
+
+	#define variable to keep trace of the error during retry process
+	$camRegistrationError = ""
 	for($idx = 0; $idx -lt $retryCount; $idx++) {
+		# reset the variable at each iteration, so we can always keep the current loop error message
 		$camRegistrationError = ""
 		try {
 			$certificatePolicy = [System.Net.ServicePointManager]::CertificatePolicy
@@ -338,8 +342,12 @@ function Register-RemoteWorkstation()
 		machineName = $adminDesktopVMName
 		subscriptionId = $subscription
 	}
+	
+	# define this variable to keep record of the error message during retry 
+	$machineRegistrationError = ""
 
 	for($idx = 0; $idx -lt $retryCount; $idx++) {
+		# has to reset otherwise it holds the previous error even the current retry success
 		$machineRegistrationError = ""
 
 		try {
