@@ -25,7 +25,7 @@ By default, the CAM deployment scripts will create a service principal account f
 
 If you are not in posession of an account which meets the criteria, you must create a service principal account before deploying CAM.
 
-There are multiple ways to manually create a service principal account. See [Creating a Service Principal Account](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-create-service-principal-portal) for instructions on how to do it from the Azure portal.
+There are multiple ways to manually create a service principal account. See [Creating a Service Principal Account](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-group-create-service-principal-portal) for instructions on how to do it from the Azure portal. Be sure to give the service principal account contributor access to the resource group that CAM is being deployed to. This may involve creating the Resource Group manually before starting the deployment.
 
 The CAM deployment will use the created service principal account to interact with Azure.
 
