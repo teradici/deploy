@@ -755,7 +755,7 @@ function Generate-Certificate-And-Passwords()
 	$CAMConfig.parameters.CAMCSCertificate.value = $certInfo.cert
 	$CAMConfig.parameters.CAMCSCertificatePassword.value = $certInfo.passwd
 	
-	Write-Host "Successfully put certificate in Key Vault."
+	Write-Host "Successfully imported certificate."
 }
 
 
@@ -839,7 +839,7 @@ function Get-CertificateInfoForAppGateway() {
 
 		Write-Host "Certificate generated. Formatting as .pfx file."
 
-		#generate pfx file from certificate
+		# Generate pfx file from certificate
 		$certPath = $certLoc + '\' + $cert.Thumbprint
 
 		if (-not $tempDir) {
@@ -851,23 +851,24 @@ function Get-CertificateInfoForAppGateway() {
 			Remove-Item $certificateFile
 		}
 
-		#generate password for pfx file
-        #https://docs.microsoft.com/en-us/azure/application-gateway/application-gateway-ssl
-		#The certificate password must be between 4 to 12 characters made up of letters or numbers. Special characters are not accepted.
+		# Generate password for pfx file
+        # https://docs.microsoft.com/en-us/azure/application-gateway/application-gateway-ssl
+		# The certificate password must be between 4 to 12 characters made up of letters or numbers.
+		# Special characters are not accepted.
 		$certPswd = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 10 | % {[char]$_})
 
 		$certificateFilePassword = ConvertTo-SecureString -String $certPswd -AsPlainText -Force
 
-		#export pfx file
+		# Export pfx file
 		Export-PfxCertificate -Cert $certPath -FilePath $certificateFile -Password $certificateFilePassword
 
-        #delete self-signed certificate
+        # Delete self-signed certificate
 		if(Test-Path $certPath) { 
 			Remove-Item $certPath -ErrorAction SilentlyContinue
 		}
 	} 
 
-	#read from pfx file and convert to base64 string
+	# Read from pfx file and convert to base64 string
 	$fileContentEncoded = [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes($certificateFile))
 
 	$CSCertificate = ConvertTo-SecureString $fileContentEncoded -AsPlainText -Force
@@ -877,7 +878,7 @@ function Get-CertificateInfoForAppGateway() {
 		"passwd" = $certificateFilePassword
 	}
 
-	#delete certificate file if it is generated
+	# Delete certificate file if it is generated
 	if ($needToCreateSelfCert -and	(Test-Path  $certificateFile) ) { 
 		Remove-Item $certificateFile -ErrorAction SilentlyContinue 
 	}
@@ -918,7 +919,7 @@ function New-CAMAppSP()
 		$RGName
 	)
 
-	#Application name
+	# Application name
 	$appName = "CAM-$RGName"
 	Write-Host "Calling Azure Active Directory to make app $appName and a service principal."
 
@@ -946,14 +947,14 @@ function New-CAMAppSP()
 			$exceptionTenantId = $exceptionContext.Tenant.Id
 			Write-Error "Failure to remove application $appName from tenant $exceptionTenantId. Please check your AAD tenant permissions."
 
-			#re-throw whatever the original exception was
+			# Re-throw whatever the original exception was
 			throw
 		}
 	}
 
 	Write-Host "Purge complete. Creating new app $appName."
 
-	# retry required on app registration (it seems) if there is a race condition with the deleted application.
+	# Retry required on app registration (it seems) if there is a race condition with the deleted application.
 	$newAppCreateRetry = 60
 	while($newAppCreateRetry -ne 0)
 	{
@@ -982,7 +983,7 @@ function New-CAMAppSP()
 
 	Write-Host "New app creation complete. Creating SP."
 
-	# retry required since it can take a few seconds for the app registration to percolate through Azure.
+	# Retry required since it can take a few seconds for the app registration to percolate through Azure.
 	# (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
 	$SPCreateRetry = 60
 	while($SPCreateRetry -ne 0)
@@ -1011,7 +1012,7 @@ function New-CAMAppSP()
 	
 	Write-Host "SP creation complete. Adding role assignment."
 
-	# retry required since it can take a few seconds for the app registration to percolate through Azure.
+	# Retry required since it can take a few seconds for the app registration to percolate through Azure.
 	# (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
 	$rollAssignmentRetry = 120
 	while($rollAssignmentRetry -ne 0)
@@ -1038,11 +1039,11 @@ function New-CAMAppSP()
 		}
 	}
 
-	# get SP credentials
+	# Get SP credentials
 	$spPass = $generatedPassword
 	$spCreds = New-Object -TypeName pscredential -ArgumentList  $sp.ApplicationId, $spPass
 
-	# get tenant ID for this subscription
+	# Get tenant ID for this subscription
 	$subForTenantID = Get-AzureRmContext
 	$tenantID = $subForTenantID.Tenant.Id
 
@@ -1053,7 +1054,7 @@ function New-CAMAppSP()
 	return $spInfo
 }
 
-#creates cam deployment info structures and populates keyvault
+# Creates cam deployment info structures
 function New-CamDeploymentInfo()
 {
 	param(
@@ -1153,7 +1154,7 @@ function Deploy-CAM()
 		[System.Management.Automation.PSCredential]
 		$spCredential,
 
-		[parameter(Mandatory=$false)] #required if $spCredential is provided
+		[parameter(Mandatory=$false)] # required if $spCredential is provided
 		[string]
 		$tenantId,
 
@@ -1195,7 +1196,7 @@ function Deploy-CAM()
 		value=(ConvertTo-SecureString $CAMDeploymentBlobSource -AsPlainText -Force)
 		clearValue = $CAMDeploymentBlobSource
 	}
-	$CAMConfig.parameters._artifactsLocation = @{
+	$CAMConfig.parameters.artifactsLocation = @{
 		value=(ConvertTo-SecureString $artifactsLocation -AsPlainText -Force)
 		clearValue = $artifactsLocation
 	}
@@ -1346,7 +1347,7 @@ function Deploy-CAM()
 			-camSaasBaseUri $camSaasUri `
 			-verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
 
-		Write-Host "Populating keyvault with deployment information for the Cloud Access Manager Connection Service."
+		Write-Host "Creating deployment information for the Cloud Access Manager Connection Service."
 		New-CamDeploymentInfo `
 			-subscriptionId $subscriptionId `
 			-deploymentRegistrationInfo ($camDeploymenRegInfo + $userBlobInfo) `
@@ -1354,7 +1355,7 @@ function Deploy-CAM()
 			-kvInfo $kvInfo `
 			-CAMConfig $CAMConfig
 
-		Write-Host "Populating keyvault with deployment information for the Cloud Access Manager Connection Service."
+		Write-Host "Populating keyvault."
 		Add-SecretsToKeyVault `
 			-kvName $kvInfo.VaultName `
 			-CAMConfig $CAMConfig | Out-Null
@@ -1396,7 +1397,7 @@ function Deploy-CAM()
 				"keyVault": {
 					"id": "$kvId"
 				},
-				"secretName": "_artifactsLocation"
+				"secretName": "artifactsLocation"
 			}
 		},
 		"LocalAdminUsername": {
