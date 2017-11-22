@@ -91,7 +91,7 @@
             }
           },
           {
-            "name": "[parameters(rwSubnetName')]",
+            "name": "[parameters('rwSubnetName')]",
             "properties": {
                 "addressPrefix": "[parameters('rwSubnetRange')]"
             }
