@@ -62,6 +62,8 @@ Click the **Deploy Azure** button to begin.
 
 **NOTE:** In general it takes over an hour for the deployment to complete.
 
+**NOTE:** By clicking one of the following Deploy on Azure buttons, you accept the terms of the Teradici Cloud Access Software End User License Agreement and you have read and agree to be bound by the software license for use of the third-party drivers.
+
 <a target="_blank" href="https://portal.azure.com/">
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
@@ -69,25 +71,40 @@ Click the **Deploy Azure** button to begin.
 1. Select the Microsoft Azure account you want to use.
 1. Enter your Password and click **Sign in.**
 1. Launch an Azure Cloud Shell Powershell instance by clicking the Cloud Shell icon from the top panel of the Azure Portal (top right corner of the Azure Portal, close to the search bar). See [Overiew of Azure Cloud Shell](https://docs.microsoft.com/en-ca/azure/cloud-shell/overview?view=azurermps-5.0.0) for details on how to set this up. The rest of the setup steps will be run in the Azure Cloud Shell. It is recomended to maximize the Cloud Shell window so prompts can be properly seen.
-1. Change to your Cloud Drive directory. 
+1. Change to your Home directory.
     ```
-    cd $HOME\CloudDrive\
+    cd $HOME\
     ```
 1. Download the CAM Deployment script.
     ```
     Invoke-WebRequest -URI https://raw.githubusercontent.com/teradici/deploy/bd/Deploy-CAM.ps1 -OutFile .\Deploy-CAM.ps1
     ```
-1. Run the CAM Deployment script.
+1. Run the CAM Deployment script. This script can be run interactivley through prompts or directly through the command line. To run it interactvley, run the following command:
     ```
     .\Deploy-CAM.ps1
     ```
-1. You may now be prompted to select a subscription to use to deploy CAM in. Choose the number accordingly.
-1. Existing Resource Groups will be listed if there are Resource Groups available for CAM to be deployed into. Either select an existing Resource Group by selecting the number next to desired Resource Group or create a new Resource Group by providing a name for the new Resource Group.
-1. Available deployment locations will be listed. Select a location from one of the listed options by typing in the *Location* field for the desired location.
-1. Enter the desired username and password for the **Administrative Domain User**. This is a new account that will be created.
-1. Enter a **Domain Name** and ensure it finishes in *.something* (eg, *.com, .local, etc*).
-1. Enter the CAS license registration code for the **Registration Code**.
-1. When prompted for Service Principal credentials, either press 'Enter' to continue and let the script generate them or enter 'no' to provide manually generated credentials.
+    1. You may now be prompted to select a subscription to use to deploy CAM in. Choose the number accordingly.
+    1. Existing Resource Groups will be listed if there are Resource Groups available for CAM to be deployed into. Either select an existing Resource Group by selecting the number next to desired Resource Group or create a new Resource Group by providing a name for the new Resource Group.
+    1. Available deployment locations will be listed. Select a location from one of the listed options by typing in the *Location* field for the desired location.
+    1. Enter the desired username and password for the **Administrative Domain User**. This is a new account that will be created.
+    1. Enter a **Domain Name** and ensure it finishes in *.something* (eg, *.com, .local, etc*).
+    1. Enter the CAS license registration code for the **Registration Code**.
+    1. When prompted for Service Principal credentials, either press 'Enter' to continue and let the script generate them or enter 'no' to provide manually generated credentials.
+
+Alternativley, the prompts can be skipped by providing required parameters directly as follows:
+    
+    $domainCredentials = Get-Credential
+    $secureRegistrationCode = ConvertTo-SecureString <Registration-Code> -AsPlainText -Force
+    .\Deploy-CAM.ps1 `
+        -domainAdminCredential $domainCredentials `
+        -domainName <Domain-Name> `
+        -registrationCode $secureRegistrationCode `
+        -ResourceGroupName <Resource-Group-Name> `
+        -location <Location-Code>
+    
+If you wish to provide your own Service Principal Credentials using this method, the additional parameter `-spCredential $spCredential` is required where `$spCredential` is set by:
+
+    $spCredential = New-Object -TypeName pscredential -ArgumentList <Service-Principal-Client-ID>, (ConvertTo-SecureString <Service-Principal-Client-Secret> -AsPlainText -Force)
 
 The deployment will now begin to run. 
 
