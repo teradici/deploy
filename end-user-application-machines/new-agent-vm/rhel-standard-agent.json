@@ -2,16 +2,10 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "existingVNETName": {
+        "subnetID": {
             "type": "string",
             "metadata": {
-                "description": "Existing VNET that contains the domain controller"
-            }
-        },
-        "existingSubnetName": {
-            "type": "string",
-            "metadata": {
-                "description": "Existing subnet that contains the domain controller"
+                "description": "ID of the subnet to attach to"
             }
         },
         "dnsLabelPrefix": {
@@ -101,16 +95,16 @@
             },
             "defaultValue": "?public"
         },
-        "CAMDeploymentBlobSource": {
+        "binaryLocation": {
             "type": "string",
             "metadata": {
                 "description": "The location of the blobs for admin GUI machine installation"
             }
         },
-        "binaryLocation": {
+        "CAMDeploymentBlobSource": {
             "type": "string",
             "metadata": {
-                "description": "The location of the blobs for admin GUI machine installation"
+                "description": "The location of the blobs for end-user-application-vms"
             }
         },
         "registrationCode": {
@@ -126,26 +120,39 @@
                 "description": "Storage account to use for VM data and VHD's"
             }
         },
+        "enableAutoShutdown": {
+            "type": "bool",
+            "defaultValue": true,
+            "metadata": {
+                "description": "Flag for enabling auto-shutdown on idle for Agents"
+            }
+        },
+        "CAMDeploymentInfo": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Encoded blob of authorization and URL information for the CAM deployment"
+            },
+            "defaultValue": "null"
+        },
         "userStorageAccountName": {
             "type": "string",
             "metadata": {
                 "description": "Storage account for user blob and custom templates"
-            }
+            },
+            "defaultValue": ""
         },
         "userStorageAccountKey": {
             "type": "securestring",
             "metadata": {
                 "description": "Storage account key for accessing private blob data"
-            }
+            },
+            "defaultValue": ""
         }
     },
     "variables": {
 
         "apiVersion": "2015-06-15",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
-        "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
-        "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
-        "registrationCode": "[parameters('registrationCode')]",
         "enableAutoShutdown" : false,
 
         "osSettings": {
@@ -188,7 +195,7 @@
                         "properties": {
                             "privateIPAllocationMethod": "Dynamic",
                             "subnet": {
-                                "id": "[variables('subnetId')]"
+                                "id": "[parameters('subnetID')]"
                             }
                         }
                     }
@@ -266,7 +273,7 @@
                     "fileUris": [ "[ concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'))]" ]
                 },
                 "protectedSettings": {
-                    "commandToExecute": "[concat('bash ', variables('scriptFileName'), ' \"', parameters('registrationCode'), '\" \"', parameters('agentType'), '\" \"', variables('vmSettings').vmNamePrefix, '\" \"', parameters('domainToJoin'), '\" \"', parameters('domainUsername'), '\" \"', parameters('domainPassword'), '\" \"', parameters('domainGroupToJoin'), '\"')]",
+                    "commandToExecute": "[concat('bash ', variables('scriptFileName'), ' \"', variables('registrationCode'), '\" \"', parameters('agentType'), '\" \"', variables('vmSettings').vmNamePrefix, '\" \"', parameters('domainToJoin'), '\" \"', parameters('domainUsername'), '\" \"', parameters('domainPassword'), '\" \"', parameters('domainGroupToJoin'), '\"')]",
                     "storageAccountName": "[parameters('userStorageAccountName')]",
                     "storageAccountKey": "[parameters('userStorageAccountKey')]"
                 }

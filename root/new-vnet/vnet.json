@@ -28,6 +28,19 @@
       },
       "defaultValue": "10.0.0.0/24"
     },
+    "rwSubnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the subnet created in the new VNET"
+      }
+    },
+    "rwSubnetRange": {
+      "type": "string",
+      "metadata": {
+        "description": "The address range of the subnet created in the new VNET"
+      },
+      "defaultValue": "10.0.0.0/24"
+    },
     "gatewaySubnetName": {
       "type": "string",
         "metadata": {
@@ -71,12 +84,18 @@
               "addressPrefix": "[parameters('subnetRange')]"
             }
           },
-        {
+          {
             "name": "[parameters('gatewaySubnetName')]",
             "properties": {
                 "addressPrefix": "[parameters('gatewaySubnetRange')]"
             }
-        }
+          },
+          {
+            "name": "[parameters(rwSubnetName')]",
+            "properties": {
+                "addressPrefix": "[parameters('rwSubnetRange')]"
+            }
+          }
         ]
       }
     }

@@ -340,9 +340,6 @@ function New-RemoteWorstationTemplates
 	Write-Host "Creating default remote workstation template parameters file data"
 
 	#Setup internal variables from config structure
-	$existingSubnetName = $CAMConfig.internal.existingSubnetName
-	$existingVNETName = $CAMConfig.internal.existingVNETName
-
 	$VMAdminUsername = "localadmin"
 	$domainGroupAppServersJoin = $CAMConfig.internal.domainGroupAppServersJoin
 
@@ -364,10 +361,11 @@ function New-RemoteWorstationTemplates
 	"`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
 	"contentVersion": "1.0.0.0",
 	"parameters": {
+		"agentType": { "value": %agentType% }
 		"vmSize": { "value": "%vmSize%" },
 		"CAMDeploymentBlobSource": { "value": "$blobUri" },
 		"binaryLocation": { "value": "$binaryLocation" },
-		"existingSubnetName": { "value": "$existingSubnetName" },
+		"subnetID": { "value": "$($CAMConfig.parameters.remoteWorkstationSubnet.clearValue)" },
 		"domainUsername": { "value": "$DomainAdminUsername" },
 		"userStorageAccountName": {
 			"reference": {
@@ -402,7 +400,6 @@ function New-RemoteWorstationTemplates
 			}
 		},
 		"dnsLabelPrefix": { "value": "tbd-vmname" },
-		"existingVNETName": { "value": "$existingVNETName" },
 		"vmAdminUsername": { "value": "$VMAdminUsername" },
 		"vmAdminPassword": {
 			"reference": {
@@ -432,6 +429,10 @@ function New-RemoteWorstationTemplates
 	$standardArmParamContent = $armParamContent -replace "%vmSize%",$standardVMSize
 	$graphicsArmParamContent = $armParamContent -replace "%vmSize%",$graphicsVMSize
 	$linuxArmParamContent = $armParamContent -replace "%vmSize%",$standardVMSize
+
+	$standardArmParamContent = $standardArmParamContent -replace "%agentType%","Standard"
+	$graphicsArmParamContent = $graphicsArmParamContent -replace "%agentType%","Graphics"
+	$linuxArmParamContent = $linuxArmParamContent -replace "%agentType%","Standard"
 
 	Write-Host "Creating default template parameters files"
 
@@ -1228,9 +1229,33 @@ function Deploy-CAM()
 
 
 	$CAMConfig.internal = @{}
-	$CAMConfig.internal.existingSubnetName = "Subnet-CloudAccessManager"
-	$CAMConfig.internal.existingVNETName = "vnet-CloudAccessManager"
+	$CAMConfig.internal.vnetName = "vnet-CloudAccessManager"
+	$CAMConfig.internal.RWSubnetName = "subnet-RemoteWorkstation"
+	$CAMConfig.internal.CSSubnetName = "subnet-ConnectionService"
+	$CAMConfig.internal.GWSubnetName = "subnet-Gateway"
+	$CAMConfig.internal.vnetID = `
+	"/subscriptions/$subscriptionId/resourceGroups/$RGName/providers/Microsoft.Network/virtualNetworks/$($CAMConfig.internal.vnetName)"
 
+	$CAMConfig.internal.RWSubnetID = $CAMConfig.internal.vnetID + "/subnets/$($CAMConfig.internal.RWSubnetName)"
+	$CAMConfig.internal.CSSubnetID = $CAMConfig.internal.vnetID + "/subnets/$($CAMConfig.internal.CSSubnetName)"
+	$CAMConfig.internal.GWSubnetID = $CAMConfig.internal.vnetID + "/subnets/$($CAMConfig.internal.GWSubnetName)"
+
+	$CAMConfig.parameters.remoteWorkstationSubnet = @{
+		value=(ConvertTo-SecureString $CAMConfig.internal.RWSubnetID -AsPlainText -Force)
+		clearValue = $CAMConfig.internal.RWSubnetID
+	}
+
+	$CAMConfig.parameters.connectionServiceSubnet = @{
+		value=(ConvertTo-SecureString $CAMConfig.internal.RWSubnetID -AsPlainText -Force)
+		clearValue = $CAMConfig.internal.CSSubnetID
+	}
+
+	$CAMConfig.parameters.gatewaySubnet = @{
+		value=(ConvertTo-SecureString $CAMConfig.internal.RWSubnetID -AsPlainText -Force)
+		clearValue = $CAMConfig.internal.GWSubnetID
+	}
+	
+	
 	$CAMConfig.internal.domainGroupAppServersJoin = "Remote Workstations"
 	
 	$CAMConfig.internal.standardVMSize = "Standard_D2_v2"

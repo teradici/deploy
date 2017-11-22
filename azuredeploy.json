@@ -204,11 +204,8 @@
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          "existingVNETName": {
-            "value": "[reference('Root').outputs.virtualNetworkName.value]"
-          },          
-          "existingSubnetName": {
-            "value": "[reference('Root').outputs.adSubnetName.value]"
+          "subnetId": {
+            "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', reference('Root').outputs.virtualNetworkName.value, reference('Root').outputs.rwSubnetName.value)]"
           },
           "dnsLabelPrefix": {
             "value" : "[variables('adminDesktopVMName')]"
