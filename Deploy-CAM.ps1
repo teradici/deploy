@@ -270,7 +270,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 			$camDeploymentInfo.Add("CAM_SUBSCRIPTIONID",$subscriptionId)
 			$camDeploymentInfo.Add("CAM_RESOURCEGROUP",$RGName)
 			# When we have the admin as a service account:
-			# $camDeploymentInfo.Add("CAM_DOMAINACCOUNTNAME",$CAMConfig.ARMParameters.parameters.domainAdminUsername.value)
+			# $camDeploymentInfo.Add("CAM_DOMAINACCOUNTNAME",$CAMConfig.ARMParameters... service account info)
 			# We'll want to pass through CAM_VERIFYCERT at some point.
 			
 			Write-Host "Deployment has been registered successfully with Cloud Access Manager service"
@@ -331,22 +331,25 @@ function New-RemoteWorstationTemplates
 	Write-Host "Creating default remote workstation template parameters file data"
 
 	#Setup internal variables from config structure
-	$existingSubnetName = $CAMConfig.internal.existingSubnetName
-	$DomainAdminUsername = $CAMConfig.ARMParameters.parameters.domainAdminUsername.value
 	$djSecretName = $CAMConfig.internal.djSecretName
 	$rcSecretName = $CAMConfig.internal.rcSecretName
 	$rwLocalSecretName = $CAMConfig.internal.rwLocalSecretName
 	$csLaSecretName = $CAMConfig.internal.csLocalSecretName
-	$existingVNETName = $CAMConfig.internal.existingVNETName
-	$VMAdminUsername = "localadmin"
-	$domainFQDN = 	$CAMConfig.ARMParameters.parameters.domainName.value
-	$domainGroupAppServersJoin = $CAMConfig.internal.domainGroupAppServersJoin
 	$saSasTokenSecretName = $CAMConfig.internal.saSasTokenSecretName
+	$existingSubnetName = $CAMConfig.internal.existingSubnetName
+	$existingVNETName = $CAMConfig.internal.existingVNETName
+
+	$VMAdminUsername = "localadmin"
+	$domainGroupAppServersJoin = $CAMConfig.internal.domainGroupAppServersJoin
+
 	$standardVMSize = $CAMConfig.internal.standardVMSize
 	$graphicsVMSize = $CAMConfig.internal.graphicsVMSize
 	$agentARM = $CAMConfig.internal.agentARM
 	$gaAgentARM = $CAMConfig.internal.gaAgentARM
 	$linuxAgentARM = $CAMConfig.internal.linuxAgentARM
+
+	$DomainAdminUsername = $CAMConfig.ARMParameters.parameters.domainAdminUsername.value
+	$domainFQDN = 	$CAMConfig.ARMParameters.parameters.domainName.value
 
 	#Put the VHD's in the user storage account until we move to managed storage... 
 	$VHDStorageAccountName = $storageAccountContext.StorageAccountName
@@ -629,8 +632,7 @@ function New-CAM-KeyVault()
 		$spName,
 
 		[parameter(Mandatory=$true)]
-		[String]
-		$creatingUserId
+		$adminAzureContext
 	)
 
 
@@ -668,16 +670,8 @@ function New-CAM-KeyVault()
                     -VaultName $kvName `
                     -ServicePrincipalName $spName `
                     -PermissionsToSecrets Get, Set `
-                    -ErrorAction stop | Out-Null
-<# Access right issue... would be great to have some solution! Arrgh - perhaps can change context to admin if that account
- has correct rights (and only try once and fail with a log message but no side-effects.)
-				Write-Host "Set access policy for vault $kvName for user $creatingUserId"
-				Set-AzureRmKeyVaultAccessPolicy `
-					-VaultName $kvName `
-					-UserPrincipalName $creatingUserId `
-					-PermissionsToSecrets Get, Set `
-					-ErrorAction stop
-#>
+					-ErrorAction stop | Out-Null
+
 				break
 			}
 			catch
@@ -697,24 +691,32 @@ function New-CAM-KeyVault()
 		throw
 	}
 
+	# Try to set key vault access for the calling administrator (if they have rights...)
+
+	# Get previous SP context and set back to admin
+	$spContext = Get-AzureRMContext
+	Set-AzureRMContext -Context $adminAzureContext | Out-Null
+	
+	Write-Host "Set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
+	Set-AzureRmKeyVaultAccessPolicy `
+		-VaultName $kvName `
+		-UserPrincipalName $adminAzureContext.Account.Id `
+		-PermissionsToSecrets Get, Set `
+		-ErrorAction continue | Out-Null
+
+	# Set context back to SP
+	Set-AzureRMContext -Context $spContext | Out-Null
+
 	return $keyVault
 }
 
-# Populates the vault with many of the needed CAM deployment parameters
-function Populate-CAM-Keyvault()
+# Populates the vault with generated passwords and the app gateway certificate
+function Populate-CAM-KeyVault-With-Generated-Secrets()
 {
 	Param(
 		[parameter(Mandatory=$true)]
 		[String]
 		$kvName,
-
-		[parameter(Mandatory=$true)]
-		[SecureString]
-		$registrationCode,
-		
-		[parameter(Mandatory=$true)]
-		[SecureString]
-		$DomainJoinPassword,
 
 		[parameter(Mandatory=$true)]
 		$CAMConfig,
@@ -731,62 +733,92 @@ function Populate-CAM-Keyvault()
 		[String]
 		$tempDir
 	)
-		$rcSecretName = $CAMConfig.internal.rcSecretName
-		$djSecretName = $CAMConfig.internal.djSecretName
-		$rwLocalSecretName = $CAMConfig.internal.rwLocalSecretName
-		$csLocalSecretName = $CAMConfig.internal.csLocalSecretName
+
+	Write-Host "Creating Local Admin Password for new remote workstations"
+
+	$rwLocalAdminPasswordStr =  "5!" + (-join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})) # "5!" is to ensure numbers and symbols
+
+	$rwLocalAdminPassword = ConvertTo-SecureString $rwLocalAdminPasswordStr -AsPlainText -Force
+
+	$rwLocalSecretName = $CAMConfig.internal.rwLocalSecretName
+	$rwLaSecret = Set-AzureKeyVaultSecret `
+			-VaultName $kvName `
+			-Name $rwLocalSecretName `
+			-SecretValue $rwLocalAdminPassword `
+			-ErrorAction stop
+
+
+	Write-Host "Creating Local Admin Password for Connection Service servers"
 	
-		$rcSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $rcSecretName -SecretValue $registrationCode -ErrorAction stop
-		$rcSecretVersionedURL = $rcSecret.Id
-		$rcSecretURL = $rcSecretVersionedURL.Substring(0, $rcSecretVersionedURL.lastIndexOf('/'))
+	$csLocalAdminPasswordStr =  "5!" + (-join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})) # "5!" is to ensure numbers and symbols
 
-		$djSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $djSecretName -SecretValue $domainJoinPassword -ErrorAction stop
-		$djSecretVersionedURL = $djSecret.Id
-		$djSecretURL = $djSecretVersionedURL.Substring(0, $djSecretVersionedURL.lastIndexOf('/'))
+	$csLocalAdminPassword = ConvertTo-SecureString $csLocalAdminPasswordStr -AsPlainText -Force
 
+	$csLocalSecretName = $CAMConfig.internal.csLocalSecretName
+	$csLaSecret = Set-AzureKeyVaultSecret `
+			-VaultName $kvName `
+			-Name $csLocalSecretName `
+			-SecretValue $csLocalAdminPassword `
+			-ErrorAction stop
 
-		Write-Host "Creating Local Admin Password for new remote workstations"
+	# App gateway certificate info
+	$certInfo = Get-CertificateInfoForAppGateway -certificateFile $certificateFile -certificateFilePassword $certificateFilePassword -tempDir $tempDir
 
-		$rwLocalAdminPasswordStr =  "5!" + (-join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})) # "5!" is to ensure numbers and symbols
-
-		$rwLocalAdminPassword = ConvertTo-SecureString $rwLocalAdminPasswordStr -AsPlainText -Force
-
-		$rwLaSecret = Set-AzureKeyVaultSecret `
-			 -VaultName $kvName `
-			 -Name $rwLocalSecretName `
-			 -SecretValue $rwLocalAdminPassword
-
-	    $rwLaSecretVersionedURL = $rwLaSecret.Id
-		$rwLaSecretURL = $rwLaSecretVersionedURL.Substring(0, $rwLaSecretVersionedURL.lastIndexOf('/'))
-
-		Write-Host "Creating Local Admin Password for Connection Service servers"
+	$CSCertSecretName = $CAMConfig.internal.CSCertSecretName
+	$CSCertSecret = Set-AzureKeyVaultSecret `
+		-VaultName $kvName `
+		-Name $CSCertSecretName `
+		-SecretValue $certInfo.cert `
+		-ErrorAction stop
 		
-		$csLocalAdminPasswordStr =  "5!" + (-join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})) # "5!" is to ensure numbers and symbols
+	$CSCertPasswordSecretName = $CAMConfig.internal.CSCertPasswordSecretName
+	$CSCertPasswordSecret = Set-AzureKeyVaultSecret `
+		-VaultName $kvName `
+		-Name $CSCertPasswordSecretName `
+		-SecretValue $certInfo.passwd `
+		-ErrorAction stop
 
-		$csLocalAdminPassword = ConvertTo-SecureString $csLocalAdminPasswordStr -AsPlainText -Force
-
-		$csLaSecret = Set-AzureKeyVaultSecret `
-				-VaultName $kvName `
-				-Name $csLocalSecretName `
-				-SecretValue $csLocalAdminPassword
-
-		$csLaSecretVersionedURL = $csLaSecret.Id
-		$csLaSecretURL = $csLaSecretVersionedURL.Substring(0, $csLaSecretVersionedURL.lastIndexOf('/'))
-
-		$certInfo = Get-CertificateInfoForAppGateway -certificateFile $certificateFile -certificateFilePassword $certificateFilePassword -tempDir $tempDir
-
-		$CSCertSecretName = $CAMConfig.internal.CSCertSecretName
-		$CSCertSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $CSCertSecretName -SecretValue $certInfo.cert
-		$CSCertSecretVersionedURL = $CSCertSecret.Id
-		$CSCertSecretURL = $CSCertSecretVersionedURL.Substring(0, $CSCertSecretVersionedURL.lastIndexOf('/'))
-
-		$CSCertPasswordSecretName = $CAMConfig.internal.CSCertPasswordSecretName
-		$CSCertPasswordSecret = Set-AzureKeyVaultSecret -VaultName $kvName -Name $CSCertPasswordSecretName -SecretValue $certInfo.passwd
-		$CSCertPasswordSecretVersionedURL = $CSCertPasswordSecret.Id
-		$CSCertPasswordSecretURL = $CSCertPasswordSecretVersionedURL.Substring(0, $CSCertPasswordSecretVersionedURL.lastIndexOf('/'))
-
-		Write-Host "Successfully put certificate in Key Vault."
+	Write-Host "Successfully put certificate in Key Vault."
 }
+
+
+
+# Populates the vault with deployment parameters for CAM and Connection Service deployments
+function Populate-CAM-KeyVault-With-Deployment-Parameters()
+{
+	Param(
+		[parameter(Mandatory=$true)]
+		[String]
+		$kvName,
+
+		[parameter(Mandatory=$true)]
+		[SecureString]
+		$registrationCode,
+		
+		[parameter(Mandatory=$true)]
+		[SecureString]
+		$DomainJoinPassword,
+
+		[parameter(Mandatory=$true)]
+		$CAMConfig
+	)
+	
+	$rcSecretName = $CAMConfig.internal.rcSecretName
+	$rcSecret = Set-AzureKeyVaultSecret `
+		-VaultName $kvName `
+		-Name $rcSecretName `
+		-SecretValue $registrationCode `
+		-ErrorAction stop
+
+	$djSecretName = $CAMConfig.internal.djSecretName
+	$djSecret = Set-AzureKeyVaultSecret `
+		-VaultName $kvName `
+		-Name $djSecretName `
+		-SecretValue $domainJoinPassword `
+		-ErrorAction stop
+}
+
+
 
 function Get-CertificateInfoForAppGateway() {
 	Param(
@@ -912,6 +944,8 @@ function Get-CertificateInfoForAppGateway() {
 
 	return $certInfo
 }
+
+
 
 function New-CAMAppSP()
 {
@@ -1138,7 +1172,10 @@ function Deploy-CAM()
 		$domainAdminCredential,
 		
 		$domainName,
-		[SecureString]$registrationCode,
+
+		[SecureString]
+		$registrationCode,
+
 		$camSaasUri,
 		$CAMDeploymentBlobSource,
 		$outputParametersFileName,
@@ -1176,11 +1213,6 @@ function Deploy-CAM()
 
 	$domainAdminUsername = $domainAdminCredential.UserName
 
-	# Need plaintext registration code
-	$userName = "Domain\DummyUser"
-	$regCreds = New-Object -TypeName pscredential -ArgumentList  $userName, $registrationCode
-	$clearRegCode = $regCreds.GetNetworkCredential().Password
-
 	$camConfigurationJson = @"
 	{
 	  "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
@@ -1191,9 +1223,6 @@ function Deploy-CAM()
 			},
 			"domainName": {
 				  "value": "$domainName"
-			},
-			"registrationCode": {
-				  "value": "$clearRegCode"
 			},
 			"CAMDeploymentBlobSource": {
 				"value": "$CAMDeploymentBlobSource"
@@ -1310,16 +1339,20 @@ function Deploy-CAM()
 		$kvInfo = New-CAM-KeyVault `
 			-RGName $RGName `
 			-spName $spInfo.spCreds.UserName `
-			-creatingUserId $azureContext.Account.Id
+			-adminAzureContext $azureContext
 
-		Populate-CAM-KeyVault `
+		Populate-CAM-KeyVault-With-Generated-Secrets `
 			-kvName $kvInfo.VaultName `
-			-registrationCode $registrationCode `
-			-DomainJoinPassword $domainAdminCredential.Password `
 			-CAMConfig $CAMConfig `
 			-tempDir $tempDir `
 			-certificateFile $certificateFile `
 			-certificateFilePassword $certificateFilePassword | Out-Null
+
+		Populate-CAM-KeyVault-With-Deployment-Parameters `
+			-kvName $kvInfo.VaultName `
+			-registrationCode $registrationCode `
+			-DomainJoinPassword $domainAdminCredential.Password `
+			-CAMConfig $CAMConfig | Out-Null
 
 		$userDataStorageAccount = New-UserStorageAccount `
 			-RGName $RGName `
@@ -1418,6 +1451,14 @@ function Deploy-CAM()
 				},
 				"secretName": "$($CAMConfig.internal.camDeploySecretName)"
 			}
+		},
+		"registrationCode": {
+			"reference": {
+				"keyVault": {
+				"id": "$kvId"
+				},
+				"secretName": "$($CAMConfig.internal.rcSecretName)"
+			}
 		}
 	}
 "@
@@ -1462,7 +1503,7 @@ function Deploy-CAM()
 	finally {
 		if ($azureContext)
 		{
-			Set-AzureRMContext -Context $azureContext > $null
+			Set-AzureRMContext -Context $azureContext | Out-Null
 		}
 	}
 }
