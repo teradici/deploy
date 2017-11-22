@@ -21,10 +21,7 @@ You must have an Azure account and subscription. You must have a valid registrat
 **NOTE:** To learn how to deploy CAS on Microsoft Azure go to [Deploy Teradici Cloud Access Software on Azure.](https://github.com/teradici/pcoip-agent-azure-templates/blob/master/README.md)
 
 By default, the CAM deployment scripts will create a service principal account for CAM to use after deployment. In order for the CAM deployment scripts to create this service principal, you must sign into Azure with an account which meets the following criteria:
-1. The account must have owner access to the subscription (to be able to set access policies)
-1. The account must be able to be programatically logged in without user interaction. This means:
-   1. It must be an organizational account, not a Microsoft account.
-   1. It must not require multi-factor authentication.
+* The account must have owner access to the subscription (to be able to set access policies)
 
 If you are not in posession of an account which meets the criteria, you must create a service principal account before deploying CAM.
 
@@ -36,16 +33,16 @@ In some instances you are required to register the keyvault policy for the subsc
 
 
 ## Deployment Parameters
-The following parameters are the form fields you are required to fill in on the template in the Microsoft Azure Portal to begin deploying CAM:
+The following parameters are required to to begin deploying CAM:
 * Administrative Domain User Credentials: The desired credentials for the administrator account to be created for the domain.
   * The username must be short form and not a User Principal Name (UPN). For example 'uname' is allowed and 'uname@example.com' is not allowed. There are certain names such as 'administrator' which are also not allowed. See [FAQs about Windows Virtual Machines.](https://docs.microsoft.com/en-us/azure/virtual-machines/windows/faq)
   * It must not be an existing domain account.
-* domainName: The FQDN of the Active Directory Domain to be created. **Must have a '.' like example.com or domain.local.**
+* Domain Name: The FQDN of the Active Directory Domain to be created. **Must have a '.' like example.com or domain.local.**
   * The domain name does not need to be unique to get the system operational so if you're testing an isolated system you can use the same name for your deployments like 'mydomain.com.'
-* registrationCode: The license registration code for the PCoIP CAS licenses. The CAS registration code is sent to you in an email once you have purchased a CAS license.
+* Registration Code: The license registration code for the PCoIP CAS licenses. The CAS registration code is sent to you in an email once you have purchased a CAS license.
 * *(Optional)* Service Principal Account: A manually generated Service Principal Account can be provided to be used by CAM. Otherwise one will be generated for CAM automatically.
  
-## Deploying Cloud Access Manager using Microsoft Azure
+## Deploying Cloud Access Manager with Azure Cloud Shell
 The CAM solution consists of the following components:
  * Deployment Cloud Server (This provides the administration GUI)
  * Domain Controller (This will contain an active directory)
@@ -59,7 +56,7 @@ The CAM solution consists of the following components:
 
 The following steps outline the procedure for performing a deployment of CAM using Microsoft Azure: 
 
-Click the **Deploy Azure** button to  begin.
+Click the **Deploy Azure** button to begin.
 
 **NOTE:** Once you click the **Deploy Azure** button you will be taken to the Microsoft Azure account login page. It is important to read these steps to the end prior to clicking deploy or re-opening this file afterwards.
 
@@ -69,9 +66,9 @@ Click the **Deploy Azure** button to  begin.
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
-1. Select the Microsoft Azure account you want to access.
+1. Select the Microsoft Azure account you want to use.
 1. Enter your Password and click **Sign in.**
-1. Launch an Azure Cloud Shell Powershell instance. See [Overiew of Azure Cloud Shell](https://docs.microsoft.com/en-ca/azure/cloud-shell/overview?view=azurermps-5.0.0) for details on how to set this up. The rest of the setup steps will be run in the Azure Cloud Shell. It is recomended to maximize the Cloud Shell window so prompts can be properly seen.
+1. Launch an Azure Cloud Shell Powershell instance by clicking the Cloud Shell icon from the top panel of the Azure Portal (top right corner of the Azure Portal, close to the search bar). See [Overiew of Azure Cloud Shell](https://docs.microsoft.com/en-ca/azure/cloud-shell/overview?view=azurermps-5.0.0) for details on how to set this up. The rest of the setup steps will be run in the Azure Cloud Shell. It is recomended to maximize the Cloud Shell window so prompts can be properly seen.
 1. Change to your Cloud Drive directory. 
     ```
     cd $HOME\CloudDrive\
@@ -85,16 +82,16 @@ Click the **Deploy Azure** button to  begin.
     .\Deploy-CAM.ps1
     ```
 1. You may now be prompted to select a subscription to use to deploy CAM in. Choose the number accordingly.
-1. Exisiting Resource Groups will be listed if there are Resource Groups available for CAM to be deployed into. Either select an existing Resource Group by selecting the number next to desired Resource Group or create a new Resource Group by providing a name for the new Resource Group.
+1. Existing Resource Groups will be listed if there are Resource Groups available for CAM to be deployed into. Either select an existing Resource Group by selecting the number next to desired Resource Group or create a new Resource Group by providing a name for the new Resource Group.
 1. Available deployment locations will be listed. Select a location from one of the listed options by typing in the *Location* field for the desired location.
-1. Enter the desired credentials for the **Administrative Domain User**. This is a new account that will be created.
-1. Enter a **Domain Name** and ensure it finishes in *.com*.
+1. Enter the desired username and password for the **Administrative Domain User**. This is a new account that will be created.
+1. Enter a **Domain Name** and ensure it finishes in *.something* (eg, *.com, .local, etc*).
 1. Enter the CAS license registration code for the **Registration Code**.
 1. When prompted for Service Principal credentials, either press 'Enter' to continue and let the script generate them or enter 'no' to provide manually generated credentials.
 
 The deployment will now begin to run. 
 
-You can track it through the notifications icon or for a more detailed view of your deployment click the **Resource Groups** icon in the Azure portal and click on your resource group.
+You can track it through the Azure Portal. For a detailed view of your deployment click the **Resource Groups** icon in the Azure portal and click on your resource group.
 
 **NOTE:** The Azure Cloud Shell will disconnect after 20 minutes of inactivity. This is expected behaviour. Once the deployment has begun, Azure will handle processing the deployment and the Azure Cloud Shell is no longer needed.
 
