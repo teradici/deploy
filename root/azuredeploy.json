@@ -304,6 +304,12 @@
           "subnetRange": {
             "value": "[variables('networkSettings').subnets.adSubnet.prefix]"
           },
+          "rwSubnetName": {
+            "value": "[variables('networkSettings').subnets.rwSubnet.name]"
+          },
+          "rwSubnetRange": {
+            "value": "[variables('networkSettings').subnets.rwSubnet.prefix]"
+          },
           "gatewaySubnetName": {
             "value": "[variables('networkSettings').subnets.gatewaySubnet.name]"
           },
