@@ -361,7 +361,7 @@ function New-RemoteWorstationTemplates
 	"`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
 	"contentVersion": "1.0.0.0",
 	"parameters": {
-		"agentType": { "value": %agentType% }
+		"agentType": { "value": "%agentType%" },
 		"vmSize": { "value": "%vmSize%" },
 		"CAMDeploymentBlobSource": { "value": "$blobUri" },
 		"binaryLocation": { "value": "$binaryLocation" },
