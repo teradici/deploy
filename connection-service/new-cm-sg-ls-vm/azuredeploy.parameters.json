@@ -30,7 +30,7 @@
             "value": "10.0.0.5"
         },
         "_artifactsLocation": {
-            "value": "https://raw.githubusercontent.com/teradici/deploy/master/frontend/new-cm-sg-ls-vm"
+            "value": "https://raw.githubusercontent.com/teradici/deploy/master/connection-service/new-cm-sg-ls-vm"
         }
     }
 }

@@ -55,7 +55,7 @@
     "CAMDeploymentInfo": {
       "type": "securestring",
       "metadata": {
-          "description": "Encoded blob of authorization and URL information for the CAM Frontend."
+          "description": "Encoded blob of authorization and URL information for the CAM Connection Service."
       }
     },
     "certData": {
