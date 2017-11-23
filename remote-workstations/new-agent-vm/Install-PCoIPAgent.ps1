@@ -484,7 +484,9 @@ Configuration InstallPCoIPAgent
 					$domainInfo = (Get-WMIObject Win32_NTDomain) | Where-Object {$_.DnsForestName -eq $domain} | Select-Object -First 1
 					$dcname = ($domainInfo.DomainControllerName -replace "\\", "")
 
-					#create a PSSession with the domain controller that we used to login
+					Write-Host "Connecting to DC to add $machineToJoin to $domainGroupToJoin."
+					
+					# Create a PSSession with the domain controller that we used to login
 					$psSession = New-PSSession -ComputerName $dcname -Credential $using:domainJoinCredential
 
 					Invoke-Command -Session $psSession -ArgumentList $domainGroupToJoin, $machineToJoin `
@@ -507,6 +509,7 @@ Configuration InstallPCoIPAgent
 						# Add-ADGroupMember uses the SAM account name for the computer which has a trailing '$'
 						Add-ADGroupMember -Identity $domainGroupToJoin -Members ($machineToJoin + "$")
 					}
+					Remove-PSSession $psSession
 				}
 					
 				#make placeholder file so this is only run once
