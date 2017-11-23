@@ -41,8 +41,8 @@
         "CAMDeploymentInfo": {
             "value": "This+would+be+a+URI+encoded+string"
         },
-        "_artifactsLocation": {
-            "value": "https://raw.githubusercontent.com/teradici/deploy/bddc2/connection-service"
+        "_baseArtifactsLocation": {
+            "value": "https://raw.githubusercontent.com/teradici/deploy/bddc2"
         }
     }
 }

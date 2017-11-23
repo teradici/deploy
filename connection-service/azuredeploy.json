@@ -82,10 +82,10 @@
         "description": "The location of the blobs for admin GUI machine installation"
       }
     },
-    "_artifactsLocation": {
+    "_baseArtifactsLocation": {
       "type": "string",
       "metadata": {
-        "description": "The location of resources, such as templates and DSC modules, that the template depends on"
+        "description": "The base location (URI) of the deployment. This file is being run from _baseArtifactsLocation/connection-service"
       }
     },
     "_artifactsLocationSasToken": {
@@ -97,6 +97,7 @@
     }
   },
   "variables": {
+    "_artifactsLocation":  "[concat(parameters('_baseArtifactsLocation'), '/connection-service')]",
     "storageAccountName": "[concat(uniquestring(resourceGroup().id),'cs',parameters('CSUniqueSuffix'))]",
     "brokerPort":  "8444",
     "appGwName": "[concat('CAM-ApplicationGateway',parameters('CSUniqueSuffix'))]",
@@ -127,7 +128,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/new-sg-s/new-sg-s.json', parameters('_artifactsLocationSasToken'))]",
+          "uri": "[concat(variables('_artifactsLocation'), '/new-sg-s/new-sg-s.json', parameters('_artifactsLocationSasToken'))]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
@@ -148,7 +149,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/new-vm-join-domain/new-vm-join-domain.json', parameters('_artifactsLocationSasToken'))]",
+          "uri": "[concat(variables('_artifactsLocation'), '/new-vm-join-domain/new-vm-join-domain.json', parameters('_artifactsLocationSasToken'))]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
@@ -198,7 +199,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/new-admin-vm/new-admin-vm.json', parameters('_artifactsLocationSasToken'))]",
+          "uri": "[concat(variables('_artifactsLocation'), '/new-admin-vm/new-admin-vm.json', parameters('_artifactsLocationSasToken'))]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
@@ -218,7 +219,7 @@
             "value": "[parameters('CAMDeploymentBlobSource')]"
           },
           "_artifactsLocation": {
-            "value": "[concat(parameters('_artifactsLocation'), '/new-admin-vm')]"
+            "value": "[concat(variables('_artifactsLocation'), '/new-admin-vm')]"
           },
           "CAMDeploymentInfo": {
             "value": "[parameters('CAMDeploymentInfo')]"
@@ -237,7 +238,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/new-app-gateway/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
+          "uri": "[concat(variables('_artifactsLocation'), '/new-app-gateway/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
@@ -286,7 +287,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/new-cm-sg-ls-vm/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
+          "uri": "[concat(variables('_artifactsLocation'), '/new-cm-sg-ls-vm/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
@@ -318,7 +319,7 @@
             "value": "[variables('connectionServerBrokerFQDN')]"
           },
           "_artifactsLocation": {
-            "value": "[concat(parameters('_artifactsLocation'), '/new-cm-sg-ls-vm')]"
+            "value": "[concat(variables('_artifactsLocation'), '/new-cm-sg-ls-vm')]"
           },
           "_artifactsLocationSasToken": {
             "value": "[parameters('_artifactsLocationSasToken')]"

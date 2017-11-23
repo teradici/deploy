@@ -95,7 +95,7 @@
   },
   "variables": {
     "domainGroupAppServersJoin": "Remote Workstations",
-    "adminDesktopVMName": "admin-rws"
+    "adminDesktopVMName": "admin-rw"
   },
   "resources": [
     {
@@ -181,8 +181,8 @@
           "CAMDeploymentBlobSource": {
             "value": "[parameters('CAMDeploymentBlobSource')]"
           },
-          "_artifactsLocation": {
-            "value": "[concat(parameters('_artifactsLocation'), '/connection-service')]"
+          "_baseArtifactsLocation": {
+            "value": "[parameters('_artifactsLocation')]"
           },
           "_artifactsLocationSasToken": {
             "value": "[parameters('_artifactsLocationSasToken')]"
