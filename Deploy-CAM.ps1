@@ -340,7 +340,6 @@ function New-RemoteWorstationTemplates
 	Write-Host "Creating default remote workstation template parameters file data"
 
 	#Setup internal variables from config structure
-	$VMAdminUsername = "localadmin"
 	$domainGroupAppServersJoin = $CAMConfig.internal.domainGroupAppServersJoin
 
 	$standardVMSize = $CAMConfig.internal.standardVMSize
@@ -400,7 +399,14 @@ function New-RemoteWorstationTemplates
 			}
 		},
 		"dnsLabelPrefix": { "value": "tbd-vmname" },
-		"vmAdminUsername": { "value": "$VMAdminUsername" },
+		"vmAdminUsername": {
+			"reference": {
+				"keyVault": {
+				"id": "$kvId"
+				},
+				"secretName": "remoteWorkstationLocalAdminUsername"
+			}
+		},
 		"vmAdminPassword": {
 			"reference": {
 				"keyVault": {
@@ -1210,8 +1216,16 @@ function Deploy-CAM()
 	$CAMConfig.parameters.CAMCSCertificate = @{}
 	$CAMConfig.parameters.CAMCSCertificatePassword = @{}
 	$CAMConfig.parameters.remoteWorkstationLocalAdminPassword = @{}
+	$CAMConfig.parameters.remoteWorkstationLocalAdminUsername = @{
+		value=(ConvertTo-SecureString "localadmin" -AsPlainText -Force)
+		clearValue = "localadmin"
+	}
 	$CAMConfig.parameters.connectionServiceLocalAdminPassword = @{}
-
+	$CAMConfig.parameters.connectionServiceLocalAdminUsername = @{
+		value=(ConvertTo-SecureString "localadmin" -AsPlainText -Force)
+		clearValue = "localadmin"
+	}
+	
 	# Set in Populate-UserBlob
 	$CAMConfig.parameters.userStorageAccountSaasToken = @{}
 	$CAMConfig.parameters.userStorageAccountUri = @{}
@@ -1426,7 +1440,12 @@ function Deploy-CAM()
 			}
 		},
 		"LocalAdminUsername": {
-			"value": "localadmin"
+			"reference": {
+				"keyVault": {
+					"id": "$kvId"
+				},
+				"secretName": "connectionServiceLocalAdminUsername"
+			}
 		},
 		"LocalAdminPassword": {
 			"reference": {
@@ -1437,7 +1456,12 @@ function Deploy-CAM()
 			}
 		},
 		"rwsLocalAdminUsername": {
-			"value": "localadmin"
+			"reference": {
+				"keyVault": {
+					"id": "$kvId"
+				},
+				"secretName": "remoteWorkstationLocalAdminUsername"
+			}
 		},
 		"rwsLocalAdminPassword": {
 			"reference": {

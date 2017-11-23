@@ -2,6 +2,9 @@
   "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
     "parameters": {
+        "CSUniqueSuffix": {
+            "value": "2"
+        },
         "domainAdminUsername": {
             "value": "GEN-USER"
         },
@@ -16,9 +19,6 @@
         },
         "LocalAdminPassword": {
             "value": "GEN-PASSWORD"
-        },
-        "CSUniqueSuffix": {
-            "value": "2"
         },
         "CSsubnetId": {
             "value": "/resources/etc"
