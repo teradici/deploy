@@ -516,15 +516,15 @@ function Populate-UserBlob
 
 	#source, targetdir pairs
 	$new_agent_vm_files = @(
-		@("$artifactsLocation/end-user-application-machines/new-agent-vm/Install-PCoIPAgent.ps1","remote-workstation"),
-		@("$artifactsLocation/end-user-application-machines/new-agent-vm/Install-PCoIPAgent.sh","remote-workstation"),
+		@("$artifactsLocation/remote-workstations/new-agent-vm/Install-PCoIPAgent.ps1","remote-workstation"),
+		@("$artifactsLocation/remote-workstations/new-agent-vm/Install-PCoIPAgent.sh","remote-workstation"),
 		@("$CAMDeploymentBlobSource/Install-PCoIPAgent.ps1.zip","remote-workstation"),
-		@("$artifactsLocation/end-user-application-machines/new-agent-vm/sumo-agent-vm.json","remote-workstation"),
-		@("$artifactsLocation/end-user-application-machines/new-agent-vm/sumo.conf","remote-workstation"),
-		@("$artifactsLocation/end-user-application-machines/new-agent-vm/Install-Idle-Shutdown.sh","remote-workstation"),
-		@("$artifactsLocation/end-user-application-machines/new-agent-vm/$($CAMConfig.internal.linuxAgentARM)","remote-workstation-template"),
-		@("$artifactsLocation/end-user-application-machines/new-agent-vm/$($CAMConfig.internal.gaAgentARM)","remote-workstation-template"),
-		@("$artifactsLocation/end-user-application-machines/new-agent-vm/$($CAMConfig.internal.agentARM)","remote-workstation-template")
+		@("$artifactsLocation/remote-workstations/new-agent-vm/sumo-agent-vm.json","remote-workstation"),
+		@("$artifactsLocation/remote-workstations/new-agent-vm/sumo.conf","remote-workstation"),
+		@("$artifactsLocation/remote-workstations/new-agent-vm/Install-Idle-Shutdown.sh","remote-workstation"),
+		@("$artifactsLocation/remote-workstations/new-agent-vm/$($CAMConfig.internal.linuxAgentARM)","remote-workstation-template"),
+		@("$artifactsLocation/remote-workstations/new-agent-vm/$($CAMConfig.internal.gaAgentARM)","remote-workstation-template"),
+		@("$artifactsLocation/remote-workstations/new-agent-vm/$($CAMConfig.internal.agentARM)","remote-workstation-template")
 	)
 
 

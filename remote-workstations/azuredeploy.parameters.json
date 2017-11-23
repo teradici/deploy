@@ -21,6 +21,6 @@
         "vmAdminPassword": { "value": "GEN-PASSWORD" },
         "domainGroupToJoin": { "value": "domainGroupAppServersJoin" },
         "CAMDeploymentBlobSource": { "value": "https://teradeploy.blob.core.windows.net/binaries" },
-        "_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/end-user-application-machines" }
+        "_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/remote-workstations" }
     }
 }

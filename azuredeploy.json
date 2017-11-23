@@ -200,7 +200,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/end-user-application-machines/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
+          "uri": "[concat(parameters('_artifactsLocation'), '/remote-workstations/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
@@ -241,7 +241,7 @@
             "value": "[parameters('registrationCode')]"
           },
           "_artifactsLocation": {
-            "value": "[concat(parameters('_artifactsLocation'), '/end-user-application-machines')]"
+            "value": "[concat(parameters('_artifactsLocation'), '/remote-workstations')]"
           },
           "CAMDeploymentBlobSource": {
             "value": "[parameters('CAMDeploymentBlobSource')]"

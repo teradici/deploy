@@ -82,7 +82,7 @@
         "CAMDeploymentBlobSource": {
             "type": "string",
             "metadata": {
-                "description": "Location of binary store primarily targeted towards end-user-application-machines."
+                "description": "Location of binary store primarily targeted towards remote-workstations."
             }
         },
         "binaryLocation": {
