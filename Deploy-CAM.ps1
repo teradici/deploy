@@ -1246,12 +1246,12 @@ function Deploy-CAM()
 	}
 
 	$CAMConfig.parameters.connectionServiceSubnet = @{
-		value=(ConvertTo-SecureString $CAMConfig.internal.RWSubnetID -AsPlainText -Force)
+		value=(ConvertTo-SecureString $CAMConfig.internal.CSSubnetID -AsPlainText -Force)
 		clearValue = $CAMConfig.internal.CSSubnetID
 	}
 
 	$CAMConfig.parameters.gatewaySubnet = @{
-		value=(ConvertTo-SecureString $CAMConfig.internal.RWSubnetID -AsPlainText -Force)
+		value=(ConvertTo-SecureString $CAMConfig.internal.GWSubnetID -AsPlainText -Force)
 		clearValue = $CAMConfig.internal.GWSubnetID
 	}
 	
