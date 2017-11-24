@@ -42,8 +42,18 @@ param(
 )
 
 
+# Converts a secure string parameter to a plain string
+function ConvertTo-Plaintext
+{
+	param(
+		[Parameter(ValueFromPipeline)]
+		[SecureString]
+		$secureString
+	)
+	return (New-Object PSCredential "user",$secureString).GetNetworkCredential().Password
+}
 
-#from: https://stackoverflow.com/questions/22002748/hashtables-from-convertfrom-json-have-different-type-from-powershells-built-in-h
+# from: https://stackoverflow.com/questions/22002748/hashtables-from-convertfrom-json-have-different-type-from-powershells-built-in-h
 function ConvertPSObjectToHashtable
 {
     param (
@@ -221,9 +231,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 			Write-Host "Cloud Access Manager sign in succeeded"
 
 			# Need plaintext registration code
-			$userName = "Domain\DummyUser"
-			$regCreds = New-Object -TypeName pscredential -ArgumentList  $userName, $registrationCode
-			$clearRegCode = $regCreds.GetNetworkCredential().Password
+			$clearRegCode = ConvertTo-Plaintext $registrationCode
 
 
 			# Register Deployment
@@ -1702,9 +1710,7 @@ if($subscriptionsToDisplay.Length -lt 1) {
 			$confirmedPassword = Read-Host -AsSecureString "Please re-enter the password"
 
 			# Need plaintext password to check if same
-			$userName = "Domain\DummyUser"
-			$passwordCreds = New-Object -TypeName pscredential -ArgumentList  $userName, $confirmedPassword
-			$clearPassword = $passwordCreds.GetNetworkCredential().Password
+			$clearPassword =  ConvertTo-Plaintext $confirmedPassword
 			if(-not ($domainAdminCredential.GetNetworkCredential().Password -ceq $clearPassword)) {
 				# don't match- try again.
 				Write-Host "The entered passwords do not match."
@@ -1737,9 +1743,7 @@ if($subscriptionsToDisplay.Length -lt 1) {
 		}
 		
 		# Need plaintext registration code to check length
-		$userName = "Domain\DummyUser"
-		$regCreds = New-Object -TypeName pscredential -ArgumentList  $userName, $registrationCode
-		$clearRegCode = $regCreds.GetNetworkCredential().Password
+		$clearRegCode = ConvertTo-Plaintext $registrationCode
 		if($clearRegCode.Length -lt 21) {
 			#too short- try again.
 			Write-Host "The registration code is at least 21 characters long"
