@@ -139,6 +139,9 @@
           },
           "gatewaySubnetRange": {
             "value": "[variables('networkSettings').subnets.gatewaySubnet.prefix]"
+          },
+          "DNSServerAddress": {
+            "value": [ "[variables('networkSettings').subnets.adSubnet.adNicIPAddress]" ]
           }
         }
       }
@@ -274,50 +277,6 @@
           },
           "CAMDeploymentBlobSource": {
             "value": "[parameters('CAMDeploymentBlobSource')]"
-          }
-        }
-      }
-    },
-    {
-      "type": "Microsoft.Resources/deployments",
-      "name": "SetDNSForVNet",
-      "apiVersion": "2016-02-01",
-      "dependsOn": [
-        "Microsoft.Resources/deployments/ConfigureDCandCA"
-      ],
-      "properties": {
-        "mode": "Incremental",
-        "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/new-vnet/vnet.json', parameters('_artifactsLocationSasToken'))]",
-          "contentVersion": "1.0.0.0"
-        },
-        "parameters": {
-          "virtualNetworkName": {
-            "value": "[variables('networkSettings').vnetName]"
-          },
-          "virtualNetworkAddressRange": {
-            "value": "[variables('networkSettings').addressPrefix]"
-          },
-          "subnetName": {
-            "value": "[variables('networkSettings').subnets.adSubnet.name]"
-          },
-          "subnetRange": {
-            "value": "[variables('networkSettings').subnets.adSubnet.prefix]"
-          },
-          "rwSubnetName": {
-            "value": "[variables('networkSettings').subnets.rwSubnet.name]"
-          },
-          "rwSubnetRange": {
-            "value": "[variables('networkSettings').subnets.rwSubnet.prefix]"
-          },
-          "gatewaySubnetName": {
-            "value": "[variables('networkSettings').subnets.gatewaySubnet.name]"
-          },
-          "gatewaySubnetRange": {
-            "value": "[variables('networkSettings').subnets.gatewaySubnet.prefix]"
-          },
-          "DNSServerAddress": {
-            "value": [ "[variables('networkSettings').subnets.adSubnet.adNicIPAddress]" ]
           }
         }
       }
