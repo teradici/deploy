@@ -1077,8 +1077,11 @@ function New-CAMDeploymentInfo()
 	foreach($key in $camDeploymenRegInfoParameters.keys) {
 		$secretName = $camDeploymenRegInfoParameters.$key
 		Write-Host "Setting $key to value of secret $secretName"
-		$secretValue = (Get-AzureKeyVaultSecret -VaultName CAM-YSDkmlWPEbfNJtQT -Name $secretName).SecretValueText
-		$camDeploymenRegInfo.$key = $secretValue
+		$secret = Get-AzureKeyVaultSecret `
+			-VaultName $kvName `
+			-Name $secretName `
+			-ErrorAction stop
+		$camDeploymenRegInfo.$key = $secret.SecretValueText
 	}
 	$camDeploymenRegInfo.Add("CAM_USER_BLOB_URI", "userStorageAccountUri")
 	$camDeploymenRegInfo.Add("CAM_USER_STORAGE_ACCOUNT_NAME", "userStorageName")
@@ -1137,24 +1140,22 @@ graphURL=https\://graph.windows.net/
 
 function Generate-CamDeploymentInfoParameters
 {
-	parameters(
+	param(
 		$spInfo,
 		$camSaasUri,
 		$deploymentId,
 		$subscriptionID,
 		$RGName,
-		$kvName,
-
-
-	)		
-	$CAMConfig.parameters.AzureSPClientID = (ConvertTo-SecureString $spInfo.spCreds.UserName -AsPlainText -Force)
+		$kvName
+	)
+	$CAMConfig.parameters.AzureSPClientID.value = (ConvertTo-SecureString $spInfo.spCreds.UserName -AsPlainText -Force)
 	$CAMConfig.parameters.AzureSPKey.value = $spInfo.spCreds.Password
-	$CAMConfig.parameters.AzureSPTenantID = (ConvertTo-SecureString $spInfo.tenantId -AsPlainText -Force)
-	$CAMConfig.parameters.CAMServiceURI =(ConvertTo-SecureString $camSaasUri -AsPlainText -Force)
-	$CAMConfig.parameters.CAMDeploymentID = (ConvertTo-SecureString $deploymentId -AsPlainText -Force)
-	$CAMConfig.parameters.AzureSubscriptionID = (ConvertTo-SecureString $subscriptionID -AsPlainText -Force)
-	$CAMConfig.parameters.AzureResourceGroupName = (ConvertTo-SecureString $RGName -AsPlainText -Force)
-	$CAMConfig.parameters.AzureKeyVaultName = (ConvertTo-SecureString $kvName -AsPlainText -Force)
+	$CAMConfig.parameters.AzureSPTenantID.value = (ConvertTo-SecureString $spInfo.tenantId -AsPlainText -Force)
+	$CAMConfig.parameters.CAMServiceURI.value =(ConvertTo-SecureString $camSaasUri -AsPlainText -Force)
+	$CAMConfig.parameters.CAMDeploymentID.value = (ConvertTo-SecureString $deploymentId -AsPlainText -Force)
+	$CAMConfig.parameters.AzureSubscriptionID.value = (ConvertTo-SecureString $subscriptionID -AsPlainText -Force)
+	$CAMConfig.parameters.AzureResourceGroupName.value = (ConvertTo-SecureString $RGName -AsPlainText -Force)
+	$CAMConfig.parameters.AzureKeyVaultName.value = (ConvertTo-SecureString $kvName -AsPlainText -Force)
 }
 
 
