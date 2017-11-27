@@ -66,6 +66,8 @@ USERNAME="$5"
 PASSWORD="$6"
 # the seventh argument is the domain group to join
 GROUP="$7"
+# the eighth argument is the agent installer channel
+AGENT_CHANNEL="$8"
 
 # Make sure Linux OS is up to date
 echo "--> Updating Linux OS to latest"
@@ -234,7 +236,22 @@ sudo rpm --import https://downloads.teradici.com/rhel/teradici.pub.gpg
 
 # Add the Teradici repository
 echo "-->Add the Teradici repository"
-sudo wget --retry-connrefused --tries=3 --waitretry=5 -O /etc/yum.repos.d/pcoip.repo https://downloads.teradici.com/rhel/pcoip.repo
+
+agent_repo_url = https://downloads.teradici.com/rhel/pcoip.repo
+case "$AGENT_CHANNEL" in 
+    "beta")
+		agent_repo_url = https://downloads.teradici.com/rhel/pcoip-beta.repo
+        ;;
+    "dev")
+		agent_repo_url = https://downloads.teradici.com/rhel/pcoip-dev.repo
+        ;;   
+    *)
+		agent_repo_url = https://downloads.teradici.com/rhel/pcoip.repo
+        ;;       
+esac
+
+sudo wget --retry-connrefused --tries=3 --waitretry=5 -O /etc/yum.repos.d/pcoip.repo $agent_repo_url
+
 exitCode=$?
 if [ $exitCode -ne 0 ]
 then

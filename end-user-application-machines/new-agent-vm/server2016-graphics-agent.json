@@ -125,6 +125,12 @@
                 "description": "Storage account key for accessing private blob data"
             },
             "defaultValue": ""
+        },
+        "AgentChannel": {
+            "type": "string",
+            "metadata": {
+                "description": "from the channel to download PCoIP Agent Installer."
+            }
         }
     },
     "variables": {
@@ -135,7 +141,7 @@
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
         "vnetID": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', parameters('existingVNETName'))]",
         "subnetId": "[concat(variables('vnetID'),'/subnets/', parameters('existingSubnetName'))]",
-        "pcoipAgentInstallerUrl": "[concat(parameters('binaryLocation'),'/PCoIP_agent_release_installer_2.10.0.7600_graphics.exe')]",
+        "pcoipAgentInstallerUrl": "[concat('https://downloads.teradici.com/win/', parameters('AgentChannel'))]",
         "videoDriverUrl": "[concat(parameters('binaryLocation'),'/370.12_grid_win10_server2016_64bit_international.exe')]",
         "sasToken": "[parameters('_artifactsLocationSasToken')]",
         "registrationCode": "[parameters('registrationCode')]"

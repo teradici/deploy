@@ -25,6 +25,11 @@ param(
 	[SecureString]
 	$certificateFilePassword = $null,
 
+	[parameter(Mandatory=$false)]
+	[ValidateSet("stable","beta","dev")] 
+	[String]
+	$AgentChannel = "stable",
+
 	$camSaasUri = "https://cam-antar.teradici.com",
 	$CAMDeploymentTemplateURI ="https://raw.githubusercontent.com/teradici/deploy/bd/azuredeploy.json",
 	$CAMDeploymentBlobSource = "https://teradeploy.blob.core.windows.net/bdbinaries",
@@ -358,6 +363,7 @@ function New-RemoteWorstationTemplates
 	"contentVersion": "1.0.0.0",
 	"parameters": {
 		"vmSize": { "value": "%vmSize%" },
+		"AgentChannel": { "value": $CAMConfig.internal.agentChannel},
 		"CAMDeploymentBlobSource": { "value": "$blobUri" },
 		"binaryLocation": { "value": "$binaryLocation" },
 		"existingSubnetName": { "value": "$existingSubnetName" },
@@ -1153,6 +1159,11 @@ function Deploy-CAM()
 		$certificateFilePassword = $null,
 
 		[parameter(Mandatory=$false)]
+		[ValidateSet("stable","beta","dev")] 
+		[String]
+		$AgentChannel = "stable",
+
+		[parameter(Mandatory=$false)]
 		[bool]
 		$testDeployment = $false
 
@@ -1184,6 +1195,9 @@ function Deploy-CAM()
 			},
 			"camSaasUri": {
 				"value": "$camSaasUri"
+			},
+			"AgentChannel": {
+				"value": "$AgentChannel"
 			},
 			"CAMDeploymentBlobSource": {
 				"value": "$CAMDeploymentBlobSource"
@@ -1224,6 +1238,7 @@ function Deploy-CAM()
 	$CAMConfig.internal.gaAgentARM = "server2016-graphics-agent.json"
 	$CAMConfig.internal.linuxAgentARM = "rhel-standard-agent.json"
 	$CAMConfig.internal.domainGroupAppServersJoin = "Remote Workstations"
+	$CAMConfig.internal.agentChannel = $AgentChannel
 
 	# make temporary directory for intermediate files
 	$folderName = 	-join ((97..122) | Get-Random -Count 18 | % {[char]$_})
@@ -1680,4 +1695,5 @@ Deploy-CAM `
  -tenantId $selectedTenantId `
  -testDeployment $testDeployment `
  -certificateFile $certificateFile `
- -certificateFilePassword $certificateFilePassword
+ -certificateFilePassword $certificateFilePassword `
+ -AgentChannel $AgentChannel
