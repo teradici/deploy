@@ -1,0 +1,171 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "subnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "sub network Id which network interface attached to virtual machine belongs to."
+      }
+    },
+    "userName": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 20,
+      "defaultValue": "adminTest",
+      "metadata": {
+        "description": "User Name for the Virtual Machine."
+      }
+    },
+    "password": {
+      "type": "securestring",
+      "minLength": 12,
+      "maxLength": 123,
+      "metadata": {
+        "description": "Password for the Virtual Machine."
+      }
+    },
+    "vmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2_v2",
+      "metadata": {
+        "description": "Virtual Machine Size."
+      }
+    },
+    "vmNumber": {
+      "type": "int",
+      "defaultValue": 1,
+      "maxValue": 16,
+      "metadata": {
+        "description": "The number of VMs to be provisioned."
+      }
+    }
+  },
+  "variables": {
+    "apiVersion": "2016-09-01",
+    "namePrefix": "cam",
+    "nicName": "[concat(variables('namePrefix'), '-nic')]",
+    "pipName": "[concat(variables('namePrefix'), '-pip')]",
+    "domainNameLabel": "[tolower(replace(concat(variables('namePrefix'), '-', uniqueString(resourceGroup().id, resourceGroup().location )), '.',''))]",
+    "vmNamePrefix": "[concat(variables('namePrefix'), '-VM-')]",
+    "osSettings": {
+      "Windows Server 2016": {
+        "publisher": "MicrosoftWindowsServer",
+        "offer": "WindowsServer",
+        "sku": "2016-Datacenter",
+        "version": "latest"
+      }
+    },
+    "osType": "Windows Server 2016",
+    "vmSettings": {
+      "vmNamePrefix": "[variables('vmNamePrefix')]",
+      "adminUserName": "[parameters('userName')]",
+      "adminPassword": "[parameters('password')]",
+      "vmSize": "[parameters('vmSize')]",
+      "nicName": "[variables('nicName')]",
+      "os": "[variables('osSettings')[variables('osType')]]"
+    }
+  },
+
+  "resources": [
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[concat(variables('pipName'), copyIndex())]",
+      "location": "[resourceGroup().location]",
+      "copy": {
+        "name": "pipCountSet",
+        "count": "[parameters('vmNumber')]"
+      },
+
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic",
+        "dnsSettings": {
+          "domainNameLabel": "[concat(variables('domainNameLabel'), '-', copyIndex())]"
+        }
+      }
+    },
+
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[concat(variables('nicName'), copyIndex())]",
+      "location": "[resourceGroup().location]",
+      "copy": {
+        "name": "nicCountSet",
+        "count": "[parameters('vmNumber')]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('pipName'), copyIndex())]"
+      ],
+
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig",
+            "properties": {
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', concat(variables('pipName'), copyIndex()) )]"
+              },
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[parameters('subnetId')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+
+    {
+      "apiVersion": "2017-03-30",
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[concat(variables('vmSettings').vmNamePrefix, copyIndex())]",
+      "location": "[resourceGroup().location]",
+      "copy": {
+        "name": "vmCountSet",
+        "count": "[parameters('vmNumber')]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', variables('vmSettings').nicName, copyIndex())]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('vmSettings').vmSize]"
+        },
+        "osProfile": {
+          "computerName": "[concat(variables('vmSettings').vmNamePrefix, copyIndex())]",
+          "adminUsername": "[variables('vmSettings').adminUserName]",
+          "adminPassword": "[variables('vmSettings').adminPassword]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('vmSettings').os.publisher]",
+            "offer": "[variables('vmSettings').os.offer]",
+            "sku": "[variables('vmSettings').os.sku]",
+            "version": "[variables('vmSettings').os.version]"
+          },
+          "osDisk": {
+            "name": "[concat('os-disk', copyIndex())]",
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('vmSettings').nicName, copyIndex()) ) ]"
+            }
+          ]
+        }
+      }
+    }
+  ],
+
+  "outputs": {
+    "fqdn": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses',concat(variables('pipName'), 0))).dnsSettings.fqdn]"
+    }
+  }
+}
