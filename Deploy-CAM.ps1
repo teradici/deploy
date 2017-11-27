@@ -122,7 +122,7 @@ function Login-AzureRmAccountWithBetterReporting($Credential)
 	}
 }
 
-
+# registers CAM and returns the deployment ID
 function Register-CAM()
 {
 	Param(
@@ -155,7 +155,7 @@ function Register-CAM()
 		$camSaasBaseUri
 	)
 
-    $camDeploymentInfo = @{} #start with an empty hash map
+	$deploymentId = $null
 
 	#define variable to keep trace of the error during retry process
 	$camRegistrationError = ""
@@ -279,16 +279,6 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 				throw ("Failed to get a Deployment ID")
 			}
 
-			$camDeploymentInfo.Add("CAM_USERNAME",$userRequest.username)
-			$camDeploymentInfo.Add("CAM_PASSWORD",$userRequest.password)
-			$camDeploymentInfo.Add("CAM_TENANTID",$userRequest.tenantId)
-			$camDeploymentInfo.Add("CAM_URI",$camSaasBaseUri)
-			$camDeploymentInfo.Add("CAM_DEPLOYMENTID",$deploymentId)
-			$camDeploymentInfo.Add("CAM_SUBSCRIPTIONID",$subscriptionId)
-			$camDeploymentInfo.Add("CAM_RESOURCEGROUP",$RGName)
-			# When we have the admin as a service account:
-			# $camDeploymentInfo.Add("CAM_DOMAINACCOUNTNAME",$CAMConfig.ARMParameters... service account info)
-			# We'll want to pass through CAM_VERIFYCERT at some point.
 			
 			Write-Host "Deployment has been registered successfully with Cloud Access Manager service"
 
@@ -305,7 +295,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 	if($camRegistrationError) {
 		throw $camRegistrationError
 	}
-	return $camDeploymentInfo
+	return $deploymentId
 }
 
 
@@ -513,7 +503,6 @@ function Populate-UserBlob
 		$tempDir
 		)
 
-	$kvName = $kvInfo.VaultName
 	$kvId = $kvInfo.ResourceId
 	
 	################################
@@ -588,30 +577,15 @@ function Populate-UserBlob
 		Write-Host "Blob copy complete"
 	
 		$blobUri = $ctx.BlobEndPoint + $container_name + '/'
-
-		#populate userBlobInfo return value
-		$userBlobInfo = @{}
-		# using the blob uri + the token from the key vault will allow the web interface to retrieve required information from private blob
-		$userBlobInfo.Add("CAM_KEY_VAULT_NAME", $kvName)
 		
 		# Setup deployment parameters/Keyvault secrets
 		# this is the url to access the blob account
-		$blobUriSecretName = "userStorageAccountUri"
-		$CAMConfig.parameters.$blobUriSecretName.value = (ConvertTo-SecureString $blobUri -AsPlainText -Force)
-		$userBlobInfo.Add("CAM_USER_BLOB_URI", $blobUriSecretName)
-		
-		$storageAccountSecretName = "userStorageName"
-		$CAMConfig.parameters.$storageAccountSecretName.value = (ConvertTo-SecureString $acct_name -AsPlainText -Force)
-		$userBlobInfo.Add("CAM_USER_STORAGE_ACCOUNT_NAME", $storageAccountSecretName)
-		
-		$storageAccountKeyName = "userStorageAccountKey"
-		$CAMConfig.parameters.$storageAccountKeyName.value = (ConvertTo-SecureString $acctKey -AsPlainText -Force)
-		$userBlobInfo.Add("CAM_USER_STORAGE_ACCOUNT_KEY", $storageAccountKeyName)
+		$CAMConfig.parameters.userStorageAccountUri.value = (ConvertTo-SecureString $blobUri -AsPlainText -Force)
+		$CAMConfig.parameters.userStorageName.value = (ConvertTo-SecureString $acct_name -AsPlainText -Force)
+		$CAMConfig.parameters.userStorageAccountKey.value = (ConvertTo-SecureString $acctKey -AsPlainText -Force)
 
 		$saSasToken = New-AzureStorageAccountSASToken -Service Blob -Resource Object -Context $ctx -ExpiryTime ((Get-Date).AddYears(2)) -Permission "racwdlup" 
-		$saSasTokenSecretName = "userStorageAccountSaasToken"
-		$CAMConfig.parameters.$saSasTokenSecretName.value = (ConvertTo-SecureString $saSasToken -AsPlainText -Force)
-		$userBlobInfo.Add("CAM_USER_BLOB_TOKEN", $saSasTokenSecretName)
+		$CAMConfig.parameters.userStorageAccountSaasToken.value = (ConvertTo-SecureString $saSasToken -AsPlainText -Force)
 
 		# Generate and upload the parameters files
 
@@ -628,8 +602,6 @@ function Populate-UserBlob
 			-storageAccountKeyName	$storageAccountKeyName `
 			-tempDir $tempDir
 	)
-
-	return $userBlobInfo
 }
 
 
@@ -914,7 +886,8 @@ function Add-SecretsToKeyVault()
 		[parameter(Mandatory=$true)]
 		$CAMConfig
 	)
-
+	Write-Host "Populating keyvault."
+	
 	foreach($key in $CAMConfig.parameters.keys) {
 		Write-Host "Writing secret to keyvault: $key"
 		Set-AzureKeyVaultSecret `
@@ -1069,37 +1042,55 @@ function New-CAMAppSP()
 	return $spInfo
 }
 
-# Creates cam deployment info structures
-function New-CamDeploymentInfo()
+# Creates cam deployment info structures and pushes to Key Vault
+function New-CAMDeploymentInfo()
 {
 	param(
 	    [parameter(Mandatory=$true)] 
 	    $subscriptionId, # Azure subscription being operated on
 
-		[parameter(Mandatory=$true)] 
-		$deploymentRegistrationInfo, # Deployment and user data storage account info
-		
 	    [parameter(Mandatory=$true)] 
-		$spInfo, # Service Principal info structure
-
-	    [parameter(Mandatory=$true)] 
-		$kvInfo, # Key Vault info
+		$kvName, # Key Vault info
 
 	    [parameter(Mandatory=$true)] 
 		$CAMConfig # CAM Configuration info structure
 		)
 
+	Write-Host "Populating CAMDeploymentInfo structure for the Connection Service"
 
-	$client = $spInfo.spCreds.UserName
-	$key = $spInfo.spCreds.GetNetworkCredential().Password
-	$tenant = $spInfo.tenantId
+
+	# Mapping CAM deployment info environment variable parameters
+	# to Key Vault Secrets 
+	$camDeploymenRegInfoParameters = @{
+		"CAM_USERNAME" = "AzureSPClientID"
+		"CAM_PASSWORD" = "AzureSPKey"
+		"CAM_TENANTID" = "AzureSPTenantID"
+		"CAM_URI" = "CAMServiceURI"
+		"CAM_DEPLOYMENTID" = "CAMDeploymentID"
+		"CAM_SUBSCRIPTIONID" = "AzureSubscriptionID"
+		"CAM_RESOURCEGROUP" = "AzureResourceGroupName"
+		"CAM_KEY_VAULT_NAME" = "AzureKeyVaultName"
+	}
+
+
+	$camDeploymenRegInfo = @{}
+	foreach($key in $camDeploymenRegInfoParameters.keys) {
+		$secretName = $camDeploymenRegInfoParameters.$key
+		Write-Host "Setting $key to value of secret $secretName"
+		$secretValue = (Get-AzureKeyVaultSecret -VaultName CAM-YSDkmlWPEbfNJtQT -Name $secretName).SecretValueText
+		$camDeploymenRegInfo.$key = $secretValue
+	}
+	$camDeploymenRegInfo.Add("CAM_USER_BLOB_URI", "userStorageAccountUri")
+	$camDeploymenRegInfo.Add("CAM_USER_STORAGE_ACCOUNT_NAME", "userStorageName")
+	$camDeploymenRegInfo.Add("CAM_USER_STORAGE_ACCOUNT_KEY", "userStorageAccountKey")
+	$camDeploymenRegInfo.Add("CAM_USER_BLOB_TOKEN", "userStorageAccountSaasToken")
 
 
 	$authFileContent = @"
-subscription=$subscriptionID
-client=$client
-key=$key
-tenant=$tenant
+subscription=$($camDeploymenRegInfo.CAM_SUBSCRIPTIONID)
+client=$($camDeploymenRegInfo.CAM_USERNAME)
+key=$($camDeploymenRegInfo.CAM_PASSWORD)
+tenant=$($camDeploymenRegInfo.CAM_TENANTID)
 managementURI=https\://management.core.windows.net/
 baseURL=https\://management.azure.com/
 authURL=https\://login.windows.net/
@@ -1109,16 +1100,21 @@ graphURL=https\://graph.windows.net/
 	$authFileContentURL = [System.Web.HttpUtility]::UrlEncode($authFileContent) 
 
 	$camDeploymenInfo = @{};
-	$camDeploymenInfo.Add("registrationInfo",$deploymentRegistrationInfo)
+	$camDeploymenInfo.Add("registrationInfo",$camDeploymenRegInfo)
 	$camDeploymenInfo.Add("AzureAuthFile",$authFileContentURL)
 
-	$camDeploymenInfoJSON = ConvertTo-JSON $camDeploymenInfo -Depth 16 -Compress
+	$camDeploymenInfoJSON = ConvertTo-JSON $camDeploymenInfo -Depth 99 -Compress
 	$camDeploymenInfoURL = [System.Web.HttpUtility]::UrlEncode($camDeploymenInfoJSON)
 
 	$camDeploymenInfoURLSecure = ConvertTo-SecureString $camDeploymenInfoURL -AsPlainText -Force
 
-	$CAMConfig.parameters.CAMDeploymentInfo.value = $camDeploymenInfoURLSecure
-	$CAMConfig.parameters.SPKey.value = $spInfo.spCreds.Password
+	# Put URL encoded blob into Key Vault 
+	Write-Host "Writing secret to keyvault: CAMDeploymentInfo"
+	Set-AzureKeyVaultSecret `
+		-VaultName $kvName `
+		-Name "CAMDeploymentInfo" `
+		-SecretValue $camDeploymenInfoURLSecure `
+		-ErrorAction stop | Out-Null
 
 	<# Test code for encoding/decoding
 	$camDeploymenInfoURL
@@ -1135,6 +1131,30 @@ graphURL=https\://graph.windows.net/
 
 	#>
 
+}
+
+
+
+function Generate-CamDeploymentInfoParameters
+{
+	parameters(
+		$spInfo,
+		$camSaasUri,
+		$deploymentId,
+		$subscriptionID,
+		$RGName,
+		$kvName,
+
+
+	)		
+	$CAMConfig.parameters.AzureSPClientID = (ConvertTo-SecureString $spInfo.spCreds.UserName -AsPlainText -Force)
+	$CAMConfig.parameters.AzureSPKey.value = $spInfo.spCreds.Password
+	$CAMConfig.parameters.AzureSPTenantID = (ConvertTo-SecureString $spInfo.tenantId -AsPlainText -Force)
+	$CAMConfig.parameters.CAMServiceURI =(ConvertTo-SecureString $camSaasUri -AsPlainText -Force)
+	$CAMConfig.parameters.CAMDeploymentID = (ConvertTo-SecureString $deploymentId -AsPlainText -Force)
+	$CAMConfig.parameters.AzureSubscriptionID = (ConvertTo-SecureString $subscriptionID -AsPlainText -Force)
+	$CAMConfig.parameters.AzureResourceGroupName = (ConvertTo-SecureString $RGName -AsPlainText -Force)
+	$CAMConfig.parameters.AzureKeyVaultName = (ConvertTo-SecureString $kvName -AsPlainText -Force)
 }
 
 
@@ -1240,12 +1260,16 @@ function Deploy-CAM()
 	$CAMConfig.parameters.userStorageName = @{}
 	$CAMConfig.parameters.userStorageAccountKey = @{}
 
-	############ SPKey ?????
-	$CAMConfig.parameters.SPKey = @{}
-
-	# This is a derived value from the other parameters...
-	$CAMConfig.parameters.CAMDeploymentInfo = @{}
-
+	# Populated in Generate-CamDeploymentInfoParameters
+	$CAMConfig.parameters.AzureSPClientID = @{}
+	$CAMConfig.parameters.AzureSPKey = @{}
+	$CAMConfig.parameters.AzureSPTenantID = @{}
+	$CAMConfig.parameters.CAMServiceURI = @{}
+	$CAMConfig.parameters.CAMDeploymentID = @{}
+	$CAMConfig.parameters.AzureSubscriptionID = @{}
+	$CAMConfig.parameters.AzureResourceGroupName = @{}
+	$CAMConfig.parameters.AzureKeyVaultName = @{}
+	
 	#TODO: All the strings in here need to be reviewed for dual sourcing in the entire solution
 	# including ARM templates
 
@@ -1374,7 +1398,7 @@ function Deploy-CAM()
 			-RGName $RGName `
 			-Location $rg.Location
 		
-		$userBlobInfo = Populate-UserBlob `
+		Populate-UserBlob `
 			-CAMConfig $CAMConfig `
 			-artifactsLocation $artifactsLocation `
 			-userDataStorageAccount	$userDataStorageAccount `
@@ -1384,7 +1408,7 @@ function Deploy-CAM()
 			-tempDir $tempDir
 
 		Write-Host "Registering Cloud Access Manager Deployment to Cloud Access Manager Service"
-		$camDeploymenRegInfo = Register-CAM `
+		$deploymentId = Register-CAM `
 			-SubscriptionId $subscriptionID `
 			-client $client `
 			-key $key `
@@ -1394,19 +1418,24 @@ function Deploy-CAM()
 			-camSaasBaseUri $camSaasUri `
 			-verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
 
-		Write-Host "Creating deployment information for the Cloud Access Manager Connection Service."
-		New-CamDeploymentInfo `
-			-subscriptionId $subscriptionId `
-			-deploymentRegistrationInfo ($camDeploymenRegInfo + $userBlobInfo) `
+		Generate-CamDeploymentInfoParameters `
 			-spInfo $spInfo `
-			-kvInfo $kvInfo `
-			-CAMConfig $CAMConfig
+			-camSaasUri $camSaasUri `
+			-deploymentId $deploymentId `
+			-subscriptionID $subscriptionID `
+			-RGName $RGName `
+			-kvName $kvInfo.VaultName
 
-		Write-Host "Populating keyvault."
 		Add-SecretsToKeyVault `
 			-kvName $kvInfo.VaultName `
 			-CAMConfig $CAMConfig | Out-Null
-		
+	
+		New-CAMDeploymentInfo `
+			-subscriptionId $subscriptionId `
+			-kvName $kvInfo.VaultName `
+			-CAMConfig $CAMConfig
+
+
 		#keyvault ID of the form: /subscriptions/$subscriptionID/resourceGroups/$azureRGName/providers/Microsoft.KeyVault/vaults/$kvName
 		$kvId = $kvInfo.ResourceId
 
