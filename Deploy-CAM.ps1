@@ -355,7 +355,6 @@ function New-RemoteWorstationTemplates
 
 	#Put the VHD's in the user storage account until we move to managed storage... 
 	$VHDStorageAccountName = $storageAccountContext.StorageAccountName
-	
 
 	$armParamContent = @"
 {
@@ -363,7 +362,7 @@ function New-RemoteWorstationTemplates
 	"contentVersion": "1.0.0.0",
 	"parameters": {
 		"vmSize": { "value": "%vmSize%" },
-		"AgentChannel": { "value": $CAMConfig.internal.agentChannel},
+		"AgentChannel": { "value": "$CAMConfig.internal.agentChannel"},
 		"CAMDeploymentBlobSource": { "value": "$blobUri" },
 		"binaryLocation": { "value": "$binaryLocation" },
 		"existingSubnetName": { "value": "$existingSubnetName" },

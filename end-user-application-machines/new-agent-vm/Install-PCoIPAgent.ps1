@@ -230,7 +230,7 @@ Configuration InstallPCoIPAgent
 
                 $installerFileName = "PCoIP_agent_release_installer_standard.exe"
 
-				if ($using:isSA) {
+				if (! $using:isSA) {
 					$installerFileName = "PCoIP_agent_release_installer_graphics.exe"
 				}
 
