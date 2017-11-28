@@ -237,16 +237,16 @@ sudo rpm --import https://downloads.teradici.com/rhel/teradici.pub.gpg
 # Add the Teradici repository
 echo "-->Add the Teradici repository"
 
-agent_repo_url = https://downloads.teradici.com/rhel/pcoip.repo
+agent_repo_url = "https://downloads.teradici.com/rhel/pcoip.repo"
 case "$AGENT_CHANNEL" in 
     "beta")
-		agent_repo_url = https://downloads.teradici.com/rhel/pcoip-beta.repo
+		agent_repo_url = "https://downloads.teradici.com/rhel/pcoip-beta.repo"
         ;;
     "dev")
-		agent_repo_url = https://downloads.teradici.com/rhel/pcoip-dev.repo
+		agent_repo_url = "https://downloads.teradici.com/rhel/pcoip-dev.repo"
         ;;   
     *)
-		agent_repo_url = https://downloads.teradici.com/rhel/pcoip.repo
+		agent_repo_url = "https://downloads.teradici.com/rhel/pcoip.repo"
         ;;       
 esac
 
