@@ -1990,24 +1990,24 @@ else {
             $registrationCode = $null
         }
     } while (-not $registrationCode )
+
+    Deploy-CAM `
+        -domainAdminCredential $domainAdminCredential `
+        -domainName $domainName `
+        -registrationCode $registrationCode `
+        -camSaasUri $camSaasUri.Trim().TrimEnd('/') `
+        -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
+        -CAMDeploymentTemplateURI $CAMDeploymentTemplateURI `
+        -CAMDeploymentBlobSource $CAMDeploymentBlobSource.Trim().TrimEnd('/') `
+        -outputParametersFileName $outputParametersFileName `
+        -subscriptionId $selectedSubcriptionId `
+        -RGName $rgMatch.ResourceGroupName `
+        -spCredential $spCredential `
+        -tenantId $selectedTenantId `
+        -testDeployment $testDeployment `
+        -certificateFile $certificateFile `
+        -certificateFilePassword $certificateFilePassword
 }
 
 
 
-# Not using splat because of bad handling of default values.
-Deploy-CAM `
-    -domainAdminCredential $domainAdminCredential `
-    -domainName $domainName `
-    -registrationCode $registrationCode `
-    -camSaasUri $camSaasUri.Trim().TrimEnd('/') `
-    -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
-    -CAMDeploymentTemplateURI $CAMDeploymentTemplateURI `
-    -CAMDeploymentBlobSource $CAMDeploymentBlobSource.Trim().TrimEnd('/') `
-    -outputParametersFileName $outputParametersFileName `
-    -subscriptionId $selectedSubcriptionId `
-    -RGName $rgMatch.ResourceGroupName `
-    -spCredential $spCredential `
-    -tenantId $selectedTenantId `
-    -testDeployment $testDeployment `
-    -certificateFile $certificateFile `
-    -certificateFilePassword $certificateFilePassword
