@@ -7,13 +7,17 @@
 yum -y update
 
 #Install and setup the Sumo Collector
-wget https://teradeploy.blob.core.windows.net/binaries/SC_1.0.zip -P /tmp/
-unzip -o /tmp/SC_1.0.zip
-rpm -i sumo/SumoCollector-19.182-25.x86_64.rpm
-cp sumo/user.properties /opt/SumoCollector/config/
-cp sumo/sumo_cm_vm.json /opt/SumoCollector/config/
+mkdir sumo
+wget "https://collectors.sumologic.com/rest/download/linux/64" -O sumo/SumoCollector.sh && sudo chmod +x sumo/SumoCollector.sh
+wget "$3/user.properties" -O sumo/user.properties
+wget "$3/sumo_cm_vm.json" -O sumo/sumo_cm_vm.json
+JSON_FILE=$(pwd)/sumo/sumo_cm_vm.json
 echo "Attemtping to set sumo collector ID to: " "$2"
-sed -i s/collectorID/"$2"/ /opt/SumoCollector/config/user.properties
+sed -i s/collectorID/"$2"/ sumo/user.properties
+sed -i s/syncsourceFile/"$JSON_FILE"/ sumo/user.properties
+
+sudo ./sumo/SumoCollector.sh -q -varfile sumo/user.properties
+
 # service collector install - configures the collector to start at boot time
 service collector install
 service collector restart
