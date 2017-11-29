@@ -19,7 +19,7 @@
         "dnsLabelPrefix": { "value": "tbd-vmname" },
         "vmAdminUsername": { "value": "GEN-USER" },
         "vmAdminPassword": { "value": "GEN-PASSWORD" },
-        "domainGroupToJoin": { "value": "domainGroupAppServersJoin" },
+        "domainGroupToJoin": { "value": "Remote Workstations" },
         "CAMDeploymentBlobSource": { "value": "https://teradeploy.blob.core.windows.net/binaries" },
         "_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/remote-workstations" }
     }

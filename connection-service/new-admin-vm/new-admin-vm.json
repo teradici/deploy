@@ -8,10 +8,10 @@
                 "description": "Unique public DNS prefix for the deployment. The fqdn will look something like '<dnsname>.westus.cloudapp.azure.com'. Up to 62 chars, digits or dashes, lowercase, should start with a letter: must conform to '^[a-z][a-z0-9-]{1,61}[a-z0-9]$'."
             }
         },
-        "domainGroupAppServersJoin": {
+        "remoteWorkstationDomainGroup": {
             "type": "string",
             "metadata": {
-                "description": "The domain group the application servers should join"
+                "description": "The domain group the remote workstations should join"
             }
         },
         "domainUsername": {
@@ -78,7 +78,7 @@
                     },
                     "configurationFunction": "Install-CAM-CS.ps1\\InstallCAM",
                     "Properties": {
-                        "domainGroupAppServersJoin": "[parameters('domainGroupAppServersJoin')]",
+                        "remoteWorkstationDomainGroup": "[parameters('remoteWorkstationDomainGroup')]",
                         "sourceURI": "[parameters('CAMDeploymentBlobSource')]",
                         "DomainAdminCreds": {
                             "UserName": "[parameters('domainUsername')]",

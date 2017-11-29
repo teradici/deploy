@@ -35,7 +35,7 @@
         "certPassword": {
             "value": "changeit"
         },
-        "domainGroupAppServersJoin": {
+        "remoteWorkstationDomainGroup": {
             "value": "Remote Workstations"
         },
         "CAMDeploymentInfo": {

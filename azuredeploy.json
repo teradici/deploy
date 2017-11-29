@@ -22,6 +22,12 @@
         "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
       }
     },
+    "remoteWorkstationDomainGroup": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the domain group that Remote Workstations are joined to"
+      }
+    },
     "localAdminUsername": {
       "type": "string",
       "metadata": {
@@ -94,7 +100,6 @@
     }
   },
   "variables": {
-    "domainGroupAppServersJoin": "Remote Workstations",
     "adminDesktopVMName": "admin-rw"
   },
   "resources": [
@@ -160,8 +165,8 @@
           "domainAdminPassword": {
             "value": "[parameters('domainAdminPassword')]"
           },
-          "domainGroupAppServersJoin": {
-            "value": "[variables('domainGroupAppServersJoin')]"
+          "remoteWorkstationDomainGroup": {
+            "value": "[parameters('remoteWorkstationDomainGroup')]"
           },
           "localAdminUsername": {
             "value": "[parameters('localAdminUsername')]"
@@ -232,7 +237,7 @@
             "value": "[parameters('rwsLocalAdminPassword')]"
           },
           "domainGroupToJoin": {
-            "value": "[variables('domainGroupAppServersJoin')]"
+            "value": "[parameters('remoteWorkstationDomainGroup')]"
           },
           "CAMDeploymentInfo": {
             "value": "[parameters('CAMDeploymentInfo')]"

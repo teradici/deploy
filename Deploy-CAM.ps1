@@ -334,9 +334,7 @@ function New-RemoteWorstationTemplates {
 
     Write-Host "Creating default remote workstation template parameters file data"
 
-    #Setup internal variables from config structure
-    $domainGroupAppServersJoin = $CAMConfig.internal.domainGroupAppServersJoin
-
+    # Setup internal variables from config structure
     $standardVMSize = $CAMConfig.internal.standardVMSize
     $graphicsVMSize = $CAMConfig.internal.graphicsVMSize
     $agentARM = $CAMConfig.internal.agentARM
@@ -410,8 +408,15 @@ function New-RemoteWorstationTemplates {
 				"secretName": "remoteWorkstationLocalAdminPassword"
 			}
 		},
+		"domainGroupToJoin": {
+			"reference": {
+				"keyVault": {
+				"id": "$kvId"
+				},
+				"secretName": "remoteWorkstationDomainGroup"
+			}
+		},
 		"domainToJoin": { "value": "$domainFQDN" },
-		"domainGroupToJoin": { "value": "$domainGroupAppServersJoin" },
 		"storageAccountName": { "value": "$VHDStorageAccountName" },
 		"_artifactsLocation": { "value": "$blobUri" },
 		"_artifactsLocationSasToken": {
@@ -1235,8 +1240,13 @@ function New-ConnectionServiceDeployment() {
 				"secretName": "CAMCSCertificatePassword"
 			}
 		},
-		"domainGroupAppServersJoin": {
-			"value": "Remote Workstations"
+		"remoteWorkstationDomainGroup": {
+			"reference": {
+				"keyVault": {
+					"id": "$kvID"
+				},
+				"secretName": "remoteWorkstationDomainGroup"
+			}
 		},
 		"CAMDeploymentInfo": {
 			"reference": {
@@ -1515,7 +1525,12 @@ function Deploy-CAM() {
         value      = (ConvertTo-SecureString "localadmin" -AsPlainText -Force)
         clearValue = "localadmin"
     }
-	
+
+    $CAMConfig.parameters.remoteWorkstationDomainGroup = @{
+        value      = (ConvertTo-SecureString "Remote Workstations" -AsPlainText -Force)
+        clearValue = "Remote Workstations"
+    }
+
     # Set in Populate-UserBlob
     $CAMConfig.parameters.userStorageAccountSaasToken = @{}
     $CAMConfig.parameters.userStorageAccountUri = @{}
@@ -1563,8 +1578,6 @@ function Deploy-CAM() {
         clearValue = $CAMConfig.internal.GWSubnetID
     }
 	
-	
-    $CAMConfig.internal.domainGroupAppServersJoin = "Remote Workstations"
 	
     $CAMConfig.internal.standardVMSize = "Standard_D2_v2"
     $CAMConfig.internal.graphicsVMSize = "Standard_NV6"
@@ -1639,11 +1652,11 @@ function Deploy-CAM() {
     $retryCount = 60
     for ($idx = ($retryCount - 1); $idx -ge 0; $idx--) {
         try {
-            $spContext = Add-AzureRmAccount `
+            Add-AzureRmAccount `
                 -Credential $spInfo.spCreds `
                 -ServicePrincipal `
                 -TenantId $spInfo.tenantId `
-                -ErrorAction Stop
+                -ErrorAction Stop | Out-Null
             break
         }
         catch {
@@ -1708,6 +1721,14 @@ function Deploy-CAM() {
 					"id": "$kvId"
 				},
 				"secretName": "domainName"
+			}
+		},
+		"remoteWorkstationDomainGroup": {
+			"reference": {
+				"keyVault": {
+					"id": "$kvID"
+				},
+				"secretName": "remoteWorkstationDomainGroup"
 			}
 		},
 		"CAMDeploymentBlobSource": {

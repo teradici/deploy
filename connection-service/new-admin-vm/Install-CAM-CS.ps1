@@ -54,7 +54,7 @@ Configuration InstallCAM
         $linuxAgentARM = "rhel-standard-agent.json",
 
         [Parameter(Mandatory)]
-        [String]$domainGroupAppServersJoin,
+        [String]$remoteWorkstationDomainGroup,
 
         [Parameter(Mandatory)]
         [System.Management.Automation.PSCredential]$DomainAdminCreds,
@@ -527,7 +527,7 @@ dc=$domainroot
 adServerHostAddress=$domainControllerFQDN
 resourceGroupName=$RGNameLocal
 CAMSessionTimeoutMinutes=480
-domainGroupAppServersJoin="$using:domainGroupAppServersJoin"
+domainGroupAppServersJoin="$using:remoteWorkstationDomainGroup"
 "@
 
 				$targetDir = "$CatalinaHomeLocation\adminproperty"
