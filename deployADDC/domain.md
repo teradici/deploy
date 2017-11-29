@@ -8,7 +8,7 @@ In order to deploy CAM integrated with a pre-existing domain controller, the fol
 * **service account password** password for the service account
 * **Virtual NetWork Id** the id of the virtual network where CAM will be deployed
 * **Subnet for remote workstations** the subnet where the remote workstations will be deployed
-* **Subnet for Azure Application Gateway** the subnet where the CAM Azure Application Gateway will be deployed. Note this subnet cannot have any resources than other application gateways.
+* **Subnet for Azure Application Gateway** the subnet where the CAM Azure Application Gateway will be deployed. Note this subnet cannot have any other resources than application gateways.
 
 > **Notes** It assumes CAM and AD DC will use the same network but might be different sub-network
 
@@ -60,7 +60,7 @@ There are two methods of enabling LDAPS on a DC.
        2) The Subject name or the first name in the Subject Alternative Name (SAN) must match the Fully Qualified Domain Name (FQDN) of the host machine, such as Subject:CN=server.domain.com.  
       3) The host machine account needs to have access to the private key. This is done when the digital certificate request is issued from that machine, or when the private key was exported and imported to a different machine.  
     
-The following links as exmples to setup LDAPS:  
+The following links provide exmples for setting up LDAPS:  
 https://support.microsoft.com/en-us/help/321051/how-to-enable-ldap-over-ssl-with-a-third-party-certification-authority  
 http://pdhewaju.com.np/2017/03/02/configuring-secure-ldap-connection-server-2016/  
 https://www.petri.com/enable-secure-ldap-windows-server-2008-2012-dc  
