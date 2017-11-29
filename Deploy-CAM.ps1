@@ -1290,13 +1290,40 @@ function Deploy-CAM()
 	# cache the current context
 	$azureContext = Get-AzureRMContext
 	$rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName
-	try {
-		$spContext = Add-AzureRmAccount `
-			-Credential $spInfo.spCreds `
-			-ServicePrincipal `
-			-TenantId $spInfo.tenantId `
-			-ErrorAction Stop 
 
+	# sign in as SP
+	$retryCount = 60
+    for ($idx = ($retryCount - 1); $idx -ge 0; $idx--) {
+        try {
+            Add-AzureRmAccount `
+                -Credential $spInfo.spCreds `
+                -ServicePrincipal `
+                -TenantId $spInfo.tenantId `
+                -ErrorAction Stop | Out-Null
+            break
+        }
+        catch {
+            if ($azureContext) {
+                Write-Host "Reverting to initial Azure context for $($azureContext.Account.Id)"
+                Set-AzureRMContext -Context $azureContext | Out-Null
+            }
+            # if it's the unknown user (so potentially a timing issue where the account hasn't percolated
+            # through the system yet) retry. Otherwise abort and re-throw
+            $caughtError = $_
+            if (     ($caughtError.Exception -is [Microsoft.IdentityModel.Clients.ActiveDirectory.AdalException]) `
+                -and ($caughtError.Exception.ServiceErrorCodes[0] -eq 70001) `
+                -and ($idx -gt 0))
+            {
+                Write-Host "Could not find application ID for tenant. Retries remaining: $idx"
+                continue
+            }
+            else {
+                throw $caughtError
+            }
+        }
+	}
+	
+	try {
 		$kvInfo = New-PopulatedKeyvault `
 			-RGName $RGName `
 			-registrationCode $registrationCode `
