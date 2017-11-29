@@ -1337,6 +1337,82 @@ function New-ConnectionServiceDeployment() {
     }
 }
 
+# Creates a CAM Deployment Root including keyvault, user data storage account
+# and populates parameters.
+# Returns key vault info.
+function New-CAMDeploymentRoot()
+{
+    param(
+        $RGName,
+        $spInfo,
+        $azureContext,
+        $CAMConfig,
+        $tempDir,
+        $certificateFile,
+        $certificateFilePassword,
+        $camSaasUri,
+        $verifyCAMSaaSCertificate,
+        $subscriptionID
+    )
+
+    $rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName
+    $client = $spInfo.spCreds.UserName
+    $key = $spInfo.spCreds.GetNetworkCredential().Password
+    $tenant = $spInfo.tenantId
+    $registrationCode = $CAMConfig.parameters.cloudAccessRegistrationCode.value
+    $artifactsLocation = $CAMConfig.parameters.artifactsLocation.clearValue
+    $CAMDeploymentBlobSource = $CAMConfig.parameters.CAMDeploymentBlobSource.clearValue
+    
+    $kvInfo = New-CAM-KeyVault `
+        -RGName $RGName `
+        -spName $spInfo.spCreds.UserName `
+        -adminAzureContext $azureContext
+
+    Generate-Certificate-And-Passwords `
+        -kvName $kvInfo.VaultName `
+        -CAMConfig $CAMConfig `
+        -tempDir $tempDir `
+        -certificateFile $certificateFile `
+        -certificateFilePassword $certificateFilePassword | Out-Null
+
+    $userDataStorageAccount = New-UserStorageAccount `
+        -RGName $RGName `
+        -Location $rg.Location
+
+    Populate-UserBlob `
+        -CAMConfig $CAMConfig `
+        -artifactsLocation $artifactsLocation `
+        -userDataStorageAccount	$userDataStorageAccount `
+        -CAMDeploymentBlobSource $CAMDeploymentBlobSource `
+        -RGName $RGName `
+        -kvInfo $kvInfo `
+        -tempDir $tempDir | Out-Null
+
+    Write-Host "Registering Cloud Access Manager Deployment to Cloud Access Manager Service"
+    $deploymentId = Register-CAM `
+        -SubscriptionId $subscriptionID `
+        -client $client `
+        -key $key `
+        -tenant $tenant `
+        -RGName $RGName `
+        -registrationCode $registrationCode `
+        -camSaasBaseUri $camSaasUri `
+        -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
+
+    Generate-CamDeploymentInfoParameters `
+        -spInfo $spInfo `
+        -camSaasUri $camSaasUri `
+        -deploymentId $deploymentId `
+        -subscriptionID $subscriptionID `
+        -RGName $RGName `
+        -kvName $kvInfo.VaultName | Out-Null
+
+    Add-SecretsToKeyVault `
+        -kvName $kvInfo.VaultName `
+        -CAMConfig $CAMConfig | Out-Null
+
+    return $kvInfo
+}
 
 # Deploy a full CAM deployment with root networking and DC, a connection service
 # and a convenience 'first' Windows standard agent machine 
@@ -1586,62 +1662,25 @@ function Deploy-CAM() {
     }
 
 
-    $rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName
     try {
 
-        $kvInfo = New-CAM-KeyVault `
+        $kvInfo = New-CAMDeploymentRoot `
             -RGName $RGName `
-            -spName $spInfo.spCreds.UserName `
-            -adminAzureContext $azureContext
-
-        Generate-Certificate-And-Passwords `
-            -kvName $kvInfo.VaultName `
+            -spInfo $spInfo `
+            -azureContext $azureContext `
             -CAMConfig $CAMConfig `
             -tempDir $tempDir `
             -certificateFile $certificateFile `
-            -certificateFilePassword $certificateFilePassword | Out-Null
-
-        $userDataStorageAccount = New-UserStorageAccount `
-            -RGName $RGName `
-            -Location $rg.Location
-		
-        Populate-UserBlob `
-            -CAMConfig $CAMConfig `
-            -artifactsLocation $artifactsLocation `
-            -userDataStorageAccount	$userDataStorageAccount `
-            -CAMDeploymentBlobSource $CAMDeploymentBlobSource `
-            -RGName $RGName `
-            -kvInfo $kvInfo `
-            -tempDir $tempDir
-
-        Write-Host "Registering Cloud Access Manager Deployment to Cloud Access Manager Service"
-        $deploymentId = Register-CAM `
-            -SubscriptionId $subscriptionID `
-            -client $client `
-            -key $key `
-            -tenant $tenant `
-            -RGName $RGName `
-            -registrationCode $registrationCode `
-            -camSaasBaseUri $camSaasUri `
-            -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
-
-        Generate-CamDeploymentInfoParameters `
-            -spInfo $spInfo `
+            -certificateFilePassword $certificateFilePassword `
             -camSaasUri $camSaasUri `
-            -deploymentId $deploymentId `
-            -subscriptionID $subscriptionID `
-            -RGName $RGName `
-            -kvName $kvInfo.VaultName
+            -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
+            -subscriptionID $subscriptionID
 
-        Add-SecretsToKeyVault `
-            -kvName $kvInfo.VaultName `
-            -CAMConfig $CAMConfig | Out-Null
-	
+        # Populate/re-populate CAMDeploymentInfo before deploying any connection service
         New-CAMDeploymentInfo `
             -kvName $kvInfo.VaultName
 
-
-        #keyvault ID of the form: /subscriptions/$subscriptionID/resourceGroups/$azureRGName/providers/Microsoft.KeyVault/vaults/$kvName
+        # keyvault ID of the form: /subscriptions/$subscriptionID/resourceGroups/$azureRGName/providers/Microsoft.KeyVault/vaults/$kvName
         $kvId = $kvInfo.ResourceId
 
         $generatedDeploymentParameters = @"
