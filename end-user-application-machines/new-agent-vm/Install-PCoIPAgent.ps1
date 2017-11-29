@@ -91,13 +91,13 @@ Configuration InstallPCoIPAgent
             SetScript  = {
                 Write-Verbose "Install_SumoCollector"
 
-                $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
+                $installerFileName = "SumoCollector.exe"
                 $uninstallerRegistryID = "7857-4527-9352-4688"  # This will need to change for every installer version change!
 
 				$sasToken = ($using:sasTokenAsCred).GetNetworkCredential().password
 				$blobLocation = ($using:sasTokenAsCred).GetNetworkCredential().username
 
-                $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/$installerFileName"
+                $sumo_package = 'https://collectors.sumologic.com/rest/download/win64'
                 $sumo_config = "$blobLocation/sumo.conf${sasToken}"
                 $sumo_collector_json = "$blobLocation/sumo-agent-vm.json${sasToken}"
                 $dest = "C:\sumo"
