@@ -145,7 +145,7 @@
         "AgentChannel": {
             "type": "string",
             "metadata": {
-                "description": "from the channel to download PCoIP Agent Installer."
+                "description": "PCoIP Agent channel to use for installer download ."
             }
         }
     },
