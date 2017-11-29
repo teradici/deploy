@@ -35,8 +35,8 @@ param(
     $certificateFilePassword = $null,
 
     $camSaasUri = "https://cam-antar.teradici.com",
-    $CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/bd/azuredeploy.json",
-    $CAMDeploymentBlobSource = "https://teradeploy.blob.core.windows.net/bdbinaries",
+    $CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/bddc2/azuredeploy.json",
+    $CAMDeploymentBlobSource = "https://teradeploy.blob.core.windows.net/bdstable",
     $outputParametersFileName = "cam-output.parameters.json",
     $location
 )
@@ -1551,15 +1551,43 @@ function Deploy-CAM() {
     # Login with SP since some Powershell contexts (with token auth - like Azure Cloud PowerShell or Visual Studio)
     # can't do operations on keyvaults
 
-    # cache the current context
+    
+    # cache the current context and sign in as SP
     $azureContext = Get-AzureRMContext
+    $retryCount = 60
+    for ($idx = ($retryCount - 1); $idx -ge 0; $idx--) {
+        try {
+            $spContext = Add-AzureRmAccount `
+                -Credential $spInfo.spCreds `
+                -ServicePrincipal `
+                -TenantId $spInfo.tenantId `
+                -ErrorAction Stop
+            break
+        }
+        catch {
+            if ($azureContext) {
+                Write-Host "Reverting to initial Azure context for $($azureContext.Account.Id)"
+                Set-AzureRMContext -Context $azureContext | Out-Null
+            }
+            # if it's the unknown user (so potentially a timing issue where the account hasn't percolated
+            # through the system yet) retry. Otherwise abort and re-throw
+            $caughtError = $_
+            if (     ($caughtError.Exception -is [Microsoft.IdentityModel.Clients.ActiveDirectory.AdalException]) `
+                -and ($caughtError.Exception.ServiceErrorCodes[0] -eq 70001) `
+                -and ($idx -gt 0))
+            {
+                Write-Host "Could not find application ID for tenant. Retries remaining: $idx"
+                continue
+            }
+            else {
+                throw $caughtError
+            }
+        }
+    }
+
+
     $rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName
     try {
-        $spContext = Add-AzureRmAccount `
-            -Credential $spInfo.spCreds `
-            -ServicePrincipal `
-            -TenantId $spInfo.tenantId `
-            -ErrorAction Stop 
 
         $kvInfo = New-CAM-KeyVault `
             -RGName $RGName `
@@ -1758,6 +1786,7 @@ function Deploy-CAM() {
     }
     finally {
         if ($azureContext) {
+            Write-Host "Reverting to initial Azure context for $($azureContext.Account.Id)"
             Set-AzureRMContext -Context $azureContext | Out-Null
         }
     }
