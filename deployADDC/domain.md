@@ -8,12 +8,12 @@ In order to deploy CAM integrated with a pre-existing domain controller, the fol
 * **service account password** password for the service account
 * **Virtual NetWork Id** the id of the virtual network where CAM will be deployed
 * **Subnet for remote workstations** the subnet where the remote workstations will be deployed
-* **Subnet for Azure Application Gateway** the subnet where the CAM Azure Application Gateway will be deployed. Note this subnet cannot have any other resources than other application gateways.
+* **Subnet for Azure Application Gateway** the subnet where the CAM Azure Application Gateway will be deployed. Note this subnet cannot have any resources than other application gateways.
 
 > **Notes** It assumes CAM and AD DC will use the same network but might be different sub-network
 
 Before deploying CAM integrated with an existing DC, please make sure the following requirements have been satisfied:      
-### 1.  Creating an account with delegated permissions to join a computer to domain.   
+### 1.  Create an account with delegated permissions to join a computer to domain.   
 * the account should have minimum permissions to:
 * Create Computer Objects
 * Delete Computer Objects
