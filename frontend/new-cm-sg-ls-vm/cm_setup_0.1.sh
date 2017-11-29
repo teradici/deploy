@@ -14,9 +14,9 @@ wget "$3/sumo_cm_vm.json" -O sumo/sumo_cm_vm.json
 JSON_FILE=$(pwd)/sumo/sumo_cm_vm.json
 echo "Attemtping to set sumo collector ID to: " "$2"
 sed -i s/collectorID/"$2"/ sumo/user.properties
-sed -i s/syncsourceFile/"$JSON_FILE"/ sumo/user.properties
+sed -i 's|syncsourceFile|'$JSON_FILE'|' sumo/user.properties
 
-sudo ./sumo/SumoCollector.sh -q -varfile sumo/user.properties
+sudo ./sumo/SumoCollector.sh -q -varfile user.properties
 
 # service collector install - configures the collector to start at boot time
 service collector install
