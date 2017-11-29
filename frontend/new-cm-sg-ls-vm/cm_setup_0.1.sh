@@ -7,16 +7,16 @@
 yum -y update
 
 #Install and setup the Sumo Collector
-mkdir sumo
-wget "https://collectors.sumologic.com/rest/download/linux/64" -O sumo/SumoCollector.sh && sudo chmod +x sumo/SumoCollector.sh
-wget "$3/user.properties" -O sumo/user.properties
-wget "$3/sumo_cm_vm.json" -O sumo/sumo_cm_vm.json
-JSON_FILE=$(pwd)/sumo/sumo_cm_vm.json
+mkdir /tmp/sumo
+wget "https://collectors.sumologic.com/rest/download/linux/64" -O /tmp/sumo/SumoCollector.sh && sudo chmod +x /tmp/sumo/SumoCollector.sh
+wget "$3/user.properties" -O /tmp/sumo/user.properties
+wget "$3/sumo_cm_vm.json" -O /tmp/sumo/sumo_cm_vm.json
+JSON_FILE=/tmp/sumo/sumo_cm_vm.json
 echo "Attemtping to set sumo collector ID to: " "$2"
-sed -i s/collectorID/"$2"/ sumo/user.properties
-sed -i 's|syncsourceFile|'$JSON_FILE'|' sumo/user.properties
+sed -i s/collectorID/"$2"/ /tmp/sumo/user.properties
+sed -i 's|syncsourceFile|'$JSON_FILE'|' /tmp/sumo/user.properties
 
-sudo ./sumo/SumoCollector.sh -q -varfile user.properties
+sudo /tmp/sumo/SumoCollector.sh -q -varfile user.properties
 
 # service collector install - configures the collector to start at boot time
 service collector install
