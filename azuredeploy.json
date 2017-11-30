@@ -90,7 +90,7 @@
       "defaultValue": "stable",
       "allowedValues": ["stable","beta","dev"],
       "metadata": {
-        "description": "PCoIP Agent channel to use for installer download ."
+        "description": "PCoIP Agent channel to use for installer download."
       }
     },
     "CAMDeploymentInfo": {

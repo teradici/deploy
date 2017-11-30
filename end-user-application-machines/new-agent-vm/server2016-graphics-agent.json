@@ -129,7 +129,7 @@
         "AgentChannel": {
             "type": "string",
             "metadata": {
-                "description": "PCoIP Agent channel to use for installer download ."
+                "description": "PCoIP Agent channel to use for installer download."
             }
         }
     },
