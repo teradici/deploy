@@ -236,8 +236,8 @@ Configuration InstallPCoIPAgent
 
                 $pcoipAgentInstallerUrl = $using:pcoipAgentInstallerUrl
 
-				if (! $pcoipAgentInstallerUrl.EndsWith('\') ) {
-					 $pcoipAgentInstallerUrl =  $pcoipAgentInstallerUrl + '\';
+				if (! $pcoipAgentInstallerUrl.EndsWith('/') ) {
+					 $pcoipAgentInstallerUrl =  $pcoipAgentInstallerUrl + '/';
 				}
 
 				$pcoipAgentInstallerUrl =  $pcoipAgentInstallerUrl + $installerFileName;
