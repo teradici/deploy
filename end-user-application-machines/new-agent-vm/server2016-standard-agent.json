@@ -24,22 +24,10 @@
             "type": "string",
             "defaultValue": "Windows Server 2016",
             "allowedValues": [
-              "Windows Server 2016",
-              "RHEL 7"
+              "Windows Server 2016"
             ],
             "metadata": {
               "description": "Type of OS to use for VM."
-            }
-        },
-        "agentType": {
-            "type": "string",
-            "defaultValue": "Standard",
-            "allowedValues": [
-              "Standard",
-              "Graphics"
-            ],
-            "metadata": {
-              "description": "PCoIP Agent Type: Standard or Graphics."
             }
         },
         "vmSize": {
@@ -153,6 +141,12 @@
                 "description": "Storage account key for accessing private blob data"
             },
             "defaultValue": ""
+        },
+        "AgentChannel": {
+            "type": "string",
+            "metadata": {
+                "description": "PCoIP Agent channel to use for installer download."
+            }
         }
     },
     "variables": {
@@ -170,15 +164,9 @@
               "offer": "WindowsServer",
               "sku": "2016-Datacenter",
               "version": "latest"
-            },
-            "RHEL 7": {
-              "publisher": "RedHat",
-              "offer": "RHEL",
-              "sku": "7.3",
-              "version": "latest"
             }
         },
-      
+
         "vmSettings": {
             "vmNamePrefix": "[parameters('dnsLabelPrefix')]",
             "adminUserName": "[parameters('vmAdminUsername')]",
@@ -188,19 +176,8 @@
             "os": "[variables('osSettings')[parameters('osType')]]"
         },
 
-        "extensions": {
-            "Standard": {
-                "pcoipAgentInstallerUrl": "[concat(parameters('binaryLocation'), '/PCoIP_agent_release_installer_2.10.0.7600_standard.exe')]",
-                "videoDriverUrl": ""
-            },
-            "Graphics": {
-                "pcoipAgentInstallerUrl": "[concat(parameters('binaryLocation'), '/PCoIP_agent_release_installer_2.10.0.7600_graphics.exe')]",
-                "videoDriverUrl": "[concat(parameters('binaryLocation'), '/370.12_grid_win10_server2016_64bit_international.exe')]"
-            }
-        },
-          
-        "pcoipAgentInstallerUrl": "[variables('extensions')[parameters('agentType')].pcoipAgentInstallerUrl]",
-        "videoDriverUrl": "[variables('extensions')[parameters('agentType')].videoDriverUrl]"
+        "pcoipAgentInstallerUrl": "[concat('https://downloads.teradici.com/win/', parameters('AgentChannel'))]",
+        "videoDriverUrl": ""
     },
     "resources": [
         {

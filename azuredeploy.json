@@ -85,6 +85,14 @@
           "description": "Id of the keyvault where user credentials for the deployment are stored."
       }
     },
+    "AgentChannel": {
+      "type": "string",
+      "defaultValue": "stable",
+      "allowedValues": ["stable","beta","dev"],
+      "metadata": {
+        "description": "PCoIP Agent channel to use for installer download."
+      }
+    },
     "CAMDeploymentInfo": {
       "type": "securestring",
       "metadata": {
@@ -277,6 +285,9 @@
           },
           "registrationCode": {
             "value": "[parameters('registrationCode')]"
+          },
+          "AgentChannel": {
+            "value": "[parameters('AgentChannel')]"
           },
           "_artifactsLocation": {
             "value": "[concat(parameters('_artifactsLocation'), '/end-user-application-machines')]"

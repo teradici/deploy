@@ -228,8 +228,20 @@ Configuration InstallPCoIPAgent
 				#agent installer exit code 1641 require reboot machine
 				Set-Variable EXIT_CODE_REBOOT 1641 -Option Constant
 
+                $installerFileName = "PCoIP_agent_release_installer_standard.exe"
+
+				if (! $using:isSA) {
+					$installerFileName = "PCoIP_agent_release_installer_graphics.exe"
+				}
+
                 $pcoipAgentInstallerUrl = $using:pcoipAgentInstallerUrl
-                $installerFileName = [System.IO.Path]::GetFileName($pcoipAgentInstallerUrl)
+
+				if (! $pcoipAgentInstallerUrl.EndsWith('/') ) {
+					 $pcoipAgentInstallerUrl =  $pcoipAgentInstallerUrl + '/';
+				}
+
+				$pcoipAgentInstallerUrl =  $pcoipAgentInstallerUrl + $installerFileName;
+                
                 $destFile = $using:agentInstallerDLDirectory + '\' + $installerFileName
 
 				$orderNumArray = $using:orderNumArray
