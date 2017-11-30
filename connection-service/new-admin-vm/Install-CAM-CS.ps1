@@ -518,6 +518,10 @@ Configuration InstallCAM
 				$domainControllerFQDN = $using:dcvmfqdn
 				$RGNameLocal        = $using:RGName
 
+				$localAdminCreds = $using:DomainAdminCreds
+				$adminUsername = $localAdminCreds.GetNetworkCredential().Username
+				$adminPassword = $localAdminCreds.GetNetworkCredential().Password
+
 				$auProperties = @"
 #$date
 cn=Users
@@ -528,6 +532,10 @@ adServerHostAddress=$domainControllerFQDN
 resourceGroupName=$RGNameLocal
 CAMSessionTimeoutMinutes=480
 domainGroupAppServersJoin="$using:remoteWorkstationDomainGroup"
+ldapHost=ldaps://$domainControllerFQDN
+ldapAdminUsername=$adminUsername
+ldapAdminPassword=$adminPassword
+ldapDomain=$Using:domainFQDN
 "@
 
 				$targetDir = "$CatalinaHomeLocation\adminproperty"
