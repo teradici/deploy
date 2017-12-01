@@ -35,7 +35,7 @@ param(
     $certificateFilePassword = $null,
 
     $camSaasUri = "https://cam-antar.teradici.com",
-    $CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/bddc2/azuredeploy.json",
+    $CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/bddc2b/azuredeploy.json",
     $CAMDeploymentBlobSource = "https://teradeploy.blob.core.windows.net/bdstable",
     $outputParametersFileName = "cam-output.parameters.json",
     $location
@@ -988,31 +988,6 @@ function New-CAMAppSP() {
             }
         }
     }
-	
-    Write-Host "SP creation complete. Adding role assignment."
-
-    # Retry required since it can take a few seconds for the app registration to percolate through Azure.
-    # (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
-    $rollAssignmentRetry = 120
-    while ($rollAssignmentRetry -ne 0) {
-        $rollAssignmentRetry--
-
-        try {
-            New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $RGName -ServicePrincipalName $app.ApplicationId -ErrorAction Stop
-            break
-        }
-        catch {
-            Write-Host "Waiting for service principal. Remaining: $rollAssignmentRetry"
-            Start-sleep -Seconds 1
-            if ($rollAssignmentRetry -eq 0) {
-                #re-throw whatever the original exception was
-                $exceptionContext = Get-AzureRmContext
-                $exceptionSubscriptionId = $exceptionContext.Subscription.Id
-                Write-Error "Failure to create Contributor role for $appName in ResourceGroup: $RGName Subscription: $exceptionSubscriptionId. Please check your subscription premissions."
-                throw
-            }
-        }
-    }
 
     # Get SP credentials
     $spPass = $generatedPassword
@@ -1409,6 +1384,7 @@ function New-CAMDeploymentRoot()
 {
     param(
         $RGName,
+        $rwRGName,
         $spInfo,
         $azureContext,
         $CAMConfig,
@@ -1459,7 +1435,7 @@ function New-CAMDeploymentRoot()
         -client $client `
         -key $key `
         -tenant $tenant `
-        -RGName $RGName `
+        -RGName $rwRGName `
         -registrationCode $registrationCode `
         -camSaasBaseUri $camSaasUri `
         -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
@@ -1469,7 +1445,7 @@ function New-CAMDeploymentRoot()
         -camSaasUri $camSaasUri `
         -deploymentId $deploymentId `
         -subscriptionID $subscriptionID `
-        -RGName $RGName `
+        -RGName $rwRGName `
         -kvName $kvInfo.VaultName | Out-Null
 
     Add-SecretsToKeyVault `
@@ -1483,21 +1459,31 @@ function New-CAMDeploymentRoot()
 # and a convenience 'first' Windows standard agent machine 
 function Deploy-CAM() {
     param(
+        [parameter(Mandatory = $false)] 
         [bool]
         $verifyCAMSaaSCertificate = $true,
 
+        [parameter(Mandatory = $true)] 
         $CAMDeploymentTemplateURI,
 
+        [parameter(Mandatory = $true)] 
         [System.Management.Automation.PSCredential]
         $domainAdminCredential,
 		
+        [parameter(Mandatory = $true)] 
         $domainName,
 
+        [parameter(Mandatory = $true)] 
         [SecureString]
         $registrationCode,
 
+        [parameter(Mandatory = $true)] 
         $camSaasUri,
+
+        [parameter(Mandatory = $true)] 
         $CAMDeploymentBlobSource,
+
+        [parameter(Mandatory = $true)] 
         $outputParametersFileName,
 		
         [parameter(Mandatory = $true)] 
@@ -1505,6 +1491,12 @@ function Deploy-CAM() {
 		
         [parameter(Mandatory = $true)]
         $RGName,
+		
+        [parameter(Mandatory = $true)]
+        $csRGName,
+		
+        [parameter(Mandatory = $true)]
+        $rwRGName,
 		
         [parameter(Mandatory = $false)]
         [System.Management.Automation.PSCredential]
@@ -1692,6 +1684,37 @@ function Deploy-CAM() {
 
     Write-Host "Using SP $client in tenant $tenant and subscription $subscriptionId"
 
+    # SP info exists but needs to get rights to the required resource groups
+    Write-Host "Adding role assignments for SP."
+    
+    # Retry required since it can take a few seconds for app registration to percolate through Azure.
+    # (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
+    $rollAssignmentRetry = 120
+    while ($rollAssignmentRetry -ne 0) {
+        $rollAssignmentRetry--
+
+        try {
+            New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $RGName -ServicePrincipalName $client -ErrorAction Stop
+            New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $csRGName -ServicePrincipalName $client -ErrorAction Stop
+            New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $rwRGName -ServicePrincipalName $client -ErrorAction Stop
+            break
+        }
+        catch {
+            #TODO: we should only be catching the 'SP or app not found' error
+            Write-Host "Waiting for service principal. Remaining: $rollAssignmentRetry"
+            Start-sleep -Seconds 1
+            if ($rollAssignmentRetry -eq 0) {
+                #re-throw whatever the original exception was
+                $exceptionContext = Get-AzureRmContext
+                $exceptionSubscriptionId = $exceptionContext.Subscription.Id
+                Write-Error "Failure to create Contributor role for $appName in ResourceGroup: $RGName Subscription: $exceptionSubscriptionId. Please check your subscription premissions."
+                throw
+            }
+        }
+    }
+
+
+
     # Login with SP since some Powershell contexts (with token auth - like Azure Cloud PowerShell or Visual Studio)
     # can't do operations on keyvaults
 
@@ -1734,6 +1757,7 @@ function Deploy-CAM() {
 
         $kvInfo = New-CAMDeploymentRoot `
             -RGName $RGName `
+            -rwRGName $rwRGName `
             -spInfo $spInfo `
             -azureContext $azureContext `
             -CAMConfig $CAMConfig `
@@ -1779,7 +1803,13 @@ function Deploy-CAM() {
 				},
 				"secretName": "remoteWorkstationDomainGroup"
 			}
-		},
+        },
+        "connectionServiceResourceGroup": {
+            "value": "$csRGName"
+        },
+        "remoteWorkstationResourceGroup": {
+            "value": "$rwRGName"
+        },
 		"CAMDeploymentBlobSource": {
 			"reference": {
 				"keyVault": {
@@ -2082,7 +2112,34 @@ if ($CAMRootKeyvault) {
 
 }
 else {
-    # New deployment
+    # New deployment - either complete or a root + Remote Workstation deployment
+    # Now let's create the other required resource groups
+
+    $csRGName = $rgName + "-CS1"
+    $rwRGName = $rgName + "-RW"
+
+    $csrg = Get-AzureRmResourceGroup -ResourceGroupName $csRGName -ErrorAction SilentlyContinue
+    if($csrg)
+    {
+        # assume it's there for a reason? Alternately we could fail but...
+        Write-Host "Connection service resource group $csRGName exists. Using it."
+    }
+    else {
+        Write-Host "Creating connection service resource group $csRGName ."
+        $csrg = New-AzureRmResourceGroup -Name $csRGName -Location $rgMatch.Location -ErrorAction Stop
+    }
+
+    $rwrg = Get-AzureRmResourceGroup -ResourceGroupName $rwRGName -ErrorAction SilentlyContinue
+    if($csrg)
+    {
+        # assume it's there for a reason? Alternately we could fail but...
+        Write-Host "Remote workstation resource group $rwRGName exists. Using it."
+    }
+    else {
+        Write-Host "Creating remote workstation resource group $rwRGName ."
+        $rwrg = New-AzureRmResourceGroup -Name $rwRGName -Location $rgMatch.Location -ErrorAction Stop
+    }
+
 
     # allow interactive input of a bunch of parameters. spCredential is handled in the SP functions elsewhere in this file
     do {
@@ -2143,6 +2200,8 @@ else {
         -outputParametersFileName $outputParametersFileName `
         -subscriptionId $selectedSubcriptionId `
         -RGName $rgMatch.ResourceGroupName `
+        -csRGName $csRGName `
+        -rwRGName $rwRGName `
         -spCredential $spCredential `
         -tenantId $selectedTenantId `
         -testDeployment $testDeployment `

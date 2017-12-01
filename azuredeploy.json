@@ -71,6 +71,18 @@
         "description": "Password for .pfx certificate"
       }
     },
+    "connectionServiceResourceGroup": {
+      "type": "string",
+      "metadata": {
+          "description": "The resource group the connection service is deployed in."
+      }
+    },
+    "remoteWorkstationResourceGroup": {
+      "type": "securestring",
+      "metadata": {
+          "description": "The resource group the remote workstations are deployed in."
+      }
+    },
     "CAMDeploymentInfo": {
       "type": "securestring",
       "metadata": {
@@ -135,7 +147,6 @@
         }
       }
     },
-
     {
       "type": "Microsoft.Resources/deployments",
       "name": "ConnectionService",
@@ -143,6 +154,7 @@
       "dependsOn": [
         "Root"
       ],
+      "resourceGroup": "[parameters('connectionServiceResourceGroup')]",
       "properties": {
         "mode": "Incremental",
         "templateLink": {
@@ -197,11 +209,12 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "name": "CreateEndUserApplicationMachine",
+      "name": "CreateRemoteWorkstation",
       "apiVersion": "2016-02-01",
       "dependsOn": [
         "Microsoft.Resources/deployments/Root"
       ],
+      "resourceGroup": "[parameters('remoteWorkstationResourceGroup')]",
       "properties": {
         "mode": "Incremental",
         "templateLink": {
