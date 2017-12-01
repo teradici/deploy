@@ -78,9 +78,39 @@
       }
     },
     "remoteWorkstationResourceGroup": {
-      "type": "securestring",
+      "type": "string",
       "metadata": {
           "description": "The resource group the remote workstations are deployed in."
+      }
+    },
+    "vnetName": {
+      "type": "string",
+      "metadata": {
+          "description": "The name of the virtual network to be created for CAM."
+      }
+    },
+    "rootSubnetName": {
+      "type": "string",
+      "metadata": {
+          "description": "The name of the root subnet in the virtual network."
+      }
+    },
+    "remoteWorkstationSubnetName": {
+      "type": "string",
+      "metadata": {
+          "description": "The name of the remote workstation subnet in the virtual network."
+      }
+    },
+    "connectionServiceSubnetName": {
+      "type": "string",
+      "metadata": {
+          "description": "The name of the connection service subnet in the virtual network."
+      }
+    },
+    "gatewaySubnetName": {
+      "type": "string",
+      "metadata": {
+          "description": "The name of the subnet for application gateways in the virtual network."
       }
     },
     "CAMDeploymentInfo": {
@@ -135,6 +165,21 @@
           "domainAdminPassword": {
             "value": "[parameters('domainAdminPassword')]"
           },
+          "vnetName": {
+            "value": "[parameters('vnetName')]"
+          },
+          "rootSubnetName": {
+              "value": "[parameters('rootSubnetName')]"
+          },
+          "remoteWorkstationSubnetName": {
+              "value":"[parameters('remoteWorkstationSubnetName')]"
+          },
+          "connectionServiceSubnetName": {
+              "value": "[parameters('connectionServiceSubnetName')]"
+          },
+          "gatewaySubnetName": {
+              "value": "[parameters('gatewaySubnetName')]"
+          },
           "CAMDeploymentBlobSource": {
             "value": "[parameters('CAMDeploymentBlobSource')]"
           },
@@ -152,7 +197,7 @@
       "name": "ConnectionService",
       "apiVersion": "2017-05-10",
       "dependsOn": [
-        "Root"
+        "Microsoft.Resources/deployments/Root"
       ],
       "resourceGroup": "[parameters('connectionServiceResourceGroup')]",
       "properties": {
@@ -163,7 +208,7 @@
         },
         "parameters": {
           "CSsubnetId": {
-            "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', reference('Root').outputs.virtualNetworkName.value, reference('Root').outputs.adSubnetName.value)]"
+            "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', reference('Root').outputs.virtualNetworkName.value, reference('Root').outputs.csSubnetName.value)]"
           },
           "GWsubnetId": {
             "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', reference('Root').outputs.virtualNetworkName.value, reference('Root').outputs.gatewaySubnetName.value)]"

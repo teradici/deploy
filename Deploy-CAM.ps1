@@ -1527,9 +1527,8 @@ function Deploy-CAM() {
 
     # Setup CAMConfig as a hash table of ARM parameters for Azure (KeyVault)
     # Most parameters are secrets so the KeyVault can be a single configuration source
-
-    # and internal parameters for this script
-    # the parameter name in the hash is the KeyVault secret name
+    # the parameter name is the KeyVault secret name
+    # and internal parameters for this script which are not pushed to the key vault
     $CAMConfig = @{} 
     $CAMConfig.parameters = @{}
     $CAMConfig.parameters.domainAdminUsername = @{
@@ -1588,12 +1587,9 @@ function Deploy-CAM() {
     $CAMConfig.parameters.AzureResourceGroupName = @{}
     $CAMConfig.parameters.AzureKeyVaultName = @{}
 	
-    #TODO: All the strings in here need to be reviewed for dual sourcing in the entire solution
-    # including ARM templates
-
-
     $CAMConfig.internal = @{}
     $CAMConfig.internal.vnetName = "vnet-CloudAccessManager"
+    $CAMConfig.internal.rootSubnetName = "subnet-CAMRoot"
     $CAMConfig.internal.RWSubnetName = "subnet-RemoteWorkstation"
     $CAMConfig.internal.CSSubnetName = "subnet-ConnectionService"
     $CAMConfig.internal.GWSubnetName = "subnet-Gateway"
@@ -1809,6 +1805,21 @@ function Deploy-CAM() {
         },
         "remoteWorkstationResourceGroup": {
             "value": "$rwRGName"
+        },
+        "vnetName": {
+            "value": "$($CAMConfig.internal.vnetName)"
+        },
+        "rootSubnetName": {
+            "value": "$($CAMConfig.internal.rootSubnetName)"
+        },
+        "remoteWorkstationSubnetName": {
+            "value": "$($CAMConfig.internal.RWSubnetName)"
+        },
+        "connectionServiceSubnetName": {
+            "value": "$($CAMConfig.internal.CSSubnetName)"
+        },
+        "gatewaySubnetName": {
+            "value": "$($CAMConfig.internal.GWSubnetName)"
         },
 		"CAMDeploymentBlobSource": {
 			"reference": {

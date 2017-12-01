@@ -96,6 +96,12 @@ Configuration InstallCAM
 	$brokerServiceName = "CAMBroker"
 	$AUIServiceName = "CAMAUI"
 
+	# CAM Deployment Info
+	$CAMDeploymentInfoCred = CAMDeploymentInfo;
+	$CAMDeploymentInfo = $CAMDeploymentInfoCred.GetNetworkCredential().Password
+	$CAMDeploymentInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($CAMDeploymentInfo)
+	$CAMDeploymentInfoDecoded = ConvertFrom-Json $CAMDeploymentInfoJSONDecoded
+
 	# Retry for CAM Registration
 	$retryCount = 3
 	$delay = 10
@@ -516,7 +522,8 @@ Configuration InstallCAM
 				$domainroot = $domainsplit[1]  # get the second part of the domain name
 				$date = Get-Date
 				$domainControllerFQDN = $using:dcvmfqdn
-				$RGNameLocal        = $using:RGName
+				$regInfo = $using:camDeploymentInfoDecoded.RegistrationInfo
+				$remoteWorkstationResourceGroup = $regInfo.CAM_RESOURCEGROUP
 
 				$localAdminCreds = $using:DomainAdminCreds
 				$adminUsername = $localAdminCreds.GetNetworkCredential().Username
@@ -529,7 +536,7 @@ dom=$domainleaf
 dcDomain = $domainleaf
 dc=$domainroot
 adServerHostAddress=$domainControllerFQDN
-resourceGroupName=$RGNameLocal
+resourceGroupName=$remoteWorkstationResourceGroup
 CAMSessionTimeoutMinutes=480
 domainGroupAppServersJoin="$using:remoteWorkstationDomainGroup"
 ldapHost=ldaps://$domainControllerFQDN
@@ -592,15 +599,9 @@ ldapDomain=$Using:domainFQDN
 
 				Write-Host "Writing auth file."
 
-				# File format as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
+				# Auth file format as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
 
-				$CAMDeploymentInfoCred = $using:CAMDeploymentInfo;
-				$CAMDeploymentInfo = $CAMDeploymentInfoCred.GetNetworkCredential().Password
-				$CAMDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($CAMDeploymentInfo)
-				$CAMDeploymenInfoDecoded = ConvertFrom-Json $CAMDeploymenInfoJSONDecoded
-				$regInfo = $camDeploymenInfoDecoded.RegistrationInfo
-				$authFileContent = [System.Web.HttpUtility]::UrlDecode($CAMDeploymenInfoDecoded.AzureAuthFile)
-
+				$authFileContent = [System.Web.HttpUtility]::UrlDecode($using:CAMDeploymentInfoDecoded.AzureAuthFile)
 				$targetDir = "$env:CATALINA_HOME\adminproperty"
 				$authFilePath = "$targetDir\authfile.txt"
 
@@ -622,7 +623,7 @@ ldapDomain=$Using:domainFQDN
 
 				#login to Azure and get storage context so we can pull the right files out of the blob storage
 
-				$regInfo = $camDeploymenInfoDecoded.RegistrationInfo
+				$regInfo = $using:camDeploymentInfoDecoded.RegistrationInfo
 
 				$spName = $regInfo.CAM_USERNAME
 				$spPass = ConvertTo-SecureString $regInfo.CAM_PASSWORD -AsPlainText -Force
@@ -983,12 +984,7 @@ brokerLocale=en_US
 
             SetScript  = {
 				##
-
-				$CAMDeploymentInfoCred = $using:CAMDeploymentInfo;
-				$CAMDeploymentInfo = $CAMDeploymentInfoCred.GetNetworkCredential().Password
-				$CAMDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($CAMDeploymentInfo)
-				$CAMDeploymenInfoDecoded = ConvertFrom-Json $CAMDeploymenInfoJSONDecoded
-				$regInfo = $camDeploymenInfoDecoded.RegistrationInfo
+				$regInfo = $using:camDeploymentInfoDecoded.RegistrationInfo
 
 				# now have an object with key value pairs - set environment (to be active after reboot)
 				$regInfo.psobject.properties | Foreach-Object {
