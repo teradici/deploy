@@ -60,9 +60,6 @@ Configuration InstallCAM
         [System.Management.Automation.PSCredential]$DomainAdminCreds,
 
         [Parameter(Mandatory)]
-        [String]$RGName, #Azure resource group name
-
-        [Parameter(Mandatory)]
         [String]$gitLocation,
 
         [Parameter(Mandatory)]
