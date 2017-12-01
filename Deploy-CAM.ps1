@@ -2109,6 +2109,15 @@ if ($CAMRootKeyvault) {
         return   # early return!
     }
     Write-Host "This resource group has a CAM deployment already. Using $($CAMRootKeyvault.Name)"
+
+    $requestNewCS = Read-Host `
+        "Please hit enter to create a new connection service for this Cloud Access Manager deployment or 'no' to cancel"
+
+    if ($requestNewCS -like "*n*") {
+        Write-Host "Not deploying a new connection service. Exiting."
+        exit
+    }
+
     Write-Host "Deploying a new CAM Connection Service with updated CAMDeploymentInfo"
 	
     New-CAMDeploymentInfo `
