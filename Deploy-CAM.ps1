@@ -1694,9 +1694,9 @@ function Deploy-CAM() {
         $rollAssignmentRetry--
 
         try {
-            New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $RGName -ServicePrincipalName $client -ErrorAction Stop
-            New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $csRGName -ServicePrincipalName $client -ErrorAction Stop
-            New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $rwRGName -ServicePrincipalName $client -ErrorAction Stop
+            New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $RGName -ServicePrincipalName $client -ErrorAction Stop | Out-Null
+            New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $csRGName -ServicePrincipalName $client -ErrorAction Stop | Out-Null
+            New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $rwRGName -ServicePrincipalName $client -ErrorAction Stop | Out-Null
             break
         }
         catch {
@@ -2130,7 +2130,7 @@ else {
     }
 
     $rwrg = Get-AzureRmResourceGroup -ResourceGroupName $rwRGName -ErrorAction SilentlyContinue
-    if($csrg)
+    if($rwrg)
     {
         # assume it's there for a reason? Alternately we could fail but...
         Write-Host "Remote workstation resource group $rwRGName exists. Using it."
