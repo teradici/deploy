@@ -2125,7 +2125,7 @@ else {
         Write-Host "Connection service resource group $csRGName exists. Using it."
     }
     else {
-        Write-Host "Creating connection service resource group $csRGName ."
+        Write-Host "Creating connection service resource group $csRGName"
         $csrg = New-AzureRmResourceGroup -Name $csRGName -Location $rgMatch.Location -ErrorAction Stop
     }
 
@@ -2136,7 +2136,7 @@ else {
         Write-Host "Remote workstation resource group $rwRGName exists. Using it."
     }
     else {
-        Write-Host "Creating remote workstation resource group $rwRGName ."
+        Write-Host "Creating remote workstation resource group $rwRGName"
         $rwrg = New-AzureRmResourceGroup -Name $rwRGName -Location $rgMatch.Location -ErrorAction Stop
     }
 
