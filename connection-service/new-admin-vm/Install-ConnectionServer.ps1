@@ -1,6 +1,6 @@
-# Install-CAM-CS.ps1
+# Install-ConnectionServer.ps1
 # Compile to a local .zip file via this command:
-# Publish-AzureVMDscConfiguration -ConfigurationPath .\Install-CAM-CS.ps1 -ConfigurationArchivePath .\Install-CAM.ps1.zip
+# Publish-AzureVMDscConfiguration -ConfigurationPath .\Install-ConnectionServer.ps1 -ConfigurationArchivePath .\Install-CAM.ps1.zip
 # And then push to GitHUB.
 #
 # Or to push to Azure Storage:
@@ -12,10 +12,10 @@
 # $StorageContainer = 'binaries'
 # 
 # $StorageContext = New-AzureStorageContext -StorageAccountName $StorageAccount -StorageAccountKey $StorageKey
-# Publish-AzureVMDscConfiguration -ConfigurationPath .\Install-CAM-CS.ps1  -ContainerName $StorageContainer -StorageContext $StorageContext
+# Publish-AzureVMDscConfiguration -ConfigurationPath .\Install-ConnectionServer.ps1  -ContainerName $StorageContainer -StorageContext $StorageContext
 #
 #
-Configuration InstallCAM
+Configuration InstallConnectionServer
 {
 	# One day pull from Oracle as per here? https://github.com/gregjhogan/cJre8/blob/master/DSCResources/cJre8/cJre8.schema.psm1
     param
@@ -94,9 +94,8 @@ Configuration InstallCAM
 	$AUIServiceName = "CAMAUI"
 
 	# CAM Deployment Info
-	$CAMDeploymentInfoCred = CAMDeploymentInfo;
-	$CAMDeploymentInfo = $CAMDeploymentInfoCred.GetNetworkCredential().Password
-	$CAMDeploymentInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($CAMDeploymentInfo)
+	$CAMDeploymentInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode( `
+		$CAMDeploymentInfo.GetNetworkCredential().Password)
 	$CAMDeploymentInfoDecoded = ConvertFrom-Json $CAMDeploymentInfoJSONDecoded
 
 	# Retry for CAM Registration
