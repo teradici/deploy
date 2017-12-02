@@ -1360,11 +1360,30 @@ function New-ConnectionServiceDeployment() {
                 -Verbose
         }
         else {
-            New-AzureRmResourceGroupDeployment `
-                -DeploymentName "CS" `
-                -ResourceGroupName $csRGName `
-                -TemplateFile $CSDeploymentTemplateURI `
-                -TemplateParameterFile $outputParametersFilePath 
+            for($idx = 3;$idx -gt 0;$idx--)
+            {
+                try {
+                    New-AzureRmResourceGroupDeployment `
+                        -DeploymentName "CS" `
+                        -ResourceGroupName $csRGName `
+                        -TemplateFile $CSDeploymentTemplateURI `
+                        -TemplateParameterFile $outputParametersFilePath
+                    # success!
+                    break
+                }
+                catch {
+                    # Seems there can be a race condition on the role assignment of the SP with
+                    # the resource group before getting here - setting a retry loop
+                    if ($_.Exception.Message -like "*does not have authorization*")
+                    {
+                        Write-host "Authorization error. Retrying. Remaining: $idx"
+                        Start-sleep -Seconds 10
+                    }
+                    else {
+                        throw $_
+                    }
+                }
+            }
         }
     }
     catch {
@@ -2108,7 +2127,8 @@ if ($CAMRootKeyvault) {
         Write-Host "Please move or remove all but one."
         return   # early return!
     }
-    Write-Host "This resource group has a CAM deployment already. Using $($CAMRootKeyvault.Name)"
+    Write-Host "The resource group $($rgMatch.ResourceGroupName) has a CAM deployment already."
+    Write-Host "Using key vault $($CAMRootKeyvault.Name)"
 
     $requestNewCS = Read-Host `
         "Please hit enter to create a new connection service for this Cloud Access Manager deployment or 'no' to cancel"
