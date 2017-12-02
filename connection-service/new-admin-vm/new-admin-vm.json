@@ -88,7 +88,6 @@
                             "UserName": "dummy",
                             "Password": "PrivateSettingsRef:CAMDeploymentInfo"
                         },
-                        "RGName": "[resourceGroup().name]",
                         "gitLocation": "[parameters('_artifactsLocation')]",
                         "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-AdminUI-',subscription().subscriptionId)]"
                     }
