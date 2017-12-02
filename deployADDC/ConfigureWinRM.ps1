@@ -10,7 +10,8 @@ param
 (
     [string] $hostname,
 	[string] $svrAccountName,
-	[Int32]	 $userCount=100
+	[Int32]	 $userCount=100,
+	[string] $artificatsLocation="https://raw.githubusercontent.com/teradici/deploy/TSW-67106-use-external-ad/deployADDC/CreateUsers.ps1"
 )
 
 #################################################################################################################################
@@ -204,7 +205,7 @@ createGroupForCAM $svrAccountName
 #################################################################################################################################
 
 $domain=(Get-ADDomain).Forest
-Invoke-WebRequest -UseBasicParsing -Uri $addressLocation -OutFile CreatUsers.ps1
+Invoke-WebRequest -UseBasicParsing -Uri $artificatsLocation -OutFile CreatUsers.ps1
 .\CreatUsers.ps1 -userCount $userCount -dnsDomain $domain
 
 #################################################################################################################################
