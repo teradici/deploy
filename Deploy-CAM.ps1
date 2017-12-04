@@ -1141,7 +1141,6 @@ function Generate-CamDeploymentInfoParameters {
 # Deploy a connection service over a current deployment
 function New-ConnectionServiceDeployment() {
     param(
-        $CSsuffix,
         $RGName,
         $subscriptionId,
         $keyVault,
@@ -1152,121 +1151,46 @@ function New-ConnectionServiceDeployment() {
     $kvName = $keyVault.Name
     # TODO - make sure user account has keyvault secret access here. Try to add self if not
     # and if doesn't work, probably fail.
-    $generatedDeploymentParameters = @"
-{
-	"`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
-	"contentVersion": "1.0.0.0",
-	"parameters": {
-		"CSUniqueSuffix": {
-			"value": "$CSsuffix"
-		},
-		"domainAdminUsername": {
-			"reference": {
-				"keyVault": {
-					"id": "$kvID"
-				},
-				"secretName": "domainAdminUsername"
-			}
-		},
-		"domainAdminPassword": {
-			"reference": {
-				"keyVault": {
-					"id": "$kvID"
-				},
-				"secretName": "domainJoinPassword"
-			}
-		},
-		"domainName": {
-			"reference": {
-				"keyVault": {
-					"id": "$kvID"
-				},
-				"secretName": "domainName"
-			}
-		},
-		"LocalAdminUsername": {
-			"reference": {
-				"keyVault": {
-					"id": "$kvID"
-				},
-				"secretName": "connectionServiceLocalAdminUsername"
-			}
-		},
-		"LocalAdminPassword": {
-			"reference": {
-				"keyVault": {
-					"id": "$kvID"
-				},
-				"secretName": "connectionServiceLocalAdminPassword"
-			}
-		},
-		"CSsubnetId": {
-			"reference": {
-				"keyVault": {
-					"id": "$kvID"
-				},
-				"secretName": "connectionServiceSubnet"
-			}
-		},
-		"GWsubnetId": {
-			"reference": {
-				"keyVault": {
-					"id": "$kvID"
-				},
-				"secretName": "gatewaySubnet"
-			}
-		},
-		"CAMDeploymentBlobSource": {
-			"reference": {
-				"keyVault": {
-					"id": "$kvID"
-				},
-				"secretName": "CAMDeploymentBlobSource"
-			}
-		},
-		"certData": {
-			"reference": {
-				"keyVault": {
-					"id": "$kvID"
-				},
-				"secretName": "CAMCSCertificate"
-			}
-		},
-		"certPassword": {
-			"reference": {
-				"keyVault": {
-					"id": "$kvID"
-				},
-				"secretName": "CAMCSCertificatePassword"
-			}
-		},
-		"remoteWorkstationDomainGroup": {
-			"reference": {
-				"keyVault": {
-					"id": "$kvID"
-				},
-				"secretName": "remoteWorkstationDomainGroup"
-			}
-		},
-		"CAMDeploymentInfo": {
-			"reference": {
-				"keyVault": {
-					"id": "$kvID"
-				},
-				"secretName": "CAMDeploymentInfo"
-			}
-		},
-		"_baseArtifactsLocation": {
-			"reference": {
-				"keyVault": {
-					"id": "$kvID"
-				},
-				"secretName": "artifactsLocation"
-			}
-		}
-	}
-}
-"@
+
+    $csRGName = $null
+    while(-not $csRGName)
+    {
+        $secret = Get-AzureKeyVaultSecret `
+            -VaultName $kvName `
+            -Name "connectionServiceNumber" `
+            -ErrorAction stop
+
+        if ($secret -eq $null) {
+            $connectionServiceNumber = 1
+        }
+        else {
+            # increment connectionServiceNumber
+            $connectionServiceNumber = ([int]$secret.SecretValueText) + 1
+        }
+
+        Set-AzureKeyVaultSecret `
+            -VaultName $kvName `
+            -Name "connectionServiceNumber" `
+            -SecretValue (ConvertTo-SecureString $connectionServiceNumber -AsPlainText -Force) `
+            -ErrorAction stop | Out-Null
+        
+        Write-Host "Checking available resource group for connection service number $connectionServiceNumber"
+
+        $csRGName = $RGName + "-CS" + $connectionServiceNumber
+        $rg = Get-AzureRmResourceGroup -ResourceGroupName $csRGName -ErrorAction SilentlyContinue
+        if($rg)
+        {
+            # found the resource group - do the loop with an incremented number try to find a free name
+            $csRGName = $null
+        }
+    }
+
+    $rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName -ErrorAction stop
+    $location = $rg.Location
+
+    Write-Host "Creating resource group $csRGName"
+    New-AzureRmResourceGroup -Name $csRGName -Location $location -ErrorAction stop | Out-Null
+    
 
     # deploy as the SP to ensure that the SP has appropriate rights for where it's
     # being deployed
@@ -1295,12 +1219,137 @@ function New-ConnectionServiceDeployment() {
     $artifactsLocation = $secret.SecretValueText
 
     Write-Host "Using SP $client in tenant $tenant and subscription $subscriptionId"
-
+    New-AzureRmRoleAssignment `
+        -RoleDefinitionName Contributor `
+        -ResourceGroupName $csRGName `
+        -ServicePrincipalName $client `
+        -ErrorAction Stop | Out-Null
+    
     $spCreds = New-Object PSCredential $client, (ConvertTo-SecureString $key -AsPlainText -Force)
 
     $azureContext = Get-AzureRMContext
-    $rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName
 
+
+    $generatedDeploymentParameters = @"
+{
+    "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "CSUniqueSuffix": {
+            "reference": {
+                "keyVault": {
+                    "id": "$kvID"
+                },
+                "secretName": "connectionServiceNumber"
+            }
+        },
+        "domainAdminUsername": {
+            "reference": {
+                "keyVault": {
+                    "id": "$kvID"
+                },
+                "secretName": "domainAdminUsername"
+            }
+        },
+        "domainAdminPassword": {
+            "reference": {
+                "keyVault": {
+                    "id": "$kvID"
+                },
+                "secretName": "domainJoinPassword"
+            }
+        },
+        "domainName": {
+            "reference": {
+                "keyVault": {
+                    "id": "$kvID"
+                },
+                "secretName": "domainName"
+            }
+        },
+        "LocalAdminUsername": {
+            "reference": {
+                "keyVault": {
+                    "id": "$kvID"
+                },
+                "secretName": "connectionServiceLocalAdminUsername"
+            }
+        },
+        "LocalAdminPassword": {
+            "reference": {
+                "keyVault": {
+                    "id": "$kvID"
+                },
+                "secretName": "connectionServiceLocalAdminPassword"
+            }
+        },
+        "CSsubnetId": {
+            "reference": {
+                "keyVault": {
+                    "id": "$kvID"
+                },
+                "secretName": "connectionServiceSubnet"
+            }
+        },
+        "GWsubnetId": {
+            "reference": {
+                "keyVault": {
+                    "id": "$kvID"
+                },
+                "secretName": "gatewaySubnet"
+            }
+        },
+        "CAMDeploymentBlobSource": {
+            "reference": {
+                "keyVault": {
+                    "id": "$kvID"
+                },
+                "secretName": "CAMDeploymentBlobSource"
+            }
+        },
+        "certData": {
+            "reference": {
+                "keyVault": {
+                    "id": "$kvID"
+                },
+                "secretName": "CAMCSCertificate"
+            }
+        },
+        "certPassword": {
+            "reference": {
+                "keyVault": {
+                    "id": "$kvID"
+                },
+                "secretName": "CAMCSCertificatePassword"
+            }
+        },
+        "remoteWorkstationDomainGroup": {
+            "reference": {
+                "keyVault": {
+                    "id": "$kvID"
+                },
+                "secretName": "remoteWorkstationDomainGroup"
+            }
+        },
+        "CAMDeploymentInfo": {
+            "reference": {
+                "keyVault": {
+                    "id": "$kvID"
+                },
+                "secretName": "CAMDeploymentInfo"
+            }
+        },
+        "_baseArtifactsLocation": {
+            "reference": {
+                "keyVault": {
+                    "id": "$kvID"
+                },
+                "secretName": "artifactsLocation"
+            }
+        }
+    }
+}
+"@
 
     # make temporary directory for intermediate files
     $folderName = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
@@ -1313,24 +1362,24 @@ function New-ConnectionServiceDeployment() {
     $outputParametersFileName = "csdeploymentparameters.json"
     $CSDeploymentTemplateURI = $artifactsLocation + "/connection-service/azuredeploy.json"
     try {
-        $spContext = Add-AzureRmAccount `
+        Add-AzureRmAccount `
             -Credential $spCreds `
             -ServicePrincipal `
             -TenantId $tenant `
-            -ErrorAction Stop 
+            -ErrorAction Stop | Out-Null
 
         $outputParametersFilePath = Join-Path $tempDir $outputParametersFileName
         Set-Content $outputParametersFilePath  $generatedDeploymentParameters
 
-        Write-Host "`nDeploying Cloud Access Manager Connection Service. This process can take up to (tbd 30?) minutes."
+        Write-Host "`nDeploying Cloud Access Manager Connection Service. This process can take up to 60 minutes."
         Write-Host "Please feel free to watch here for early errors for a few minutes and then go do something else. Or go for coffee!"
         Write-Host "If this script is running in Azure Cloud Shell then you may let the shell timeout and the deployment will continue."
-        Write-Host "Please watch the resource group $RGName in the Azure Portal for current status."
+        Write-Host "Please watch the resource group $csRGName in the Azure Portal for current status."
 
         if ($testDeployment) {
             # just do a test if $true
             Test-AzureRmResourceGroupDeployment `
-                -ResourceGroupName $RGName `
+                -ResourceGroupName $csRGName `
                 -TemplateFile $CSDeploymentTemplateURI `
                 -TemplateParameterFile $outputParametersFilePath `
                 -Verbose
@@ -1338,7 +1387,7 @@ function New-ConnectionServiceDeployment() {
         else {
             New-AzureRmResourceGroupDeployment `
                 -DeploymentName "CS" `
-                -ResourceGroupName $RGName `
+                -ResourceGroupName $csRGName `
                 -TemplateFile $CSDeploymentTemplateURI `
                 -TemplateParameterFile $outputParametersFilePath 
         }
@@ -2021,13 +2070,10 @@ if ($CAMRootKeyvault) {
     Write-Host "This resource group has a CAM deployment already. Using $($CAMRootKeyvault.Name)"
     Write-Host "Deploying a new CAM Connection Service with updated CAMDeploymentInfo"
 	
-    $CSsuffix = Read-Host "CAM Connection Service Unique Suffix"
-
     New-CAMDeploymentInfo `
         -kvName $CAMRootKeyvault.Name
 
     New-ConnectionServiceDeployment `
-        -CSsuffix $CSsuffix `
         -RGName $rgMatch.ResourceGroupName `
         -subscriptionId $selectedSubcriptionId `
         -keyVault $CAMRootKeyvault `
