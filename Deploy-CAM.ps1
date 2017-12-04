@@ -947,7 +947,12 @@ function New-CAMAppSP() {
         $newAppCreateRetry--
 
         try {
-            $app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword -ErrorAction Stop
+            $app = New-AzureRmADApplication `
+                -DisplayName $appName `
+                -HomePage $appURI `
+                -IdentifierUris $appURI `
+                -Password $generatedPassword `
+                -ErrorAction Stop
             break
         }
         catch {
@@ -1127,6 +1132,10 @@ function New-ConnectionServiceDeployment() {
     # TODO - make sure user account has keyvault secret access here. Try to add self if not
     # and if doesn't work, probably fail.
 
+    # Find a connection service resouce group name that can be used.
+    # An incrementing count is used to find a free resource group. This count is
+    # stored in the key vault to ensure every connection service in the deployment has a unique
+    # identifier, even if old connection services have been deleted.
     $csRGName = $null
     while(-not $csRGName)
     {
