@@ -174,8 +174,8 @@ Configuration InstallConnectionServer
             SetScript  = {
                 Write-Verbose "Install_SumoCollector"
 
-                $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
-                $sumo_package = "$using:sourceURI/$installerFileName"
+                $installerFileName = "SumoCollector.exe"
+                $sumo_package = 'https://collectors.sumologic.com/rest/download/win64'
 				$sumo_config = "$using:gitLocation/$using:sumoConf"
                 $sumo_collector_json = "$using:gitLocation/sumo-admin-vm.json"
 				$dest = "C:\sumo"

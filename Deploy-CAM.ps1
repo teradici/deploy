@@ -34,6 +34,11 @@ param(
     [SecureString]
     $certificateFilePassword = $null,
 
+	[parameter(Mandatory=$false)]
+	[ValidateSet("stable","beta","dev")] 
+	[String]
+	$AgentChannel = "stable",
+
     $camSaasUri = "https://cam-antar.teradici.com",
     $CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/bddc2b/azuredeploy.json",
     $CAMDeploymentBlobSource = "https://teradeploy.blob.core.windows.net/bdstable",
@@ -347,6 +352,7 @@ function New-RemoteWorstationTemplates {
     #Put the VHD's in the user storage account until we move to managed storage...
     $VHDStorageAccountName = $storageAccountContext.StorageAccountName
 	
+	$agentChannel = $CAMConfig.internal.agentChannel
 
     $armParamContent = @"
 {
@@ -355,6 +361,7 @@ function New-RemoteWorstationTemplates {
 	"parameters": {
 		"agentType": { "value": "%agentType%" },
 		"vmSize": { "value": "%vmSize%" },
+		"AgentChannel": { "value": "$agentChannel"},
 		"CAMDeploymentBlobSource": { "value": "$blobUri" },
 		"binaryLocation": { "value": "$binaryLocation" },
 		"subnetID": { "value": "$($CAMConfig.parameters.remoteWorkstationSubnet.clearValue)" },
@@ -1542,6 +1549,11 @@ function Deploy-CAM() {
         [SecureString]
         $certificateFilePassword = $null,
 
+		[parameter(Mandatory=$false)]
+		[ValidateSet("stable","beta","dev")] 
+		[String]
+		$AgentChannel = "stable",
+
         [parameter(Mandatory = $false)]
         [bool]
         $testDeployment = $false
@@ -1643,6 +1655,7 @@ function Deploy-CAM() {
         clearValue = $CAMConfig.internal.GWSubnetID
     }
 
+	$CAMConfig.internal.agentChannel = $AgentChannel
 
     $CAMConfig.internal.standardVMSize = "Standard_D2_v2"
     $CAMConfig.internal.graphicsVMSize = "Standard_NV6"
@@ -1775,7 +1788,6 @@ function Deploy-CAM() {
             }
         }
     }
-
 
     try {
 
@@ -2255,8 +2267,6 @@ else {
         -tenantId $selectedTenantId `
         -testDeployment $testDeployment `
         -certificateFile $certificateFile `
-        -certificateFilePassword $certificateFilePassword
+        -certificateFilePassword $certificateFilePassword `
+		-AgentChannel $AgentChannel
 }
-
-
-
