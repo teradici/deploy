@@ -1132,7 +1132,7 @@ function New-ConnectionServiceDeployment() {
     # TODO - make sure user account has keyvault secret access here. Try to add self if not
     # and if doesn't work, probably fail.
 
-    # Find a connection service resouce group name that can be used.
+    # Find a connection service resource group name that can be used.
     # An incrementing count is used to find a free resource group. This count is
     # stored in the key vault to ensure every connection service in the deployment has a unique
     # identifier, even if old connection services have been deleted.
@@ -1642,8 +1642,8 @@ function Deploy-CAM() {
         value      = (ConvertTo-SecureString $CAMConfig.internal.GWSubnetID -AsPlainText -Force)
         clearValue = $CAMConfig.internal.GWSubnetID
     }
-	
-	
+
+
     $CAMConfig.internal.standardVMSize = "Standard_D2_v2"
     $CAMConfig.internal.graphicsVMSize = "Standard_NV6"
     $CAMConfig.internal.agentARM = "server2016-standard-agent.json"
@@ -1709,7 +1709,7 @@ function Deploy-CAM() {
     Write-Host "Using SP $client in tenant $tenant and subscription $subscriptionId"
 
     # SP info exists but needs to get rights to the required resource groups
-    Write-Host "Adding role assignments for SP."
+    Write-Host "Adding role assignments for the Service Principal account."
     
     # Retry required since it can take a few seconds for app registration to percolate through Azure.
     # (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
@@ -1731,7 +1731,7 @@ function Deploy-CAM() {
                 #re-throw whatever the original exception was
                 $exceptionContext = Get-AzureRmContext
                 $exceptionSubscriptionId = $exceptionContext.Subscription.Id
-                Write-Error "Failure to create Contributor role for $appName in ResourceGroup: $RGName Subscription: $exceptionSubscriptionId. Please check your subscription premissions."
+                Write-Error "Failure to create Contributor role for $client in ResourceGroup: $RGName Subscription: $exceptionSubscriptionId. Please check your subscription premissions."
                 throw
             }
         }
