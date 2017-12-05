@@ -113,6 +113,14 @@
           "description": "The name of the subnet for application gateways in the virtual network."
       }
     },
+    "AgentChannel": {
+      "type": "string",
+      "defaultValue": "stable",
+      "allowedValues": ["stable","beta","dev"],
+      "metadata": {
+        "description": "PCoIP Agent channel to use for installer download."
+      }
+    },
     "CAMDeploymentInfo": {
       "type": "securestring",
       "metadata": {
@@ -302,6 +310,9 @@
           },
           "registrationCode": {
             "value": "[parameters('registrationCode')]"
+          },
+          "AgentChannel": {
+            "value": "[parameters('AgentChannel')]"
           },
           "_artifactsLocation": {
             "value": "[concat(parameters('_artifactsLocation'), '/remote-workstations')]"
