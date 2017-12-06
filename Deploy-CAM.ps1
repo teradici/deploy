@@ -1731,10 +1731,40 @@ function Deploy-CAM() {
         $rollAssignmentRetry--
 
         try {
-            New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $RGName -ServicePrincipalName $client -ErrorAction Stop | Out-Null
-            New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $csRGName -ServicePrincipalName $client -ErrorAction Stop | Out-Null
-            New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $rwRGName -ServicePrincipalName $client -ErrorAction Stop | Out-Null
-            break
+            # Only assign contributor access if needed
+            $rgNames = @($RGName, $csRGName, $rwRGName)
+            ForEach ($rgn in $rgNames) {
+                $rg = Get-AzureRmResourceGroup -Name $rgn
+
+                # Get-AzureRmRoleAssignment responds much more rationally if given a scope with an ID
+                # than a resource group name.
+                $spRoles = Get-AzureRmRoleAssignment -ServicePrincipalName $client -Scope $rg.ResourceId
+                
+                # filter on an exact resource group ID match as Get-AzureRmRoleAssignment seems to do a more loose pattern match
+                $spRoles = $spRoles | Where-Object {$_.Scope -eq $rg.ResourceId}
+                
+                # spRoles could be a single object or an array. foreach works with both.
+                $hasAccess = $false
+                foreach($role in $spRoles) {
+                    $roleName = $role.RoleDefinitionName
+                    if (($roleName -eq "Contributor") -or ($roleName -eq "Owner")) {
+                        Write-Host "$client already has $roleName for $rgn."
+                        $hasAccess = $true
+                        break
+                    }
+                }
+
+                if(-not $hasAccess) {
+                    Write-Host "Giving $client Contributor access to $rgn."
+                    New-AzureRmRoleAssignment `
+                        -RoleDefinitionName Contributor `
+                        -ResourceGroupName $rgn `
+                        -ServicePrincipalName $client `
+                        -ErrorAction Stop | Out-Null
+                }
+            }
+
+            break # while
         }
         catch {
             #TODO: we should only be catching the 'Service principal or app not found' error
@@ -1744,7 +1774,7 @@ function Deploy-CAM() {
                 #re-throw whatever the original exception was
                 $exceptionContext = Get-AzureRmContext
                 $exceptionSubscriptionId = $exceptionContext.Subscription.Id
-                Write-Error "Failure to create Contributor role for $client in ResourceGroup: $RGName Subscription: $exceptionSubscriptionId. Please check your subscription permissions."
+                Write-Error "Failure to create Contributor role for $client. Subscription: $exceptionSubscriptionId. Please check your subscription permissions."
                 throw
             }
         }
