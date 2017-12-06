@@ -617,7 +617,7 @@ function Populate-UserBlob {
 
 
 
-# Creates a key vault in the target resource group and gives the current SP access to the secrets.
+# Creates a key vault in the target resource group and gives the current service principal access to the secrets.
 function New-CAM-KeyVault() {
     Param(
         [parameter(Mandatory = $true)] 
@@ -686,7 +686,7 @@ function New-CAM-KeyVault() {
 
     # Try to set key vault access for the calling administrator (if they have rights...)
 
-    # Get previous SP context and set back to admin
+    # Get previous service principal context and set back to admin
     $spContext = Get-AzureRMContext
     Set-AzureRMContext -Context $adminAzureContext | Out-Null
 	
@@ -703,7 +703,7 @@ function New-CAM-KeyVault() {
         Write-Host "Please set key vault access policies in the Azure Portal or through Azure API's when needed."
     }
 
-    # Set context back to SP
+    # Set context back to service principal
     Set-AzureRMContext -Context $spContext | Out-Null
 
     return $keyVault
@@ -933,7 +933,7 @@ function New-CAMAppSP() {
     foreach ($app in $appArray) {
         $aoID = $app.ObjectId
         try {
-            Write-Host "Removing previous SP application $appName ObjectId: $aoID"
+            Write-Host "Removing previous service principal application $appName ObjectId: $aoID"
             Remove-AzureRmADApplication -ObjectId $aoID -Force -ErrorAction Stop
         }
         catch {
@@ -976,10 +976,11 @@ function New-CAMAppSP() {
     }
 
 
-    Write-Host "New app creation complete. Creating SP."
+    Write-Host "New app creation complete. Creating service principal."
 
     # Retry required since it can take a few seconds for the app registration to percolate through Azure.
     # (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
+    $sp = $null
     $SPCreateRetry = 60
     while ($SPCreateRetry -ne 0) {
         $SPCreateRetry--
@@ -995,13 +996,13 @@ function New-CAMAppSP() {
             Start-sleep -Seconds 1
             if ($SPCreateRetry -eq 0) {
                 #re-throw whatever the original exception was
-                Write-Error "Failure to create SP for $appName."
+                Write-Error "Failure to create service principal for $appName."
                 throw
             }
         }
     }
 
-    # Get SP credentials
+    # Get service principal credentials
     $spPass = $generatedPassword
     $spCreds = New-Object -TypeName pscredential -ArgumentList  $sp.ApplicationId, $spPass
 
@@ -1183,7 +1184,7 @@ function New-ConnectionServiceDeployment() {
     New-AzureRmResourceGroup -Name $csRGName -Location $location -ErrorAction stop | Out-Null
     
 
-    # deploy as the SP to ensure that the SP has appropriate rights for where it's
+    # deploy as the service principal to ensure that the service principal has appropriate rights for where it's
     # being deployed
     $secret = Get-AzureKeyVaultSecret `
         -VaultName $kvName `
@@ -1209,7 +1210,7 @@ function New-ConnectionServiceDeployment() {
         -ErrorAction stop
     $artifactsLocation = $secret.SecretValueText
 
-    Write-Host "Using SP $client in tenant $tenant and subscription $subscriptionId"
+    Write-Host "Using service principal $client in tenant $tenant and subscription $subscriptionId"
     New-AzureRmRoleAssignment `
         -RoleDefinitionName Contributor `
         -ResourceGroupName $csRGName `
@@ -1388,7 +1389,7 @@ function New-ConnectionServiceDeployment() {
                     break
                 }
                 catch {
-                    # Seems there can be a race condition on the role assignment of the SP with
+                    # Seems there can be a race condition on the role assignment of the service principal with
                     # the resource group before getting here - setting a retry loop
                     if ($_.Exception.Message -like "*does not have authorization*")
                     {
@@ -1674,9 +1675,9 @@ function Deploy-CAM() {
     $spInfo = $null
     if (-not $spCredential)	{
 
-        # if there's no SP provided then we either need to make one or ask for one
+        # if there's no service principal provided then we either need to make one or ask for one
 
-        # if the current context tenantId does not match the desired tenantId then we can't make SP's
+        # if the current context tenantId does not match the desired tenantId then we can't make service principal's
         $currentContext = Get-AzureRmContext
         $currentContextTenant = $currentContext.Tenant.Id 
         $tenantIDsMatch = ($currentContextTenant -eq $tenantId)
@@ -1695,34 +1696,33 @@ function Deploy-CAM() {
 
         if ((-not $tenantIDsMatch) -or ($requestSPGeneration -like "*n*")) {
             # manually get credential
-            $spCredential = Get-Credential -Message "Please enter SP credential"
+            $spCredential = Get-Credential -Message "Please enter service principal credential"
 
             $spInfo = @{}
             $spinfo.spCreds = $spCredential
             $spInfo.tenantId = $tenantId
         }
         else {
-            # generate SP
+            # generate service principal
             $spInfo = New-CAMAppSP `
                 -RGName $RGName
         }
     }
     else {
-        # SP credential provided in parameter list
-        if ($tenantId -eq $null) {throw "SP provided but no tenantId"}
+        # service principal credential provided in parameter list
+        if ($tenantId -eq $null) {throw "Service principal provided but no tenantId"}
         $spInfo = @{}
         $spinfo.spCreds = $spCredential
         $spInfo.tenantId = $tenantId
     }
 
     $client = $spInfo.spCreds.UserName
-    $key = $spInfo.spCreds.GetNetworkCredential().Password
     $tenant = $spInfo.tenantId
 
-    Write-Host "Using SP $client in tenant $tenant and subscription $subscriptionId"
+    Write-Host "Using service principal $client in tenant $tenant and subscription $subscriptionId"
 
-    # SP info exists but needs to get rights to the required resource groups
-    Write-Host "Adding role assignments for the Service Principal account."
+    # Service principal info exists but needs to get rights to the required resource groups
+    Write-Host "Adding role assignments for the service principal account."
     
     # Retry required since it can take a few seconds for app registration to percolate through Azure.
     # (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
@@ -1737,14 +1737,14 @@ function Deploy-CAM() {
             break
         }
         catch {
-            #TODO: we should only be catching the 'SP or app not found' error
+            #TODO: we should only be catching the 'Service principal or app not found' error
             Write-Host "Waiting for service principal. Remaining: $rollAssignmentRetry"
             Start-sleep -Seconds 1
             if ($rollAssignmentRetry -eq 0) {
                 #re-throw whatever the original exception was
                 $exceptionContext = Get-AzureRmContext
                 $exceptionSubscriptionId = $exceptionContext.Subscription.Id
-                Write-Error "Failure to create Contributor role for $client in ResourceGroup: $RGName Subscription: $exceptionSubscriptionId. Please check your subscription premissions."
+                Write-Error "Failure to create Contributor role for $client in ResourceGroup: $RGName Subscription: $exceptionSubscriptionId. Please check your subscription permissions."
                 throw
             }
         }
@@ -1752,11 +1752,11 @@ function Deploy-CAM() {
 
 
 
-    # Login with SP since some Powershell contexts (with token auth - like Azure Cloud PowerShell or Visual Studio)
+    # Login with service principal since some Powershell contexts (with token auth - like Azure Cloud PowerShell or Visual Studio)
     # can't do operations on keyvaults
 
     
-    # cache the current context and sign in as SP
+    # cache the current context and sign in as service principal
     $azureContext = Get-AzureRMContext
     $retryCount = 60
     for ($idx = ($retryCount - 1); $idx -ge 0; $idx--) {
@@ -2202,7 +2202,7 @@ else {
     }
 
 
-    # allow interactive input of a bunch of parameters. spCredential is handled in the SP functions elsewhere in this file
+    # allow interactive input of a bunch of parameters. spCredential is handled in the service principal functions elsewhere in this file
     do {
         if ( -not $domainAdminCredential ) {
             $domainAdminCredential = Get-Credential -Message "Please enter admin credential for new domain"
