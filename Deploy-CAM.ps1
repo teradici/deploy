@@ -40,8 +40,8 @@ param(
 	$AgentChannel = "stable",
 
     $camSaasUri = "https://cam-antar.teradici.com",
-    $CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/bddc2/azuredeploy.json",
-    $CAMDeploymentBlobSource = "https://teradeploy.blob.core.windows.net/bdstable",
+	$CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/bd/azuredeploy.json",
+	$CAMDeploymentBlobSource = "https://teradeploy.blob.core.windows.net/bdbinaries",
     $outputParametersFileName = "cam-output.parameters.json",
     $location
 )
