@@ -53,7 +53,7 @@ param(
 
     [parameter(Mandatory=$false)]
     [String]
-    $CloudServicesSubnetName,
+    $CloudServiceSubnetName,
 
     [parameter(Mandatory=$false)]
     [String]
@@ -1194,11 +1194,9 @@ function New-ConnectionServiceDeployment() {
         {
             # Check if Resource Group is empty
             $Resources = Find-AzureRmResource -ResourceGroupNameEquals $csRGName
-            $outputstr = $RG.ResourceGroupName + " - " + $Resources.Length
-            Write-Output $outputstr
             if( -not $Resources.Length -eq 0)
             {
-                # found the resource group - do the loop with an incremented number try to find a free name
+                # found the resource group was not empty - do the loop with an incremented number try to find a free name
                 $csRGName = $null
             }
         }
@@ -2278,7 +2276,7 @@ else {
 
     $vnetConfig = @{}
     $vnetConfig.vnetName = $vnetName
-    $vnetConfig.CSsubnetName = $CloudServicesSubnetName
+    $vnetConfig.CSsubnetName = $CloudServiceSubnetName
     $vnetConfig.GWsubnetName = $GatewaySubnetName
     $vnetConfig.RWsubnetName = $RemoteWorkstationSubnetName
     if( $deployOverDC ) {
@@ -2338,13 +2336,13 @@ else {
             $vnetConfig.vnetName = "vnet-CloudAccessManager"
         }
         if( -not $vnetConfig.CSSubnetName ) {
-            $vnetConfig.CSSubnetName = "subnet-CloudAccessManager"
+            $vnetConfig.CSSubnetName = "subnet-ConnectionService"
         }
         if( -not $vnetConfig.GWSubnetName ) {
-            $vnetConfig.GWSubnetName = "subnet-gateway"
+            $vnetConfig.GWSubnetName = "subnet-Gateway"
         }
         if( -not $vnetConfig.RWSubnetName ) {
-            $vnetConfig.RWSubnetName = "subnet-vm"
+            $vnetConfig.RWSubnetName = "subnet-RemoteWorkstation"
         }
     }
 
