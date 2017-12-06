@@ -91,13 +91,13 @@ Configuration InstallPCoIPAgent
             SetScript  = {
                 Write-Verbose "Install_SumoCollector"
 
-                $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
+                $installerFileName = "SumoCollector.exe"
                 $uninstallerRegistryID = "7857-4527-9352-4688"  # This will need to change for every installer version change!
 
 				$sasToken = ($using:sasTokenAsCred).GetNetworkCredential().password
 				$blobLocation = ($using:sasTokenAsCred).GetNetworkCredential().username
 
-                $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/$installerFileName"
+                $sumo_package = 'https://collectors.sumologic.com/rest/download/win64'
                 $sumo_config = "$blobLocation/sumo.conf${sasToken}"
                 $sumo_collector_json = "$blobLocation/sumo-agent-vm.json${sasToken}"
                 $dest = "C:\sumo"
@@ -228,8 +228,20 @@ Configuration InstallPCoIPAgent
 				#agent installer exit code 1641 require reboot machine
 				Set-Variable EXIT_CODE_REBOOT 1641 -Option Constant
 
+                $installerFileName = "PCoIP_agent_release_installer_standard.exe"
+
+				if (! $using:isSA) {
+					$installerFileName = "PCoIP_agent_release_installer_graphics.exe"
+				}
+
                 $pcoipAgentInstallerUrl = $using:pcoipAgentInstallerUrl
-                $installerFileName = [System.IO.Path]::GetFileName($pcoipAgentInstallerUrl)
+
+				if (! $pcoipAgentInstallerUrl.EndsWith('/') ) {
+					 $pcoipAgentInstallerUrl =  $pcoipAgentInstallerUrl + '/';
+				}
+
+				$pcoipAgentInstallerUrl =  $pcoipAgentInstallerUrl + $installerFileName;
+                
                 $destFile = $using:agentInstallerDLDirectory + '\' + $installerFileName
 
 				$orderNumArray = $using:orderNumArray

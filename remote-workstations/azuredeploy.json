@@ -97,6 +97,12 @@
           "metadata": {
             "description": "PCoIP Standard Agent License Registration Code."
           }
+        },
+        "AgentChannel": {
+          "type": "string",
+          "metadata": {
+            "description": "PCoIP Agent channel to use for installer download."
+          }
         }
   },
   "variables": {
@@ -148,6 +154,9 @@
           "vmSize": {
             "value": "[parameters('vmSize')]"
           },
+          "agentType": {
+            "value": "Standard"
+          },
           "domainToJoin": {
             "value": "[parameters('domainToJoin')]"
           },
@@ -186,6 +195,9 @@
           },
           "storageAccountName": {
             "value": "[variables('storageAccountName')]"
+          },
+          "AgentChannel": {
+            "value": "[parameters('AgentChannel')]"
           }
         }
       }

@@ -1,6 +1,6 @@
-# Install-CAM-CS.ps1
+# Install-ConnectionServer.ps1
 # Compile to a local .zip file via this command:
-# Publish-AzureVMDscConfiguration -ConfigurationPath .\Install-CAM-CS.ps1 -ConfigurationArchivePath .\Install-CAM.ps1.zip
+# Publish-AzureVMDscConfiguration -ConfigurationPath .\Install-ConnectionServer.ps1 -ConfigurationArchivePath .\Install-CAM.ps1.zip
 # And then push to GitHUB.
 #
 # Or to push to Azure Storage:
@@ -12,10 +12,10 @@
 # $StorageContainer = 'binaries'
 # 
 # $StorageContext = New-AzureStorageContext -StorageAccountName $StorageAccount -StorageAccountKey $StorageKey
-# Publish-AzureVMDscConfiguration -ConfigurationPath .\Install-CAM-CS.ps1  -ContainerName $StorageContainer -StorageContext $StorageContext
+# Publish-AzureVMDscConfiguration -ConfigurationPath .\Install-ConnectionServer.ps1  -ContainerName $StorageContainer -StorageContext $StorageContext
 #
 #
-Configuration InstallCAM
+Configuration InstallConnectionServer
 {
 	# One day pull from Oracle as per here? https://github.com/gregjhogan/cJre8/blob/master/DSCResources/cJre8/cJre8.schema.psm1
     param
@@ -60,9 +60,6 @@ Configuration InstallCAM
         [System.Management.Automation.PSCredential]$DomainAdminCreds,
 
         [Parameter(Mandatory)]
-        [String]$RGName, #Azure resource group name
-
-        [Parameter(Mandatory)]
         [String]$gitLocation,
 
         [Parameter(Mandatory)]
@@ -95,6 +92,11 @@ Configuration InstallCAM
 
 	$brokerServiceName = "CAMBroker"
 	$AUIServiceName = "CAMAUI"
+
+	# CAM Deployment Info
+	$CAMDeploymentInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode( `
+		$CAMDeploymentInfo.GetNetworkCredential().Password)
+	$CAMDeploymentInfoDecoded = ConvertFrom-Json $CAMDeploymentInfoJSONDecoded
 
 	# Retry for CAM Registration
 	$retryCount = 3
@@ -172,8 +174,8 @@ Configuration InstallCAM
             SetScript  = {
                 Write-Verbose "Install_SumoCollector"
 
-                $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
-                $sumo_package = "$using:sourceURI/$installerFileName"
+                $installerFileName = "SumoCollector.exe"
+                $sumo_package = 'https://collectors.sumologic.com/rest/download/win64'
 				$sumo_config = "$using:gitLocation/$using:sumoConf"
                 $sumo_collector_json = "$using:gitLocation/sumo-admin-vm.json"
 				$dest = "C:\sumo"
@@ -516,7 +518,8 @@ Configuration InstallCAM
 				$domainroot = $domainsplit[1]  # get the second part of the domain name
 				$date = Get-Date
 				$domainControllerFQDN = $using:dcvmfqdn
-				$RGNameLocal        = $using:RGName
+				$regInfo = $using:camDeploymentInfoDecoded.RegistrationInfo
+				$remoteWorkstationResourceGroup = $regInfo.CAM_RESOURCEGROUP
 
 				$localAdminCreds = $using:DomainAdminCreds
 				$adminUsername = $localAdminCreds.GetNetworkCredential().Username
@@ -529,7 +532,7 @@ dom=$domainleaf
 dcDomain = $domainleaf
 dc=$domainroot
 adServerHostAddress=$domainControllerFQDN
-resourceGroupName=$RGNameLocal
+resourceGroupName=$remoteWorkstationResourceGroup
 CAMSessionTimeoutMinutes=480
 domainGroupAppServersJoin="$using:remoteWorkstationDomainGroup"
 ldapHost=ldaps://$domainControllerFQDN
@@ -592,15 +595,9 @@ ldapDomain=$Using:domainFQDN
 
 				Write-Host "Writing auth file."
 
-				# File format as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
+				# Auth file format as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
 
-				$CAMDeploymentInfoCred = $using:CAMDeploymentInfo;
-				$CAMDeploymentInfo = $CAMDeploymentInfoCred.GetNetworkCredential().Password
-				$CAMDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($CAMDeploymentInfo)
-				$CAMDeploymenInfoDecoded = ConvertFrom-Json $CAMDeploymenInfoJSONDecoded
-				$regInfo = $camDeploymenInfoDecoded.RegistrationInfo
-				$authFileContent = [System.Web.HttpUtility]::UrlDecode($CAMDeploymenInfoDecoded.AzureAuthFile)
-
+				$authFileContent = [System.Web.HttpUtility]::UrlDecode($using:CAMDeploymentInfoDecoded.AzureAuthFile)
 				$targetDir = "$env:CATALINA_HOME\adminproperty"
 				$authFilePath = "$targetDir\authfile.txt"
 
@@ -622,7 +619,7 @@ ldapDomain=$Using:domainFQDN
 
 				#login to Azure and get storage context so we can pull the right files out of the blob storage
 
-				$regInfo = $camDeploymenInfoDecoded.RegistrationInfo
+				$regInfo = $using:camDeploymentInfoDecoded.RegistrationInfo
 
 				$spName = $regInfo.CAM_USERNAME
 				$spPass = ConvertTo-SecureString $regInfo.CAM_PASSWORD -AsPlainText -Force
@@ -905,6 +902,10 @@ brokerLocale=en_US
 					$certs = Invoke-Command {Get-ChildItem -Path "Cert:\LocalMachine\My"} -Session $DCSession
 					Remove-PSSession $DCSession
 
+					if (-not $certs) {
+						Write-Host "No Certificates found."
+					}
+
 					$cert = $certs | Where-Object { $_.Subject -eq $certSubject }
 					if($cert) {
 						$foundCert = $cert
@@ -951,7 +952,8 @@ brokerLocale=en_US
 							# Non Self-signed Well known CA's certificate case
 							Write-Host "No Issuer certificate of LDAP certificate found."
 						}
-
+					} else {
+						Write-Host "No certificate with subject [$certSubject] found."
 					}
 
 					# No certificate (or issuer certificate) yet.
@@ -983,12 +985,7 @@ brokerLocale=en_US
 
             SetScript  = {
 				##
-
-				$CAMDeploymentInfoCred = $using:CAMDeploymentInfo;
-				$CAMDeploymentInfo = $CAMDeploymentInfoCred.GetNetworkCredential().Password
-				$CAMDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($CAMDeploymentInfo)
-				$CAMDeploymenInfoDecoded = ConvertFrom-Json $CAMDeploymenInfoJSONDecoded
-				$regInfo = $camDeploymenInfoDecoded.RegistrationInfo
+				$regInfo = $using:camDeploymentInfoDecoded.RegistrationInfo
 
 				# now have an object with key value pairs - set environment (to be active after reboot)
 				$regInfo.psobject.properties | Foreach-Object {

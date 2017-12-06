@@ -34,8 +34,13 @@ param(
     [SecureString]
     $certificateFilePassword = $null,
 
+	[parameter(Mandatory=$false)]
+	[ValidateSet("stable","beta","dev")] 
+	[String]
+	$AgentChannel = "stable",
+
     $camSaasUri = "https://cam-antar.teradici.com",
-    $CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/bddc2/azuredeploy.json",
+    $CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/bddc2b/azuredeploy.json",
     $CAMDeploymentBlobSource = "https://teradeploy.blob.core.windows.net/bdstable",
     $outputParametersFileName = "cam-output.parameters.json",
     $location
@@ -347,6 +352,7 @@ function New-RemoteWorstationTemplates {
     #Put the VHD's in the user storage account until we move to managed storage...
     $VHDStorageAccountName = $storageAccountContext.StorageAccountName
 	
+	$agentChannel = $CAMConfig.internal.agentChannel
 
     $armParamContent = @"
 {
@@ -355,6 +361,7 @@ function New-RemoteWorstationTemplates {
 	"parameters": {
 		"agentType": { "value": "%agentType%" },
 		"vmSize": { "value": "%vmSize%" },
+		"AgentChannel": { "value": "$agentChannel"},
 		"CAMDeploymentBlobSource": { "value": "$blobUri" },
 		"binaryLocation": { "value": "$binaryLocation" },
 		"subnetID": { "value": "$($CAMConfig.parameters.remoteWorkstationSubnet.clearValue)" },
@@ -610,7 +617,7 @@ function Populate-UserBlob {
 
 
 
-# Creates a key vault in the target resource group and gives the current SP access to the secrets.
+# Creates a key vault in the target resource group and gives the current service principal access to the secrets.
 function New-CAM-KeyVault() {
     Param(
         [parameter(Mandatory = $true)] 
@@ -679,7 +686,7 @@ function New-CAM-KeyVault() {
 
     # Try to set key vault access for the calling administrator (if they have rights...)
 
-    # Get previous SP context and set back to admin
+    # Get previous service principal context and set back to admin
     $spContext = Get-AzureRMContext
     Set-AzureRMContext -Context $adminAzureContext | Out-Null
 	
@@ -696,7 +703,7 @@ function New-CAM-KeyVault() {
         Write-Host "Please set key vault access policies in the Azure Portal or through Azure API's when needed."
     }
 
-    # Set context back to SP
+    # Set context back to service principal
     Set-AzureRMContext -Context $spContext | Out-Null
 
     return $keyVault
@@ -926,7 +933,7 @@ function New-CAMAppSP() {
     foreach ($app in $appArray) {
         $aoID = $app.ObjectId
         try {
-            Write-Host "Removing previous SP application $appName ObjectId: $aoID"
+            Write-Host "Removing previous service principal application $appName ObjectId: $aoID"
             Remove-AzureRmADApplication -ObjectId $aoID -Force -ErrorAction Stop
         }
         catch {
@@ -947,7 +954,12 @@ function New-CAMAppSP() {
         $newAppCreateRetry--
 
         try {
-            $app = New-AzureRmADApplication -DisplayName $appName -HomePage $appURI -IdentifierUris $appURI -Password $generatedPassword -ErrorAction Stop
+            $app = New-AzureRmADApplication `
+                -DisplayName $appName `
+                -HomePage $appURI `
+                -IdentifierUris $appURI `
+                -Password $generatedPassword `
+                -ErrorAction Stop
             break
         }
         catch {
@@ -964,10 +976,11 @@ function New-CAMAppSP() {
     }
 
 
-    Write-Host "New app creation complete. Creating SP."
+    Write-Host "New app creation complete. Creating service principal."
 
     # Retry required since it can take a few seconds for the app registration to percolate through Azure.
     # (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
+    $sp = $null
     $SPCreateRetry = 60
     while ($SPCreateRetry -ne 0) {
         $SPCreateRetry--
@@ -983,38 +996,13 @@ function New-CAMAppSP() {
             Start-sleep -Seconds 1
             if ($SPCreateRetry -eq 0) {
                 #re-throw whatever the original exception was
-                Write-Error "Failure to create SP for $appName."
-                throw
-            }
-        }
-    }
-	
-    Write-Host "SP creation complete. Adding role assignment."
-
-    # Retry required since it can take a few seconds for the app registration to percolate through Azure.
-    # (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
-    $rollAssignmentRetry = 120
-    while ($rollAssignmentRetry -ne 0) {
-        $rollAssignmentRetry--
-
-        try {
-            New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $RGName -ServicePrincipalName $app.ApplicationId -ErrorAction Stop
-            break
-        }
-        catch {
-            Write-Host "Waiting for service principal. Remaining: $rollAssignmentRetry"
-            Start-sleep -Seconds 1
-            if ($rollAssignmentRetry -eq 0) {
-                #re-throw whatever the original exception was
-                $exceptionContext = Get-AzureRmContext
-                $exceptionSubscriptionId = $exceptionContext.Subscription.Id
-                Write-Error "Failure to create Contributor role for $appName in ResourceGroup: $RGName Subscription: $exceptionSubscriptionId. Please check your subscription premissions."
+                Write-Error "Failure to create service principal for $appName."
                 throw
             }
         }
     }
 
-    # Get SP credentials
+    # Get service principal credentials
     $spPass = $generatedPassword
     $spCreds = New-Object -TypeName pscredential -ArgumentList  $sp.ApplicationId, $spPass
 
@@ -1152,6 +1140,10 @@ function New-ConnectionServiceDeployment() {
     # TODO - make sure user account has keyvault secret access here. Try to add self if not
     # and if doesn't work, probably fail.
 
+    # Find a connection service resource group name that can be used.
+    # An incrementing count is used to find a free resource group. This count is
+    # stored in the key vault to ensure every connection service in the deployment has a unique
+    # identifier, even if old connection services have been deleted.
     $csRGName = $null
     while(-not $csRGName)
     {
@@ -1192,7 +1184,7 @@ function New-ConnectionServiceDeployment() {
     New-AzureRmResourceGroup -Name $csRGName -Location $location -ErrorAction stop | Out-Null
     
 
-    # deploy as the SP to ensure that the SP has appropriate rights for where it's
+    # deploy as the service principal to ensure that the service principal has appropriate rights for where it's
     # being deployed
     $secret = Get-AzureKeyVaultSecret `
         -VaultName $kvName `
@@ -1218,7 +1210,7 @@ function New-ConnectionServiceDeployment() {
         -ErrorAction stop
     $artifactsLocation = $secret.SecretValueText
 
-    Write-Host "Using SP $client in tenant $tenant and subscription $subscriptionId"
+    Write-Host "Using service principal $client in tenant $tenant and subscription $subscriptionId"
     New-AzureRmRoleAssignment `
         -RoleDefinitionName Contributor `
         -ResourceGroupName $csRGName `
@@ -1385,11 +1377,30 @@ function New-ConnectionServiceDeployment() {
                 -Verbose
         }
         else {
-            New-AzureRmResourceGroupDeployment `
-                -DeploymentName "CS" `
-                -ResourceGroupName $csRGName `
-                -TemplateFile $CSDeploymentTemplateURI `
-                -TemplateParameterFile $outputParametersFilePath 
+            for($idx = 3;$idx -gt 0;$idx--)
+            {
+                try {
+                    New-AzureRmResourceGroupDeployment `
+                        -DeploymentName "CS" `
+                        -ResourceGroupName $csRGName `
+                        -TemplateFile $CSDeploymentTemplateURI `
+                        -TemplateParameterFile $outputParametersFilePath
+                    # success!
+                    break
+                }
+                catch {
+                    # Seems there can be a race condition on the role assignment of the service principal with
+                    # the resource group before getting here - setting a retry loop
+                    if ($_.Exception.Message -like "*does not have authorization*")
+                    {
+                        Write-host "Authorization error. Retrying. Remaining: $idx"
+                        Start-sleep -Seconds 10
+                    }
+                    else {
+                        throw $_
+                    }
+                }
+            }
         }
     }
     catch {
@@ -1409,6 +1420,7 @@ function New-CAMDeploymentRoot()
 {
     param(
         $RGName,
+        $rwRGName,
         $spInfo,
         $azureContext,
         $CAMConfig,
@@ -1459,7 +1471,7 @@ function New-CAMDeploymentRoot()
         -client $client `
         -key $key `
         -tenant $tenant `
-        -RGName $RGName `
+        -RGName $rwRGName `
         -registrationCode $registrationCode `
         -camSaasBaseUri $camSaasUri `
         -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
@@ -1469,7 +1481,7 @@ function New-CAMDeploymentRoot()
         -camSaasUri $camSaasUri `
         -deploymentId $deploymentId `
         -subscriptionID $subscriptionID `
-        -RGName $RGName `
+        -RGName $rwRGName `
         -kvName $kvInfo.VaultName | Out-Null
 
     Add-SecretsToKeyVault `
@@ -1483,21 +1495,31 @@ function New-CAMDeploymentRoot()
 # and a convenience 'first' Windows standard agent machine 
 function Deploy-CAM() {
     param(
+        [parameter(Mandatory = $false)] 
         [bool]
         $verifyCAMSaaSCertificate = $true,
 
+        [parameter(Mandatory = $true)] 
         $CAMDeploymentTemplateURI,
 
+        [parameter(Mandatory = $true)] 
         [System.Management.Automation.PSCredential]
         $domainAdminCredential,
 		
+        [parameter(Mandatory = $true)] 
         $domainName,
 
+        [parameter(Mandatory = $true)] 
         [SecureString]
         $registrationCode,
 
+        [parameter(Mandatory = $true)] 
         $camSaasUri,
+
+        [parameter(Mandatory = $true)] 
         $CAMDeploymentBlobSource,
+
+        [parameter(Mandatory = $true)] 
         $outputParametersFileName,
 		
         [parameter(Mandatory = $true)] 
@@ -1505,6 +1527,12 @@ function Deploy-CAM() {
 		
         [parameter(Mandatory = $true)]
         $RGName,
+		
+        [parameter(Mandatory = $true)]
+        $csRGName,
+		
+        [parameter(Mandatory = $true)]
+        $rwRGName,
 		
         [parameter(Mandatory = $false)]
         [System.Management.Automation.PSCredential]
@@ -1522,6 +1550,11 @@ function Deploy-CAM() {
         [SecureString]
         $certificateFilePassword = $null,
 
+		[parameter(Mandatory=$false)]
+		[ValidateSet("stable","beta","dev")] 
+		[String]
+		$AgentChannel = "stable",
+
         [parameter(Mandatory = $false)]
         [bool]
         $testDeployment = $false
@@ -1535,9 +1568,8 @@ function Deploy-CAM() {
 
     # Setup CAMConfig as a hash table of ARM parameters for Azure (KeyVault)
     # Most parameters are secrets so the KeyVault can be a single configuration source
-
-    # and internal parameters for this script
-    # the parameter name in the hash is the KeyVault secret name
+    # the parameter name is the KeyVault secret name
+    # and internal parameters for this script which are not pushed to the key vault
     $CAMConfig = @{} 
     $CAMConfig.parameters = @{}
     $CAMConfig.parameters.domainAdminUsername = @{
@@ -1596,12 +1628,9 @@ function Deploy-CAM() {
     $CAMConfig.parameters.AzureResourceGroupName = @{}
     $CAMConfig.parameters.AzureKeyVaultName = @{}
 	
-    #TODO: All the strings in here need to be reviewed for dual sourcing in the entire solution
-    # including ARM templates
-
-
     $CAMConfig.internal = @{}
     $CAMConfig.internal.vnetName = "vnet-CloudAccessManager"
+    $CAMConfig.internal.rootSubnetName = "subnet-CAMRoot"
     $CAMConfig.internal.RWSubnetName = "subnet-RemoteWorkstation"
     $CAMConfig.internal.CSSubnetName = "subnet-ConnectionService"
     $CAMConfig.internal.GWSubnetName = "subnet-Gateway"
@@ -1626,8 +1655,9 @@ function Deploy-CAM() {
         value      = (ConvertTo-SecureString $CAMConfig.internal.GWSubnetID -AsPlainText -Force)
         clearValue = $CAMConfig.internal.GWSubnetID
     }
-	
-	
+
+	$CAMConfig.internal.agentChannel = $AgentChannel
+
     $CAMConfig.internal.standardVMSize = "Standard_D2_v2"
     $CAMConfig.internal.graphicsVMSize = "Standard_NV6"
     $CAMConfig.internal.agentARM = "server2016-standard-agent.json"
@@ -1645,9 +1675,9 @@ function Deploy-CAM() {
     $spInfo = $null
     if (-not $spCredential)	{
 
-        # if there's no SP provided then we either need to make one or ask for one
+        # if there's no service principal provided then we either need to make one or ask for one
 
-        # if the current context tenantId does not match the desired tenantId then we can't make SP's
+        # if the current context tenantId does not match the desired tenantId then we can't make service principal's
         $currentContext = Get-AzureRmContext
         $currentContextTenant = $currentContext.Tenant.Id 
         $tenantIDsMatch = ($currentContextTenant -eq $tenantId)
@@ -1666,37 +1696,67 @@ function Deploy-CAM() {
 
         if ((-not $tenantIDsMatch) -or ($requestSPGeneration -like "*n*")) {
             # manually get credential
-            $spCredential = Get-Credential -Message "Please enter SP credential"
+            $spCredential = Get-Credential -Message "Please enter service principal credential"
 
             $spInfo = @{}
             $spinfo.spCreds = $spCredential
             $spInfo.tenantId = $tenantId
         }
         else {
-            # generate SP
+            # generate service principal
             $spInfo = New-CAMAppSP `
                 -RGName $RGName
         }
     }
     else {
-        # SP credential provided in parameter list
-        if ($tenantId -eq $null) {throw "SP provided but no tenantId"}
+        # service principal credential provided in parameter list
+        if ($tenantId -eq $null) {throw "Service principal provided but no tenantId"}
         $spInfo = @{}
         $spinfo.spCreds = $spCredential
         $spInfo.tenantId = $tenantId
     }
 
     $client = $spInfo.spCreds.UserName
-    $key = $spInfo.spCreds.GetNetworkCredential().Password
     $tenant = $spInfo.tenantId
 
-    Write-Host "Using SP $client in tenant $tenant and subscription $subscriptionId"
+    Write-Host "Using service principal $client in tenant $tenant and subscription $subscriptionId"
 
-    # Login with SP since some Powershell contexts (with token auth - like Azure Cloud PowerShell or Visual Studio)
+    # Service principal info exists but needs to get rights to the required resource groups
+    Write-Host "Adding role assignments for the service principal account."
+    
+    # Retry required since it can take a few seconds for app registration to percolate through Azure.
+    # (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
+    $rollAssignmentRetry = 120
+    while ($rollAssignmentRetry -ne 0) {
+        $rollAssignmentRetry--
+
+        try {
+            New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $RGName -ServicePrincipalName $client -ErrorAction Stop | Out-Null
+            New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $csRGName -ServicePrincipalName $client -ErrorAction Stop | Out-Null
+            New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $rwRGName -ServicePrincipalName $client -ErrorAction Stop | Out-Null
+            break
+        }
+        catch {
+            #TODO: we should only be catching the 'Service principal or app not found' error
+            Write-Host "Waiting for service principal. Remaining: $rollAssignmentRetry"
+            Start-sleep -Seconds 1
+            if ($rollAssignmentRetry -eq 0) {
+                #re-throw whatever the original exception was
+                $exceptionContext = Get-AzureRmContext
+                $exceptionSubscriptionId = $exceptionContext.Subscription.Id
+                Write-Error "Failure to create Contributor role for $client in ResourceGroup: $RGName Subscription: $exceptionSubscriptionId. Please check your subscription permissions."
+                throw
+            }
+        }
+    }
+
+
+
+    # Login with service principal since some Powershell contexts (with token auth - like Azure Cloud PowerShell or Visual Studio)
     # can't do operations on keyvaults
 
     
-    # cache the current context and sign in as SP
+    # cache the current context and sign in as service principal
     $azureContext = Get-AzureRMContext
     $retryCount = 60
     for ($idx = ($retryCount - 1); $idx -ge 0; $idx--) {
@@ -1729,11 +1789,11 @@ function Deploy-CAM() {
         }
     }
 
-
     try {
 
         $kvInfo = New-CAMDeploymentRoot `
             -RGName $RGName `
+            -rwRGName $rwRGName `
             -spInfo $spInfo `
             -azureContext $azureContext `
             -CAMConfig $CAMConfig `
@@ -1779,7 +1839,28 @@ function Deploy-CAM() {
 				},
 				"secretName": "remoteWorkstationDomainGroup"
 			}
-		},
+        },
+        "connectionServiceResourceGroup": {
+            "value": "$csRGName"
+        },
+        "remoteWorkstationResourceGroup": {
+            "value": "$rwRGName"
+        },
+        "vnetName": {
+            "value": "$($CAMConfig.internal.vnetName)"
+        },
+        "rootSubnetName": {
+            "value": "$($CAMConfig.internal.rootSubnetName)"
+        },
+        "remoteWorkstationSubnetName": {
+            "value": "$($CAMConfig.internal.RWSubnetName)"
+        },
+        "connectionServiceSubnetName": {
+            "value": "$($CAMConfig.internal.CSSubnetName)"
+        },
+        "gatewaySubnetName": {
+            "value": "$($CAMConfig.internal.GWSubnetName)"
+        },
 		"CAMDeploymentBlobSource": {
 			"reference": {
 				"keyVault": {
@@ -1969,7 +2050,6 @@ else {
 
 $chosenSubscriptionIndex = $chosenSubscriptionNumber - 1
 
-# Let user choose since it's sometimes not obvious...
 Write-Host ($subscriptionsToDisplay[$chosenSubscriptionIndex] | Select-Object -Property Current, Number, Name, SubscriptionId, TenantId | Format-Table | Out-String)
 $rmContext = Set-AzureRmContext -SubscriptionId $subscriptionsToDisplay[$chosenSubscriptionIndex].SubscriptionId -TenantId $subscriptionsToDisplay[$chosenSubscriptionIndex].TenantId
 
@@ -2067,7 +2147,17 @@ if ($CAMRootKeyvault) {
         Write-Host "Please move or remove all but one."
         return   # early return!
     }
-    Write-Host "This resource group has a CAM deployment already. Using $($CAMRootKeyvault.Name)"
+    Write-Host "The resource group $($rgMatch.ResourceGroupName) has a CAM deployment already."
+    Write-Host "Using key vault $($CAMRootKeyvault.Name)"
+
+    $requestNewCS = Read-Host `
+        "Please hit enter to create a new connection service for this Cloud Access Manager deployment or 'no' to cancel"
+
+    if ($requestNewCS -like "*n*") {
+        Write-Host "Not deploying a new connection service. Exiting."
+        exit
+    }
+
     Write-Host "Deploying a new CAM Connection Service with updated CAMDeploymentInfo"
 	
     New-CAMDeploymentInfo `
@@ -2082,9 +2172,36 @@ if ($CAMRootKeyvault) {
 
 }
 else {
-    # New deployment
+    # New deployment - either complete or a root + Remote Workstation deployment
+    # Now let's create the other required resource groups
 
-    # allow interactive input of a bunch of parameters. spCredential is handled in the SP functions elsewhere in this file
+    $csRGName = $rgName + "-CS1"
+    $rwRGName = $rgName + "-RW"
+
+    $csrg = Get-AzureRmResourceGroup -ResourceGroupName $csRGName -ErrorAction SilentlyContinue
+    if($csrg)
+    {
+        # assume it's there for a reason? Alternately we could fail but...
+        Write-Host "Connection service resource group $csRGName exists. Using it."
+    }
+    else {
+        Write-Host "Creating connection service resource group $csRGName"
+        $csrg = New-AzureRmResourceGroup -Name $csRGName -Location $rgMatch.Location -ErrorAction Stop
+    }
+
+    $rwrg = Get-AzureRmResourceGroup -ResourceGroupName $rwRGName -ErrorAction SilentlyContinue
+    if($rwrg)
+    {
+        # assume it's there for a reason? Alternately we could fail but...
+        Write-Host "Remote workstation resource group $rwRGName exists. Using it."
+    }
+    else {
+        Write-Host "Creating remote workstation resource group $rwRGName"
+        $rwrg = New-AzureRmResourceGroup -Name $rwRGName -Location $rgMatch.Location -ErrorAction Stop
+    }
+
+
+    # allow interactive input of a bunch of parameters. spCredential is handled in the service principal functions elsewhere in this file
     do {
         if ( -not $domainAdminCredential ) {
             $domainAdminCredential = Get-Credential -Message "Please enter admin credential for new domain"
@@ -2143,12 +2260,12 @@ else {
         -outputParametersFileName $outputParametersFileName `
         -subscriptionId $selectedSubcriptionId `
         -RGName $rgMatch.ResourceGroupName `
+        -csRGName $csRGName `
+        -rwRGName $rwRGName `
         -spCredential $spCredential `
         -tenantId $selectedTenantId `
         -testDeployment $testDeployment `
         -certificateFile $certificateFile `
-        -certificateFilePassword $certificateFilePassword
+        -certificateFilePassword $certificateFilePassword `
+		-AgentChannel $AgentChannel
 }
-
-
-

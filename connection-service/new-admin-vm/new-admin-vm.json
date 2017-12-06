@@ -72,11 +72,11 @@
                 "typeHandlerVersion": "2.9",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "modulesUrl": "[concat(parameters('CAMDeploymentBlobSource'),'/Install-CAM-CS.ps1.zip')]",
+                    "modulesUrl": "[concat(parameters('CAMDeploymentBlobSource'),'/Install-ConnectionServer.ps1.zip')]",
                     "privacy": {
                         "DataCollection": "Disable"
                     },
-                    "configurationFunction": "Install-CAM-CS.ps1\\InstallCAM",
+                    "configurationFunction": "Install-ConnectionServer.ps1\\InstallConnectionServer",
                     "Properties": {
                         "remoteWorkstationDomainGroup": "[parameters('remoteWorkstationDomainGroup')]",
                         "sourceURI": "[parameters('CAMDeploymentBlobSource')]",
@@ -88,7 +88,6 @@
                             "UserName": "dummy",
                             "Password": "PrivateSettingsRef:CAMDeploymentInfo"
                         },
-                        "RGName": "[resourceGroup().name]",
                         "gitLocation": "[parameters('_artifactsLocation')]",
                         "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-AdminUI-',subscription().subscriptionId)]"
                     }
