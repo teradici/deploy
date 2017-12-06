@@ -45,7 +45,7 @@ param(
 
     [parameter(Mandatory=$false)]
     [String]
-    $vnetName,
+    $vnetID,
 
     [parameter(Mandatory=$false)]
     [String]
@@ -1667,13 +1667,12 @@ function Deploy-CAM() {
     $CAMConfig.parameters.AzureKeyVaultName = @{}
 	
     $CAMConfig.internal = @{}
-    $CAMConfig.internal.vnetName = $vnetConfig.vnetName
+    $CAMConfig.internal.vnetID = $vnetConfig.vnetID
+    $CAMConfig.internal.vnetName = $CAMConfig.internal.vnetID.split("/")[-1]
     $CAMConfig.internal.rootSubnetName = "subnet-CAMRoot"
     $CAMConfig.internal.RWSubnetName = $vnetConfig.RWSubnetName
     $CAMConfig.internal.CSSubnetName = $vnetConfig.CSSubnetName
     $CAMConfig.internal.GWSubnetName = $vnetConfig.GWSubnetName
-    $CAMConfig.internal.vnetID = `
-        "/subscriptions/$subscriptionId/resourceGroups/$RGName/providers/Microsoft.Network/virtualNetworks/$($CAMConfig.internal.vnetName)"
 
     $CAMConfig.internal.RWSubnetID = $CAMConfig.internal.vnetID + "/subnets/$($CAMConfig.internal.RWSubnetName)"
     $CAMConfig.internal.CSSubnetID = $CAMConfig.internal.vnetID + "/subnets/$($CAMConfig.internal.CSSubnetName)"
@@ -2270,12 +2269,11 @@ else {
 
     # Check if deploying Root only (ie, DC and vnet already exist)
     if( -not $deployOverDC ) {
-        $deployOverDC = Read-Host "Do you want to create a new Domain Controller and VNet? Please hit enter to continue with deploying a new domain and vnet or 'no' to maually provide"
-        $deployOverDC = $deployOverDC -like "*n*"
+        $deployOverDC = (Read-Host "Do you want to create a new Domain Controller and VNet? Please hit enter to continue with deploying a new domain and vnet or 'no' to maually provide") -like "*n*"
     }
 
     $vnetConfig = @{}
-    $vnetConfig.vnetName = $vnetName
+    $vnetConfig.vnetID = $vnetID
     $vnetConfig.CSsubnetName = $CloudServiceSubnetName
     $vnetConfig.GWsubnetName = $GatewaySubnetName
     $vnetConfig.RWsubnetName = $RemoteWorkstationSubnetName
@@ -2283,17 +2281,24 @@ else {
         # Don't create new DC and vnets
         # prompt for vnet name, gateway subnet name, remote workstatin subnet name, connection service subnet name
         do {
-            if ( -not $vnetConfig.vnetName ) {
-                $vnetConfig.vnetName = Read-Host "Provide Connection Service Vnet Name"
+            if ( -not $vnetConfig.vnetID ) {
+                $vnetConfig.vnetID = Read-Host "Provide Connection Service VNet Reference ID (in the form /subscriptions/{subscriptionID}/resourceGroups/{vnetResourceGroupName}/providers/Microsoft.Network/virtualNetworks/{vnetName})"
             }
-            if ( -not (Find-AzureRmResource -ResourceGroupNameEquals $rgName -ResourceType "Microsoft.Network/virtualNetworks" -ResourceNameEquals $vnetConfig.vnetName) ) {
-                # Does not exist
-                Write-Host ("{0} not found in root resource group {1}" -f ($vnetConfig.vnetName,$rgName))
-                $vnetConfig.vnetName = $null
+            # vnetID is a reference ID that is like: 
+            # "/subscriptions/{subscription}/resourceGroups/{vnetRG}/providers/Microsoft.Network/virtualNetworks/{vnetName}"
+            $vnetName = $vnetConfig.vnetID.split("/")[8]
+            $vnetRgName = $vnetConfig.vnetID.split("/")[4]
+            if ( (-not $vnetRgName) -or (-not $vnetName) -or `
+                (-not (Find-AzureRmResource -ResourceGroupNameEquals $vnetRgName `
+                -ResourceType "Microsoft.Network/virtualNetworks" `
+                -ResourceNameEquals $vnetName)) ) {
+                    # Does not exist
+                    Write-Host ("{0} not found" -f ($vnetConfig.vnetID))
+                    $vnetConfig.vnetID = $null
             }
-        } while (-not $vnetConfig.vnetName)
+        } while (-not $vnetConfig.vnetID)
 
-        $vnet = Get-AzureRmVirtualNetwork -Name $vnetConfig.vnetName -ResourceGroupName $rgName
+        $vnet = Get-AzureRmVirtualNetwork -Name $vnetName -ResourceGroupName $vnetRgName
 
         # Connection Service Subnet
         do {
@@ -2331,9 +2336,9 @@ else {
             }
         } while (-not $vnetConfig.RWsubnetName)
     } else {
-        #create new DC and vnets
-        if( -not $vnetConfig.vnetName ) {
-            $vnetConfig.vnetName = "vnet-CloudAccessManager"
+        # create new DC and vnets. Default values populated here.
+        if( -not $vnetConfig.vnetID ) {
+            $vnetConfig.vnetID = "/subscriptions/$selectedSubcriptionId/resourceGroups/$rgName/providers/Microsoft.Network/virtualNetworks/vnet-CloudAccessManager"
         }
         if( -not $vnetConfig.CSSubnetName ) {
             $vnetConfig.CSSubnetName = "subnet-ConnectionService"
@@ -2403,7 +2408,7 @@ else {
         -CAMDeploymentBlobSource $CAMDeploymentBlobSource.Trim().TrimEnd('/') `
         -outputParametersFileName $outputParametersFileName `
         -subscriptionId $selectedSubcriptionId `
-        -RGName $rgMatch.ResourceGroupName `
+        -RGName $rgName `
         -csRGName $csRGName `
         -rwRGName $rwRGName `
         -spCredential $spCredential `
