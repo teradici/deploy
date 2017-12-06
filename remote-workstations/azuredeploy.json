@@ -154,6 +154,9 @@
           "vmSize": {
             "value": "[parameters('vmSize')]"
           },
+          "agentType": {
+            "value": "Standard"
+          },
           "domainToJoin": {
             "value": "[parameters('domainToJoin')]"
           },

@@ -902,6 +902,10 @@ brokerLocale=en_US
 					$certs = Invoke-Command {Get-ChildItem -Path "Cert:\LocalMachine\My"} -Session $DCSession
 					Remove-PSSession $DCSession
 
+					if (-not $certs) {
+						Write-Host "No Certificates found."
+					}
+
 					$cert = $certs | Where-Object { $_.Subject -eq $certSubject }
 					if($cert) {
 						$foundCert = $cert
@@ -948,7 +952,8 @@ brokerLocale=en_US
 							# Non Self-signed Well known CA's certificate case
 							Write-Host "No Issuer certificate of LDAP certificate found."
 						}
-
+					} else {
+						Write-Host "No certificate with subject [$certSubject] found."
 					}
 
 					# No certificate (or issuer certificate) yet.
