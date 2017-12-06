@@ -2050,7 +2050,6 @@ else {
 
 $chosenSubscriptionIndex = $chosenSubscriptionNumber - 1
 
-# Let user choose since it's sometimes not obvious...
 Write-Host ($subscriptionsToDisplay[$chosenSubscriptionIndex] | Select-Object -Property Current, Number, Name, SubscriptionId, TenantId | Format-Table | Out-String)
 $rmContext = Set-AzureRmContext -SubscriptionId $subscriptionsToDisplay[$chosenSubscriptionIndex].SubscriptionId -TenantId $subscriptionsToDisplay[$chosenSubscriptionIndex].TenantId
 
