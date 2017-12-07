@@ -2129,6 +2129,7 @@ else {
                     # Success!
                     $selectedRGName = $true
                     $rgMatch = Get-AzureRmResourceGroup -Name $rgName
+                    Write-Host "Successfully created resource group with name $rgName, $rgMatch.ResourceGroupName..."
                 }
             }
         }
@@ -2174,7 +2175,7 @@ if ($CAMRootKeyvault) {
 else {
     # New deployment - either complete or a root + Remote Workstation deployment
     # Now let's create the other required resource groups
-
+    Write-Host "Using specified resource group $rgName"
     $csRGName = $rgName + "-CS1"
     $rwRGName = $rgName + "-RW"
 
