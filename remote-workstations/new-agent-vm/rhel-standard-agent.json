@@ -94,18 +94,6 @@
             },
             "defaultValue": "?public"
         },
-        "binaryLocation": {
-            "type": "string",
-            "metadata": {
-                "description": "The location of the blobs for admin GUI machine installation"
-            }
-        },
-        "CAMDeploymentBlobSource": {
-            "type": "string",
-            "metadata": {
-                "description": "The location of the blobs for end-user-application-vms"
-            }
-        },
         "registrationCode": {
           "type": "securestring",
           "minLength": 21,

@@ -188,7 +188,7 @@
           "gatewaySubnetName": {
               "value": "[parameters('gatewaySubnetName')]"
           },
-          "CAMDeploymentBlobSource": {
+          "CAMBinariesSource": {
             "value": "[parameters('CAMBinariesSource')]"
           },
           "_artifactsLocation": {
@@ -248,7 +248,7 @@
           "CAMDeploymentInfo": {
             "value": "[parameters('CAMDeploymentInfo')]"
           },
-          "CAMDeploymentBlobSource": {
+          "CAMBinariesSource": {
             "value": "[parameters('CAMBinariesSource')]"
           },
           "_baseArtifactsLocation": {
@@ -317,10 +317,7 @@
           "_artifactsLocation": {
             "value": "[concat(parameters('_artifactsLocation'), '/remote-workstations')]"
           },
-          "CAMDeploymentBlobSource": {
-            "value": "[parameters('CAMBinariesSource')]"
-          },
-          "binaryLocation": {
+          "CAMBinariesSource": {
             "value": "[parameters('CAMBinariesSource')]"
           }
         }
