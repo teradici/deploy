@@ -1859,6 +1859,7 @@ function Deploy-CAM() {
                     }
                 }
             }
+            break
         }
         catch {
             #TODO: we should only be catching the 'Service principal or app not found' error
@@ -2219,6 +2220,7 @@ if ($ResourceGroupName) {
         New-AzureRmResourceGroup -Name $ResourceGroupName -Location $location
     } 
     $rgMatch = Get-AzureRmResourceGroup -Name $ResourceGroupName
+    $rgName = $rgMatch.ResourceGroupName
 }
 else {
     $rgIndex = 0
@@ -2495,7 +2497,7 @@ else {
         -CAMDeploymentBlobSource $CAMDeploymentBlobSource.Trim().TrimEnd('/') `
         -outputParametersFileName $outputParametersFileName `
         -subscriptionId $selectedSubcriptionId `
-        -RGName $rgName `
+        -RGName $rgMatch.ResourceGroupName `
         -csRGName $csRGName `
         -rwRGName $rwRGName `
         -spCredential $spCredential `
