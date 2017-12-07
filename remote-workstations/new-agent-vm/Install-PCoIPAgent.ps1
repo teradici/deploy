@@ -12,20 +12,26 @@ Configuration InstallPCoIPAgent
      	[PSCredential] $registrationCodeCredential,
 
         [Parameter(Mandatory=$false)]
-        [String]$sumoCollectorID,
+        [String] $sumoCollectorID,
 
         [Parameter(Mandatory=$false)]
-		[PSCredential]$sasTokenAsCred,
+		[PSCredential] $sasTokenAsCred,
 
         [Parameter(Mandatory=$false)]
      	[PSCredential] $domainJoinCredential,
 
         [Parameter(Mandatory=$false)]
-		[string]$domainGroupToJoin,
+		[string] $domainGroupToJoin,
 
 		[Parameter(Mandatory=$false)]
-		[bool]$enableAutoShutdown
-	)
+		[bool]$enableAutoShutdown,
+
+        [Parameter(Mandatory=$false)]
+		[System.Management.Automation.PSCredential]$CAMDeploymentInfo,
+
+		[Parameter(Mandatory=$false)]
+		[bool]$verifyCAMSaaSCertificate=$true
+		)
     
     $isSA = [string]::IsNullOrWhiteSpace($videoDriverUrl)
 
@@ -85,13 +91,13 @@ Configuration InstallPCoIPAgent
             SetScript  = {
                 Write-Verbose "Install_SumoCollector"
 
-                $installerFileName = "SumoCollector_windows-x64_19_182-25.exe"
+                $installerFileName = "SumoCollector.exe"
                 $uninstallerRegistryID = "7857-4527-9352-4688"  # This will need to change for every installer version change!
 
 				$sasToken = ($using:sasTokenAsCred).GetNetworkCredential().password
 				$blobLocation = ($using:sasTokenAsCred).GetNetworkCredential().username
 
-                $sumo_package = "https://teradeploy.blob.core.windows.net/binaries/$installerFileName"
+                $sumo_package = 'https://collectors.sumologic.com/rest/download/win64'
                 $sumo_config = "$blobLocation/sumo.conf${sasToken}"
                 $sumo_collector_json = "$blobLocation/sumo-agent-vm.json${sasToken}"
                 $dest = "C:\sumo"
@@ -222,8 +228,20 @@ Configuration InstallPCoIPAgent
 				#agent installer exit code 1641 require reboot machine
 				Set-Variable EXIT_CODE_REBOOT 1641 -Option Constant
 
+                $installerFileName = "PCoIP_agent_release_installer_standard.exe"
+
+				if (! $using:isSA) {
+					$installerFileName = "PCoIP_agent_release_installer_graphics.exe"
+				}
+
                 $pcoipAgentInstallerUrl = $using:pcoipAgentInstallerUrl
-                $installerFileName = [System.IO.Path]::GetFileName($pcoipAgentInstallerUrl)
+
+				if (! $pcoipAgentInstallerUrl.EndsWith('/') ) {
+					 $pcoipAgentInstallerUrl =  $pcoipAgentInstallerUrl + '/';
+				}
+
+				$pcoipAgentInstallerUrl =  $pcoipAgentInstallerUrl + $installerFileName;
+                
                 $destFile = $using:agentInstallerDLDirectory + '\' + $installerFileName
 
 				$orderNumArray = $using:orderNumArray
@@ -468,17 +486,19 @@ Configuration InstallPCoIPAgent
 				$domainGroupToJoin = $using:domainGroupToJoin
 				$machineToJoin = $env:computername
 
-				if( -not ((gwmi win32_computersystem).partofdomain))
+				if( -not ((Get-WmiObject win32_computersystem).partofdomain))
 				{
 					Write-Host "$machineToJoin is not part of a domain so is not joining domain group $domainGroupToJoin."
 				}
 				else
 				{
-					$domain = (gwmi win32_computersystem).domain
-					$domainInfo = (Get-WMIObject Win32_NTDomain) | Where-Object {$_.DnsForestName -eq $domain} | Select -First 1
+					$domain = (Get-WmiObject win32_computersystem).domain
+					$domainInfo = (Get-WMIObject Win32_NTDomain) | Where-Object {$_.DnsForestName -eq $domain} | Select-Object -First 1
 					$dcname = ($domainInfo.DomainControllerName -replace "\\", "")
 
-					#create a PSSession with the domain controller that we used to login
+					Write-Host "Connecting to DC to add $machineToJoin to $domainGroupToJoin."
+					
+					# Create a PSSession with the domain controller that we used to login
 					$psSession = New-PSSession -ComputerName $dcname -Credential $using:domainJoinCredential
 
 					Invoke-Command -Session $psSession -ArgumentList $domainGroupToJoin, $machineToJoin `
@@ -501,14 +521,214 @@ Configuration InstallPCoIPAgent
 						# Add-ADGroupMember uses the SAM account name for the computer which has a trailing '$'
 						Add-ADGroupMember -Identity $domainGroupToJoin -Members ($machineToJoin + "$")
 					}
+					Remove-PSSession $psSession
 				}
 					
 				#make placeholder file so this is only run once
 				New-Item "$using:agentInstallerDLDirectory\domainGroupJoinFile.txt" -type file
 			}
 		}
-    }
+
+		Script RegisterUserEntitlement
+		{
+			DependsOn  = @("[File]Agent_Download_Directory")
+
+			GetScript  = { return 'RegisterUserEntitlement'}
+
+			TestScript = { 
+				if( -not $using:CAMDeploymentInfo ) {
+					Write-Host "No CAM info to register user to remote workstation."
+					return $true
+				} else {
+					$CAMDeploymentInfoCred = $using:CAMDeploymentInfo;
+					$CAMDeploymentInfo = $CAMDeploymentInfoCred.GetNetworkCredential().Password
+					if( (-not $CAMDeploymentInfo) -or ($CAMDeploymentInfo -eq "null")) {
+						Write-Host "No CAM info to register user to remote workstation."
+						return $true
+					}
+				}
+				# Otherwise check marker file if complete
+				Test-Path "$using:agentInstallerDLDirectory\RegisterUserEntitlementFile.txt"
+			}
+
+			SetScript  = {
+				$machineToJoin = $env:computername
+
+				if( -not ((Get-WmiObject win32_computersystem).partofdomain))
+				{
+					throw "$machineToJoin is not part of a domain."
+				}
+
+				$domain = (Get-WmiObject win32_computersystem).domain
+				$domainInfo = (Get-WMIObject Win32_NTDomain) | Where-Object {$_.DnsForestName -eq $domain} | Select-Object -First 1
+				$dcname = ($domainInfo.DomainControllerName -replace "\\", "")
+
+				#create a PSSession with the domain controller that we used to login
+				$psSession = New-PSSession -ComputerName $dcname -Credential $using:domainJoinCredential
+
+				# Get User Guid for Domain User
+				# TODO: Can we just do this on Localhost?
+				$userGuid = Invoke-Command -Session $psSession -ScriptBlock {
+					Add-Type -AssemblyName System.DirectoryServices.AccountManagement
+					[System.DirectoryServices.AccountManagement.UserPrincipal]::Current.Guid.Guid
+				}
+				Remove-PSSession $psSession
+
+				# get the CAM cred's and info we need.
+				$CAMDeploymentInfoCred = $using:CAMDeploymentInfo;
+				$CAMDeploymentInfo = $CAMDeploymentInfoCred.GetNetworkCredential().Password
+				$CAMDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($CAMDeploymentInfo)
+				$CAMDeploymenInfoDecoded = ConvertFrom-Json $CAMDeploymenInfoJSONDecoded
+				$regInfo = $camDeploymenInfoDecoded.RegistrationInfo
+				
+				$camSaasBaseUri = $regInfo.CAM_URI
+				$camSaasBaseUri = $camSaasBaseUri.Trim().TrimEnd('/')
+
+				$camRegistrationError = ""
+				for($idx = 0; $idx -lt $using:retryCount; $idx++) {
+					try {
+						$userRequest = @{
+							username = $regInfo.CAM_USERNAME
+							password = $regInfo.CAM_PASSWORD
+							tenantId = $regInfo.CAM_TENANTID
+						}
+						$certificatePolicy = [System.Net.ServicePointManager]::CertificatePolicy
+						
+						if (!$using:verifyCAMSaaSCertificate) {
+							# Do this so SSL Errors are ignored
+							Write-Host "Warning - Ignoring SSL errors!"
+							add-type @"
+using System.Net;
+using System.Security.Cryptography.X509Certificates;
+public class TrustAllCertsPolicy : ICertificatePolicy {
+	public bool CheckValidationResult(
+		ServicePoint srvPoint, X509Certificate certificate,
+		WebRequest request, int certificateProblem) {
+		return true;
+	}
 }
+"@
+						
+							[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+						}
+						[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+						
+						# Get a Sign-in token
+						$signInResult = ""
+						try {
+							$signInResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/signin") -Body $userRequest
+						} catch {
+							if ($_.ErrorDetails.Message) {
+								$signInResult = ConvertFrom-Json $_.ErrorDetails.Message
+							} else {
+								throw $_
+							}
+						}
+						Write-Verbose ((ConvertTo-Json $signInResult) -replace "\.*token.*", 'Token": "Sanitized"')
+						# Check if signIn succeded
+						if ($signInResult.code -ne 200) {
+							throw ("Signing in failed. Result was: " + (ConvertTo-Json $signInResult))
+						}
+						$tokenHeader = @{
+							authorization=$signInResult.data.token
+						}
+						Write-Host "Cloud Access Manager sign in succeeded"
+
+						# Register Remote Workstation
+						$machineRequest = @{
+							deploymentId = $regInfo.CAM_DEPLOYMENTID
+							resourceGroup = $regInfo.CAM_RESOURCEGROUP
+							machineName = $machineToJoin
+							subscriptionId = $regInfo.CAM_SUBSCRIPTIONID
+						}
+						$registerMachineResult = ""
+						try {
+							$registerMachineResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/machines") -Body $machineRequest -Headers $tokenHeader
+						} catch {
+							if ($_.ErrorDetails.Message) {
+								$registerMachineResult = ConvertFrom-Json $_.ErrorDetails.Message
+							} else {
+								throw $_
+							}
+						}
+						Write-Verbose (ConvertTo-Json $registerMachineResult)
+						# Check if registration succeeded
+						if( !(($registerMachineResult.code -eq 201) -or ($registerMachineResult.data.reason.ToLower().Contains("exists")))) {
+							throw ("Registering Machine failed. Result was: " + (ConvertTo-Json $registerMachineResult))
+						}
+						$machineId = ""
+						# Get the machineId
+						if( ($registerMachineResult.code -eq 409) -and ($registerMachineResult.data.reason.ToLower().Contains("already exist")) ) {
+							# Deployment is already registered so the deplymentId needs to be retrieved
+							$registeredMachine = ""
+							try {
+								$registeredMachine = Invoke-RestMethod `
+									-Method Get `
+									-Uri ($camSaasBaseUri + "/api/v1/machines") `
+									-Body $machineRequest `
+									-Headers $tokenHeader
+								$machineId = $registeredMachine.data.machineId
+							} catch {
+								if ($_.ErrorDetails.Message) {
+									$registeredMachine = ConvertFrom-Json $_.ErrorDetails.Message
+									throw ("Getting Deployment ID failed. Result was: " + (ConvertTo-Json $registeredMachine))
+								} else {
+									throw $_
+								}								
+							}
+						} else {
+							$machineId = $registerMachineResult.data.machineId
+						}
+						Write-Host "Remote Workstation $machineToJoin has been registered successfully with Cloud Access Manager"
+						
+						# Register User Entitlement to Machine
+
+						$entitlementRequest = @{
+							machineId = $machineId
+							deploymentId = $regInfo.CAM_DEPLOYMENTID
+							userGuid = $userGuid
+						}
+						$registerEntitlementResult = ""
+						try {
+							$registerEntitlementResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/machines/entitlements") -Body $entitlementRequest -Headers $tokenHeader
+						} catch {
+							if ($_.ErrorDetails.Message) {
+								$registerEntitlementResult = ConvertFrom-Json $_.ErrorDetails.Message
+							} else {
+								throw $_
+							}
+						}
+						Write-Verbose (ConvertTo-Json $registerEntitlementResult)
+						# Check if entitlement succeeded
+						if( !(($registerEntitlementResult.code -eq 201) -or ($registerEntitlementResult.data.reason.ToLower().Contains("exists")))) {
+							throw ("Registering User Entitlement failed. Result was: " + (ConvertTo-Json $registerEntitlementResult))
+						}
+						Write-Host "User Entitlement has been registered succesfully with Cloud Access Manager"
+
+						$camRegistrationError = ""
+						break;
+					} catch {
+						$camRegistrationError = $_
+						Write-Verbose ( "Attempt {0} of $using:retryCount failed due to Error: {1}" -f ($idx+1), $camRegistrationError )
+						Start-Sleep -s $using:delay
+					} finally {
+						# restore CertificatePolicy 
+						[System.Net.ServicePointManager]::CertificatePolicy = $certificatePolicy
+					}
+				}
+
+				if($camRegistrationError) {
+					throw $camRegistrationError
+				}
+
+				#make placeholder file so this is only run once
+				New-Item "$using:agentInstallerDLDirectory\RegisterUserEntitlementFile.txt" -type file
+			}
+		}
+	}
+}
+
+
 
 Configuration VmUsability
 {

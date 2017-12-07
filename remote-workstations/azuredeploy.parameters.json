@@ -15,13 +15,12 @@
             "value": "xxxxxxxxxxxx@nnnn-nnnn-nnnn-nnnn"
         },
         "vmSize": { "value": "Standard_D2_v2" },
-        "existingSubnetName": { "value": "subnet1" },
+        "subnetID": { "value": "/etc/subnet1" },
         "dnsLabelPrefix": { "value": "tbd-vmname" },
-        "existingVNETName": { "value": "existingVNETName" },
         "vmAdminUsername": { "value": "GEN-USER" },
         "vmAdminPassword": { "value": "GEN-PASSWORD" },
-        "domainGroupToJoin": { "value": "domainGroupAppServersJoin" },
+        "domainGroupToJoin": { "value": "Remote Workstations" },
         "CAMDeploymentBlobSource": { "value": "https://teradeploy.blob.core.windows.net/binaries" },
-        "_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/end-user-application-machines" }
+        "_artifactsLocation": { "value": "https://raw.githubusercontent.com/teradici/deploy/master/remote-workstations" }
     }
 }

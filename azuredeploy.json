@@ -22,30 +22,109 @@
         "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
       }
     },
-    "AzureAdminUsername": {
+    "remoteWorkstationDomainGroup": {
       "type": "string",
       "metadata": {
-        "description": "The name of the Azure account/service principal with contributor access to the subscription. This account cannot require MFA."
+        "description": "The name of the domain group that Remote Workstations are joined to"
       }
     },
-    "AzureAdminPassword": {
+    "localAdminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the local admin account for connection service VM's"
+      }
+    },
+    "localAdminPassword": {
       "type": "securestring",
       "metadata": {
-        "description": "The password of the Azure account/service principal with contributor access to the subscription. This account cannot require MFA."
+        "description": "The password/key for the local VM accounts."
       }
     },
-    "tenantID": {
-        "type": "string",
-        "defaultValue": "null",
-        "metadata": {
-            "description": "Tenant ID to use for the case where the Azure Admin account is a service principal. Leave as 'null' if a standard user (non-SP) account is being used."
-        }
+    "rwsLocalAdminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the local admin account for remote workstation VM's"
+      }
+    },
+    "rwsLocalAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password/key for the local remote workstation accounts."
+      }
     },
     "registrationCode": {
       "type": "securestring",
       "minLength": 21,
       "metadata": {
         "description": "PCoIP Agent License Registration Code."
+      }
+    },
+    "certData": {
+      "type": "string",
+      "metadata": {
+        "description": "Base-64 encoded form of the .pfx file for the Application Gateway Certificate"
+      }
+    },
+    "certPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password for .pfx certificate"
+      }
+    },
+    "connectionServiceResourceGroup": {
+      "type": "string",
+      "metadata": {
+          "description": "The resource group the connection service is deployed in."
+      }
+    },
+    "remoteWorkstationResourceGroup": {
+      "type": "string",
+      "metadata": {
+          "description": "The resource group the remote workstations are deployed in."
+      }
+    },
+    "vnetName": {
+      "type": "string",
+      "metadata": {
+          "description": "The name of the virtual network to be created for CAM."
+      }
+    },
+    "rootSubnetName": {
+      "type": "string",
+      "metadata": {
+          "description": "The name of the root subnet in the virtual network."
+      }
+    },
+    "remoteWorkstationSubnetName": {
+      "type": "string",
+      "metadata": {
+          "description": "The name of the remote workstation subnet in the virtual network."
+      }
+    },
+    "connectionServiceSubnetName": {
+      "type": "string",
+      "metadata": {
+          "description": "The name of the connection service subnet in the virtual network."
+      }
+    },
+    "gatewaySubnetName": {
+      "type": "string",
+      "metadata": {
+          "description": "The name of the subnet for application gateways in the virtual network."
+      }
+    },
+    "AgentChannel": {
+      "type": "string",
+      "defaultValue": "stable",
+      "allowedValues": ["stable","beta","dev"],
+      "metadata": {
+        "description": "PCoIP Agent channel to use for installer download."
+      }
+    },
+    "CAMDeploymentInfo": {
+      "type": "securestring",
+      "metadata": {
+          "description": "Encoded blob of authorization and URL information for the CAM Connection Service."
       }
     },
     "CAMDeploymentBlobSource": {
@@ -68,31 +147,16 @@
         "description": "Auto-generated token to access _artifactsLocation"
       },
       "defaultValue": ""
-    },
-    "camSaasUri": {
-      "type": "string",
-      "metadata": {
-        "description": "URI for the CAM SAAS"
-      },
-      "defaultValue": "https://cam-antar.teradici.com"
-    },
-    "verifyCAMSaaSCertificate": {
-      "type": "bool",
-      "defaultValue": true,
-      "metadata": {
-        "description": "a flag to indicate whether to verify CAM SaaS Server certificate. True means to verify."
-      }
     }
   },
   "variables": {
-    "domainGroupAppServersJoin": "Remote Workstations",
-    "adminDesktopVMName": "admin-rws"
+    "adminDesktopVMName": "admin-rw"
   },
   "resources": [
     {
       "type": "Microsoft.Resources/deployments",
       "name": "Root",
-      "apiVersion": "2016-02-01",
+      "apiVersion": "2017-05-10",
       "properties": {
         "mode": "Incremental",
         "templateLink": {
@@ -109,6 +173,21 @@
           "domainAdminPassword": {
             "value": "[parameters('domainAdminPassword')]"
           },
+          "vnetName": {
+            "value": "[parameters('vnetName')]"
+          },
+          "rootSubnetName": {
+              "value": "[parameters('rootSubnetName')]"
+          },
+          "remoteWorkstationSubnetName": {
+              "value":"[parameters('remoteWorkstationSubnetName')]"
+          },
+          "connectionServiceSubnetName": {
+              "value": "[parameters('connectionServiceSubnetName')]"
+          },
+          "gatewaySubnetName": {
+              "value": "[parameters('gatewaySubnetName')]"
+          },
           "CAMDeploymentBlobSource": {
             "value": "[parameters('CAMDeploymentBlobSource')]"
           },
@@ -121,38 +200,27 @@
         }
       }
     },
-
     {
       "type": "Microsoft.Resources/deployments",
-      "name": "Frontend",
-      "apiVersion": "2016-02-01",
+      "name": "ConnectionService",
+      "apiVersion": "2017-05-10",
       "dependsOn": [
-        "Root"
+        "Microsoft.Resources/deployments/Root"
       ],
+      "resourceGroup": "[parameters('connectionServiceResourceGroup')]",
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/frontend/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
+          "uri": "[concat(parameters('_artifactsLocation'), '/connection-service/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          
-          "virtualNetworkName" : {
-            "value" : "[reference('Root').outputs.virtualNetworkName.value]"
+          "CSsubnetId": {
+            "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', reference('Root').outputs.virtualNetworkName.value, reference('Root').outputs.csSubnetName.value)]"
           },
-          "adSubnetName": {
-            "value": "[reference('Root').outputs.adSubnetName.value]"
+          "GWsubnetId": {
+            "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', reference('Root').outputs.virtualNetworkName.value, reference('Root').outputs.gatewaySubnetName.value)]"
           },
-          "gatewaySubnetName": {
-            "value": "[reference('Root').outputs.gatewaySubnetName.value]"
-          },
-          "adminDesktopVMName" : {
-            "value" : "[variables('adminDesktopVMName')]"
-          },
-          "cmnsgName" : {
-            "value" : "[reference('Root').outputs.cmnsgName.value]"
-          },
-          
           "domainName": {
             "value": "[parameters('domainName')]"
           },
@@ -162,35 +230,29 @@
           "domainAdminPassword": {
             "value": "[parameters('domainAdminPassword')]"
           },
-          "AzureAdminUsername": {
-            "value": "[parameters('AzureAdminUsername')]"
+          "remoteWorkstationDomainGroup": {
+            "value": "[parameters('remoteWorkstationDomainGroup')]"
           },
-          "AzureAdminPassword": {
-            "value": "[parameters('AzureAdminPassword')]"
+          "localAdminUsername": {
+            "value": "[parameters('localAdminUsername')]"
           },
-          "tenantID": {
-            "value": "[parameters('tenantID')]"
+          "localAdminPassword": {
+            "value": "[parameters('localAdminPassword')]"
           },
-          "registrationCode": {
-            "value": "[parameters('registrationCode')]"
+          "certData": {
+            "value": "[parameters('certData')]"
           },
-          "camSaasUri": {
-            "value": "[parameters('camSaasUri')]"
+          "certPassword": {
+            "value": "[parameters('certPassword')]"
           },
-          "userDataStorageAccount": {
-            "value": "[reference('Root').outputs.templateStorageAccountName.value]"
-          },
-          "verifyCAMSaaSCertificate": {
-            "value": "[parameters('verifyCAMSaaSCertificate')]"
+          "CAMDeploymentInfo": {
+            "value": "[parameters('CAMDeploymentInfo')]"
           },
           "CAMDeploymentBlobSource": {
             "value": "[parameters('CAMDeploymentBlobSource')]"
           },
-          "_agentArtifactsLocation": {
-            "value": "[concat(parameters('_artifactsLocation'), '/end-user-application-machines/new-agent-vm')]"
-          },
-          "_artifactsLocation": {
-            "value": "[concat(parameters('_artifactsLocation'), '/frontend')]"
+          "_baseArtifactsLocation": {
+            "value": "[parameters('_artifactsLocation')]"
           },
           "_artifactsLocationSasToken": {
             "value": "[parameters('_artifactsLocationSasToken')]"
@@ -200,23 +262,21 @@
     },
     {
       "type": "Microsoft.Resources/deployments",
-      "name": "CreateEndUserApplicationMachine",
-      "apiVersion": "2016-02-01",
+      "name": "CreateRemoteWorkstation",
+      "apiVersion": "2017-05-10",
       "dependsOn": [
         "Microsoft.Resources/deployments/Root"
       ],
+      "resourceGroup": "[parameters('remoteWorkstationResourceGroup')]",
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/end-user-application-machines/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
+          "uri": "[concat(parameters('_artifactsLocation'), '/remote-workstations/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          "existingVNETName": {
-            "value": "[reference('Root').outputs.virtualNetworkName.value]"
-          },          
-          "existingSubnetName": {
-            "value": "[reference('Root').outputs.adSubnetName.value]"
+          "subnetId": {
+            "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', reference('Root').outputs.virtualNetworkName.value, reference('Root').outputs.rwSubnetName.value)]"
           },
           "dnsLabelPrefix": {
             "value" : "[variables('adminDesktopVMName')]"
@@ -237,25 +297,31 @@
             "value": 3
           },
           "vmAdminUsername": {
-            "value": "[parameters('domainAdminUsername')]"
+            "value": "[parameters('rwsLocalAdminUsername')]"
           },
           "vmAdminPassword": {
-            "value": "[parameters('domainAdminPassword')]"
+            "value": "[parameters('rwsLocalAdminPassword')]"
           },
           "domainGroupToJoin": {
-            "value": "[variables('domainGroupAppServersJoin')]"
+            "value": "[parameters('remoteWorkstationDomainGroup')]"
+          },
+          "CAMDeploymentInfo": {
+            "value": "[parameters('CAMDeploymentInfo')]"
+          },
+          "registrationCode": {
+            "value": "[parameters('registrationCode')]"
+          },
+          "AgentChannel": {
+            "value": "[parameters('AgentChannel')]"
           },
           "_artifactsLocation": {
-            "value": "[concat(parameters('_artifactsLocation'), '/end-user-application-machines')]"
+            "value": "[concat(parameters('_artifactsLocation'), '/remote-workstations')]"
           },
           "CAMDeploymentBlobSource": {
             "value": "[parameters('CAMDeploymentBlobSource')]"
           },
           "binaryLocation": {
             "value": "[parameters('CAMDeploymentBlobSource')]"
-          },
-          "registrationCode": {
-            "value": "[parameters('registrationCode')]"
           }
         }
       }

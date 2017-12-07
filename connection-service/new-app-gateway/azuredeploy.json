@@ -29,18 +29,6 @@
         "description": "Number of instances"
       }
     },
-    "backendIpAddressDefault": {
-      "type": "string",
-      "metadata": {
-        "description": "IP Address of Default Backend Server"
-      }
-    },
-    "backendIpAddressForPathRule1": {
-      "type": "string",
-      "metadata": {
-        "description": "IP Address of Backend Server for Path Rule 1 match"
-      }
-    },
     "pathMatch1": {
       "type": "string",
       "metadata": {
@@ -58,15 +46,39 @@
       "metadata": {
         "description": "Password for .pfx certificate"
       }
+    },
+    "SGBackendPoolName": {
+      "type": "string",
+      "metadata": {
+        "description": "Security Gateway backend pool name"
+      }
+    },
+    "CSBackendPoolName": {
+      "type": "string",
+      "metadata": {
+        "description": "Connection Service backend pool name"
+      }
+    },
+    "applicationGatewayName": {
+      "type": "string",
+      "metadata": {
+        "description": "Application Gateway Name including the unique CS suffix"
+      }
+    },
+    "CSUniqueSuffix": {
+      "type": "string",
+      "metadata": {
+          "description": "Suffix to add to connection service resources to ensure uniqueness."
+      }
     }
   },
   "variables": {
-    "applicationGatewayName": "applicationGateway1",
-    "publicIPAddressName": "publicIp1",
-    "virtualNetworkName": "virtualNetwork1",
+    "publicIPAddressName": "[concat('publicIp1',parameters('CSUniqueSuffix'))]",
     "publicIPRef": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]",
-    "applicationGatewayID": "[resourceId('Microsoft.Network/applicationGateways',variables('applicationGatewayName'))]",
-    "apiVersion": "2015-06-15"
+    "applicationGatewayID": "[resourceId('Microsoft.Network/applicationGateways',parameters('applicationGatewayName'))]",
+    "apiVersion": "2015-06-15",
+    "appGwFrontendPort": 443,
+    "appGwBackendPort": 8080
   },
   "resources": [
     {
@@ -80,7 +92,7 @@
     },
     {
       "apiVersion": "[variables('apiVersion')]",
-      "name": "[variables('applicationGatewayName')]",
+      "name": "[parameters('applicationGatewayName')]",
       "type": "Microsoft.Network/applicationGateways",
       "location": "[resourceGroup().location]",
       "dependsOn": [
@@ -125,37 +137,23 @@
           {
             "name": "appGatewayFrontendPort",
             "properties": {
-              "Port": 443
+              "Port": "[variables('appGwFrontendPort')]"
             }
           }
         ],
         "backendAddressPools": [
           {
-            "name": "appGatewayBackendPoolDefault",
-            "properties": {
-              "BackendAddresses": [
-                {
-                  "IpAddress": "[parameters('backendIpAddressDefault')]"
-                }
-              ]
-            }
+            "name": "[parameters('CSBackendPoolName')]"
           },
           {
-            "name": "appGatewayBackendPool1",
-            "properties": {
-              "BackendAddresses": [
-                {
-                  "IpAddress": "[parameters('backendIpAddressForPathRule1')]"
-                }
-              ]
-            }
+            "name": "[parameters('SGBackendPoolName')]"
           },
         ],
         "backendHttpSettingsCollection": [
           {
             "name": "appGatewayBackendHttpSettings",
             "properties": {
-              "Port": 8080,
+              "Port": "[variables('appGwBackendPort')]",
               "Protocol": "Http",
               "CookieBasedAffinity": "Enabled"
             }
@@ -183,7 +181,7 @@
             "name": "urlPathMap1",
             "properties": {
               "defaultBackendAddressPool": {
-                "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/appGatewayBackendPoolDefault')]"
+                "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/', parameters('CSBackendPoolName') )]"
               },
               "defaultBackendHttpSettings": {
                 "id": "[concat(variables('applicationGatewayID'), '/backendHttpSettingsCollection/appGatewayBackendHttpSettings')]"
@@ -196,7 +194,7 @@
                       "[parameters('pathMatch1')]"
                     ],
                     "backendAddressPool": {
-                      "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/appGatewayBackendPool1')]"
+                      "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/', parameters('SGBackendPoolName') )]"
                     },
                     "backendHttpSettings": {
                       "id": "[concat(variables('applicationGatewayID'), '/backendHttpSettingsCollection/appGatewayBackendHttpSettings')]"

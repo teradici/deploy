@@ -1,0 +1,36 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vmAdminUsername": {
+            "value": "bdall"
+        },
+        "vmAdminPassword": {
+            "value": ""
+        },
+        "vmSku": {
+            "value": "Standard_D1_v2"
+        },
+        "vmssName": {
+            "value": "sg-vmss"
+        },
+        "instanceCount": {
+            "value": 1
+        },
+        "cmnsgName": {
+            "value": "networkSecurityGroup"
+        },
+        "appGwbackendAddressPoolId": {
+            "value": "/resources/blah/blah"
+        },
+        "subnetId": {
+            "value": "/resources/blah/blah"
+        },
+        "brokerFQDN": {
+            "value": "10.0.0.5"
+        },
+        "_artifactsLocation": {
+            "value": "https://raw.githubusercontent.com/teradici/deploy/master/connection-service/new-cm-sg-ls-vm"
+        }
+    }
+}

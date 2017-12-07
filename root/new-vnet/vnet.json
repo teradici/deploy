@@ -15,13 +15,39 @@
       },
       "defaultValue": "10.0.0.0/16"
     },
-    "subnetName": {
+    "rootSubnetName": {
       "type": "string",
       "metadata": {
         "description": "The name of the subnet created in the new VNET"
       }
     },
-    "subnetRange": {
+    "rootSubnetRange": {
+      "type": "string",
+      "metadata": {
+        "description": "The address range of the subnet created in the new VNET"
+      },
+      "defaultValue": "10.0.0.0/24"
+    },
+    "csSubnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the subnet created in the new VNET"
+      }
+    },
+    "csSubnetRange": {
+      "type": "string",
+      "metadata": {
+        "description": "The address range of the subnet created in the new VNET"
+      },
+      "defaultValue": "10.0.0.0/24"
+    },
+    "rwSubnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the subnet created in the new VNET"
+      }
+    },
+    "rwSubnetRange": {
       "type": "string",
       "metadata": {
         "description": "The address range of the subnet created in the new VNET"
@@ -66,17 +92,29 @@
         },
         "subnets": [
           {
-            "name": "[parameters('subnetName')]",
+            "name": "[parameters('rootSubnetName')]",
             "properties": {
-              "addressPrefix": "[parameters('subnetRange')]"
+              "addressPrefix": "[parameters('rootSubnetRange')]"
             }
           },
-        {
+          {
+            "name": "[parameters('csSubnetName')]",
+            "properties": {
+                "addressPrefix": "[parameters('csSubnetRange')]"
+            }
+          },
+          {
             "name": "[parameters('gatewaySubnetName')]",
             "properties": {
                 "addressPrefix": "[parameters('gatewaySubnetRange')]"
             }
-        }
+          },
+          {
+            "name": "[parameters('rwSubnetName')]",
+            "properties": {
+                "addressPrefix": "[parameters('rwSubnetRange')]"
+            }
+          }
         ]
       }
     }

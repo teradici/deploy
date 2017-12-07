@@ -1,0 +1,331 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "domainAdminUsername": {
+      "type": "string",
+      "defaultValue": "adminUser",
+      "metadata": {
+        "description": "The name of the administrator account of the new VM and domain"
+      }
+    },
+    "domainAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password for the administrator account of the new VM and domain"
+      }
+    },
+    "domainName": {
+      "type": "string",
+      "metadata": {
+        "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
+      }
+    },
+    "localAdminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the local admin account for connection service VM's"
+      }
+    },
+    "localAdminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The password/key for the local VM accounts."
+      }
+    },
+    "CSUniqueSuffix": {
+      "type": "string",
+      "defaultValue": "1",
+      "metadata": {
+          "description": "Suffix to add to connection service resources to ensure uniqueness."
+      }
+    },
+    "CSsubnetId": {
+      "type": "string",
+      "metadata": {
+          "description": "ID of the subnet that the Conection Service Machines' NIC's attach to"
+      }
+    },
+    "GWsubnetId": {
+      "type": "string",
+      "metadata": {
+          "description": "ID of the subnet that the Conection Service gateway(s) attach to"
+      }
+    },
+    "CAMDeploymentInfo": {
+      "type": "securestring",
+      "metadata": {
+          "description": "Encoded blob of authorization and URL information for the CAM Connection Service."
+      }
+    },
+    "certData": {
+      "type": "string",
+      "metadata": {
+        "description": "Base-64 encoded form of the .pfx file for the Application Gateway Certificate"
+      }
+    },
+    "certPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password for .pfx certificate"
+      }
+    },
+    "remoteWorkstationDomainGroup": {
+      "type": "string",
+      "metadata": {
+          "description": "The domain group the remote workstations should join"
+      }
+    },
+    "CAMDeploymentBlobSource": {
+      "type": "string",
+      "metadata": {
+        "description": "The location of the blobs for admin GUI machine installation"
+      }
+    },
+    "_baseArtifactsLocation": {
+      "type": "string",
+      "metadata": {
+        "description": "The base location (URI) of the deployment. This file is being run from _baseArtifactsLocation/connection-service"
+      }
+    },
+    "_artifactsLocationSasToken": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Auto-generated token to access _artifactsLocation"
+      },
+      "defaultValue": ""
+    }
+  },
+  "variables": {
+    "_artifactsLocation":  "[concat(parameters('_baseArtifactsLocation'), '/connection-service')]",
+    "storageAccountName": "[concat(uniquestring(resourceGroup().id),'cs',parameters('CSUniqueSuffix'))]",
+    "brokerPort":  "8444",
+    "appGwName": "[concat('CAM-ApplicationGateway',parameters('CSUniqueSuffix'))]",
+    "appGwSGPoolName": "SGBackendPool",
+    "appGwSGPoolID": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/applicationGateways/', variables('appGwName'), '/backendAddressPools/', variables('appGwSGPoolName'))]",
+    "appGwCSPoolName": "CSBackendPool",
+    "appGwCSPoolID": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/applicationGateways/', variables('appGwName'), '/backendAddressPools/', variables('appGwCSPoolName'))]",
+    "cmnsgName": "[concat('cmNSG',parameters('CSUniqueSuffix'))]",
+    "connectionServerName": "[concat('conn-srvr',parameters('CSUniqueSuffix'))]",
+    "connectionServerBrokerFQDN": "[concat(variables('connectionServerName'),'.',parameters('domainName'),':',variables('brokerPort'))]"
+},
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[variables('storageAccountName')]",
+      "apiVersion": "2016-01-01",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "Storage",
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "CreateNetworkSGs",
+      "apiVersion": "2016-02-01",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('_artifactsLocation'), '/new-sg-s/new-sg-s.json', parameters('_artifactsLocationSasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "cmnsgName": {
+            "value": "[variables('cmnsgName')]"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "CreateConnectionServer",
+      "apiVersion": "2016-02-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+	      "Microsoft.Resources/deployments/CreateAppGateway"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('_artifactsLocation'), '/new-vm-join-domain/new-vm-join-domain.json', parameters('_artifactsLocationSasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "subnetId": {
+            "value": "[parameters('CSsubnetId')]"
+          },
+          "dnsLabelPrefix": {
+            "value": "[variables('connectionServerName')]"
+          },
+          "vmSize": {
+            "value": "Standard_A2_v2"
+          },
+          "domainToJoin": {
+            "value": "[parameters('domainName')]"
+          },
+          "domainUsername": {
+            "value": "[parameters('domainAdminUsername')]"
+          },
+          "domainPassword": {
+            "value": "[parameters('domainAdminPassword')]"
+          },
+          "domainJoinOptions": {
+            "value": 3
+          },
+          "vmAdminUsername": {
+            "value": "[parameters('localAdminUsername')]"
+          },
+          "vmAdminPassword": {
+            "value": "[parameters('localAdminPassword')]"
+          },
+          "applicationGatewayPoolReference": {
+            "value": "[variables('appGwCSPoolID')]"
+          },
+          "storageAccountName": {
+            "value": "[variables('storageAccountName')]"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "ConfigureConnectionServer",
+      "apiVersion": "2016-02-01",
+      "dependsOn": [
+        "Microsoft.Resources/deployments/CreateConnectionServer"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('_artifactsLocation'), '/new-admin-vm/new-admin-vm.json', parameters('_artifactsLocationSasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "dnsLabelPrefix": {
+            "value": "[variables('connectionServerName')]"
+          },
+          "remoteWorkstationDomainGroup": {
+            "value": "[parameters('remoteWorkstationDomainGroup')]"
+          },
+          "domainUsername": {
+            "value": "[parameters('domainAdminUsername')]"
+          },
+          "domainPassword": {
+            "value": "[parameters('domainAdminPassword')]"
+          },
+          "CAMDeploymentBlobSource": {
+            "value": "[parameters('CAMDeploymentBlobSource')]"
+          },
+          "_artifactsLocation": {
+            "value": "[concat(variables('_artifactsLocation'), '/new-admin-vm')]"
+          },
+          "CAMDeploymentInfo": {
+            "value": "[parameters('CAMDeploymentInfo')]"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "CreateAppGateway",
+      "apiVersion": "2016-02-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+        "Microsoft.Resources/deployments/CreateNetworkSGs"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('_artifactsLocation'), '/new-app-gateway/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "subnetRef": {
+              "value": "[parameters('GWsubnetId')]"
+          },
+          "skuName": {
+            "value": "Standard_Small"
+          },
+          "capacity": {
+            "value": 1
+          },
+          "pathMatch1": {
+            "value": "/pcoip-broker/*"
+          },
+          "certData": {
+            "value": "[parameters('certData')]"
+          },
+          "certPassword": {
+            "value": "[parameters('certPassword')]"
+          },
+          "SGBackendPoolName": {
+            "value": "[variables('appGwSGPoolName')]"
+          },
+          "CSBackendPoolName": {
+            "value": "[variables('appGwCSPoolName')]"
+          },
+          "applicationGatewayName": {
+            "value": "[variables('appGwName')]"
+          },
+          "CSUniqueSuffix": {
+            "value": "[parameters('CSUniqueSuffix')]"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "name": "Create-SG-VMSS",
+      "apiVersion": "2016-02-01",
+      "dependsOn": [
+        "Microsoft.Resources/deployments/CreateNetworkSGs",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+        "Microsoft.Resources/deployments/CreateAppGateway"
+      ],
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "[concat(variables('_artifactsLocation'), '/new-cm-sg-ls-vm/azuredeploy.json', parameters('_artifactsLocationSasToken'))]",
+          "contentVersion": "1.0.0.0"
+        },
+        "parameters": {
+          "subnetId": {
+            "value": "[parameters('CSsubnetId')]"
+          },
+          "cmnsgName": {
+            "value": "[variables('cmnsgName')]"
+          },
+          "vmSku": {
+            "value": "Standard_A1_v2"
+          },
+          "vmssName": {
+            "value": "[concat('SG-VMSS',parameters('CSUniqueSuffix'))]"
+          },
+          "instanceCount": {
+            "value": 1
+          },
+          "appGwbackendAddressPoolId": {
+            "value": "[variables('appGwSGPoolID')]"
+          },
+          "vmAdminUsername": {
+            "value": "[parameters('localAdminUsername')]"
+          },
+          "vmAdminPassword": {
+            "value": "[parameters('localAdminPassword')]"
+          },
+          "brokerFQDN": {
+            "value": "[variables('connectionServerBrokerFQDN')]"
+          },
+          "_artifactsLocation": {
+            "value": "[concat(variables('_artifactsLocation'), '/new-cm-sg-ls-vm')]"
+          },
+          "_artifactsLocationSasToken": {
+            "value": "[parameters('_artifactsLocationSasToken')]"
+          }
+        }
+      }
+    }
+  ]
+}
