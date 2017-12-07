@@ -93,16 +93,16 @@
             },
             "defaultValue": "?public"
         },
-        "binaryLocation": {
+        "CAMBinariesSource": {
             "type": "string",
             "metadata": {
                 "description": "The location of the blobs for admin GUI machine installation"
             }
         },
-        "CAMDeploymentBlobSource": {
+        "blobRWTemplateUri": {
             "type": "string",
             "metadata": {
-                "description": "The location of the blobs for end-user-application-vms"
+                "description": "The location of the blobs in user storage account for remote workstation "
             }
         },
         "registrationCode": {
@@ -182,7 +182,7 @@
                 "videoDriverUrl": ""
             },
             "Graphics": {
-                "videoDriverUrl": "[concat(parameters('binaryLocation'), '/370.12_grid_win10_server2016_64bit_international.exe')]"
+                "videoDriverUrl": "[concat(parameters('CAMBinariesSource'), '/370.12_grid_win10_server2016_64bit_international.exe')]"
             }
         },
           
@@ -302,7 +302,7 @@
             "autoUpgradeMinorVersion": true,
             "settings": {
               "configuration": {
-                "url": "[concat(parameters('CAMDeploymentBlobSource'), '/Install-PCoIPAgent.ps1.zip')]",
+                "url": "[concat(parameters('blobRWTemplateUri'), '/Install-PCoIPAgent.ps1.zip')]",
                 "script": "Install-PCoIPAgent.ps1",
                 "function": "InstallPCoIPAgent"
               },

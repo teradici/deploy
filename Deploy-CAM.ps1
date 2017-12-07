@@ -41,7 +41,7 @@ param(
 
     $camSaasUri = "https://cam-antar.teradici.com",
     $CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/bddc2/azuredeploy.json",
-    $CAMDeploymentBlobSource = "https://teradeploy.blob.core.windows.net/bdstable",
+    $CAMBinariesSource = "https://teradeploy.blob.core.windows.net/bdstable",
     $outputParametersFileName = "cam-output.parameters.json",
     $location
 )
@@ -328,7 +328,7 @@ function New-RemoteWorstationTemplates {
     param (
         $CAMConfig,
         $binaryLocation,
-        $blobUri,
+        $blobRWTemplateUri,
         $kvId,
         $storageAccountContext,
         $storageAccountContainerName,
@@ -362,8 +362,8 @@ function New-RemoteWorstationTemplates {
 		"agentType": { "value": "%agentType%" },
 		"vmSize": { "value": "%vmSize%" },
 		"AgentChannel": { "value": "$agentChannel"},
-		"CAMDeploymentBlobSource": { "value": "$blobUri" },
-		"binaryLocation": { "value": "$binaryLocation" },
+		"blobRWTemplateUri": { "value": "$blobRWTemplateUri" },
+		"CAMBinariesSource": { "value": "$CAMBinariesSource" },
 		"subnetID": { "value": "$($CAMConfig.parameters.remoteWorkstationSubnet.clearValue)" },
 		"domainUsername": { "value": "$DomainAdminUsername" },
 		"userStorageAccountName": {
@@ -425,13 +425,13 @@ function New-RemoteWorstationTemplates {
 		},
 		"domainToJoin": { "value": "$domainFQDN" },
 		"storageAccountName": { "value": "$VHDStorageAccountName" },
-		"_artifactsLocation": { "value": "$blobUri" },
+		"_artifactsLocation": { "value": "$blobRWTemplateUri" },
 		"_artifactsLocationSasToken": {
 			"reference": {
 				"keyVault": {
 					"id": "$kvId"
 				},
-				"secretName": "userStorageAccountSaasToken"
+				"secretName": "userStorageAccountSasToken"
 			}
 		}
 	}
@@ -502,7 +502,7 @@ function Populate-UserBlob {
         $CAMConfig,
         $artifactsLocation,
         $userDataStorageAccount,
-        $CAMDeploymentBlobSource,
+        $CAMBinariesSource,
         $sumoAgentApplicationVM,
         $sumoConf,
         $idleShutdownLinux,
@@ -523,7 +523,7 @@ function Populate-UserBlob {
     $new_agent_vm_files = @(
         @("$artifactsLocation/remote-workstations/new-agent-vm/Install-PCoIPAgent.ps1", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/Install-PCoIPAgent.sh", "remote-workstation"),
-        @("$CAMDeploymentBlobSource/Install-PCoIPAgent.ps1.zip", "remote-workstation"),
+        @("$CAMBinariesSource/Install-PCoIPAgent.ps1.zip", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/sumo-agent-vm.json", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/sumo.conf", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/Install-Idle-Shutdown.sh", "remote-workstation"),
@@ -595,7 +595,7 @@ function Populate-UserBlob {
         $CAMConfig.parameters.userStorageAccountKey.value = (ConvertTo-SecureString $acctKey -AsPlainText -Force)
 
         $saSasToken = New-AzureStorageAccountSASToken -Service Blob -Resource Object -Context $ctx -ExpiryTime ((Get-Date).AddYears(2)) -Permission "racwdlup" 
-        $CAMConfig.parameters.userStorageAccountSaasToken.value = (ConvertTo-SecureString $saSasToken -AsPlainText -Force)
+        $CAMConfig.parameters.userStorageAccountSasToken.value = (ConvertTo-SecureString $saSasToken -AsPlainText -Force)
 
         # Generate and upload the parameters files
 
@@ -603,8 +603,8 @@ function Populate-UserBlob {
         # blobUri is the new per-deployment blob storage location of the binaries (so a sub-directory in the container)
         New-RemoteWorstationTemplates `
             -CAMConfig $CAMConfig `
-            -binaryLocation $CAMDeploymentBlobSource `
-            -blobUri ($blobUri + 'remote-workstation') `
+            -binaryLocation $CAMBinariesSource `
+            -blobRWTemplateUri ($blobUri + 'remote-workstation') `
             -kvId $kvId `
             -storageAccountContext $ctx `
             -storageAccountContainerName $container_name `
@@ -1054,7 +1054,7 @@ function New-CAMDeploymentInfo() {
     $camDeploymenRegInfo.Add("CAM_USER_BLOB_URI", "userStorageAccountUri")
     $camDeploymenRegInfo.Add("CAM_USER_STORAGE_ACCOUNT_NAME", "userStorageName")
     $camDeploymenRegInfo.Add("CAM_USER_STORAGE_ACCOUNT_KEY", "userStorageAccountKey")
-    $camDeploymenRegInfo.Add("CAM_USER_BLOB_TOKEN", "userStorageAccountSaasToken")
+    $camDeploymenRegInfo.Add("CAM_USER_BLOB_TOKEN", "userStorageAccountSasToken")
 
 
     $authFileContent = @"
@@ -1291,12 +1291,12 @@ function New-ConnectionServiceDeployment() {
                 "secretName": "gatewaySubnet"
             }
         },
-        "CAMDeploymentBlobSource": {
+        "CAMBinariesSource": {
             "reference": {
                 "keyVault": {
                     "id": "$kvID"
                 },
-                "secretName": "CAMDeploymentBlobSource"
+                "secretName": "CAMBinariesSource"
             }
         },
         "certData": {
@@ -1438,7 +1438,7 @@ function New-CAMDeploymentRoot()
     $tenant = $spInfo.tenantId
     $registrationCode = $CAMConfig.parameters.cloudAccessRegistrationCode.value
     $artifactsLocation = $CAMConfig.parameters.artifactsLocation.clearValue
-    $CAMDeploymentBlobSource = $CAMConfig.parameters.CAMDeploymentBlobSource.clearValue
+    $CAMBinariesSource = $CAMConfig.parameters.CAMBinariesSource.clearValue
     
     $kvInfo = New-CAM-KeyVault `
         -RGName $RGName `
@@ -1460,7 +1460,7 @@ function New-CAMDeploymentRoot()
         -CAMConfig $CAMConfig `
         -artifactsLocation $artifactsLocation `
         -userDataStorageAccount	$userDataStorageAccount `
-        -CAMDeploymentBlobSource $CAMDeploymentBlobSource `
+        -CAMBinariesSource $CAMBinariesSource `
         -RGName $RGName `
         -kvInfo $kvInfo `
         -tempDir $tempDir | Out-Null
@@ -1517,7 +1517,7 @@ function Deploy-CAM() {
         $camSaasUri,
 
         [parameter(Mandatory = $true)] 
-        $CAMDeploymentBlobSource,
+        $CAMBinariesSource,
 
         [parameter(Mandatory = $true)] 
         $outputParametersFileName,
@@ -1580,9 +1580,9 @@ function Deploy-CAM() {
         value      = (ConvertTo-SecureString $domainName -AsPlainText -Force)
         clearValue = $domainName
     }
-    $CAMConfig.parameters.CAMDeploymentBlobSource = @{
-        value      = (ConvertTo-SecureString $CAMDeploymentBlobSource -AsPlainText -Force)
-        clearValue = $CAMDeploymentBlobSource
+    $CAMConfig.parameters.CAMBinariesSource = @{
+        value      = (ConvertTo-SecureString $CAMBinariesSource -AsPlainText -Force)
+        clearValue = $CAMBinariesSource
     }
     $CAMConfig.parameters.artifactsLocation = @{
         value      = (ConvertTo-SecureString $artifactsLocation -AsPlainText -Force)
@@ -1613,7 +1613,7 @@ function Deploy-CAM() {
     }
 
     # Set in Populate-UserBlob
-    $CAMConfig.parameters.userStorageAccountSaasToken = @{}
+    $CAMConfig.parameters.userStorageAccountSasToken = @{}
     $CAMConfig.parameters.userStorageAccountUri = @{}
     $CAMConfig.parameters.userStorageName = @{}
     $CAMConfig.parameters.userStorageAccountKey = @{}
@@ -1861,12 +1861,12 @@ function Deploy-CAM() {
         "gatewaySubnetName": {
             "value": "$($CAMConfig.internal.GWSubnetName)"
         },
-		"CAMDeploymentBlobSource": {
+		"CAMBinariesSource": {
 			"reference": {
 				"keyVault": {
 					"id": "$kvId"
 				},
-				"secretName": "CAMDeploymentBlobSource"
+				"secretName": "CAMBinariesSource"
 			}
 		},
 		"_artifactsLocation": {
@@ -2256,7 +2256,7 @@ else {
         -camSaasUri $camSaasUri.Trim().TrimEnd('/') `
         -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
         -CAMDeploymentTemplateURI $CAMDeploymentTemplateURI `
-        -CAMDeploymentBlobSource $CAMDeploymentBlobSource.Trim().TrimEnd('/') `
+        -CAMBinariesSource $CAMBinariesSource.Trim().TrimEnd('/') `
         -outputParametersFileName $outputParametersFileName `
         -subscriptionId $selectedSubcriptionId `
         -RGName $rgMatch.ResourceGroupName `
