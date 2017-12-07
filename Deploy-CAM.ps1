@@ -1739,11 +1739,12 @@ function Deploy-CAM() {
                 # Get-AzureRmRoleAssignment responds much more rationally if given a scope with an ID
                 # than a resource group name.
                 $spRoles = Get-AzureRmRoleAssignment -ServicePrincipalName $client -Scope $rg.ResourceId
-                
+
                 # filter on an exact resource group ID match as Get-AzureRmRoleAssignment seems to do a more loose pattern match
-                $spRoles = $spRoles | Where-Object {$_.Scope -eq $rg.ResourceId}
+                $spRoles = $spRoles | Where-Object `
+                    {($_.Scope -eq $rg.ResourceId) -or ($_.Scope -eq "/subscriptions/$subscriptionID")}
                 
-                # spRoles could be a single object or an array. foreach works with both.
+                # spRoles could be no object, a single object or an array. foreach works with all.
                 $hasAccess = $false
                 foreach($role in $spRoles) {
                     $roleName = $role.RoleDefinitionName
