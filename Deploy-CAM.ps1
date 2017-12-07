@@ -61,7 +61,7 @@ param(
 
     $camSaasUri = "https://cam-antar.teradici.com",
 	$CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/bd/azuredeploy.json",
-	$CAMDeploymentBlobSource = "https://teradeploy.blob.core.windows.net/bdbinaries",
+	$CAMDeploymentBlobSource = "https://teradeploy.blob.core.windows.net/bdstable",
     $outputParametersFileName = "cam-output.parameters.json",
     $location
 )
@@ -1820,7 +1820,7 @@ function Deploy-CAM() {
                 }
             }
             
-            # Add Scopt to vNet if vNet alread exists and scope does not already exist
+            # Add Scope to vNet if vNet already exists and scope does not already exist
             $vnetRG = $CAMConfig.internal.vnetID.Split("/")[4]
             if( Find-AzureRmResource -ResourceNameEquals $CAMConfig.internal.vnetName -ResourceType "Microsoft.Network/virtualNetworks" -ResourceGroupNameEquals $vnetRG )
             {
@@ -1948,7 +1948,7 @@ function Deploy-CAM() {
 
             New-ConnectionServiceDeployment `
                 -RGName $rgName `
-                -subscriptionId $subcriptionId `
+                -subscriptionId $subscriptionID `
                 -keyVault $CAMRootKeyvault `
                 -testDeployment $testDeployment `
                 -tempDir $tempDir
@@ -2220,7 +2220,6 @@ if ($ResourceGroupName) {
         New-AzureRmResourceGroup -Name $ResourceGroupName -Location $location
     } 
     $rgMatch = Get-AzureRmResourceGroup -Name $ResourceGroupName
-    $rgName = $rgMatch.ResourceGroupName
 }
 else {
     $rgIndex = 0
@@ -2254,7 +2253,6 @@ else {
             }
             else {
                 $rgMatch = $resouceGroups[$rgIndex - 1]
-                $rgName = $rgMatch.ResourceGroupName
                 $selectedRGName = $true
             }
             continue
@@ -2427,7 +2425,7 @@ else {
     } else {
         # create new DC and vnets. Default values populated here.
         if( -not $vnetConfig.vnetID ) {
-            $vnetConfig.vnetID = "/subscriptions/$selectedSubcriptionId/resourceGroups/$rgName/providers/Microsoft.Network/virtualNetworks/vnet-CloudAccessManager"
+            $vnetConfig.vnetID = "/subscriptions/$selectedSubcriptionId/resourceGroups/$($rgMatch.ResourceGroupName)/providers/Microsoft.Network/virtualNetworks/vnet-CloudAccessManager"
         }
         if( -not $vnetConfig.CSSubnetName ) {
             $vnetConfig.CSSubnetName = "subnet-ConnectionService"
