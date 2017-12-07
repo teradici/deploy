@@ -2096,7 +2096,7 @@ $resouceGroups = Get-AzureRmResourceGroup
 # - If it doesn't, create it in which case location parameter must be provided 
 if ($ResourceGroupName) {
     Write-Host "RGNAME PROVIDED: $ResourceGroupName"
-    if (-not (Get-AzureRMResourceGroup -name $ResourceGroupName)) {
+    if (-not (Get-AzureRMResourceGroup -name $ResourceGroupName -ErrorAction SilentlyContinue)) {
         Write-Host "Resource group $ResourceGroupName does not exist! Creating in location: $location"
         New-AzureRmResourceGroup -Name $ResourceGroupName -Location $location
     } 
