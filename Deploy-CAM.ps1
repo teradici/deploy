@@ -2142,24 +2142,25 @@ else {
             # entered a name. Let's see if it matches any resource groups first
             $rgMatch = $resouceGroups | Where-Object {$_.ResourceGroupName -eq $rgIdentifier}
             if ($rgMatch) {
-                $rgName = $rgMatch.ResourceGroupName
-                Write-Host ("Resource group `"$rgName`" already exists. The current one will be used.")
+                Write-Host ("Resource group `"$($rgMatch.ResourceGroupName)`" already exists. The current one will be used.")
                 $selectedRGName = $true
             }
             else {
                 # make a new resource group and on failure go back to RG selection.
-                $rgName = $rgIdentifier
+                $inputRgName = $rgIdentifier
                 $newRgResult = $null
 
                 Write-Host("Available Azure Locations")
                 Write-Host (Get-AzureRMLocation | Select-Object -Property Location, DisplayName | Format-Table | Out-String )
 
                 $newRGLocation = Read-Host "`nPlease enter resource group location"
-                $newRgResult = New-AzureRmResourceGroup -Name $rgName -Location $newRGLocation
+
+                Write-Host "Creating Cloud Access Manager root resource group $inputRgName"
+                $newRgResult = New-AzureRmResourceGroup -Name $inputRgName -Location $newRGLocation
                 if ($newRgResult) {
                     # Success!
                     $selectedRGName = $true
-                    $rgMatch = Get-AzureRmResourceGroup -Name $rgName
+                    $rgMatch = Get-AzureRmResourceGroup -Name $inputRgName
                 }
             }
         }
@@ -2206,8 +2207,8 @@ else {
     # New deployment - either complete or a root + Remote Workstation deployment
     # Now let's create the other required resource groups
 
-    $csRGName = $rgName + "-CS1"
-    $rwRGName = $rgName + "-RW"
+    $csRGName = $rgMatch.ResourceGroupName + "-CS1"
+    $rwRGName = $rgMatch.ResourceGroupName + "-RW"
 
     $csrg = Get-AzureRmResourceGroup -ResourceGroupName $csRGName -ErrorAction SilentlyContinue
     if($csrg)
