@@ -1236,16 +1236,34 @@ function New-ConnectionServiceDeployment() {
     $artifactsLocation = $secret.SecretValueText
 
     Write-Host "Using service principal $client in tenant $tenant and subscription $subscriptionId"
-    try {
+    $csRG = Get-AzureRmResourceGroup -Name $csRGName
+
+    # Get-AzureRmRoleAssignment responds much more rationally if given a scope with an ID
+    # than a resource group name.
+    $spRoles = Get-AzureRmRoleAssignment -ServicePrincipalName $client -Scope $csRG.ResourceId
+
+    # filter on an exact resource group ID match as Get-AzureRmRoleAssignment seems to do a more loose pattern match
+    $spRoles = $spRoles | Where-Object `
+        {($_.Scope -eq $csRG.ResourceId) -or ($_.Scope -eq "/subscriptions/$subscriptionId")}
+                
+    # spRoles could be no object, a single object or an array. foreach works with all.
+    $hasAccess = $false
+    foreach($role in $spRoles) {
+        $roleName = $role.RoleDefinitionName
+        if (($roleName -eq "Contributor") -or ($roleName -eq "Owner")) {
+            Write-Host "$client already has $roleName for $csRGName."
+            $hasAccess = $true
+            break
+        }
+    }
+
+    if(-not $hasAccess) {
+        Write-Host "Giving $client Contributor access to $csRGName."
         New-AzureRmRoleAssignment `
             -RoleDefinitionName Contributor `
             -ResourceGroupName $csRGName `
             -ServicePrincipalName $client `
             -ErrorAction Stop | Out-Null
-    } catch {
-        if( -not $_.Exception.Message.Contains("The role assignment already exists") ) {
-            throw $_
-        }
     }
     
     $spCreds = New-Object PSCredential $client, (ConvertTo-SecureString $key -AsPlainText -Force)
@@ -1771,6 +1789,46 @@ function Deploy-CAM() {
             New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $RGName -ServicePrincipalName $client -ErrorAction Stop | Out-Null
             New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $csRGName -ServicePrincipalName $client -ErrorAction Stop | Out-Null
             New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $rwRGName -ServicePrincipalName $client -ErrorAction Stop | Out-Null
+
+            # Add Scopt to vNet if vNet alread exists and scope does not already exist
+            $vnetRG = $CAMConfig.internal.vnetID.Split("/")[4]
+            if( Find-AzureRmResource -ResourceNameEquals $CAMConfig.internal.vnetName -ResourceType "Microsoft.Network/virtualNetworks" -ResourceGroupNameEquals $vnetRG )
+            {
+                # Get-AzureRmRoleAssignment responds much more rationally if given a scope with an ID
+                # than a resource group name.
+                $spRoles = Get-AzureRmRoleAssignment -ServicePrincipalName $client -Scope $CAMConfig.internal.vnetID
+
+                # filter on an exact resource group ID match as Get-AzureRmRoleAssignment seems to do a more loose pattern match
+                $spRoles = $spRoles | Where-Object `
+                    {($_.Scope -eq $csRG.ResourceId) -or ($_.Scope -eq "/subscriptions/$subscriptionId")}
+                
+                # spRoles could be no object, a single object or an array. foreach works with all.
+                $hasAccess = $false
+                foreach($role in $spRoles) {
+                    $roleName = $role.RoleDefinitionName
+                    if (($roleName -eq "Contributor") -or ($roleName -eq "Owner")) {
+                        Write-Host "$client already has $roleName for $($CAMConfig.internal.vnetName)."
+                        $hasAccess = $true
+                        break
+                    }
+                }
+
+                if(-not $hasAccess) {
+                    $prompt = Read-Host "The Service Principal credentials need to be given Contributor access to the vNet $($CAMConfig.internal.vnetName). Press enter to accept and continue or 'no' to cancel deployment"
+                    if ( -not $prompt )
+                    {
+                        Write-Host "Giving $client Contributor access to $($CAMConfig.internal.vnetName)"
+                        New-AzureRmRoleAssignment `
+                            -RoleDefinitionName Contributor `
+                            -Scope $CAMConfig.internal.vnetID `
+                            -ServicePrincipalName $client `
+                            -ErrorAction Stop | Out-Null
+                    } else {
+                        Write-Host "Cancelling Deployment"
+                        exit
+                    }
+                }
+            }
             break
         }
         catch {
