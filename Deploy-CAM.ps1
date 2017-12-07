@@ -1205,8 +1205,11 @@ function New-ConnectionServiceDeployment() {
     $rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName -ErrorAction stop
     $location = $rg.Location
 
-    Write-Host "Creating resource group $csRGName"
-    New-AzureRmResourceGroup -Name $csRGName -Location $location -ErrorAction stop | Out-Null
+    # Create Connection Service Resource Group if it doesn't exist
+    if (-not (Find-AzureRmResourceGroup | ?{$_.name -eq $csRGName}) ) {
+        Write-Host "Creating resource group $csRGName"
+        New-AzureRmResourceGroup -Name $csRGName -Location $location -ErrorAction stop | Out-Null
+    }
     
 
     # deploy as the service principal to ensure that the service principal has appropriate rights for where it's
