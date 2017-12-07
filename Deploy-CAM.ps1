@@ -1731,10 +1731,41 @@ function Deploy-CAM() {
         $rollAssignmentRetry--
 
         try {
-            New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $RGName -ServicePrincipalName $client -ErrorAction Stop | Out-Null
-            New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $csRGName -ServicePrincipalName $client -ErrorAction Stop | Out-Null
-            New-AzureRmRoleAssignment -RoleDefinitionName Contributor -ResourceGroupName $rwRGName -ServicePrincipalName $client -ErrorAction Stop | Out-Null
-            break
+            # Only assign contributor access if needed
+            $rgNames = @($RGName, $csRGName, $rwRGName)
+            ForEach ($rgn in $rgNames) {
+                $rg = Get-AzureRmResourceGroup -Name $rgn
+
+                # Get-AzureRmRoleAssignment responds much more rationally if given a scope with an ID
+                # than a resource group name.
+                $spRoles = Get-AzureRmRoleAssignment -ServicePrincipalName $client -Scope $rg.ResourceId
+
+                # filter on an exact resource group ID match as Get-AzureRmRoleAssignment seems to do a more loose pattern match
+                $spRoles = $spRoles | Where-Object `
+                    {($_.Scope -eq $rg.ResourceId) -or ($_.Scope -eq "/subscriptions/$subscriptionID")}
+                
+                # spRoles could be no object, a single object or an array. foreach works with all.
+                $hasAccess = $false
+                foreach($role in $spRoles) {
+                    $roleName = $role.RoleDefinitionName
+                    if (($roleName -eq "Contributor") -or ($roleName -eq "Owner")) {
+                        Write-Host "$client already has $roleName for $rgn."
+                        $hasAccess = $true
+                        break
+                    }
+                }
+
+                if(-not $hasAccess) {
+                    Write-Host "Giving $client Contributor access to $rgn."
+                    New-AzureRmRoleAssignment `
+                        -RoleDefinitionName Contributor `
+                        -ResourceGroupName $rgn `
+                        -ServicePrincipalName $client `
+                        -ErrorAction Stop | Out-Null
+                }
+            }
+
+            break # while
         }
         catch {
             #TODO: we should only be catching the 'Service principal or app not found' error
@@ -1744,7 +1775,7 @@ function Deploy-CAM() {
                 #re-throw whatever the original exception was
                 $exceptionContext = Get-AzureRmContext
                 $exceptionSubscriptionId = $exceptionContext.Subscription.Id
-                Write-Error "Failure to create Contributor role for $client in ResourceGroup: $RGName Subscription: $exceptionSubscriptionId. Please check your subscription permissions."
+                Write-Error "Failure to create Contributor role for $client. Subscription: $exceptionSubscriptionId. Please check your subscription permissions."
                 throw
             }
         }
@@ -2065,7 +2096,7 @@ $resouceGroups = Get-AzureRmResourceGroup
 # - If it doesn't, create it in which case location parameter must be provided 
 if ($ResourceGroupName) {
     Write-Host "RGNAME PROVIDED: $ResourceGroupName"
-    if (-not (Get-AzureRMResourceGroup -name $ResourceGroupName)) {
+    if (-not (Get-AzureRMResourceGroup -name $ResourceGroupName -ErrorAction SilentlyContinue)) {
         Write-Host "Resource group $ResourceGroupName does not exist! Creating in location: $location"
         New-AzureRmResourceGroup -Name $ResourceGroupName -Location $location
     } 
@@ -2111,25 +2142,25 @@ else {
             # entered a name. Let's see if it matches any resource groups first
             $rgMatch = $resouceGroups | Where-Object {$_.ResourceGroupName -eq $rgIdentifier}
             if ($rgMatch) {
-                $rgName = $rgMatch.ResourceGroupName
-                Write-Host ("Resource group `"$rgName`" already exists. The current one will be used.")
+                Write-Host ("Resource group `"$($rgMatch.ResourceGroupName)`" already exists. The current one will be used.")
                 $selectedRGName = $true
             }
             else {
                 # make a new resource group and on failure go back to RG selection.
-                $rgName = $rgIdentifier
+                $inputRgName = $rgIdentifier
                 $newRgResult = $null
 
                 Write-Host("Available Azure Locations")
                 Write-Host (Get-AzureRMLocation | Select-Object -Property Location, DisplayName | Format-Table | Out-String )
 
                 $newRGLocation = Read-Host "`nPlease enter resource group location"
-                $newRgResult = New-AzureRmResourceGroup -Name $rgName -Location $newRGLocation
+
+                Write-Host "Creating Cloud Access Manager root resource group $inputRgName"
+                $newRgResult = New-AzureRmResourceGroup -Name $inputRgName -Location $newRGLocation
                 if ($newRgResult) {
                     # Success!
                     $selectedRGName = $true
-                    $rgMatch = Get-AzureRmResourceGroup -Name $rgName
-                    Write-Host "Successfully created resource group with name $rgName, $rgMatch.ResourceGroupName..."
+                    $rgMatch = Get-AzureRmResourceGroup -Name $inputRgName
                 }
             }
         }
@@ -2175,9 +2206,9 @@ if ($CAMRootKeyvault) {
 else {
     # New deployment - either complete or a root + Remote Workstation deployment
     # Now let's create the other required resource groups
-    Write-Host "Using specified resource group $rgName"
-    $csRGName = $rgName + "-CS1"
-    $rwRGName = $rgName + "-RW"
+
+    $csRGName = $rgMatch.ResourceGroupName + "-CS1"
+    $rwRGName = $rgMatch.ResourceGroupName + "-RW"
 
     $csrg = Get-AzureRmResourceGroup -ResourceGroupName $csRGName -ErrorAction SilentlyContinue
     if($csrg)
