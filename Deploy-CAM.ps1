@@ -1131,235 +1131,296 @@ function New-ConnectionServiceDeployment() {
     param(
         $RGName,
         $subscriptionId,
+        $tenantId,
+        $spCredential,
         $keyVault,
         $testDeployment
     )
 
     $kvID = $keyVault.ResourceId
     $kvName = $keyVault.Name
-    # TODO - make sure user account has keyvault secret access here. Try to add self if not
-    # and if doesn't work, probably fail.
 
-    # Find a connection service resource group name that can be used.
-    # An incrementing count is used to find a free resource group. This count is
-    # stored in the key vault to ensure every connection service in the deployment has a unique
-    # identifier, even if old connection services have been deleted.
-    $csRGName = $null
-    while(-not $csRGName)
-    {
+    # First, let's find the Service Principal 
+    $adminAzureContext = Get-AzureRMContext
+    $kvName = "CAM-lyuYaDeEBLXMPrCF"
+    $spCredential = $null
+    
+    
+    $client = $null
+    $key = $null
+    try{
         $secret = Get-AzureKeyVaultSecret `
             -VaultName $kvName `
-            -Name "connectionServiceNumber" `
+            -Name "AzureSPClientID" `
             -ErrorAction stop
-
-        if ($secret -eq $null) {
-            $connectionServiceNumber = 1
-        }
-        else {
-            # increment connectionServiceNumber
-            $connectionServiceNumber = ([int]$secret.SecretValueText) + 1
-        }
-
-        Set-AzureKeyVaultSecret `
-            -VaultName $kvName `
-            -Name "connectionServiceNumber" `
-            -SecretValue (ConvertTo-SecureString $connectionServiceNumber -AsPlainText -Force) `
-            -ErrorAction stop | Out-Null
-        
-        Write-Host "Checking available resource group for connection service number $connectionServiceNumber"
-
-        $csRGName = $RGName + "-CS" + $connectionServiceNumber
-        $rg = Get-AzureRmResourceGroup -ResourceGroupName $csRGName -ErrorAction SilentlyContinue
-        if($rg)
-        {
-            # found the resource group - do the loop with an incremented number try to find a free name
-            $csRGName = $null
+        $client = $secret.SecretValueText
+    }
+    catch {
+        $err = $_
+        if ($err.Exception.Message -eq "Access denied") {
+            Write-Host "Cannot access key vault secret. Attempting to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
+            try {
+                Set-AzureRmKeyVaultAccessPolicy `
+                    -VaultName $kvName `
+                    -UserPrincipalName $adminAzureContext.Account.Id `
+                    -PermissionsToSecrets Get, Set `
+                    -ErrorAction stop | Out-Null
+    
+                $secret = Get-AzureKeyVaultSecret `
+                    -VaultName $kvName `
+                    -Name "AzureSPClientID" `
+                    -ErrorAction stop
+                $client = $secret.SecretValueText
+            }
+            catch {
+                Write-Host "Failed to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)."
+            }
         }
     }
-
-    $rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName -ErrorAction stop
-    $location = $rg.Location
-
-    Write-Host "Creating resource group $csRGName"
-    New-AzureRmResourceGroup -Name $csRGName -Location $location -ErrorAction stop | Out-Null
     
-
-    # deploy as the service principal to ensure that the service principal has appropriate rights for where it's
-    # being deployed
-    $secret = Get-AzureKeyVaultSecret `
-        -VaultName $kvName `
-        -Name "AzureSPClientID" `
-        -ErrorAction stop
-    $client = $secret.SecretValueText
-
-    $secret = Get-AzureKeyVaultSecret `
-        -VaultName $kvName `
-        -Name "AzureSPKey" `
-        -ErrorAction stop
-    $key = $secret.SecretValueText
-
-    $secret = Get-AzureKeyVaultSecret `
-        -VaultName $kvName `
-        -Name "AzureSPTenantID" `
-        -ErrorAction stop
-    $tenant = $secret.SecretValueText
-
-    $secret = Get-AzureKeyVaultSecret `
-        -VaultName $kvName `
-        -Name "artifactsLocation" `
-        -ErrorAction stop
-    $artifactsLocation = $secret.SecretValueText
-
-    Write-Host "Using service principal $client in tenant $tenant and subscription $subscriptionId"
-    New-AzureRmRoleAssignment `
-        -RoleDefinitionName Contributor `
-        -ResourceGroupName $csRGName `
-        -ServicePrincipalName $client `
-        -ErrorAction Stop | Out-Null
+    # we may have gotten the secret if success (above) in which case we do not need to prompt.
+    if($client)
+    {
+        #get the password
+        $secret = Get-AzureKeyVaultSecret `
+            -VaultName $kvName `
+            -Name "AzureSPKey" `
+            -ErrorAction stop
+        $key = $secret.SecretValueText
+    }
+    else {
+        # before prompting, check if anything was passeed in command line
+        if (-not $spCredential)
+        {
+            $spCredential = Get-Credential -Message "Please enter service principal credential for this Cloud Access Manager deployment"
+        }
     
+        $client = $spCredential.UserName
+        $key = $spCredential.GetNetworkCredential().Password
+    }
     $spCreds = New-Object PSCredential $client, (ConvertTo-SecureString $key -AsPlainText -Force)
 
-    $azureContext = Get-AzureRMContext
-
-
-    $generatedDeploymentParameters = @"
-{
-    "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
-        "CSUniqueSuffix": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "connectionServiceNumber"
-            }
-        },
-        "domainAdminUsername": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "domainAdminUsername"
-            }
-        },
-        "domainAdminPassword": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "domainJoinPassword"
-            }
-        },
-        "domainName": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "domainName"
-            }
-        },
-        "LocalAdminUsername": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "connectionServiceLocalAdminUsername"
-            }
-        },
-        "LocalAdminPassword": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "connectionServiceLocalAdminPassword"
-            }
-        },
-        "CSsubnetId": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "connectionServiceSubnet"
-            }
-        },
-        "GWsubnetId": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "gatewaySubnet"
-            }
-        },
-        "CAMDeploymentBlobSource": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "CAMDeploymentBlobSource"
-            }
-        },
-        "certData": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "CAMCSCertificate"
-            }
-        },
-        "certPassword": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "CAMCSCertificatePassword"
-            }
-        },
-        "remoteWorkstationDomainGroup": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "remoteWorkstationDomainGroup"
-            }
-        },
-        "CAMDeploymentInfo": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "CAMDeploymentInfo"
-            }
-        },
-        "_baseArtifactsLocation": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "artifactsLocation"
-            }
-        }
-    }
-}
-"@
-
-    # make temporary directory for intermediate files
-    $folderName = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
-    $tempDir = Join-Path $env:TEMP $folderName
-    Write-Host "Using temporary directory $tempDir for intermediate files"
-    if (-not (Test-Path $tempDir)) {
-        New-Item $tempDir -type directory | Out-Null
-    }
-
-    $outputParametersFileName = "csdeploymentparameters.json"
-    $CSDeploymentTemplateURI = $artifactsLocation + "/connection-service/azuredeploy.json"
+    # put everything in a try block so that if any errors occur we revert to $azureAdminContext
     try {
+        Write-Host "Using service principal $client in tenant $tenantId and subscription $subscriptionId"
+        
+        # Note this doesn't return the same type of context as for a standard account
+        # so we'll just keep logging in when needed rather than switching context.
         Add-AzureRmAccount `
             -Credential $spCreds `
             -ServicePrincipal `
-            -TenantId $tenant `
+            -TenantId $tenantId `
             -ErrorAction Stop | Out-Null
 
+        # do key vault operations as the SP since in Cloud Shell the current user cannot always do key vault operation.
+        # Do AzureRM operations as the admin user since the SP doesn't in general have access to the new resource group yet.
+
+        # Find a connection service resource group name that can be used.
+        # An incrementing count is used to find a free resource group. This count is
+        # stored in the key vault to ensure every connection service in the deployment has a unique
+        # identifier, even if old connection services have been deleted.
+        $csRGName = $null
+        while(-not $csRGName)
+        {
+            $secret = Get-AzureKeyVaultSecret `
+                -VaultName $kvName `
+                -Name "connectionServiceNumber" `
+                -ErrorAction stop
+
+            if ($secret -eq $null) {
+                $connectionServiceNumber = 1
+            }
+            else {
+                # increment connectionServiceNumber
+                $connectionServiceNumber = ([int]$secret.SecretValueText) + 1
+            }
+
+            Set-AzureKeyVaultSecret `
+                -VaultName $kvName `
+                -Name "connectionServiceNumber" `
+                -SecretValue (ConvertTo-SecureString $connectionServiceNumber -AsPlainText -Force) `
+                -ErrorAction stop | Out-Null
+            
+            Write-Host "Checking available resource group for connection service number $connectionServiceNumber"
+
+            $csRGName = $RGName + "-CS" + $connectionServiceNumber
+            Set-AzureRMContext -Context $adminAzureContext | Out-Null
+            $rg = Get-AzureRmResourceGroup -ResourceGroupName $csRGName -ErrorAction SilentlyContinue
+            Add-AzureRmAccount `
+                -Credential $spCreds `
+                -ServicePrincipal `
+                -TenantId $tenantId `
+                -ErrorAction Stop | Out-Null
+
+            if($rg)
+            {
+                # found the resource group - do the loop with an incremented number try to find a free name
+                $csRGName = $null
+            }
+        }
+
+        Set-AzureRMContext -Context $adminAzureContext | Out-Null
+        $rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName -ErrorAction stop
+        $location = $rg.Location
+
+        Write-Host "Creating resource group $csRGName"
+        New-AzureRmResourceGroup -Name $csRGName -Location $location -ErrorAction stop | Out-Null
+        
+        New-AzureRmRoleAssignment `
+            -RoleDefinitionName Contributor `
+            -ResourceGroupName $csRGName `
+            -ServicePrincipalName $client `
+            -ErrorAction Stop | Out-Null
+    
+        # SP has proper rights - do deployment with SP
+        Add-AzureRmAccount `
+            -Credential $spCreds `
+            -ServicePrincipal `
+            -TenantId $tenantId `
+            -ErrorAction Stop | Out-Null
+
+        # make temporary directory for intermediate files
+        $folderName = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
+        $tempDir = Join-Path $env:TEMP $folderName
+        Write-Host "Using temporary directory $tempDir for intermediate files"
+        if (-not (Test-Path $tempDir)) {
+            New-Item $tempDir -type directory | Out-Null
+        }
+
+        # Refresh the CAMDeploymentInfo structure
+        New-CAMDeploymentInfo `
+            -kvName $CAMRootKeyvault.Name
+
+        # Get the template URI
+        $secret = Get-AzureKeyVaultSecret `
+            -VaultName $kvName `
+            -Name "artifactsLocation" `
+            -ErrorAction stop
+        $artifactsLocation = $secret.SecretValueText
+        $CSDeploymentTemplateURI = $artifactsLocation + "/connection-service/azuredeploy.json"
+
+        $generatedDeploymentParameters = @"
+        {
+            "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+            "contentVersion": "1.0.0.0",
+            "parameters": {
+                "CSUniqueSuffix": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "connectionServiceNumber"
+                    }
+                },
+                "domainAdminUsername": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "domainAdminUsername"
+                    }
+                },
+                "domainAdminPassword": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "domainJoinPassword"
+                    }
+                },
+                "domainName": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "domainName"
+                    }
+                },
+                "LocalAdminUsername": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "connectionServiceLocalAdminUsername"
+                    }
+                },
+                "LocalAdminPassword": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "connectionServiceLocalAdminPassword"
+                    }
+                },
+                "CSsubnetId": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "connectionServiceSubnet"
+                    }
+                },
+                "GWsubnetId": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "gatewaySubnet"
+                    }
+                },
+                "CAMDeploymentBlobSource": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "CAMDeploymentBlobSource"
+                    }
+                },
+                "certData": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "CAMCSCertificate"
+                    }
+                },
+                "certPassword": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "CAMCSCertificatePassword"
+                    }
+                },
+                "remoteWorkstationDomainGroup": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "remoteWorkstationDomainGroup"
+                    }
+                },
+                "CAMDeploymentInfo": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "CAMDeploymentInfo"
+                    }
+                },
+                "_baseArtifactsLocation": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "artifactsLocation"
+                    }
+                }
+            }
+        }
+"@
+
+        $outputParametersFileName = "csdeploymentparameters.json"
         $outputParametersFilePath = Join-Path $tempDir $outputParametersFileName
         Set-Content $outputParametersFilePath  $generatedDeploymentParameters
 
@@ -1407,8 +1468,8 @@ function New-ConnectionServiceDeployment() {
         throw
     }
     finally {
-        if ($azureContext) {
-            Set-AzureRMContext -Context $azureContext | Out-Null
+        if ($adminAzureContext) {
+            Set-AzureRMContext -Context $adminAzureContext | Out-Null
         }
     }
 }
@@ -2191,13 +2252,12 @@ if ($CAMRootKeyvault) {
     }
 
     Write-Host "Deploying a new CAM Connection Service with updated CAMDeploymentInfo"
-	
-    New-CAMDeploymentInfo `
-        -kvName $CAMRootKeyvault.Name
 
     New-ConnectionServiceDeployment `
         -RGName $rgMatch.ResourceGroupName `
         -subscriptionId $selectedSubcriptionId `
+        -tenantId $selectedTenantId `
+        -spCredential $spCredential `
         -keyVault $CAMRootKeyvault `
         -testDeployment $testDeployment `
         -tempDir $tempDir
