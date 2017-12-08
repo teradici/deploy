@@ -362,7 +362,6 @@ function New-RemoteWorstationTemplates {
 		"agentType": { "value": "%agentType%" },
 		"vmSize": { "value": "%vmSize%" },
 		"AgentChannel": { "value": "$agentChannel"},
-		"blobRWTemplateUri": { "value": "$blobRWTemplateUri" },
 		"CAMBinariesSource": { "value": "$CAMBinariesSource" },
 		"subnetID": { "value": "$($CAMConfig.parameters.remoteWorkstationSubnet.clearValue)" },
 		"domainUsername": { "value": "$DomainAdminUsername" },
@@ -373,7 +372,15 @@ function New-RemoteWorstationTemplates {
 				},
 				"secretName": "userStorageName"
 			}
-		},
+        },
+        "userStorageAccountUri": {
+			"reference": {
+				"keyVault": {
+				"id": "$kvId"
+				},
+				"secretName": "userStorageAccountUri"
+			}
+        },
 		"userStorageAccountKey": {
 			"reference": {
 				"keyVault": {
@@ -425,8 +432,7 @@ function New-RemoteWorstationTemplates {
 		},
 		"domainToJoin": { "value": "$domainFQDN" },
 		"storageAccountName": { "value": "$VHDStorageAccountName" },
-		"_artifactsLocation": { "value": "$blobRWTemplateUri" },
-		"_artifactsLocationSasToken": {
+		"userStorageAccountSasToken": {
 			"reference": {
 				"keyVault": {
 					"id": "$kvId"

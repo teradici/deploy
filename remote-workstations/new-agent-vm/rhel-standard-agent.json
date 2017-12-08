@@ -81,16 +81,16 @@
                 "description": "The password for the administrator account of the new VM and the domain"
             }
         },
-        "_artifactsLocation": {
+        "userStorageAccountUri": {
             "type": "string",
             "metadata": {
-                "description": "The location of resources, such as templates and DSC modules, that the template depends on"
+                "description": "The URI of the user's storage account"
             }
         },
-        "_artifactsLocationSasToken": {
+        "userStorageAccountSasToken": {
             "type": "securestring",
             "metadata": {
-                "description": "Auto-generated token to access _artifactsLocation"
+                "description": "SAS token for accesing user's storage account"
             },
             "defaultValue": "?public"
         },
@@ -256,7 +256,7 @@
                 "typeHandlerVersion": "2.0",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "fileUris": [ "[ concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'))]" ]
+                    "fileUris": [ "[ concat(parameters('userStorageAccountUri'), 'remote-workstation','/', variables('scriptFileName'))]" ]
                 },
                 "protectedSettings": {
                     "commandToExecute": "[concat('bash ', variables('scriptFileName'), ' \"', parameters('registrationCode'), '\" \"', parameters('agentType'), '\" \"', variables('vmSettings').vmNamePrefix, '\" \"', parameters('domainToJoin'), '\" \"', parameters('domainUsername'), '\" \"', parameters('domainPassword'), '\" \"', parameters('domainGroupToJoin'), '\" \"', parameters('AgentChannel'), '\"')]",
@@ -279,7 +279,7 @@
                 "typeHandlerVersion": "1.4",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "fileUris": [ "[concat(parameters('_artifactsLocation'), '/', variables('idleShutdownScriptFileName'))]" ]
+                    "fileUris": [ "[concat(parameters('userStorageAccountUri'), 'remote-workstation','/', variables('idleShutdownScriptFileName'))]" ]
                 },
                 "protectedSettings": {
                     "commandToExecute": "[concat('sudo bash ', variables('idleShutdownScriptFileName'), ' -install')]",
