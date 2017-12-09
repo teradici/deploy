@@ -1748,6 +1748,8 @@ function Deploy-CAM() {
             Write-Host "does not match the tenant of the deploment ($tenantId)."
             Write-Host "This can happen in Azure Cloud Powershell when an account has access to multiple tenants."
             Write-Host "Please make a service principal through the Azure Portal or other means and provide here."
+            Write-Host "Note - the service principal must already have Contributor rights to the subscription or target"
+            Write-Host "resource groups because role assignment is not possible in this case."
         }
         else {
             Write-Host "The Cloud Access Manager deployment script was not passed service principal credentials. It will attempt to create a service principal."
@@ -1782,62 +1784,64 @@ function Deploy-CAM() {
 
     Write-Host "Using service principal $client in tenant $tenant and subscription $subscriptionId"
 
-    # Service principal info exists but needs to get rights to the required resource groups
-    Write-Host "Adding role assignments for the service principal account."
-    
-    # Retry required since it can take a few seconds for app registration to percolate through Azure.
-    # (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
-    $rollAssignmentRetry = 120
-    while ($rollAssignmentRetry -ne 0) {
-        $rollAssignmentRetry--
+    if($tenantIDsMatch) {
+        # Service principal info exists but needs to get rights to the required resource groups
+        Write-Host "Adding role assignments for the service principal account."
+        
+        # Retry required since it can take a few seconds for app registration to percolate through Azure.
+        # (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
+        $rollAssignmentRetry = 120
+        while ($rollAssignmentRetry -ne 0) {
+            $rollAssignmentRetry--
 
-        try {
-            # Only assign contributor access if needed
-            $rgNames = @($RGName, $csRGName, $rwRGName)
-            ForEach ($rgn in $rgNames) {
-                $rg = Get-AzureRmResourceGroup -Name $rgn
+            try {
+                # Only assign contributor access if needed
+                $rgNames = @($RGName, $csRGName, $rwRGName)
+                ForEach ($rgn in $rgNames) {
+                    $rg = Get-AzureRmResourceGroup -Name $rgn
 
-                # Get-AzureRmRoleAssignment responds much more rationally if given a scope with an ID
-                # than a resource group name.
-                $spRoles = Get-AzureRmRoleAssignment -ServicePrincipalName $client -Scope $rg.ResourceId
+                    # Get-AzureRmRoleAssignment responds much more rationally if given a scope with an ID
+                    # than a resource group name.
+                    $spRoles = Get-AzureRmRoleAssignment -ServicePrincipalName $client -Scope $rg.ResourceId
 
-                # filter on an exact resource group ID match as Get-AzureRmRoleAssignment seems to do a more loose pattern match
-                $spRoles = $spRoles | Where-Object `
-                    {($_.Scope -eq $rg.ResourceId) -or ($_.Scope -eq "/subscriptions/$subscriptionID")}
-                
-                # spRoles could be no object, a single object or an array. foreach works with all.
-                $hasAccess = $false
-                foreach($role in $spRoles) {
-                    $roleName = $role.RoleDefinitionName
-                    if (($roleName -eq "Contributor") -or ($roleName -eq "Owner")) {
-                        Write-Host "$client already has $roleName for $rgn."
-                        $hasAccess = $true
-                        break
+                    # filter on an exact resource group ID match as Get-AzureRmRoleAssignment seems to do a more loose pattern match
+                    $spRoles = $spRoles | Where-Object `
+                        {($_.Scope -eq $rg.ResourceId) -or ($_.Scope -eq "/subscriptions/$subscriptionID")}
+                    
+                    # spRoles could be no object, a single object or an array. foreach works with all.
+                    $hasAccess = $false
+                    foreach($role in $spRoles) {
+                        $roleName = $role.RoleDefinitionName
+                        if (($roleName -eq "Contributor") -or ($roleName -eq "Owner")) {
+                            Write-Host "$client already has $roleName for $rgn."
+                            $hasAccess = $true
+                            break
+                        }
+                    }
+
+                    if(-not $hasAccess) {
+                        Write-Host "Giving $client Contributor access to $rgn."
+                        New-AzureRmRoleAssignment `
+                            -RoleDefinitionName Contributor `
+                            -ResourceGroupName $rgn `
+                            -ServicePrincipalName $client `
+                            -ErrorAction Stop | Out-Null
                     }
                 }
 
-                if(-not $hasAccess) {
-                    Write-Host "Giving $client Contributor access to $rgn."
-                    New-AzureRmRoleAssignment `
-                        -RoleDefinitionName Contributor `
-                        -ResourceGroupName $rgn `
-                        -ServicePrincipalName $client `
-                        -ErrorAction Stop | Out-Null
-                }
+                break # while
             }
-
-            break # while
-        }
-        catch {
-            #TODO: we should only be catching the 'Service principal or app not found' error
-            Write-Host "Waiting for service principal. Remaining: $rollAssignmentRetry"
-            Start-sleep -Seconds 1
-            if ($rollAssignmentRetry -eq 0) {
-                #re-throw whatever the original exception was
-                $exceptionContext = Get-AzureRmContext
-                $exceptionSubscriptionId = $exceptionContext.Subscription.Id
-                Write-Error "Failure to create Contributor role for $client. Subscription: $exceptionSubscriptionId. Please check your subscription permissions."
-                throw
+            catch {
+                #TODO: we should only be catching the 'Service principal or app not found' error
+                Write-Host "Waiting for service principal. Remaining: $rollAssignmentRetry"
+                Start-sleep -Seconds 1
+                if ($rollAssignmentRetry -eq 0) {
+                    #re-throw whatever the original exception was
+                    $exceptionContext = Get-AzureRmContext
+                    $exceptionSubscriptionId = $exceptionContext.Subscription.Id
+                    Write-Error "Failure to create Contributor role for $client. Subscription: $exceptionSubscriptionId. Please check your subscription permissions."
+                    throw
+                }
             }
         }
     }
