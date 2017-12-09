@@ -323,7 +323,7 @@ function New-UserStorageAccount {
     return $acct
 }
 
-
+# is blobRWTemplateURI still needed - can pass in the userStorageAccountUri to agent ARM template
 function New-RemoteWorstationTemplates {
     param (
         $CAMConfig,
@@ -1913,7 +1913,23 @@ function Deploy-CAM() {
 				},
 				"secretName": "artifactsLocation"
 			}
-		},
+        },
+        "userStorageAccountUri": {
+			"reference": {
+				"keyVault": {
+					"id": "$kvId"
+				},
+				"secretName": "userStorageAccountUri"
+			}
+        },
+        "userStorageAccountSasToken": {
+			"reference": {
+				"keyVault": {
+					"id": "$kvId"
+				},
+				"secretName": "userStorageAccountSasToken"
+			}
+        },
 		"LocalAdminUsername": {
 			"reference": {
 				"keyVault": {

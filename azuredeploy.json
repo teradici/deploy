@@ -134,6 +134,18 @@
         "description": "The location of the CAM binaries"
       }
     },
+    "userStorageAccountUri": {
+      "type": "string",
+      "metadata": {
+        "description": "The URI of the user's storage account"
+      }
+    },
+    "userStorageAccountSasToken": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SAS token requried to access user's storage account"
+      }
+    },
     "_artifactsLocation": {
       "type": "string",
       "metadata": {
@@ -314,8 +326,11 @@
           "AgentChannel": {
             "value": "[parameters('AgentChannel')]"
           },
-          "_artifactsLocation": {
-            "value": "[concat(parameters('_artifactsLocation'), '/remote-workstations')]"
+          "userStorageAccountUri": {
+            "value": "[parameters('userStorageAccountUri')]"
+          },
+          "userStorageAccountSasToken": {
+            "value": "[parameters('userStorageAccountSasToken')]"
           },
           "CAMBinariesSource": {
             "value": "[parameters('CAMBinariesSource')]"
