@@ -135,7 +135,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('userStorageAccountUri'), 'remote-workstation-template/server2016-standard-agent.json', parameters('userStorageAccountSasToken'))]",
+          "uri": "[concat(parameters('userStorageAccountUri'), 'remote-workstation-template/server2016-graphics-agent.json', parameters('userStorageAccountSasToken'))]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
