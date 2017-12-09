@@ -1848,6 +1848,24 @@ function Deploy-CAM() {
         # keyvault ID of the form: /subscriptions/$subscriptionID/resourceGroups/$azureRGName/providers/Microsoft.KeyVault/vaults/$kvName
         $kvId = $kvInfo.ResourceId
 
+        # debug null userStorageAccountUri
+        $vault = $kvInfo.VaultName
+        $secret = Get-AzureKeyVaultSecret `
+        -VaultName $vault `
+        -Name "userStorageAccountUri" `
+        -ErrorAction stop
+
+        $urisecret = $secret.SecretValueText
+        Write-Host "Stored uri secret is $urisecret..."
+
+        $secretdomain = Get-AzureKeyVaultSecret `
+        -VaultName $vault `
+        -Name "domainName" `
+        -ErrorAction stop
+        $plaindomainname = $secretdomain.SecretValueText
+        Write-Host "Stored domain name secret is $plaindomainname"
+
+
         $generatedDeploymentParameters = @"
 {
 	"`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",

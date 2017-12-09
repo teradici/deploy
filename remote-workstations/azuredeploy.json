@@ -77,7 +77,7 @@
             "metadata": {
                 "description": "SAS token to access user's storage account"
             },
-            "defaultValue": ""
+            "defaultValue": "?public"
         },
         "CAMBinariesSource": {
             "type": "string",
@@ -186,7 +186,14 @@
           },
           "AgentChannel": {
             "value": "[parameters('AgentChannel')]"
+          },
+          "userStorageAccountUri": {
+            "value": "[parameters('userStorageAccountUri')]"
+          },
+          "userStorageAccountSasToken": {
+            "value": "[parameters('userStorageAccountSasToken')]"
           }
+
         }
       }
     }
