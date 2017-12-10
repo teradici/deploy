@@ -134,6 +134,12 @@
         "description": "The location of the CAM binaries"
       }
     },
+    "userStorageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the user's storage account"
+      }
+    },
     "userStorageAccountUri": {
       "type": "string",
       "metadata": {
@@ -331,6 +337,9 @@
           },
           "AgentChannel": {
             "value": "[parameters('AgentChannel')]"
+          },
+          "userStorageAccountName": {
+            "value": "[parameters('userStorageAccountName')]"
           },
           "userStorageAccountUri": {
             "value": "[parameters('userStorageAccountUri')]"

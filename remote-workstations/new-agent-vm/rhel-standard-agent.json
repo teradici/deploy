@@ -81,19 +81,6 @@
                 "description": "The password for the administrator account of the new VM and the domain"
             }
         },
-        "userStorageAccountUri": {
-            "type": "string",
-            "metadata": {
-                "description": "The URI of the user's storage account"
-            }
-        },
-        "userStorageAccountSasToken": {
-            "type": "securestring",
-            "metadata": {
-                "description": "SAS token for accesing user's storage account"
-            },
-            "defaultValue": "?public"
-        },
         "registrationCode": {
           "type": "securestring",
           "minLength": 21,
@@ -127,6 +114,20 @@
                 "description": "Storage account for user blob and custom templates"
             },
             "defaultValue": ""
+        },
+        "userStorageAccountUri": {
+            "type": "string",
+            "metadata": {
+                "description": "The URI of the user's storage account"
+            },
+            "defaultValue": ""
+        },
+        "userStorageAccountSasToken": {
+            "type": "securestring",
+            "metadata": {
+                "description": "SAS token for accesing user's storage account"
+            },
+            "defaultValue": "?public"
         },
         "userStorageAccountKey": {
             "type": "securestring",

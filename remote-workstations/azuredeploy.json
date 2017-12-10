@@ -66,6 +66,12 @@
                 "description": "Encoded blob of authorization and URL information for the CAM deployment"
             }
         },
+        "userStorageAccountName": {
+          "type": "string",
+          "metadata": {
+              "description": "The name of the user's storage account"
+          }
+        },
         "userStorageAccountUri": {
             "type": "string",
             "metadata": {
@@ -192,6 +198,9 @@
           },
           "AgentChannel": {
             "value": "[parameters('AgentChannel')]"
+          },
+          "userStorageAccountName": {
+            "value": "[parameters('userStorageAccountName')]"
           },
           "userStorageAccountUri": {
             "value": "[parameters('userStorageAccountUri')]"

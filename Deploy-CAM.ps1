@@ -381,6 +381,14 @@ function New-RemoteWorstationTemplates {
 				"secretName": "userStorageAccountUri"
 			}
         },
+        "userStorageAccountSasToken": {
+			"reference": {
+				"keyVault": {
+					"id": "$kvId"
+				},
+				"secretName": "userStorageAccountSasToken"
+			}
+		},
 		"userStorageAccountKey": {
 			"reference": {
 				"keyVault": {
@@ -431,15 +439,7 @@ function New-RemoteWorstationTemplates {
 			}
 		},
 		"domainToJoin": { "value": "$domainFQDN" },
-		"storageAccountName": { "value": "$VHDStorageAccountName" },
-		"userStorageAccountSasToken": {
-			"reference": {
-				"keyVault": {
-					"id": "$kvId"
-				},
-				"secretName": "userStorageAccountSasToken"
-			}
-		}
+		"storageAccountName": { "value": "$VHDStorageAccountName" }
 	}
 }
 
@@ -1914,6 +1914,14 @@ function Deploy-CAM() {
 				"secretName": "artifactsLocation"
 			}
         },
+        "userStorageAccountName": {
+			"reference": {
+				"keyVault": {
+				"id": "$kvId"
+				},
+				"secretName": "userStorageName"
+			}
+        },
         "userStorageAccountUri": {
 			"reference": {
 				"keyVault": {
@@ -1930,7 +1938,15 @@ function Deploy-CAM() {
 				"secretName": "userStorageAccountSasToken"
 			}
         },
-		"LocalAdminUsername": {
+        "userStorageAccountKey": {
+			"reference": {
+				"keyVault": {
+				"id": "$kvId"
+				},
+				"secretName": "userStorageAccountKey"
+			}
+		},
+        "LocalAdminUsername": {
 			"reference": {
 				"keyVault": {
 					"id": "$kvId"
@@ -2001,15 +2017,7 @@ function Deploy-CAM() {
 				},
 				"secretName": "cloudAccessRegistrationCode"
 			}
-        },
-        "userStorageAccountKey": {
-			"reference": {
-				"keyVault": {
-				"id": "$kvId"
-				},
-				"secretName": "userStorageAccountKey"
-			}
-		}
+        }
 	}
 }
 "@

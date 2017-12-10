@@ -80,6 +80,20 @@
                 "description": "The password for the administrator account of the new VM and the domain"
             }
         },
+        "userStorageAccountName": {
+            "type": "string",
+            "metadata": {
+                "description": "Storage account for user blob and custom templates"
+            },
+            "defaultValue": ""
+        },
+        "userStorageAccountKey": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Storage account key for accessing private blob data"
+            },
+            "defaultValue": ""
+        },
         "userStorageAccountUri": {
             "type": "string",
             "metadata": {
@@ -125,20 +139,6 @@
                 "description": "Encoded blob of authorization and URL information for the CAM deployment"
             },
             "defaultValue": "null"
-        },
-        "userStorageAccountName": {
-            "type": "string",
-            "metadata": {
-                "description": "Storage account for user blob and custom templates"
-            },
-            "defaultValue": ""
-        },
-        "userStorageAccountKey": {
-            "type": "securestring",
-            "metadata": {
-                "description": "Storage account key for accessing private blob data"
-            },
-            "defaultValue": ""
         },
         "AgentChannel": {
             "type": "string",
