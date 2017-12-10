@@ -79,6 +79,12 @@
             },
             "defaultValue": "?public"
         },
+        "userStorageAccountKey": {
+          "type": "securestring",
+          "metadata": {
+              "description": "Key to access user's storage account"
+          }
+      },
         "CAMBinariesSource": {
             "type": "string",
             "metadata": {
@@ -192,6 +198,9 @@
           },
           "userStorageAccountSasToken": {
             "value": "[parameters('userStorageAccountSasToken')]"
+          },
+          "userStorageAccountKey": {
+            "value": "[parameters('userStorageAccountKey')]"
           }
 
         }

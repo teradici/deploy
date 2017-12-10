@@ -2001,6 +2001,14 @@ function Deploy-CAM() {
 				},
 				"secretName": "cloudAccessRegistrationCode"
 			}
+        },
+        "userStorageAccountKey": {
+			"reference": {
+				"keyVault": {
+				"id": "$kvId"
+				},
+				"secretName": "userStorageAccountKey"
+			}
 		}
 	}
 }
