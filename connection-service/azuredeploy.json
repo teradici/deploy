@@ -76,7 +76,7 @@
           "description": "The domain group the remote workstations should join"
       }
     },
-    "CAMBinariesSource": {
+    "binaryLocation": {
       "type": "string",
       "metadata": {
         "description": "The location of CAM binaries"
@@ -215,8 +215,8 @@
           "domainPassword": {
             "value": "[parameters('domainAdminPassword')]"
           },
-          "CAMBinariesSource": {
-            "value": "[parameters('CAMBinariesSource')]"
+          "binaryLocation": {
+            "value": "[parameters('binaryLocation')]"
           },
           "_artifactsLocation": {
             "value": "[concat(variables('_artifactsLocation'), '/new-admin-vm')]"

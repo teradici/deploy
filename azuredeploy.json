@@ -127,7 +127,7 @@
           "description": "Encoded blob of authorization and URL information for the CAM Connection Service."
       }
     },
-    "CAMBinariesSource": {
+    "binaryLocation": {
       "type": "string",
       "defaultValue": "https://teradeploy.blob.core.windows.net/binaries",
       "metadata": {
@@ -212,8 +212,8 @@
           "gatewaySubnetName": {
               "value": "[parameters('gatewaySubnetName')]"
           },
-          "CAMBinariesSource": {
-            "value": "[parameters('CAMBinariesSource')]"
+          "binaryLocation": {
+            "value": "[parameters('binaryLocation')]"
           },
           "_artifactsLocation": {
             "value": "[concat(parameters('_artifactsLocation'), '/root')]"
@@ -272,8 +272,8 @@
           "CAMDeploymentInfo": {
             "value": "[parameters('CAMDeploymentInfo')]"
           },
-          "CAMBinariesSource": {
-            "value": "[parameters('CAMBinariesSource')]"
+          "binaryLocation": {
+            "value": "[parameters('binaryLocation')]"
           },
           "_baseArtifactsLocation": {
             "value": "[parameters('_artifactsLocation')]"
@@ -350,8 +350,8 @@
           "userStorageAccountKey": {
             "value": "[parameters('userStorageAccountKey')]"
           },
-          "CAMBinariesSource": {
-            "value": "[parameters('CAMBinariesSource')]"
+          "binaryLocation": {
+            "value": "[parameters('binaryLocation')]"
           }
         }
       }

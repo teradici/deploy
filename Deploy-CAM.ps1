@@ -41,7 +41,7 @@ param(
 
     $camSaasUri = "https://cam-antar.teradici.com",
     $CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/param-cleanup-2/azuredeploy.json",
-    $CAMBinariesSource = "https://teradeploy.blob.core.windows.net/bdstable",
+    $binaryLocation = "https://teradeploy.blob.core.windows.net/bdstable",
     $outputParametersFileName = "cam-output.parameters.json",
     $location
 )
@@ -362,7 +362,7 @@ function New-RemoteWorstationTemplates {
 		"agentType": { "value": "%agentType%" },
 		"vmSize": { "value": "%vmSize%" },
 		"AgentChannel": { "value": "$agentChannel"},
-		"CAMBinariesSource": { "value": "$CAMBinariesSource" },
+		"binaryLocation": { "value": "$binaryLocation" },
 		"subnetID": { "value": "$($CAMConfig.parameters.remoteWorkstationSubnet.clearValue)" },
 		"domainUsername": { "value": "$DomainAdminUsername" },
 		"userStorageAccountName": {
@@ -508,7 +508,7 @@ function Populate-UserBlob {
         $CAMConfig,
         $artifactsLocation,
         $userDataStorageAccount,
-        $CAMBinariesSource,
+        $binaryLocation,
         $sumoAgentApplicationVM,
         $sumoConf,
         $idleShutdownLinux,
@@ -529,7 +529,7 @@ function Populate-UserBlob {
     $new_agent_vm_files = @(
         @("$artifactsLocation/remote-workstations/new-agent-vm/Install-PCoIPAgent.ps1", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/Install-PCoIPAgent.sh", "remote-workstation"),
-        @("$CAMBinariesSource/Install-PCoIPAgent.ps1.zip", "remote-workstation"),
+        @("$binaryLocation/Install-PCoIPAgent.ps1.zip", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/sumo-agent-vm.json", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/sumo.conf", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/Install-Idle-Shutdown.sh", "remote-workstation"),
@@ -609,7 +609,7 @@ function Populate-UserBlob {
         # blobUri is the new per-deployment blob storage location of the binaries (so a sub-directory in the container)
         New-RemoteWorstationTemplates `
             -CAMConfig $CAMConfig `
-            -binaryLocation $CAMBinariesSource `
+            -binaryLocation $binaryLocation `
             -blobRWTemplateUri ($blobUri + 'remote-workstation') `
             -kvId $kvId `
             -storageAccountContext $ctx `
@@ -1297,12 +1297,12 @@ function New-ConnectionServiceDeployment() {
                 "secretName": "gatewaySubnet"
             }
         },
-        "CAMBinariesSource": {
+        "binaryLocation": {
             "reference": {
                 "keyVault": {
                     "id": "$kvID"
                 },
-                "secretName": "CAMBinariesSource"
+                "secretName": "binaryLocation"
             }
         },
         "certData": {
@@ -1444,7 +1444,7 @@ function New-CAMDeploymentRoot()
     $tenant = $spInfo.tenantId
     $registrationCode = $CAMConfig.parameters.cloudAccessRegistrationCode.value
     $artifactsLocation = $CAMConfig.parameters.artifactsLocation.clearValue
-    $CAMBinariesSource = $CAMConfig.parameters.CAMBinariesSource.clearValue
+    $binaryLocation = $CAMConfig.parameters.binaryLocation.clearValue
     
     $kvInfo = New-CAM-KeyVault `
         -RGName $RGName `
@@ -1466,7 +1466,7 @@ function New-CAMDeploymentRoot()
         -CAMConfig $CAMConfig `
         -artifactsLocation $artifactsLocation `
         -userDataStorageAccount	$userDataStorageAccount `
-        -CAMBinariesSource $CAMBinariesSource `
+        -binaryLocation $binaryLocation `
         -RGName $RGName `
         -kvInfo $kvInfo `
         -tempDir $tempDir | Out-Null
@@ -1523,7 +1523,7 @@ function Deploy-CAM() {
         $camSaasUri,
 
         [parameter(Mandatory = $true)] 
-        $CAMBinariesSource,
+        $binaryLocation,
 
         [parameter(Mandatory = $true)] 
         $outputParametersFileName,
@@ -1586,9 +1586,9 @@ function Deploy-CAM() {
         value      = (ConvertTo-SecureString $domainName -AsPlainText -Force)
         clearValue = $domainName
     }
-    $CAMConfig.parameters.CAMBinariesSource = @{
-        value      = (ConvertTo-SecureString $CAMBinariesSource -AsPlainText -Force)
-        clearValue = $CAMBinariesSource
+    $CAMConfig.parameters.binaryLocation = @{
+        value      = (ConvertTo-SecureString $binaryLocation -AsPlainText -Force)
+        clearValue = $binaryLocation
     }
     $CAMConfig.parameters.artifactsLocation = @{
         value      = (ConvertTo-SecureString $artifactsLocation -AsPlainText -Force)
@@ -1898,12 +1898,12 @@ function Deploy-CAM() {
         "gatewaySubnetName": {
             "value": "$($CAMConfig.internal.GWSubnetName)"
         },
-		"CAMBinariesSource": {
+		"binaryLocation": {
 			"reference": {
 				"keyVault": {
 					"id": "$kvId"
 				},
-				"secretName": "CAMBinariesSource"
+				"secretName": "binaryLocation"
 			}
 		},
 		"_artifactsLocation": {
@@ -2326,7 +2326,7 @@ else {
         -camSaasUri $camSaasUri.Trim().TrimEnd('/') `
         -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
         -CAMDeploymentTemplateURI $CAMDeploymentTemplateURI `
-        -CAMBinariesSource $CAMBinariesSource.Trim().TrimEnd('/') `
+        -binaryLocation $binaryLocation.Trim().TrimEnd('/') `
         -outputParametersFileName $outputParametersFileName `
         -subscriptionId $selectedSubcriptionId `
         -RGName $rgMatch.ResourceGroupName `

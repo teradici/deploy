@@ -91,7 +91,7 @@
               "description": "Key to access user's storage account"
           }
       },
-        "CAMBinariesSource": {
+        "binaryLocation": {
             "type": "string",
             "metadata": {
                 "description": "Location of the CAM binaries."
@@ -117,7 +117,7 @@
         "windowsOSVersion": "2016-Datacenter",
         "apiVersion": "2015-06-15",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
-        "pcoipAgentInstallerUrl": "[concat(parameters('CAMBinariesSource'),'/PCoIP_agent_release_installer_2.10.0.7600_standard.exe')]",
+        "pcoipAgentInstallerUrl": "[concat(parameters('binaryLocation'),'/PCoIP_agent_release_installer_2.10.0.7600_standard.exe')]",
         "videoDriverUrl": "",
         "registrationCode": "[parameters('registrationCode')]",
         "enableAutoShutdown" : false,
@@ -147,7 +147,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('userStorageAccountUri'), 'remote-workstation-template/rhel-standard-agent.json', parameters('userStorageAccountSasToken'))]",
+          "uri": "[concat(parameters('userStorageAccountUri'), 'remote-workstation-template/server2016-standard-agent.json', parameters('userStorageAccountSasToken'))]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
@@ -187,8 +187,8 @@
           "CAMDeploymentInfo": {
             "value": "[parameters('CAMDeploymentInfo')]"
           },
-          "CAMBinariesSource": {
-            "value": "[parameters('CAMBinariesSource')]"
+          "binaryLocation": {
+            "value": "[parameters('binaryLocation')]"
           },
           "registrationCode": {
             "value": "[parameters('registrationCode')]"

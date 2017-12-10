@@ -80,7 +80,7 @@
                 "description": "The password for the administrator account of the new VM and the domain"
             }
         },
-        "CAMBinariesSource": {
+        "binaryLocation": {
             "type": "string",
             "metadata": {
                 "description": "The location of the CAM binaries"
@@ -174,7 +174,7 @@
                 "videoDriverUrl": ""
             },
             "Graphics": {
-                "videoDriverUrl": "[concat(parameters('CAMBinariesSource'), '/370.12_grid_win10_server2016_64bit_international.exe')]"
+                "videoDriverUrl": "[concat(parameters('binaryLocation'), '/370.12_grid_win10_server2016_64bit_international.exe')]"
             }
         },
           

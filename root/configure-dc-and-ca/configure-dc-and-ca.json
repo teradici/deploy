@@ -26,7 +26,7 @@
                 "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
             }
         },
-        "CAMBinariesSource": {
+        "binaryLocation": {
             "type": "string",
             "metadata": {
               "description": "The location of the blobs for admin GUI machine installation"
@@ -45,7 +45,7 @@
                 "typeHandlerVersion": "2.19",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "modulesUrl": "[concat(parameters('CAMBinariesSource'),'/Install-DC-and-CA.ps1.zip')]",                    
+                    "modulesUrl": "[concat(parameters('binaryLocation'),'/Install-DC-and-CA.ps1.zip')]",                    
                     "configurationFunction": "Install-DC-and-CA.ps1\\CreateDCCA",
                     "Properties": {
                         "DomainName": "[parameters('domainName')]",

@@ -107,7 +107,7 @@
             },
             "defaultValue": "?public"
         },
-        "CAMBinariesSource": {
+        "binaryLocation": {
             "type": "string",
             "metadata": {
                 "description": "The location of the blobs for admin GUI machine installation"
@@ -175,7 +175,7 @@
                 "videoDriverUrl": ""
             },
             "Graphics": {
-                "videoDriverUrl": "[concat(parameters('CAMBinariesSource'), '/370.12_grid_win10_server2016_64bit_international.exe')]"
+                "videoDriverUrl": "[concat(parameters('binaryLocation'), '/370.12_grid_win10_server2016_64bit_international.exe')]"
             }
         },
           

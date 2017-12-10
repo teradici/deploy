@@ -135,7 +135,7 @@
                 "description": "Storage account key for accessing private blob data"
             }
         },
-        "CAMBinariesSource": {
+        "binaryLocation": {
             "type": "string",
             "metadata": {
                 "description": "Location for CAN deployment binaries"
