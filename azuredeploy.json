@@ -146,6 +146,12 @@
         "description": "SAS token requried to access user's storage account"
       }
     },
+    "userStorageAccountKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "User's storage account key"
+      }
+    },
     "_artifactsLocation": {
       "type": "string",
       "metadata": {
@@ -331,6 +337,9 @@
           },
           "userStorageAccountSasToken": {
             "value": "[parameters('userStorageAccountSasToken')]"
+          },
+          "userStorageAccountKey": {
+            "value": "[parameters('userStorageAccountKey')]"
           },
           "CAMBinariesSource": {
             "value": "[parameters('CAMBinariesSource')]"
