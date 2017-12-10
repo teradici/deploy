@@ -134,6 +134,12 @@
                 "description": "Storage account key for accessing private blob data"
             }
         },
+        "CAMBinariesSource": {
+            "type": "string",
+            "metadata": {
+                "description": "Location for CAN deployment binaries"
+            }
+        },
         "AgentChannel": {
             "type": "string",
             "metadata": {
