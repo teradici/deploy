@@ -2359,7 +2359,8 @@ else {
 
     # Check if deploying Root only (ie, DC and vnet already exist)
     if( -not $deployOverDC ) {
-        $deployOverDC = (Read-Host "Do you want to create a new Domain Controller and VNet? Please hit enter to continue with deploying a new domain and vnet or 'no' to maually provide") -like "*n*"
+        Write-Host "Do you want to create a new domain controller and VNet?"
+        $deployOverDC = (Read-Host "Please hit enter to continue with deploying a new domain and VNet or 'no' to connect to an existing domain") -like "*n*"
     }
 
     $vnetConfig = @{}
@@ -2369,10 +2370,12 @@ else {
     $vnetConfig.RWsubnetName = $RemoteWorkstationSubnetName
     if( $deployOverDC ) {
         # Don't create new DC and vnets
-        # prompt for vnet name, gateway subnet name, remote workstatin subnet name, connection service subnet name
+        # prompt for vnet name, gateway subnet name, remote workstation subnet name, connection service subnet name
         do {
             if ( -not $vnetConfig.vnetID ) {
-                $vnetConfig.vnetID = Read-Host "Provide Connection Service VNet Reference ID (in the form /subscriptions/{subscriptionID}/resourceGroups/{vnetResourceGroupName}/providers/Microsoft.Network/virtualNetworks/{vnetName})"
+                Write-Host "Please provide the VNet reference ID for the VNet Cloud Access Manager connection service, gateways, and remote workstations will be using"
+                Write-Host "In the form /subscriptions/{subscriptionID}/resourceGroups/{vnetResourceGroupName}/providers/Microsoft.Network/virtualNetworks/{vnetName}"
+                $vnetConfig.vnetID = Read-Host "VNet Reference ID"
             }
             # vnetID is a reference ID that is like: 
             # "/subscriptions/{subscription}/resourceGroups/{vnetRG}/providers/Microsoft.Network/virtualNetworks/{vnetName}"
