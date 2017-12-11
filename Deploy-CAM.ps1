@@ -2014,9 +2014,11 @@ function Deploy-CAM() {
                 | Where-object {$_.Name -like "CAM-*"}
 
             New-ConnectionServiceDeployment `
+                -spCredential $spCredential `
                 -RGName $rgName `
                 -subscriptionId $subscriptionID `
                 -keyVault $CAMRootKeyvault `
+                -tenantId $tenantId `
                 -testDeployment $testDeployment `
                 -tempDir $tempDir
         }
