@@ -111,7 +111,7 @@
         "userStorageAccountName": {
             "type": "string",
             "metadata": {
-                "description": "Storage account for user blob and custom templates"
+                "description": "Name of user's storage account"
             },
             "defaultValue": ""
         },
@@ -132,7 +132,7 @@
         "userStorageAccountKey": {
             "type": "securestring",
             "metadata": {
-                "description": "Storage account key for accessing private blob data"
+                "description": "Key for accessing user's storage account"
             }
         },
         "binaryLocation": {
