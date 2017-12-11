@@ -885,89 +885,86 @@ brokerLocale=en_US
 
 				#second, get the certificate file
 
+				$ldapCertFileName = "ldapcert.cert"
+				$certStoreLocationOnDC = "c:\" + $ldapCertFileName
+
+				$issuerCertFileName = "issuercert.cert"
+				$issuerCertStoreLocationOnDC = "c:\" + $issuerCertFileName
+
 				$certSubject = "CN=$using:dcvmfqdn"
 
 				Write-Host "Looking for cert with $certSubject on $dcvmfqdn"
 
-				$loopCountRemaining = 60
-				$sleepTime = 10 #seconds
+				$foundCert = $false
+				$loopCountRemaining = 180
 				#loop until it's created
-				while($loopCountRemaining)
+				while(-not $foundCert)
 				{
-					$secondsRemaining = $loopCountRemaining * $sleepTime
-					Write-Host "Waiting for LDAP certificate. Seconds remaining: $secondsRemaining"
+					Write-Host "Waiting for LDAP certificate. Seconds remaining: $loopCountRemaining"
 
 					$DCSession = New-PSSession $using:dcvmfqdn -Credential $using:DomainAdminCreds
-					
-					$certs = Invoke-Command {Get-ChildItem -Path "Cert:\LocalMachine\My"} -Session $DCSession
-					Remove-PSSession $DCSession
 
-					if (-not $certs) {
-						Write-Host "No Certificates found."
-					}
+					$foundCert = `
+						Invoke-Command -Session $DCSession -ArgumentList $certSubject, $certStoreLocationOnDC, $issuerCertStoreLocationOnDC `
+						  -ScriptBlock {
+								$cs = $args[0]
+								$cloc = $args[1]
+								$icloc = $args[2]
 
-					$cert = $certs | Where-Object { $_.Subject -eq $certSubject }
-					if($cert) {
-						$foundCert = $cert
-						if ($cert.length -gt 1) {
-							Write-Host "Found more than 1 certificate"
-							$foundCert = $cert[0]
-							for($idx=0; $idx -lt $cert.length; $idx++) {
-								$sub = $cert[$idx].Subject
-								$issuer = $cert.Issuer
-								if($sub -ne $issuer) {
-									$foundCert = $cert[$idx]
-									Write-Host "Subject: $sub Issuer: $issuer - using"
-									break;
+								$cert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cs }
+								if(-not $cert)
+								{
+									Write-Host "Did not find LDAP certificate."
+									#maybe a certutil -pulse will help?
+									# NOTE - must redirect stdout to $null otherwise the success return here pollutes the return value of $foundCert
+									& "certutil" -pulse > $null
+									return $false
 								}
-								else {
-									Write-Host "Subject: $sub Issuer: $issuer - not using"
+								else
+								{
+									Export-Certificate -Cert $cert -filepath  $cloc -force
+									Write-Host "Exported LDAP certificate."
+
+									#Now export issuer Certificate
+									$issuerCert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cert.Issuer }
+									Export-Certificate -Cert $issuerCert -filepath	$icloc -force
+
+									return $true
 								}
 							}
-						}
 
-						$issuerCert = $certs | Where-Object { $_.Subject -eq $foundCert.Issuer }
-
-						if($issuerCert) {
-							$certFileName = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
-
-							$certFilePath = Join-Path $env:TEMP $certFileName
-
-							Export-Certificate -Cert $issuerCert -filepath $certFilePath -force | Out-Null
-							# Have the certificate file, add to keystore
-
-							# keytool seems to be causing an error but succeeding. Ignore and continue.
-							$eap = $ErrorActionPreference
-							$ErrorActionPreference = 'SilentlyContinue'
-							& "keytool" -import -file "$certFilePath" -keystore ($env:classpath + "\security\cacerts") -storepass changeit -noprompt
-							$ErrorActionPreference = $eap
-
-							if (Test-Path $certFilePath) {
-								Remove-Item $certFilePath  | Out-Null
-							}
-
-							Write-Host "Finished importing issuer's certificate of LDAP certificate to keystore."
-							break;
-						} else {
-							# Non Self-signed Well known CA's certificate case
-							Write-Host "No Issuer certificate of LDAP certificate found."
-						}
-					} else {
-						Write-Host "No certificate with subject [$certSubject] found."
-					}
-
-					# No certificate (or issuer certificate) yet.
-					# Wait and retry in case it's because the DC is still warming up/initializing.
-					Start-Sleep -Seconds $sleepTime
-					$loopCountRemaining = $loopCountRemaining - 1
-					if ($loopCountRemaining -eq 0)
+					if(-not $foundCert)
 					{
-						throw "No LDAP certificate!"
+						Start-Sleep -Seconds 10
+						$loopCountRemaining = $loopCountRemaining - 1
+						if ($loopCountRemaining -eq 0)
+						{
+							Remove-PSSession $DCSession
+							throw "No LDAP certificate!"
+						}
 					}
+					else
+					{
+						#found it! copy
+						Write-Host "Copying certs and exiting DC Session"
+						Copy-Item -Path $certStoreLocationOnDC -Destination "$env:systemdrive\$ldapCertFileName" -FromSession $DCSession
+						Copy-Item -Path $issuerCertStoreLocationOnDC -Destination "$env:systemdrive\$issuerCertFileName" -FromSession $DCSession
+					}
+					Remove-PSSession $DCSession
 				}
-		        Write-Host "Finished importing LDAP certificate to keystore."
-            }
+
+				# Have the certificate file, add to keystore
+
+				# keytool seems to be causing an error but succeeding. Ignore and continue.
+				$eap = $ErrorActionPreference
+				$ErrorActionPreference = 'SilentlyContinue'
+				& "keytool" -import -file "$env:systemdrive\$issuerCertFileName" -keystore ($env:classpath + "\security\cacerts") -storepass changeit -noprompt
+				$ErrorActionPreference = $eap
+
+				Write-Host "Finished importing LDAP certificate to keystore."
+			}
 		}
+
 
 		Script Set_CAM_Envionment_And_Reboot
 		{
