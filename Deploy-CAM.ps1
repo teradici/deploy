@@ -2238,11 +2238,13 @@ else {
             $domainAdminCredential = Get-Credential -Message "Please enter admin credential for new domain"
             $confirmedPassword = Read-Host -AsSecureString "Please re-enter the password"
 
-            if (-not ($domainAdminCredential.UserName -imatch '\w+')) {
-                Write-Host "Please enter a valid username."
+            if (-not ($domainAdminCredential.UserName -imatch '\w+') -Or ($domainAdminCredential.Username.Length -gt 104)) {
+                Write-Host "Please enter a valid username. It can contain letters and numbers and be shorter than 104 characters."
                 $domainAdminCredential = $null
                 continue
             }
+
+            Write-Host "USERNAME LENGTH: $($domainAdminCredential.Username.length)"
 
             # Need plaintext password to check if same
             $clearPassword = ConvertTo-Plaintext $confirmedPassword
@@ -2267,9 +2269,8 @@ else {
             $domainName = Read-Host "Please enter new fully qualified domain name including a '.' such as example.com"
         }
 
-        # follwing https://msdn.microsoft.com/en-us/library/ms853959.aspx all but  \ / : * ? " < > | constitute valid netbios name
+        # following https://msdn.microsoft.com/en-us/library/ms853959.aspx all but  \ / : * ? " < > | constitute valid netbios name
         if (-not $($domainName -imatch '\w+[.]\w+')) {
-            # too short- try again.
             Write-Host "The domain name must include two or more components separated by a '.'"
             $domainName = $null
         }
