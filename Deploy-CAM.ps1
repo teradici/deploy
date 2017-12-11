@@ -1733,25 +1733,31 @@ function Deploy-CAM() {
         New-Item $tempDir -type directory | Out-Null
     }
 
-    $spInfo = $null
-    if (-not $spCredential)	{
+    # if the current context tenantId does not match the desired tenantId then we can't make service principal's
+    $currentContext = Get-AzureRmContext
+    $currentContextTenant = $currentContext.Tenant.Id 
+    $tenantIDsMatch = ($currentContextTenant -eq $tenantId)
 
-        # if there's no service principal provided then we either need to make one or ask for one
-
-        # if the current context tenantId does not match the desired tenantId then we can't make service principal's
-        $currentContext = Get-AzureRmContext
-        $currentContextTenant = $currentContext.Tenant.Id 
-        $tenantIDsMatch = ($currentContextTenant -eq $tenantId)
-
-        if (-not $tenantIDsMatch) {
-            Write-Host "The Current Azure context is for a different tenant ($currentContextTenant) that"
-            Write-Host "does not match the tenant of the deploment ($tenantId)."
-            Write-Host "This can happen in Azure Cloud Powershell when an account has access to multiple tenants."
+    if (-not $tenantIDsMatch) {
+        Write-Host "The Current Azure context is for a different tenant ($currentContextTenant) that"
+        Write-Host "does not match the tenant of the deploment ($tenantId)."
+        Write-Host "This can happen in Azure Cloud Powershell when an account has access to multiple tenants."
+        if (-not $spCredential)	{
             Write-Host "Please make a service principal through the Azure Portal or other means and provide here."
-            Write-Host "Note - the service principal must already have Contributor rights to the subscription or target"
-            Write-Host "resource groups because role assignment is not possible in this case."
         }
         else {
+            Write-Host "Thank-you for providing service principal credentials."
+        }
+        Write-Host "Note - the service principal must already have Contributor rights to the subscription or target"
+        Write-Host "resource groups because role assignment is not possible in this case."
+    }
+
+    $spInfo = $null
+    if (-not $spCredential)	{
+        # if there's no service principal provided then we either need to make one or ask for one
+
+
+        if ($tenantIDsMatch) {
             Write-Host "The Cloud Access Manager deployment script was not passed service principal credentials. It will attempt to create a service principal."
             $requestSPGeneration = Read-Host `
                 "Please hit enter to continue or 'no' to manually enter service principal credentials from a pre-made service principal"
