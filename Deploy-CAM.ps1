@@ -323,12 +323,10 @@ function New-UserStorageAccount {
     return $acct
 }
 
-# is blobRWTemplateURI still needed - can pass in the userStorageAccountUri to agent ARM template
 function New-RemoteWorstationTemplates {
     param (
         $CAMConfig,
         $binaryLocation,
-        $blobRWTemplateUri,
         $kvId,
         $storageAccountContext,
         $storageAccountContainerName,
@@ -610,7 +608,6 @@ function Populate-UserBlob {
         New-RemoteWorstationTemplates `
             -CAMConfig $CAMConfig `
             -binaryLocation $binaryLocation `
-            -blobRWTemplateUri ($blobUri + 'remote-workstation') `
             -kvId $kvId `
             -storageAccountContext $ctx `
             -storageAccountContainerName $container_name `
