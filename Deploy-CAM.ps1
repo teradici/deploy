@@ -2244,8 +2244,6 @@ else {
                 continue
             }
 
-            Write-Host "USERNAME LENGTH: $($domainAdminCredential.Username.length)"
-
             # Need plaintext password to check if same
             $clearPassword = ConvertTo-Plaintext $confirmedPassword
             if (-not ($domainAdminCredential.GetNetworkCredential().Password -ceq $clearPassword)) {
