@@ -2238,8 +2238,8 @@ else {
             $domainAdminCredential = Get-Credential -Message "Please enter admin credential for new domain"
             $confirmedPassword = Read-Host -AsSecureString "Please re-enter the password"
 
-            if (-not ($domainAdminCredential.UserName -imatch '\w+') -Or ($domainAdminCredential.Username.Length -gt 104)) {
-                Write-Host "Please enter a valid username. It can contain letters and numbers and be shorter than 104 characters."
+            if (-not ($domainAdminCredential.UserName -imatch '\w+') -Or ($domainAdminCredential.Username.Length -gt 20)) {
+                Write-Host "Please enter a valid username. It can contain letters and numbers and cannot be longer than 20 characters."
                 $domainAdminCredential = $null
                 continue
             }
