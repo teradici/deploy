@@ -80,29 +80,10 @@
                 "description": "The password for the administrator account of the new VM and the domain"
             }
         },
-        "_artifactsLocation": {
-            "type": "string",
-            "metadata": {
-                "description": "The location of resources, such as templates and DSC modules, that the template depends on"
-            }
-        },
-        "_artifactsLocationSasToken": {
-            "type": "securestring",
-            "metadata": {
-                "description": "Auto-generated token to access _artifactsLocation"
-            },
-            "defaultValue": "?public"
-        },
         "binaryLocation": {
             "type": "string",
             "metadata": {
-                "description": "The location of the blobs for admin GUI machine installation"
-            }
-        },
-        "CAMDeploymentBlobSource": {
-            "type": "string",
-            "metadata": {
-                "description": "The location of the blobs for end-user-application-vms"
+                "description": "The location of the CAM binaries"
             }
         },
         "registrationCode": {
@@ -135,14 +116,26 @@
         "userStorageAccountName": {
             "type": "string",
             "metadata": {
-                "description": "Storage account for user blob and custom templates"
+                "description": "Name of user's storage account"
             },
             "defaultValue": ""
+        },
+        "userStorageAccountUri": {
+            "type": "string",
+            "metadata": {
+                "description": "The URI of the user's storage account"
+            }
+        },
+        "userStorageAccountSasToken": {
+            "type": "securestring",
+            "metadata": {
+                "description": "SAS token for accessing user's storage account"
+            }
         },
         "userStorageAccountKey": {
             "type": "securestring",
             "metadata": {
-                "description": "Storage account key for accessing private blob data"
+                "description": "Key for acccessing user's storage account"
             },
             "defaultValue": ""
         },
@@ -157,8 +150,7 @@
 
         "apiVersion": "2015-06-15",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
-        "sasToken": "[parameters('_artifactsLocationSasToken')]",
-
+        
         "osSettings": {
             "Windows Server 2016": {
               "publisher": "MicrosoftWindowsServer",
@@ -302,7 +294,7 @@
             "autoUpgradeMinorVersion": true,
             "settings": {
               "configuration": {
-                "url": "[concat(parameters('CAMDeploymentBlobSource'), '/Install-PCoIPAgent.ps1.zip')]",
+                "url": "[concat(parameters('userStorageAccountUri'), 'remote-workstation','/Install-PCoIPAgent.ps1.zip')]",
                 "script": "Install-PCoIPAgent.ps1",
                 "function": "InstallPCoIPAgent"
               },
@@ -318,7 +310,7 @@
               }
             },
             "protectedSettings": {
-              "configurationUrlSasToken": "[variables('sasToken')]",
+              "configurationUrlSasToken": "[parameters('userStorageAccountSasToken')]",
               "configurationArguments": {
                 "CAMDeploymentInfo": {
                     "userName": "dummyUser",
@@ -333,8 +325,8 @@
                     "Password": "[parameters('domainPassword')]"
                 },
                 "sasTokenAsCred": {
-                    "UserName": "[parameters('_artifactsLocation')]",
-                    "Password": "[variables('sasToken')]"
+                    "UserName": "[concat(parameters('userStorageAccountUri'), 'remote-workstation')]",
+                    "Password": "[parameters('userStorageAccountSasToken')]"
                 }
               }
             }
