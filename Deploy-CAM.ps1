@@ -56,7 +56,6 @@ function ConvertTo-Plaintext {
     )
     return (New-Object PSCredential "user", $secureString).GetNetworkCredential().Password
 }
-
 # from: https://stackoverflow.com/questions/22002748/hashtables-from-convertfrom-json-have-different-type-from-powershells-built-in-h
 function ConvertPSObjectToHashtable {
     param (
@@ -2274,6 +2273,12 @@ else {
             $domainAdminCredential = Get-Credential -Message "Please enter admin credential for new domain"
             $confirmedPassword = Read-Host -AsSecureString "Please re-enter the password"
 
+            if (-not ($domainAdminCredential.UserName -imatch '\w+') -Or ($domainAdminCredential.Username.Length -gt 20)) {
+                Write-Host "Please enter a valid username. It can contain letters and numbers and cannot be longer than 20 characters."
+                $domainAdminCredential = $null
+                continue
+            }
+
             # Need plaintext password to check if same
             $clearPassword = ConvertTo-Plaintext $confirmedPassword
             if (-not ($domainAdminCredential.GetNetworkCredential().Password -ceq $clearPassword)) {
@@ -2283,6 +2288,7 @@ else {
                 continue
             }
         }
+
 		
         if ($domainAdminCredential.GetNetworkCredential().Password.Length -lt 12) {
             # too short- try again.
@@ -2295,8 +2301,9 @@ else {
         if ( -not $domainName ) {
             $domainName = Read-Host "Please enter new fully qualified domain name including a '.' such as example.com"
         }
-        if ($domainName -notlike "*.*") {
-            # too short- try again.
+
+        # https://social.technet.microsoft.com/Forums/scriptcenter/en-US/db2d8388-f2c2-4f67-9f84-c17b060504e1/regex-for-computer-fqdn?forum=winserverpowershell
+        if (-not $($domainName -imatch '(?=^.{1,254}$)(^(?:(?!\d+\.|-)[a-zA-Z0-9_\-]{1,63}(?<!-)\.?)+(?:[a-zA-Z]{2,})$)')) {
             Write-Host "The domain name must include two or more components separated by a '.'"
             $domainName = $null
         }
