@@ -1221,20 +1221,19 @@ function New-ConnectionServiceDeployment() {
     try {
         Write-Host "Using service principal $client in tenant $tenantId and subscription $subscriptionId"
         
-        # Note this doesn't return the same type of context as for a standard account
-        # so we'll just keep logging in when needed rather than switching context.
-        Add-AzureRmAccount `
-            -Credential $spCreds `
-            -ServicePrincipal `
-            -TenantId $tenantId `
-            -ErrorAction Stop | Out-Null
-
         # Find a connection service resource group name that can be used.
         # An incrementing count is used to find a free resource group. This count is
         # identifier, even if old connection services have been deleted.
         $csRGName = $null
         while(-not $csRGName)
         {
+            # Note this doesn't return the same type of context as for a standard account
+            # so we'll just keep logging in when needed rather than switching context.
+            Add-AzureRmAccount `
+                -Credential $spCreds `
+                -ServicePrincipal `
+                -TenantId $tenantId `
+                -ErrorAction Stop | Out-Null
             $secret = Get-AzureKeyVaultSecret `
                 -VaultName $kvName `
                 -Name "connectionServiceNumber" `
@@ -1259,11 +1258,6 @@ function New-ConnectionServiceDeployment() {
             $csRGName = $RGName + "-CS" + $connectionServiceNumber
             Set-AzureRMContext -Context $adminAzureContext | Out-Null
             $rg = Get-AzureRmResourceGroup -ResourceGroupName $csRGName -ErrorAction SilentlyContinue
-            Add-AzureRmAccount `
-                -Credential $spCreds `
-                -ServicePrincipal `
-                -TenantId $tenantId `
-                -ErrorAction Stop | Out-Null
 
             if($rg)
             {
@@ -1277,7 +1271,7 @@ function New-ConnectionServiceDeployment() {
             }
         }
         
-        Write-Host "Using service principal $client in tenant $tenant and subscription $subscriptionId"
+		Set-AzureRMContext -Context $adminAzureContext | Out-Null
         # Create Connection Service Resource Group if it doesn't exist
         if (-not (Find-AzureRmResourceGroup | ?{$_.name -eq $csRGName}) ) {
             Write-Host "Creating resource group $csRGName"
@@ -1308,12 +1302,6 @@ function New-ConnectionServiceDeployment() {
         if(-not $hasAccess) {
             Write-Host "Giving $client Contributor access to $csRGName."
             Set-AzureRMContext -Context $adminAzureContext | Out-Null
-            $rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName -ErrorAction stop
-            $location = $rg.Location
-
-            Write-Host "Creating resource group $csRGName"
-            New-AzureRmResourceGroup -Name $csRGName -Location $location -ErrorAction stop | Out-Null
-            
             New-AzureRmRoleAssignment `
                 -RoleDefinitionName Contributor `
                 -ResourceGroupName $csRGName `
@@ -1322,6 +1310,7 @@ function New-ConnectionServiceDeployment() {
         }
     
         # SP has proper rights - do deployment with SP
+        Write-Host "Using service principal $client in tenant $tenant and subscription $subscriptionId"
         Add-AzureRmAccount `
             -Credential $spCreds `
             -ServicePrincipal `
@@ -2014,9 +2003,11 @@ function Deploy-CAM() {
                 | Where-object {$_.Name -like "CAM-*"}
 
             New-ConnectionServiceDeployment `
+                -spCredential $spCredential `
                 -RGName $rgName `
                 -subscriptionId $subscriptionID `
                 -keyVault $CAMRootKeyvault `
+                -tenantId $tenantId `
                 -testDeployment $testDeployment `
                 -tempDir $tempDir
         }
@@ -2440,7 +2431,7 @@ else {
             }
             # vnetID is a reference ID that is like: 
             # "/subscriptions/{subscription}/resourceGroups/{vnetRG}/providers/Microsoft.Network/virtualNetworks/{vnetName}"
-            $vnetName = $vnetConfig.vnetID.split("/")[8]
+            $vnetName = $vnetConfig.vnetID.split("/")[-1]
             $vnetRgName = $vnetConfig.vnetID.split("/")[4]
             if ( (-not $vnetRgName) -or (-not $vnetName) -or `
                 (-not (Find-AzureRmResource -ResourceGroupNameEquals $vnetRgName `
