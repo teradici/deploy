@@ -32,10 +32,10 @@
                 "description": "Encoded blob of authorization and URL information for the CAM Connection Service."
             }
         },
-        "CAMDeploymentBlobSource": {
+        "binaryLocation": {
             "type": "string",
             "metadata": {
-              "description": "The location of the blobs for admin GUI machine installation"
+              "description": "The location of the CAM binaries"
             }
         },
         "_artifactsLocation": {
@@ -72,14 +72,14 @@
                 "typeHandlerVersion": "2.9",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "modulesUrl": "[concat(parameters('CAMDeploymentBlobSource'),'/Install-ConnectionServer.ps1.zip')]",
+                    "modulesUrl": "[concat(parameters('binaryLocation'),'/Install-ConnectionServer.ps1.zip')]",
                     "privacy": {
                         "DataCollection": "Disable"
                     },
                     "configurationFunction": "Install-ConnectionServer.ps1\\InstallConnectionServer",
                     "Properties": {
                         "remoteWorkstationDomainGroup": "[parameters('remoteWorkstationDomainGroup')]",
-                        "sourceURI": "[parameters('CAMDeploymentBlobSource')]",
+                        "sourceURI": "[parameters('binaryLocation')]",
                         "DomainAdminCreds": {
                             "UserName": "[parameters('domainUsername')]",
                             "Password": "PrivateSettingsRef:DomainAdminPassword"

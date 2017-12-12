@@ -127,11 +127,35 @@
           "description": "Encoded blob of authorization and URL information for the CAM Connection Service."
       }
     },
-    "CAMDeploymentBlobSource": {
+    "binaryLocation": {
       "type": "string",
       "defaultValue": "https://teradeploy.blob.core.windows.net/binaries",
       "metadata": {
-        "description": "The location of the blobs for admin GUI machine installation"
+        "description": "The location of the CAM binaries"
+      }
+    },
+    "userStorageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "The name of the user's storage account"
+      }
+    },
+    "userStorageAccountUri": {
+      "type": "string",
+      "metadata": {
+        "description": "The URI of the user's storage account"
+      }
+    },
+    "userStorageAccountSasToken": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SAS token requried to access user's storage account"
+      }
+    },
+    "userStorageAccountKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "User's storage account key"
       }
     },
     "_artifactsLocation": {
@@ -188,8 +212,8 @@
           "gatewaySubnetName": {
               "value": "[parameters('gatewaySubnetName')]"
           },
-          "CAMDeploymentBlobSource": {
-            "value": "[parameters('CAMDeploymentBlobSource')]"
+          "binaryLocation": {
+            "value": "[parameters('binaryLocation')]"
           },
           "_artifactsLocation": {
             "value": "[concat(parameters('_artifactsLocation'), '/root')]"
@@ -248,8 +272,8 @@
           "CAMDeploymentInfo": {
             "value": "[parameters('CAMDeploymentInfo')]"
           },
-          "CAMDeploymentBlobSource": {
-            "value": "[parameters('CAMDeploymentBlobSource')]"
+          "binaryLocation": {
+            "value": "[parameters('binaryLocation')]"
           },
           "_baseArtifactsLocation": {
             "value": "[parameters('_artifactsLocation')]"
@@ -314,14 +338,20 @@
           "AgentChannel": {
             "value": "[parameters('AgentChannel')]"
           },
-          "_artifactsLocation": {
-            "value": "[concat(parameters('_artifactsLocation'), '/remote-workstations')]"
+          "userStorageAccountName": {
+            "value": "[parameters('userStorageAccountName')]"
           },
-          "CAMDeploymentBlobSource": {
-            "value": "[parameters('CAMDeploymentBlobSource')]"
+          "userStorageAccountUri": {
+            "value": "[parameters('userStorageAccountUri')]"
+          },
+          "userStorageAccountSasToken": {
+            "value": "[parameters('userStorageAccountSasToken')]"
+          },
+          "userStorageAccountKey": {
+            "value": "[parameters('userStorageAccountKey')]"
           },
           "binaryLocation": {
-            "value": "[parameters('CAMDeploymentBlobSource')]"
+            "value": "[parameters('binaryLocation')]"
           }
         }
       }

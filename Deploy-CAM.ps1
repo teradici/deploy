@@ -40,8 +40,8 @@ param(
 	$AgentChannel = "stable",
 
     $camSaasUri = "https://cam-antar.teradici.com",
-	$CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/master/azuredeploy.json",
-	$CAMDeploymentBlobSource = "https://teradeploy.blob.core.windows.net/binaries",
+    $CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/master/azuredeploy.json",
+    $binaryLocation = "https://teradeploy.blob.core.windows.net/binaries",
     $outputParametersFileName = "cam-output.parameters.json",
     $location
 )
@@ -56,7 +56,6 @@ function ConvertTo-Plaintext {
     )
     return (New-Object PSCredential "user", $secureString).GetNetworkCredential().Password
 }
-
 # from: https://stackoverflow.com/questions/22002748/hashtables-from-convertfrom-json-have-different-type-from-powershells-built-in-h
 function ConvertPSObjectToHashtable {
     param (
@@ -323,12 +322,10 @@ function New-UserStorageAccount {
     return $acct
 }
 
-
 function New-RemoteWorstationTemplates {
     param (
         $CAMConfig,
         $binaryLocation,
-        $blobUri,
         $kvId,
         $storageAccountContext,
         $storageAccountContainerName,
@@ -362,7 +359,6 @@ function New-RemoteWorstationTemplates {
 		"agentType": { "value": "%agentType%" },
 		"vmSize": { "value": "%vmSize%" },
 		"AgentChannel": { "value": "$agentChannel"},
-		"CAMDeploymentBlobSource": { "value": "$blobUri" },
 		"binaryLocation": { "value": "$binaryLocation" },
 		"subnetID": { "value": "$($CAMConfig.parameters.remoteWorkstationSubnet.clearValue)" },
 		"domainUsername": { "value": "$DomainAdminUsername" },
@@ -372,6 +368,22 @@ function New-RemoteWorstationTemplates {
 				"id": "$kvId"
 				},
 				"secretName": "userStorageName"
+			}
+        },
+        "userStorageAccountUri": {
+			"reference": {
+				"keyVault": {
+				"id": "$kvId"
+				},
+				"secretName": "userStorageAccountUri"
+			}
+        },
+        "userStorageAccountSasToken": {
+			"reference": {
+				"keyVault": {
+					"id": "$kvId"
+				},
+				"secretName": "userStorageAccountSasToken"
 			}
 		},
 		"userStorageAccountKey": {
@@ -424,16 +436,7 @@ function New-RemoteWorstationTemplates {
 			}
 		},
 		"domainToJoin": { "value": "$domainFQDN" },
-		"storageAccountName": { "value": "$VHDStorageAccountName" },
-		"_artifactsLocation": { "value": "$blobUri" },
-		"_artifactsLocationSasToken": {
-			"reference": {
-				"keyVault": {
-					"id": "$kvId"
-				},
-				"secretName": "userStorageAccountSaasToken"
-			}
-		}
+		"storageAccountName": { "value": "$VHDStorageAccountName" }
 	}
 }
 
@@ -502,7 +505,7 @@ function Populate-UserBlob {
         $CAMConfig,
         $artifactsLocation,
         $userDataStorageAccount,
-        $CAMDeploymentBlobSource,
+        $binaryLocation,
         $sumoAgentApplicationVM,
         $sumoConf,
         $idleShutdownLinux,
@@ -523,7 +526,7 @@ function Populate-UserBlob {
     $new_agent_vm_files = @(
         @("$artifactsLocation/remote-workstations/new-agent-vm/Install-PCoIPAgent.ps1", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/Install-PCoIPAgent.sh", "remote-workstation"),
-        @("$CAMDeploymentBlobSource/Install-PCoIPAgent.ps1.zip", "remote-workstation"),
+        @("$binaryLocation/Install-PCoIPAgent.ps1.zip", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/sumo-agent-vm.json", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/sumo-agent-vm-linux.json", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/sumo.conf", "remote-workstation"),
@@ -597,7 +600,7 @@ function Populate-UserBlob {
         $CAMConfig.parameters.userStorageAccountKey.value = (ConvertTo-SecureString $acctKey -AsPlainText -Force)
 
         $saSasToken = New-AzureStorageAccountSASToken -Service Blob -Resource Object -Context $ctx -ExpiryTime ((Get-Date).AddYears(2)) -Permission "racwdlup" 
-        $CAMConfig.parameters.userStorageAccountSaasToken.value = (ConvertTo-SecureString $saSasToken -AsPlainText -Force)
+        $CAMConfig.parameters.userStorageAccountSasToken.value = (ConvertTo-SecureString $saSasToken -AsPlainText -Force)
 
         # Generate and upload the parameters files
 
@@ -605,8 +608,7 @@ function Populate-UserBlob {
         # blobUri is the new per-deployment blob storage location of the binaries (so a sub-directory in the container)
         New-RemoteWorstationTemplates `
             -CAMConfig $CAMConfig `
-            -binaryLocation $CAMDeploymentBlobSource `
-            -blobUri ($blobUri + 'remote-workstation') `
+            -binaryLocation $binaryLocation `
             -kvId $kvId `
             -storageAccountContext $ctx `
             -storageAccountContainerName $container_name `
@@ -1056,7 +1058,7 @@ function New-CAMDeploymentInfo() {
     $camDeploymenRegInfo.Add("CAM_USER_BLOB_URI", "userStorageAccountUri")
     $camDeploymenRegInfo.Add("CAM_USER_STORAGE_ACCOUNT_NAME", "userStorageName")
     $camDeploymenRegInfo.Add("CAM_USER_STORAGE_ACCOUNT_KEY", "userStorageAccountKey")
-    $camDeploymenRegInfo.Add("CAM_USER_BLOB_TOKEN", "userStorageAccountSaasToken")
+    $camDeploymenRegInfo.Add("CAM_USER_BLOB_TOKEN", "userStorageAccountSasToken")
 
 
     $authFileContent = @"
@@ -1293,12 +1295,12 @@ function New-ConnectionServiceDeployment() {
                 "secretName": "gatewaySubnet"
             }
         },
-        "CAMDeploymentBlobSource": {
+        "binaryLocation": {
             "reference": {
                 "keyVault": {
                     "id": "$kvID"
                 },
-                "secretName": "CAMDeploymentBlobSource"
+                "secretName": "binaryLocation"
             }
         },
         "certData": {
@@ -1440,7 +1442,7 @@ function New-CAMDeploymentRoot()
     $tenant = $spInfo.tenantId
     $registrationCode = $CAMConfig.parameters.cloudAccessRegistrationCode.value
     $artifactsLocation = $CAMConfig.parameters.artifactsLocation.clearValue
-    $CAMDeploymentBlobSource = $CAMConfig.parameters.CAMDeploymentBlobSource.clearValue
+    $binaryLocation = $CAMConfig.parameters.binaryLocation.clearValue
     
     $kvInfo = New-CAM-KeyVault `
         -RGName $RGName `
@@ -1462,7 +1464,7 @@ function New-CAMDeploymentRoot()
         -CAMConfig $CAMConfig `
         -artifactsLocation $artifactsLocation `
         -userDataStorageAccount	$userDataStorageAccount `
-        -CAMDeploymentBlobSource $CAMDeploymentBlobSource `
+        -binaryLocation $binaryLocation `
         -RGName $RGName `
         -kvInfo $kvInfo `
         -tempDir $tempDir | Out-Null
@@ -1519,7 +1521,7 @@ function Deploy-CAM() {
         $camSaasUri,
 
         [parameter(Mandatory = $true)] 
-        $CAMDeploymentBlobSource,
+        $binaryLocation,
 
         [parameter(Mandatory = $true)] 
         $outputParametersFileName,
@@ -1582,9 +1584,9 @@ function Deploy-CAM() {
         value      = (ConvertTo-SecureString $domainName -AsPlainText -Force)
         clearValue = $domainName
     }
-    $CAMConfig.parameters.CAMDeploymentBlobSource = @{
-        value      = (ConvertTo-SecureString $CAMDeploymentBlobSource -AsPlainText -Force)
-        clearValue = $CAMDeploymentBlobSource
+    $CAMConfig.parameters.binaryLocation = @{
+        value      = (ConvertTo-SecureString $binaryLocation -AsPlainText -Force)
+        clearValue = $binaryLocation
     }
     $CAMConfig.parameters.artifactsLocation = @{
         value      = (ConvertTo-SecureString $artifactsLocation -AsPlainText -Force)
@@ -1615,7 +1617,7 @@ function Deploy-CAM() {
     }
 
     # Set in Populate-UserBlob
-    $CAMConfig.parameters.userStorageAccountSaasToken = @{}
+    $CAMConfig.parameters.userStorageAccountSasToken = @{}
     $CAMConfig.parameters.userStorageAccountUri = @{}
     $CAMConfig.parameters.userStorageName = @{}
     $CAMConfig.parameters.userStorageAccountKey = @{}
@@ -1894,12 +1896,12 @@ function Deploy-CAM() {
         "gatewaySubnetName": {
             "value": "$($CAMConfig.internal.GWSubnetName)"
         },
-		"CAMDeploymentBlobSource": {
+		"binaryLocation": {
 			"reference": {
 				"keyVault": {
 					"id": "$kvId"
 				},
-				"secretName": "CAMDeploymentBlobSource"
+				"secretName": "binaryLocation"
 			}
 		},
 		"_artifactsLocation": {
@@ -1909,8 +1911,40 @@ function Deploy-CAM() {
 				},
 				"secretName": "artifactsLocation"
 			}
+        },
+        "userStorageAccountName": {
+			"reference": {
+				"keyVault": {
+				"id": "$kvId"
+				},
+				"secretName": "userStorageName"
+			}
+        },
+        "userStorageAccountUri": {
+			"reference": {
+				"keyVault": {
+					"id": "$kvId"
+				},
+				"secretName": "userStorageAccountUri"
+			}
+        },
+        "userStorageAccountSasToken": {
+			"reference": {
+				"keyVault": {
+					"id": "$kvId"
+				},
+				"secretName": "userStorageAccountSasToken"
+			}
+        },
+        "userStorageAccountKey": {
+			"reference": {
+				"keyVault": {
+				"id": "$kvId"
+				},
+				"secretName": "userStorageAccountKey"
+			}
 		},
-		"LocalAdminUsername": {
+        "LocalAdminUsername": {
 			"reference": {
 				"keyVault": {
 					"id": "$kvId"
@@ -1981,7 +2015,7 @@ function Deploy-CAM() {
 				},
 				"secretName": "cloudAccessRegistrationCode"
 			}
-		}
+        }
 	}
 }
 "@
@@ -2241,6 +2275,12 @@ else {
             $domainAdminCredential = Get-Credential -Message "Please enter admin credential for new domain"
             $confirmedPassword = Read-Host -AsSecureString "Please re-enter the password"
 
+            if (-not ($domainAdminCredential.UserName -imatch '\w+') -Or ($domainAdminCredential.Username.Length -gt 20)) {
+                Write-Host "Please enter a valid username. It can contain letters and numbers and cannot be longer than 20 characters."
+                $domainAdminCredential = $null
+                continue
+            }
+
             # Need plaintext password to check if same
             $clearPassword = ConvertTo-Plaintext $confirmedPassword
             if (-not ($domainAdminCredential.GetNetworkCredential().Password -ceq $clearPassword)) {
@@ -2250,6 +2290,7 @@ else {
                 continue
             }
         }
+
 		
         if ($domainAdminCredential.GetNetworkCredential().Password.Length -lt 12) {
             # too short- try again.
@@ -2262,8 +2303,9 @@ else {
         if ( -not $domainName ) {
             $domainName = Read-Host "Please enter new fully qualified domain name including a '.' such as example.com"
         }
-        if ($domainName -notlike "*.*") {
-            # too short- try again.
+
+        # https://social.technet.microsoft.com/Forums/scriptcenter/en-US/db2d8388-f2c2-4f67-9f84-c17b060504e1/regex-for-computer-fqdn?forum=winserverpowershell
+        if (-not $($domainName -imatch '(?=^.{1,254}$)(^(?:(?!\d+\.|-)[a-zA-Z0-9_\-]{1,63}(?<!-)\.?)+(?:[a-zA-Z]{2,})$)')) {
             Write-Host "The domain name must include two or more components separated by a '.'"
             $domainName = $null
         }
@@ -2290,7 +2332,7 @@ else {
         -camSaasUri $camSaasUri.Trim().TrimEnd('/') `
         -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
         -CAMDeploymentTemplateURI $CAMDeploymentTemplateURI `
-        -CAMDeploymentBlobSource $CAMDeploymentBlobSource.Trim().TrimEnd('/') `
+        -binaryLocation $binaryLocation.Trim().TrimEnd('/') `
         -outputParametersFileName $outputParametersFileName `
         -subscriptionId $selectedSubcriptionId `
         -RGName $rgMatch.ResourceGroupName `

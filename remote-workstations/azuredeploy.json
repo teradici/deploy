@@ -66,29 +66,35 @@
                 "description": "Encoded blob of authorization and URL information for the CAM deployment"
             }
         },
-        "_artifactsLocation": {
+        "userStorageAccountName": {
+          "type": "string",
+          "metadata": {
+              "description": "The name of the user's storage account"
+          }
+        },
+        "userStorageAccountUri": {
             "type": "string",
             "metadata": {
-                "description": "The location of resources, such as templates and DSC modules, that the template depends on"
+                "description": "The URI of the user's storage account"
             }
         },
-        "_artifactsLocationSasToken": {
+        "userStorageAccountSasToken": {
             "type": "securestring",
             "metadata": {
-                "description": "Auto-generated token to access _artifactsLocation"
+                "description": "SAS token to access user's storage account"
             },
-            "defaultValue": ""
+            "defaultValue": "?public"
         },
-        "CAMDeploymentBlobSource": {
-            "type": "string",
-            "metadata": {
-                "description": "Location of binary store primarily targeted towards remote-workstations."
-            }
-        },
+        "userStorageAccountKey": {
+          "type": "securestring",
+          "metadata": {
+              "description": "Key to access user's storage account"
+          }
+      },
         "binaryLocation": {
             "type": "string",
             "metadata": {
-                "description": "The location of the Teradici's binary store"
+                "description": "Location of the CAM binaries."
             }
         },
         "registrationCode": {
@@ -111,7 +117,7 @@
         "windowsOSVersion": "2016-Datacenter",
         "apiVersion": "2015-06-15",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
-        "pcoipAgentInstallerUrl": "[concat(parameters('CAMDeploymentBlobSource'),'/PCoIP_agent_release_installer_2.10.0.7600_standard.exe')]",
+        "pcoipAgentInstallerUrl": "[concat(parameters('binaryLocation'),'/PCoIP_agent_release_installer_2.10.0.7600_standard.exe')]",
         "videoDriverUrl": "",
         "registrationCode": "[parameters('registrationCode')]",
         "enableAutoShutdown" : false,
@@ -141,7 +147,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), '/new-agent-vm/server2016-standard-agent.json', parameters('_artifactsLocationSasToken'))]",
+          "uri": "[concat(parameters('userStorageAccountUri'), 'remote-workstation-template/server2016-standard-agent.json', parameters('userStorageAccountSasToken'))]",
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
@@ -181,12 +187,6 @@
           "CAMDeploymentInfo": {
             "value": "[parameters('CAMDeploymentInfo')]"
           },
-          "_artifactsLocation": {
-            "value": "[concat(parameters('_artifactsLocation'), '/new-agent-vm')]"
-          },
-          "CAMDeploymentBlobSource": {
-            "value": "[parameters('CAMDeploymentBlobSource')]"
-          },
           "binaryLocation": {
             "value": "[parameters('binaryLocation')]"
           },
@@ -198,7 +198,20 @@
           },
           "AgentChannel": {
             "value": "[parameters('AgentChannel')]"
+          },
+          "userStorageAccountName": {
+            "value": "[parameters('userStorageAccountName')]"
+          },
+          "userStorageAccountUri": {
+            "value": "[parameters('userStorageAccountUri')]"
+          },
+          "userStorageAccountSasToken": {
+            "value": "[parameters('userStorageAccountSasToken')]"
+          },
+          "userStorageAccountKey": {
+            "value": "[parameters('userStorageAccountKey')]"
           }
+
         }
       }
     }

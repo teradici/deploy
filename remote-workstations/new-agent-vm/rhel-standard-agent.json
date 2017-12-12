@@ -81,31 +81,6 @@
                 "description": "The password for the administrator account of the new VM and the domain"
             }
         },
-        "_artifactsLocation": {
-            "type": "string",
-            "metadata": {
-                "description": "The location of resources, such as templates and DSC modules, that the template depends on"
-            }
-        },
-        "_artifactsLocationSasToken": {
-            "type": "securestring",
-            "metadata": {
-                "description": "Auto-generated token to access _artifactsLocation"
-            },
-            "defaultValue": "?public"
-        },
-        "binaryLocation": {
-            "type": "string",
-            "metadata": {
-                "description": "The location of the blobs for admin GUI machine installation"
-            }
-        },
-        "CAMDeploymentBlobSource": {
-            "type": "string",
-            "metadata": {
-                "description": "The location of the blobs for end-user-application-vms"
-            }
-        },
         "registrationCode": {
           "type": "securestring",
           "minLength": 21,
@@ -136,14 +111,34 @@
         "userStorageAccountName": {
             "type": "string",
             "metadata": {
-                "description": "Storage account for user blob and custom templates"
+                "description": "Name of user's storage account"
             },
             "defaultValue": ""
+        },
+        "userStorageAccountUri": {
+            "type": "string",
+            "metadata": {
+                "description": "The URI of the user's storage account"
+            },
+            "defaultValue": ""
+        },
+        "userStorageAccountSasToken": {
+            "type": "securestring",
+            "metadata": {
+                "description": "SAS token for accesing user's storage account"
+            },
+            "defaultValue": "?public"
         },
         "userStorageAccountKey": {
             "type": "securestring",
             "metadata": {
-                "description": "Storage account key for accessing private blob data"
+                "description": "Key for accessing user's storage account"
+            }
+        },
+        "binaryLocation": {
+            "type": "string",
+            "metadata": {
+                "description": "Location for CAN deployment binaries"
             }
         },
         "AgentChannel": {
@@ -269,7 +264,7 @@
                 "typeHandlerVersion": "2.0",
                 "autoUpgradeMinorVersion": true,
                 "settings": {
-                    "fileUris": [ "[ concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'))]" ]
+                    "fileUris": [ "[ concat(parameters('userStorageAccountUri'), 'remote-workstation','/', variables('scriptFileName'))]" ]
                 },
                 "protectedSettings": {
                     "commandToExecute": "[concat('bash ', variables('scriptFileName'), ' \"', parameters('registrationCode'), '\" \"', parameters('agentType'), '\" \"', variables('vmSettings').vmNamePrefix, '\" \"', parameters('domainToJoin'), '\" \"', parameters('domainUsername'), '\" \"', parameters('domainPassword'), '\" \"', parameters('domainGroupToJoin'), '\" \"', parameters('AgentChannel'), '\" \"', parameters('_artifactsLocation'), '\" \"', variables('sumoCollectorID'), '\" \"', parameters('_artifactsLocationSasToken'), '\"')]",
