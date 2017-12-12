@@ -57,7 +57,7 @@ param(
 
     [parameter(Mandatory=$false)]
     [String]
-    $RemoteWorkstationSubnetName,    
+    $RemoteWorkstationSubnetName,
 
     $camSaasUri = "https://cam-antar.teradici.com",
 	$CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/master/azuredeploy.json",
@@ -2476,7 +2476,7 @@ else {
                 Write-Host ("{0} not found in root resource group VNet {1}" -f ($vnetConfig.GWsubnetName,$vnet.Name))
                 $vnetConfig.GWsubnetName = $null
             }
-        } while (-not $vnetConfig.GWsubnetName)        
+        } while (-not $vnetConfig.GWsubnetName)
         
         # Remote Workstation Subnet
         do {
