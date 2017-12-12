@@ -2267,8 +2267,8 @@ else {
             $domainName = Read-Host "Please enter new fully qualified domain name including a '.' such as example.com"
         }
 
-        # following https://msdn.microsoft.com/en-us/library/ms853959.aspx all but  \ / : * ? " < > | constitute valid netbios name
-        if (-not $($domainName -imatch '\w+[.]\w+')) {
+        # https://social.technet.microsoft.com/Forums/scriptcenter/en-US/db2d8388-f2c2-4f67-9f84-c17b060504e1/regex-for-computer-fqdn?forum=winserverpowershell
+        if (-not $($domainName -imatch '(?=^.{1,254}$)(^(?:(?!\d+\.|-)[a-zA-Z0-9_\-]{1,63}(?<!-)\.?)+(?:[a-zA-Z]{2,})$)')) {
             Write-Host "The domain name must include two or more components separated by a '.'"
             $domainName = $null
         }
