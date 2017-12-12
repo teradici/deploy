@@ -76,10 +76,10 @@
           "description": "The domain group the remote workstations should join"
       }
     },
-    "CAMDeploymentBlobSource": {
+    "binaryLocation": {
       "type": "string",
       "metadata": {
-        "description": "The location of the blobs for admin GUI machine installation"
+        "description": "The location of CAM binaries"
       }
     },
     "_baseArtifactsLocation": {
@@ -215,8 +215,8 @@
           "domainPassword": {
             "value": "[parameters('domainAdminPassword')]"
           },
-          "CAMDeploymentBlobSource": {
-            "value": "[parameters('CAMDeploymentBlobSource')]"
+          "binaryLocation": {
+            "value": "[parameters('binaryLocation')]"
           },
           "_artifactsLocation": {
             "value": "[concat(variables('_artifactsLocation'), '/new-admin-vm')]"
