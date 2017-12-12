@@ -68,6 +68,12 @@ PASSWORD="$6"
 GROUP="$7"
 # the eighth argument is the agent installer channel
 AGENT_CHANNEL="$8"
+# the nigth argument is the artifact location
+ARTIFACT_LOCATION="$9"
+# the tenth argument is the sumo collector ID
+COLLECTOR_ID="${10}"
+# the eleventh argument is the SaaS Storage account token
+SAAS_TOKEN="${11}"
 
 # Make sure Linux OS is up to date
 echo "--> Updating Linux OS to latest"
@@ -307,6 +313,31 @@ do
         sleep 5
     fi
 done
+
+# Install and setup the Sumo Collector
+echo "-->Install SumoLogic collector"
+mkdir /tmp/sumo
+wget "https://collectors.sumologic.com/rest/download/linux/64" -O /tmp/sumo/SumoCollector.sh && sudo chmod +x /tmp/sumo/SumoCollector.sh
+wget "$ARTIFACT_LOCATION/user.properties$SAAS_TOKEN" -O /tmp/sumo/user.properties
+wget "$ARTIFACT_LOCATION/sumo-agent-vm-linux.json$SAAS_TOKEN" -O /tmp/sumo/sumo-agent-vm-linux.json
+JSON_FILE=/tmp/sumo/sumo-agent-vm-linux.json
+echo "Attemtping to set sumo collector ID to: " "$COLLECTOR_ID"
+sed -i s/collectorID/"$COLLECTOR_ID"/ /tmp/sumo/user.properties
+sed -i 's|syncsourceFile|'$JSON_FILE'|' /tmp/sumo/user.properties
+
+sudo /tmp/sumo/SumoCollector.sh -q -varfile user.properties
+
+# service collector install - configures the collector to start at boot time
+service collector install
+service collector restart
+service collector status
+
+# Install idle shutdown script
+echo "-->Install idle shutdown"
+mkdir /tmp/idleShutdown
+wget "$ARTIFACT_LOCATION/Install-Idle-Shutdown.sh$SAAS_TOKEN" -O /tmp/idleShutdown/Install-Idle-Shutdown-raw.sh 
+awk '{ sub("\r$", ""); print }' /tmp/idleShutdown/Install-Idle-Shutdown-raw.sh > /tmp/idleShutdown/Install-Idle-Shutdown.sh && sudo chmod +x /tmp/idleShutdown/Install-Idle-Shutdown.sh
+sudo /tmp/idleShutdown/Install-Idle-Shutdown.sh -install
 
 # Install Desktop
 echo "-->Install desktop"

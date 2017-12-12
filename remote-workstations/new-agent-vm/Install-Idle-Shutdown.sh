@@ -288,3 +288,4 @@ function main() {
 }
 
 main $@
+exit 0
