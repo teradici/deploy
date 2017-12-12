@@ -1201,7 +1201,7 @@ function New-ConnectionServiceDeployment() {
     # we may have gotten the secret if success (above) in which case we do not need to prompt.
     if($client)
     {
-        #get the password
+        # get the password (key)
         $secret = Get-AzureKeyVaultSecret `
             -VaultName $kvName `
             -Name "AzureSPKey" `
@@ -1212,7 +1212,11 @@ function New-ConnectionServiceDeployment() {
         # before prompting, check if anything was passeed in command line
         if (-not $spCredential)
         {
-            $spCredential = Get-Credential -Message "Please enter service principal credential for this Cloud Access Manager deployment"
+            Write-Host "Unable to read service principal information from key vault and none was provided on command-line."
+            Write-Host "Please enter the credentials for the service principal for this Cloud Access Manager deployment."
+            Write-Host "The username is the AzureSPClientID secret in $kvName key vault."
+            Write-Host "The password is the AzureSPKey secret in $kvName key vault."
+            $spCredential = Get-Credential -Message "Please enter service principal credential."
         }
     
         $client = $spCredential.UserName
@@ -1278,6 +1282,11 @@ function New-ConnectionServiceDeployment() {
         # Create Connection Service Resource Group if it doesn't exist
         if (-not (Find-AzureRmResourceGroup | ?{$_.name -eq $csRGName}) ) {
             Write-Host "Creating resource group $csRGName"
+
+			# Grab the root location and use that
+	        $rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName -ErrorAction stop
+	        $location = $rg.Location
+
             New-AzureRmResourceGroup -Name $csRGName -Location $location -ErrorAction stop | Out-Null
         }
 
@@ -2414,6 +2423,13 @@ if ($CAMRootKeyvault) {
 }
 else {
     # New deployment - either complete or a root + Remote Workstation deployment
+
+    # Check if deploying Root only (ie, DC and vnet already exist)
+    if( -not $deployOverDC ) {
+        Write-Host "Do you want to create a new domain controller and VNet?"
+        $deployOverDC = (Read-Host "Please hit enter to continue with deploying a new domain and VNet or 'no' to connect to an existing domain") -like "*n*"
+    }
+
     # Now let's create the other required resource groups
 
     $csRGName = $rgMatch.ResourceGroupName + "-CS1"
@@ -2443,12 +2459,6 @@ else {
 
 
     # allow interactive input of a bunch of parameters. spCredential is handled in the SP functions elsewhere in this file
-
-    # Check if deploying Root only (ie, DC and vnet already exist)
-    if( -not $deployOverDC ) {
-        Write-Host "Do you want to create a new domain controller and VNet?"
-        $deployOverDC = (Read-Host "Please hit enter to continue with deploying a new domain and VNet or 'no' to connect to an existing domain") -like "*n*"
-    }
 
     $vnetConfig = @{}
     $vnetConfig.vnetID = $vnetID
