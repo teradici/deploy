@@ -1475,7 +1475,9 @@ function New-ConnectionServiceDeployment() {
         Write-Host "`nDeploying Cloud Access Manager Connection Service. This process can take up to 60 minutes."
         Write-Host "Please feel free to watch here for early errors for a few minutes and then go do something else. Or go for coffee!"
         Write-Host "If this script is running in Azure Cloud Shell then you may let the shell timeout and the deployment will continue."
-        Write-Host "Please watch the resource group $csRGName in the Azure Portal for current status."
+        Write-Host "Please watch the resource group $csRGName in the Azure Portal for current status. The Connection Service deployment is"
+        Write-Host "complete when all deployments are showing as 'Succeeded'. Error information is also available through the deployments"
+        Write-Host "area of the resource group pane."
 
         if ($testDeployment) {
             # just do a test if $true
@@ -2203,10 +2205,12 @@ function Deploy-CAM() {
             $outputParametersFilePath = Join-Path $tempDir $outputParametersFileName
             Set-Content $outputParametersFilePath  $generatedDeploymentParameters
 
-            Write-Host "`nDeploying Cloud Access Manager Connection Service. This process can take up to 90 minutes."
+            Write-Host "`nDeploying Cloud Access Manager. This process can take up to 90 minutes."
             Write-Host "Please feel free to watch here for early errors for a few minutes and then go do something else. Or go for coffee!"
             Write-Host "If this script is running in Azure Cloud Shell then you may let the shell timeout and the deployment will continue."
-            Write-Host "Please watch the resource group $RGName in the Azure Portal for current status."
+            Write-Host "Please watch the resource group $RGName in the Azure Portal for current status. Cloud Access Manager deployment is"
+            Write-Host "complete when all deployments are showing as 'Succeeded'. Error information is also available through the deployments"
+            Write-Host "area of the resource group pane."
 
             if ($testDeployment) {
                 # just do a test if $true
@@ -2541,7 +2545,14 @@ else {
 
     do {
         if ( -not $domainAdminCredential ) {
-            $domainAdminCredential = Get-Credential -Message "Please enter admin credential for new domain"
+            if( -not $deployOverDC ) {
+                $domainAdminMessage = "Please enter the new domain administrator username for the new domain being created"
+            }
+            else {
+                $domainAdminMessage = "Please enter the username of the service account for Cloud Access Manager to use with the connected domain"
+            }
+
+            $domainAdminCredential = Get-Credential -Message $domainAdminMessage
             $confirmedPassword = Read-Host -AsSecureString "Please re-enter the password"
 
             if (-not ($domainAdminCredential.UserName -imatch '\w+') -Or ($domainAdminCredential.Username.Length -gt 20)) {
