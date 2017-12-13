@@ -78,7 +78,6 @@ function ConvertTo-Plaintext {
     )
     return (New-Object PSCredential "user", $secureString).GetNetworkCredential().Password
 }
-
 # from: https://stackoverflow.com/questions/22002748/hashtables-from-convertfrom-json-have-different-type-from-powershells-built-in-h
 function ConvertPSObjectToHashtable {
     param (
@@ -715,17 +714,16 @@ function New-CAM-KeyVault() {
     $spContext = Get-AzureRMContext
     Set-AzureRMContext -Context $adminAzureContext | Out-Null
 	
-    Write-Host "Set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
     try {
         Set-AzureRmKeyVaultAccessPolicy `
             -VaultName $kvName `
             -UserPrincipalName $adminAzureContext.Account.Id `
             -PermissionsToSecrets Get, Set `
             -ErrorAction stop | Out-Null
-    }
+        Write-Host "Successfully set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
+        }
     catch {
-        Write-Host "Failed to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)."
-        Write-Host "Please set key vault access policies in the Azure Portal or through Azure API's when needed."
+        # Silently swallow exception
     }
 
     # Set context back to service principal
@@ -1203,7 +1201,7 @@ function New-ConnectionServiceDeployment() {
     # we may have gotten the secret if success (above) in which case we do not need to prompt.
     if($client)
     {
-        #get the password
+        # get the password (key)
         $secret = Get-AzureKeyVaultSecret `
             -VaultName $kvName `
             -Name "AzureSPKey" `
@@ -1214,7 +1212,11 @@ function New-ConnectionServiceDeployment() {
         # before prompting, check if anything was passeed in command line
         if (-not $spCredential)
         {
-            $spCredential = Get-Credential -Message "Please enter service principal credential for this Cloud Access Manager deployment"
+            Write-Host "Unable to read service principal information from key vault and none was provided on command-line."
+            Write-Host "Please enter the credentials for the service principal for this Cloud Access Manager deployment."
+            Write-Host "The username is the AzureSPClientID secret in $kvName key vault."
+            Write-Host "The password is the AzureSPKey secret in $kvName key vault."
+            $spCredential = Get-Credential -Message "Please enter service principal credential."
         }
     
         $client = $spCredential.UserName
@@ -1280,6 +1282,11 @@ function New-ConnectionServiceDeployment() {
         # Create Connection Service Resource Group if it doesn't exist
         if (-not (Find-AzureRmResourceGroup | ?{$_.name -eq $csRGName}) ) {
             Write-Host "Creating resource group $csRGName"
+
+			# Grab the root location and use that
+	        $rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName -ErrorAction stop
+	        $location = $rg.Location
+
             New-AzureRmResourceGroup -Name $csRGName -Location $location -ErrorAction stop | Out-Null
         }
 
@@ -1470,7 +1477,9 @@ function New-ConnectionServiceDeployment() {
         Write-Host "`nDeploying Cloud Access Manager Connection Service. This process can take up to 60 minutes."
         Write-Host "Please feel free to watch here for early errors for a few minutes and then go do something else. Or go for coffee!"
         Write-Host "If this script is running in Azure Cloud Shell then you may let the shell timeout and the deployment will continue."
-        Write-Host "Please watch the resource group $csRGName in the Azure Portal for current status."
+        Write-Host "Please watch the resource group $csRGName in the Azure Portal for current status. The Connection Service deployment is"
+        Write-Host "complete when all deployments are showing as 'Succeeded'. Error information is also available through the deployments"
+        Write-Host "area of the resource group pane."
 
         if ($testDeployment) {
             # just do a test if $true
@@ -2206,10 +2215,12 @@ function Deploy-CAM() {
             $outputParametersFilePath = Join-Path $tempDir $outputParametersFileName
             Set-Content $outputParametersFilePath  $generatedDeploymentParameters
 
-            Write-Host "`nDeploying Cloud Access Manager Connection Service. This process can take up to 90 minutes."
+            Write-Host "`nDeploying Cloud Access Manager. This process can take up to 90 minutes."
             Write-Host "Please feel free to watch here for early errors for a few minutes and then go do something else. Or go for coffee!"
             Write-Host "If this script is running in Azure Cloud Shell then you may let the shell timeout and the deployment will continue."
-            Write-Host "Please watch the resource group $RGName in the Azure Portal for current status."
+            Write-Host "Please watch the resource group $RGName in the Azure Portal for current status. Cloud Access Manager deployment is"
+            Write-Host "complete when all deployments are showing as 'Succeeded'. Error information is also available through the deployments"
+            Write-Host "area of the resource group pane."
 
             if ($testDeployment) {
                 # just do a test if $true
@@ -2426,6 +2437,13 @@ if ($CAMRootKeyvault) {
 }
 else {
     # New deployment - either complete or a root + Remote Workstation deployment
+
+    # Check if deploying Root only (ie, DC and vnet already exist)
+    if( -not $deployOverDC ) {
+        Write-Host "Do you want to create a new domain controller and VNet?"
+        $deployOverDC = (Read-Host "Please hit enter to continue with deploying a new domain and VNet or 'no' to connect to an existing domain") -like "*n*"
+    }
+
     # Now let's create the other required resource groups
 
     $csRGName = $rgMatch.ResourceGroupName + "-CS1"
@@ -2547,8 +2565,21 @@ else {
 
     do {
         if ( -not $domainAdminCredential ) {
-            $domainAdminCredential = Get-Credential -Message "Please enter admin credential for new domain"
+            if( -not $deployOverDC ) {
+                $domainAdminMessage = "Please enter the new domain administrator username for the new domain being created"
+            }
+            else {
+                $domainAdminMessage = "Please enter the username of the service account for Cloud Access Manager to use with the connected domain"
+            }
+
+            $domainAdminCredential = Get-Credential -Message $domainAdminMessage
             $confirmedPassword = Read-Host -AsSecureString "Please re-enter the password"
+
+            if (-not ($domainAdminCredential.UserName -imatch '\w+') -Or ($domainAdminCredential.Username.Length -gt 20)) {
+                Write-Host "Please enter a valid username. It can contain letters and numbers and cannot be longer than 20 characters."
+                $domainAdminCredential = $null
+                continue
+            }
 
             # Need plaintext password to check if same
             $clearPassword = ConvertTo-Plaintext $confirmedPassword
@@ -2559,6 +2590,7 @@ else {
                 continue
             }
         }
+
 		
         if ($domainAdminCredential.GetNetworkCredential().Password.Length -lt 12) {
             # too short- try again.
@@ -2571,8 +2603,9 @@ else {
         if ( -not $domainName ) {
             $domainName = Read-Host "Please enter new fully qualified domain name including a '.' such as example.com"
         }
-        if ($domainName -notlike "*.*") {
-            # too short- try again.
+
+        # https://social.technet.microsoft.com/Forums/scriptcenter/en-US/db2d8388-f2c2-4f67-9f84-c17b060504e1/regex-for-computer-fqdn?forum=winserverpowershell
+        if (-not $($domainName -imatch '(?=^.{1,254}$)(^(?:(?!\d+\.|-)[a-zA-Z0-9_\-]{1,63}(?<!-)\.?)+(?:[a-zA-Z]{2,})$)')) {
             Write-Host "The domain name must include two or more components separated by a '.'"
             $domainName = $null
         }
