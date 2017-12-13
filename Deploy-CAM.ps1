@@ -59,6 +59,8 @@ param(
     [String]
     $RemoteWorkstationSubnetName,
 
+    [switch]$ignorePrompts,
+
     $camSaasUri = "https://cam-antar.teradici.com",
 	$CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/master/azuredeploy.json",
     $binaryLocation = "https://teradeploy.blob.core.windows.net/binaries",
@@ -1805,9 +1807,13 @@ function Deploy-CAM() {
 
 
         if ($tenantIDsMatch) {
-            Write-Host "The Cloud Access Manager deployment script was not passed service principal credentials. It will attempt to create a service principal."
-            $requestSPGeneration = Read-Host `
-                "Please hit enter to continue or 'no' to manually enter service principal credentials from a pre-made service principal"
+            if( -not $ignorePrompts ) {
+                Write-Host "The Cloud Access Manager deployment script was not passed service principal credentials. It will attempt to create a service principal."
+                $requestSPGeneration = Read-Host `
+                    "Please hit enter to continue or 'no' to manually enter service principal credentials from a pre-made service principal"
+            } else {
+                $requestSPGeneration="no"
+            }
         }
 
         if ((-not $tenantIDsMatch) -or ($requestSPGeneration -like "*n*")) {
@@ -1906,7 +1912,11 @@ function Deploy-CAM() {
                     }
 
                     if(-not $hasAccess) {
-                        $prompt = Read-Host "The Service Principal credentials need to be given Contributor access to the vNet $($CAMConfig.internal.vnetName). Press enter to accept and continue or 'no' to cancel deployment"
+                        if( -not $ignorePrompts ) {
+                            $prompt = Read-Host "The Service Principal credentials need to be given Contributor access to the vNet $($CAMConfig.internal.vnetName). Press enter to accept and continue or 'no' to cancel deployment"
+                        } else {
+                            $prompt = $false
+                        }
                         if ( -not $prompt )
                         {
                             Write-Host "Giving $client Contributor access to $($CAMConfig.internal.vnetName)"
@@ -2392,12 +2402,14 @@ if ($CAMRootKeyvault) {
     Write-Host "The resource group $($rgMatch.ResourceGroupName) has a CAM deployment already."
     Write-Host "Using key vault $($CAMRootKeyvault.Name)"
 
-    $requestNewCS = Read-Host `
+    if( -not $ignorePrompts ) {
+        $requestNewCS = Read-Host `
         "Please hit enter to create a new connection service for this Cloud Access Manager deployment or 'no' to cancel"
 
-    if ($requestNewCS -like "*n*") {
-        Write-Host "Not deploying a new connection service. Exiting."
-        exit
+        if ($requestNewCS -like "*n*") {
+            Write-Host "Not deploying a new connection service. Exiting."
+            exit
+        }
     }
 
     Write-Host "Deploying a new CAM Connection Service with updated CAMDeploymentInfo"
@@ -2445,9 +2457,11 @@ else {
     # allow interactive input of a bunch of parameters. spCredential is handled in the SP functions elsewhere in this file
 
     # Check if deploying Root only (ie, DC and vnet already exist)
-    if( -not $deployOverDC ) {
-        Write-Host "Do you want to create a new domain controller and VNet?"
-        $deployOverDC = (Read-Host "Please hit enter to continue with deploying a new domain and VNet or 'no' to connect to an existing domain") -like "*n*"
+    if( -not $ignorePrompts) {
+        if( -not $deployOverDC ) {
+            Write-Host "Do you want to create a new domain controller and VNet?"
+            $deployOverDC = (Read-Host "Please hit enter to continue with deploying a new domain and VNet or 'no' to connect to an existing domain") -like "*n*"
+        }
     }
 
     $vnetConfig = @{}
