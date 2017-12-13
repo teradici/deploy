@@ -2439,10 +2439,13 @@ else {
     # New deployment - either complete or a root + Remote Workstation deployment
 
     # Check if deploying Root only (ie, DC and vnet already exist)
-    if( -not $deployOverDC ) {
-        Write-Host "Do you want to create a new domain controller and VNet?"
-        $deployOverDC = (Read-Host "Please hit enter to continue with deploying a new domain and VNet or 'no' to connect to an existing domain") -like "*n*"
+    if( -not $ignorePrompts) {
+        if( -not $deployOverDC ) {
+            Write-Host "Do you want to create a new domain controller and VNet?"
+            $deployOverDC = (Read-Host "Please hit enter to continue with deploying a new domain and VNet or 'no' to connect to an existing domain") -like "*n*"
+        }
     }
+
 
     # Now let's create the other required resource groups
 
@@ -2474,13 +2477,6 @@ else {
 
     # allow interactive input of a bunch of parameters. spCredential is handled in the SP functions elsewhere in this file
 
-    # Check if deploying Root only (ie, DC and vnet already exist)
-    if( -not $ignorePrompts) {
-        if( -not $deployOverDC ) {
-            Write-Host "Do you want to create a new domain controller and VNet?"
-            $deployOverDC = (Read-Host "Please hit enter to continue with deploying a new domain and VNet or 'no' to connect to an existing domain") -like "*n*"
-        }
-    }
 
     $vnetConfig = @{}
     $vnetConfig.vnetID = $vnetID
