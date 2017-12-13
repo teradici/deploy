@@ -267,7 +267,7 @@
                     "fileUris": [ "[ concat(parameters('userStorageAccountUri'), 'remote-workstation','/', variables('scriptFileName'))]" ]
                 },
                 "protectedSettings": {
-                    "commandToExecute": "[concat('bash ', variables('scriptFileName'), ' \"', parameters('registrationCode'), '\" \"', parameters('agentType'), '\" \"', variables('vmSettings').vmNamePrefix, '\" \"', parameters('domainToJoin'), '\" \"', parameters('domainUsername'), '\" \"', parameters('domainPassword'), '\" \"', parameters('domainGroupToJoin'), '\" \"', parameters('AgentChannel'), '\" \"', parameters('_artifactsLocation'), '\" \"', variables('sumoCollectorID'), '\" \"', parameters('_artifactsLocationSasToken'), '\"')]",
+                    "commandToExecute": "[concat('bash ', variables('scriptFileName'), ' \"', parameters('registrationCode'), '\" \"', parameters('agentType'), '\" \"', variables('vmSettings').vmNamePrefix, '\" \"', parameters('domainToJoin'), '\" \"', parameters('domainUsername'), '\" \"', parameters('domainPassword'), '\" \"', parameters('domainGroupToJoin'), '\" \"', parameters('AgentChannel'), '\" \"', parameters('userStorageAccountUri'), '\" \"', variables('sumoCollectorID'), '\" \"', parameters('userStorageAccountSasToken'), '\"')]",
                     "storageAccountName": "[parameters('userStorageAccountName')]",
                     "storageAccountKey": "[parameters('userStorageAccountKey')]"
                 }
