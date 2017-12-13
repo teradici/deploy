@@ -713,17 +713,16 @@ function New-CAM-KeyVault() {
     $spContext = Get-AzureRMContext
     Set-AzureRMContext -Context $adminAzureContext | Out-Null
 	
-    Write-Host "Set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
     try {
         Set-AzureRmKeyVaultAccessPolicy `
             -VaultName $kvName `
             -UserPrincipalName $adminAzureContext.Account.Id `
             -PermissionsToSecrets Get, Set `
             -ErrorAction stop | Out-Null
-    }
+        Write-Host "Successfully set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
+        }
     catch {
-        Write-Host "Failed to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)."
-        Write-Host "Please set key vault access policies in the Azure Portal or through Azure API's when needed."
+        # Silently swallow exception
     }
 
     # Set context back to service principal
