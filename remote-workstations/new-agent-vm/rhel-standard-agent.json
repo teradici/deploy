@@ -173,7 +173,8 @@
         },
 
         "scriptFileName": "Install-PCoIPAgent.sh",
-        "idleShutdownScriptFileName": "Install-Idle-Shutdown.sh"
+        "idleShutdownScriptFileName": "Install-Idle-Shutdown.sh",
+        "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId,'-',parameters('dnsLabelPrefix'))]"
     },
     "resources": [
         {
@@ -266,30 +267,7 @@
                     "fileUris": [ "[ concat(parameters('userStorageAccountUri'), 'remote-workstation','/', variables('scriptFileName'))]" ]
                 },
                 "protectedSettings": {
-                    "commandToExecute": "[concat('bash ', variables('scriptFileName'), ' \"', parameters('registrationCode'), '\" \"', parameters('agentType'), '\" \"', variables('vmSettings').vmNamePrefix, '\" \"', parameters('domainToJoin'), '\" \"', parameters('domainUsername'), '\" \"', parameters('domainPassword'), '\" \"', parameters('domainGroupToJoin'), '\" \"', parameters('AgentChannel'), '\"')]",
-                    "storageAccountName": "[parameters('userStorageAccountName')]",
-                    "storageAccountKey": "[parameters('userStorageAccountKey')]"
-                }
-            }
-        },
-        {
-            "type": "Microsoft.Compute/virtualMachines/extensions",
-            "name": "[concat(parameters('dnsLabelPrefix'),'/CAMIdleShutdownShellScript')]",
-            "apiVersion": "2015-06-15",
-            "location": "[resourceGroup().location]",
-            "dependsOn": [
-                "[resourceId('Microsoft.Compute/virtualMachines/extensions', parameters('dnsLabelPrefix'), 'PCoIPAgentShellScript')]"
-            ],
-            "properties": {
-                "publisher": "Microsoft.OSTCExtensions",
-                "type": "CustomScriptForLinux",
-                "typeHandlerVersion": "1.4",
-                "autoUpgradeMinorVersion": true,
-                "settings": {
-                    "fileUris": [ "[concat(parameters('userStorageAccountUri'), 'remote-workstation','/', variables('idleShutdownScriptFileName'))]" ]
-                },
-                "protectedSettings": {
-                    "commandToExecute": "[concat('sudo bash ', variables('idleShutdownScriptFileName'), ' -install')]",
+                    "commandToExecute": "[concat('bash ', variables('scriptFileName'), ' \"', parameters('registrationCode'), '\" \"', parameters('agentType'), '\" \"', variables('vmSettings').vmNamePrefix, '\" \"', parameters('domainToJoin'), '\" \"', parameters('domainUsername'), '\" \"', parameters('domainPassword'), '\" \"', parameters('domainGroupToJoin'), '\" \"', parameters('AgentChannel'), '\" \"', parameters('userStorageAccountUri'),'remote-workstation', '\" \"', variables('sumoCollectorID'), '\" \"', parameters('userStorageAccountSasToken'), '\"')]",
                     "storageAccountName": "[parameters('userStorageAccountName')]",
                     "storageAccountKey": "[parameters('userStorageAccountKey')]"
                 }
