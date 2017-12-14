@@ -1168,60 +1168,67 @@ function New-ConnectionServiceDeployment() {
     
     $client = $null
     $key = $null
-    try{
-        $secret = Get-AzureKeyVaultSecret `
-            -VaultName $kvName `
-            -Name "AzureSPClientID" `
-            -ErrorAction stop
-        $client = $secret.SecretValueText
-    }
-    catch {
-        $err = $_
-        if ($err.Exception.Message -eq "Access denied") {
-            Write-Host "Cannot access key vault secret. Attempting to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
-            try {
-                Set-AzureRmKeyVaultAccessPolicy `
-                    -VaultName $kvName `
-                    -UserPrincipalName $adminAzureContext.Account.Id `
-                    -PermissionsToSecrets Get, Set `
-                    -ErrorAction stop | Out-Null
-    
-                $secret = Get-AzureKeyVaultSecret `
-                    -VaultName $kvName `
-                    -Name "AzureSPClientID" `
-                    -ErrorAction stop
-                $client = $secret.SecretValueText
-            }
-            catch {
-                Write-Host "Failed to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)."
+
+    if (-not $spCredential)
+    {
+        try{
+            $secret = Get-AzureKeyVaultSecret `
+                -VaultName $kvName `
+                -Name "AzureSPClientID" `
+                -ErrorAction stop
+            $client = $secret.SecretValueText
+        }
+        catch {
+            $err = $_
+            if ($err.Exception.Message -eq "Access denied") {
+                Write-Host "Cannot access key vault secret. Attempting to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
+                try {
+                    Set-AzureRmKeyVaultAccessPolicy `
+                        -VaultName $kvName `
+                        -UserPrincipalName $adminAzureContext.Account.Id `
+                        -PermissionsToSecrets Get, Set `
+                        -ErrorAction stop | Out-Null
+        
+                    $secret = Get-AzureKeyVaultSecret `
+                        -VaultName $kvName `
+                        -Name "AzureSPClientID" `
+                        -ErrorAction stop
+                    $client = $secret.SecretValueText
+                }
+                catch {
+                    Write-Host "Failed to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)."
+                }
             }
         }
-    }
-    
-    # we may have gotten the secret if success (above) in which case we do not need to prompt.
-    if($client)
-    {
-        # get the password (key)
-        $secret = Get-AzureKeyVaultSecret `
-            -VaultName $kvName `
-            -Name "AzureSPKey" `
-            -ErrorAction stop
-        $key = $secret.SecretValueText
+        
+        # we may have gotten the secret if success (above) in which case we do not need to prompt.
+        if($client)
+        {
+            # get the password (key)
+            $secret = Get-AzureKeyVaultSecret `
+                -VaultName $kvName `
+                -Name "AzureSPKey" `
+                -ErrorAction stop
+            $key = $secret.SecretValueText
+        }
     }
     else {
-        # before prompting, check if anything was passeed in command line
-        if (-not $spCredential)
-        {
-            Write-Host "Unable to read service principal information from key vault and none was provided on command-line."
-            Write-Host "Please enter the credentials for the service principal for this Cloud Access Manager deployment."
-            Write-Host "The username is the AzureSPClientID secret in $kvName key vault."
-            Write-Host "The password is the AzureSPKey secret in $kvName key vault."
-            $spCredential = Get-Credential -Message "Please enter service principal credential."
-        }
-    
+        # function was passed SPcredential
         $client = $spCredential.UserName
         $key = $spCredential.GetNetworkCredential().Password
     }
+
+    if (-not $client) {
+        Write-Host "Unable to read service principal information from key vault and none was provided on command-line."
+        Write-Host "Please enter the credentials for the service principal for this Cloud Access Manager deployment."
+        Write-Host "The username is the AzureSPClientID secret in $kvName key vault."
+        Write-Host "The password is the AzureSPKey secret in $kvName key vault."
+        $spCredential = Get-Credential -Message "Please enter service principal credential."
+
+        $client = $spCredential.UserName
+        $key = $spCredential.GetNetworkCredential().Password
+    }
+
     $spCreds = New-Object PSCredential $client, (ConvertTo-SecureString $key -AsPlainText -Force)
 
     # put everything in a try block so that if any errors occur we revert to $azureAdminContext
@@ -2025,7 +2032,7 @@ function Deploy-CAM() {
                 | Where-object {$_.Name -like "CAM-*"}
 
             New-ConnectionServiceDeployment `
-                -spCredential $spCredential `
+                -spCredential $spInfo.spCreds `
                 -RGName $rgName `
                 -subscriptionId $subscriptionID `
                 -keyVault $CAMRootKeyvault `
@@ -2597,7 +2604,14 @@ else {
 
     do {
         if ( -not $domainName ) {
-            $domainName = Read-Host "Please enter new fully qualified domain name including a '.' such as example.com"
+            if( -not $deployOverDC ) {
+                $domainNameMessage = "Please enter new fully qualified domain name of the domain which will be created, including a '.' such as example.com"
+            }
+            else {
+                $domainNameMessage = "Please enter the fully qualified domain name of the domain to connect to. The name must include a '.' such as example.com"
+            }
+            Write-Host $domainNameMessage
+            $domainName = Read-Host "Domain name"
         }
 
         # https://social.technet.microsoft.com/Forums/scriptcenter/en-US/db2d8388-f2c2-4f67-9f84-c17b060504e1/regex-for-computer-fqdn?forum=winserverpowershell
