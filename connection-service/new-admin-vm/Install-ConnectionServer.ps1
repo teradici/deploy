@@ -926,7 +926,7 @@ brokerLocale=en_US
                         $content | Out-File -FilePath "$env:systemdrive\$issuerCertFileName" -Encoding ascii
                         $foundCert=$true
                     } catch {
-                        throw "Failed to retrieve issuer certificate from $hostname`:$port because $_"
+                        Write-Host "Failed to retrieve issuer certificate from $hostname`:$port because $_"
                     } finally {
                         #cleanup
                         if ($sslStream) {
