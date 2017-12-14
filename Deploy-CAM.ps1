@@ -63,7 +63,7 @@ param(
 
     $camSaasUri = "https://cam-antar.teradici.com",
 	$CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/master/azuredeploy.json",
-    $binaryLocation = "https://teradeploy.blob.core.windows.net/binaries",
+    $binaryLocation = "https://teradeploy.blob.core.windows.net/bdstable",
     $outputParametersFileName = "cam-output.parameters.json",
     $location
 )
@@ -1168,60 +1168,67 @@ function New-ConnectionServiceDeployment() {
     
     $client = $null
     $key = $null
-    try{
-        $secret = Get-AzureKeyVaultSecret `
-            -VaultName $kvName `
-            -Name "AzureSPClientID" `
-            -ErrorAction stop
-        $client = $secret.SecretValueText
-    }
-    catch {
-        $err = $_
-        if ($err.Exception.Message -eq "Access denied") {
-            Write-Host "Cannot access key vault secret. Attempting to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
-            try {
-                Set-AzureRmKeyVaultAccessPolicy `
-                    -VaultName $kvName `
-                    -UserPrincipalName $adminAzureContext.Account.Id `
-                    -PermissionsToSecrets Get, Set `
-                    -ErrorAction stop | Out-Null
-    
-                $secret = Get-AzureKeyVaultSecret `
-                    -VaultName $kvName `
-                    -Name "AzureSPClientID" `
-                    -ErrorAction stop
-                $client = $secret.SecretValueText
-            }
-            catch {
-                Write-Host "Failed to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)."
+
+    if (-not $spCredential)
+    {
+        try{
+            $secret = Get-AzureKeyVaultSecret `
+                -VaultName $kvName `
+                -Name "AzureSPClientID" `
+                -ErrorAction stop
+            $client = $secret.SecretValueText
+        }
+        catch {
+            $err = $_
+            if ($err.Exception.Message -eq "Access denied") {
+                Write-Host "Cannot access key vault secret. Attempting to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
+                try {
+                    Set-AzureRmKeyVaultAccessPolicy `
+                        -VaultName $kvName `
+                        -UserPrincipalName $adminAzureContext.Account.Id `
+                        -PermissionsToSecrets Get, Set `
+                        -ErrorAction stop | Out-Null
+        
+                    $secret = Get-AzureKeyVaultSecret `
+                        -VaultName $kvName `
+                        -Name "AzureSPClientID" `
+                        -ErrorAction stop
+                    $client = $secret.SecretValueText
+                }
+                catch {
+                    Write-Host "Failed to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)."
+                }
             }
         }
-    }
-    
-    # we may have gotten the secret if success (above) in which case we do not need to prompt.
-    if($client)
-    {
-        # get the password (key)
-        $secret = Get-AzureKeyVaultSecret `
-            -VaultName $kvName `
-            -Name "AzureSPKey" `
-            -ErrorAction stop
-        $key = $secret.SecretValueText
+        
+        # we may have gotten the secret if success (above) in which case we do not need to prompt.
+        if($client)
+        {
+            # get the password (key)
+            $secret = Get-AzureKeyVaultSecret `
+                -VaultName $kvName `
+                -Name "AzureSPKey" `
+                -ErrorAction stop
+            $key = $secret.SecretValueText
+        }
     }
     else {
-        # before prompting, check if anything was passeed in command line
-        if (-not $spCredential)
-        {
-            Write-Host "Unable to read service principal information from key vault and none was provided on command-line."
-            Write-Host "Please enter the credentials for the service principal for this Cloud Access Manager deployment."
-            Write-Host "The username is the AzureSPClientID secret in $kvName key vault."
-            Write-Host "The password is the AzureSPKey secret in $kvName key vault."
-            $spCredential = Get-Credential -Message "Please enter service principal credential."
-        }
-    
+        # function was passed SPcredential
         $client = $spCredential.UserName
         $key = $spCredential.GetNetworkCredential().Password
     }
+
+    if (-not $client) {
+        Write-Host "Unable to read service principal information from key vault and none was provided on command-line."
+        Write-Host "Please enter the credentials for the service principal for this Cloud Access Manager deployment."
+        Write-Host "The username is the AzureSPClientID secret in $kvName key vault."
+        Write-Host "The password is the AzureSPKey secret in $kvName key vault."
+        $spCredential = Get-Credential -Message "Please enter service principal credential."
+
+        $client = $spCredential.UserName
+        $key = $spCredential.GetNetworkCredential().Password
+    }
+
     $spCreds = New-Object PSCredential $client, (ConvertTo-SecureString $key -AsPlainText -Force)
 
     # put everything in a try block so that if any errors occur we revert to $azureAdminContext
@@ -2025,7 +2032,7 @@ function Deploy-CAM() {
                 | Where-object {$_.Name -like "CAM-*"}
 
             New-ConnectionServiceDeployment `
-                -spCredential $spCredential `
+                -spCredential $spInfo.spCreds `
                 -RGName $rgName `
                 -subscriptionId $subscriptionID `
                 -keyVault $CAMRootKeyvault `
@@ -2439,10 +2446,13 @@ else {
     # New deployment - either complete or a root + Remote Workstation deployment
 
     # Check if deploying Root only (ie, DC and vnet already exist)
-    if( -not $deployOverDC ) {
-        Write-Host "Do you want to create a new domain controller and VNet?"
-        $deployOverDC = (Read-Host "Please hit enter to continue with deploying a new domain and VNet or 'no' to connect to an existing domain") -like "*n*"
+    if( -not $ignorePrompts) {
+        if( -not $deployOverDC ) {
+            Write-Host "Do you want to create a new domain controller and VNet?"
+            $deployOverDC = (Read-Host "Please hit enter to continue with deploying a new domain and VNet or 'no' to connect to an existing domain") -like "*n*"
+        }
     }
+
 
     # Now let's create the other required resource groups
 
@@ -2474,13 +2484,6 @@ else {
 
     # allow interactive input of a bunch of parameters. spCredential is handled in the SP functions elsewhere in this file
 
-    # Check if deploying Root only (ie, DC and vnet already exist)
-    if( -not $ignorePrompts) {
-        if( -not $deployOverDC ) {
-            Write-Host "Do you want to create a new domain controller and VNet?"
-            $deployOverDC = (Read-Host "Please hit enter to continue with deploying a new domain and VNet or 'no' to connect to an existing domain") -like "*n*"
-        }
-    }
 
     $vnetConfig = @{}
     $vnetConfig.vnetID = $vnetID
@@ -2492,9 +2495,9 @@ else {
         # prompt for vnet name, gateway subnet name, remote workstation subnet name, connection service subnet name
         do {
             if ( -not $vnetConfig.vnetID ) {
-                Write-Host "Please provide the VNet reference ID for the VNet Cloud Access Manager connection service, gateways, and remote workstations will be using"
+                Write-Host "Please provide the VNet resource ID for the VNet Cloud Access Manager connection service, gateways, and remote workstations will be using"
                 Write-Host "In the form /subscriptions/{subscriptionID}/resourceGroups/{vnetResourceGroupName}/providers/Microsoft.Network/virtualNetworks/{vnetName}"
-                $vnetConfig.vnetID = Read-Host "VNet Reference ID"
+                $vnetConfig.vnetID = Read-Host "VNet resource ID"
             }
             # vnetID is a reference ID that is like: 
             # "/subscriptions/{subscription}/resourceGroups/{vnetRG}/providers/Microsoft.Network/virtualNetworks/{vnetName}"
@@ -2601,7 +2604,14 @@ else {
 
     do {
         if ( -not $domainName ) {
-            $domainName = Read-Host "Please enter new fully qualified domain name including a '.' such as example.com"
+            if( -not $deployOverDC ) {
+                $domainNameMessage = "Please enter new fully qualified domain name of the domain which will be created, including a '.' such as example.com"
+            }
+            else {
+                $domainNameMessage = "Please enter the fully qualified domain name of the domain to connect to. The name must include a '.' such as example.com"
+            }
+            Write-Host $domainNameMessage
+            $domainName = Read-Host "Domain name"
         }
 
         # https://social.technet.microsoft.com/Forums/scriptcenter/en-US/db2d8388-f2c2-4f67-9f84-c17b060504e1/regex-for-computer-fqdn?forum=winserverpowershell
