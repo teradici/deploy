@@ -2488,9 +2488,9 @@ else {
         # prompt for vnet name, gateway subnet name, remote workstation subnet name, connection service subnet name
         do {
             if ( -not $vnetConfig.vnetID ) {
-                Write-Host "Please provide the VNet reference ID for the VNet Cloud Access Manager connection service, gateways, and remote workstations will be using"
+                Write-Host "Please provide the VNet resource ID for the VNet Cloud Access Manager connection service, gateways, and remote workstations will be using"
                 Write-Host "In the form /subscriptions/{subscriptionID}/resourceGroups/{vnetResourceGroupName}/providers/Microsoft.Network/virtualNetworks/{vnetName}"
-                $vnetConfig.vnetID = Read-Host "VNet Reference ID"
+                $vnetConfig.vnetID = Read-Host "VNet resource ID"
             }
             # vnetID is a reference ID that is like: 
             # "/subscriptions/{subscription}/resourceGroups/{vnetRG}/providers/Microsoft.Network/virtualNetworks/{vnetName}"
