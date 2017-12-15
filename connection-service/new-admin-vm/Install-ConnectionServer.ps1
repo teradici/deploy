@@ -885,6 +885,7 @@ brokerLocale=en_US
 
                 #second, get the certificate file
                 $issuerCertFileName = "issuercert.cert"
+				$dcvmfqdn = $using:dcvmfqdn
                 Write-Host "Looking for Issuer certificate for $dcvmfqdn"
 
                 $foundCert = $false
@@ -893,7 +894,7 @@ brokerLocale=en_US
 
                 # LDAPS Port and Host
                 $port=636
-                $hostname=$using:dcvmfqdn
+                $hostname=$dcvmfqdn
                 #loop until it's created
                 while(-not $foundCert)
                 {
@@ -927,6 +928,12 @@ brokerLocale=en_US
                         $foundCert=$true
                     } catch {
                         Write-Host "Failed to retrieve issuer certificate from $hostname`:$port because $_"
+
+						# Run 'pulse' on the DC as that can resolve the situation.
+						$DCSession = New-PSSession $dcvmfqdn -Credential $using:DomainAdminCreds
+
+						Invoke-Command {& "certutil" -pulse > $null} -Session $DCSession | Out-Null
+						Remove-PSSession $DCSession | Out-Null
                     } finally {
                         #cleanup
                         if ($sslStream) {
