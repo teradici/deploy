@@ -2340,9 +2340,9 @@ $resouceGroups = Get-AzureRmResourceGroup
 # - Check if user group exists. If it does deploy there.
 # - If it doesn't, create it in which case location parameter must be provided 
 if ($ResourceGroupName) {
-    Write-Host "RGNAME PROVIDED: $ResourceGroupName"
+    Write-Host "Provided resource group name: $ResourceGroupName"
     if (-not (Get-AzureRMResourceGroup -name $ResourceGroupName -ErrorAction SilentlyContinue)) {
-        Write-Host "Resource group $ResourceGroupName does not exist! Creating in location: $location"
+        Write-Host "Resource group $ResourceGroupName does not exist. Creating in location: $location"
         New-AzureRmResourceGroup -Name $ResourceGroupName -Location $location
     } 
     $rgMatch = Get-AzureRmResourceGroup -Name $ResourceGroupName
