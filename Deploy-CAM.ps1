@@ -2339,8 +2339,10 @@ $keyVaultProviderExists = [bool](Get-AzureRmResourceProvider | Where-Object {$_.
 if(-not $keyVaultProviderExists) {
     Write-Host "Microsoft.Keyvault is not registered as a resource provider for this subscription."
     Write-Host "Cloud Access Manager requires a key vault to operate."
-    $cancelDeployment = (Read-Host "Please hit enter to register Microsoft.Keyvault with subscription $($rmContext.Subscription.Id) or 'no' to cancel deployment") -like "*n*"
-    if ($cancelDeployment) { exit }
+    if(-not $ignorePrompts) {
+        $cancelDeployment = (Read-Host "Please hit enter to register Microsoft.Keyvault with subscription $($rmContext.Subscription.Id) or 'no' to cancel deployment") -like "*n*"
+        if ($cancelDeployment) { exit }
+    }
     Register-AzureRmResourceProvider -ProviderNamespace "Microsoft.KeyVault" -ErrorAction stop | Out-Null
 }
 
@@ -2616,7 +2618,7 @@ else {
             $confirmedPassword = Read-Host -AsSecureString "Please re-enter the password"
 
             if (-not ($domainAdminCredential.UserName -imatch '\w+') -Or ($domainAdminCredential.Username.Length -gt 20)) {
-                Write-Host "Please enter a valid username. It can contain letters and numbers and cannot be longer than 20 characters."
+                Write-Host "Please enter a valid username. It can only contain letters and numbers and cannot be longer than 20 characters."
                 $domainAdminCredential = $null
                 continue
             }
