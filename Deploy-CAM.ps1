@@ -2333,7 +2333,18 @@ $rmContext = Set-AzureRmContext -SubscriptionId $subscriptionsToDisplay[$chosenS
 $selectedTenantId = $subscriptionsToDisplay[$chosenSubscriptionIndex].TenantId
 $selectedSubcriptionId = $subscriptionsToDisplay[$chosenSubscriptionIndex].SubscriptionId
 
-# Now we have the subscription set. Time to find the CAM root RG.
+# Now we have the subscription set. Ensure it has keyvault resource provider
+$keyVaultProviderExists = [bool](Get-AzureRmResourceProvider | Where-Object {$_.ProviderNamespace -eq "Microsoft.Keyvault"})
+
+if(-not $keyVaultProviderExists) {
+    Write-Host "Microsoft.Keyvault is not registered as a resource provider for this subscription."
+    Write-Host "Cloud Access Manager requires a key vault to operate."
+    $cancelDeployment = (Read-Host "Please hit enter to register Microsoft.Keyvault with subscription $($rmContext.Subscription.Id) or 'no' to cancel deployment") -like "*n*"
+    if ($cancelDeployment) { exit }
+    Register-AzureRmResourceProvider -ProviderNamespace "Microsoft.KeyVault" -ErrorAction stop | Out-Null
+}
+
+# Find the CAM root RG.
 $resouceGroups = Get-AzureRmResourceGroup
 
 # if a user has provided ResourceGroupName as parameter:
