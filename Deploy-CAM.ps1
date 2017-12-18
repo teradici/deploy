@@ -39,8 +39,30 @@ param(
 	[String]
 	$AgentChannel = "stable",
 
+    [parameter(Mandatory=$false)]
+    [bool]
+    $deployOverDC = $false,
+
+    [parameter(Mandatory=$false)]
+    [String]
+    $vnetID,
+
+    [parameter(Mandatory=$false)]
+    [String]
+    $GatewaySubnetName,
+
+    [parameter(Mandatory=$false)]
+    [String]
+    $CloudServiceSubnetName,
+
+    [parameter(Mandatory=$false)]
+    [String]
+    $RemoteWorkstationSubnetName,
+
+    [switch]$ignorePrompts,
+
     $camSaasUri = "https://cam-antar.teradici.com",
-    $CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/master/azuredeploy.json",
+	$CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/master/azuredeploy.json",
     $binaryLocation = "https://teradeploy.blob.core.windows.net/binaries",
     $outputParametersFileName = "cam-output.parameters.json",
     $location
@@ -369,7 +391,7 @@ function New-RemoteWorstationTemplates {
 				},
 				"secretName": "userStorageName"
 			}
-        },
+		},
         "userStorageAccountUri": {
 			"reference": {
 				"keyVault": {
@@ -437,8 +459,8 @@ function New-RemoteWorstationTemplates {
 		},
 		"domainToJoin": { "value": "$domainFQDN" },
 		"storageAccountName": { "value": "$VHDStorageAccountName" }
-	}
-}
+			}
+		}
 
 "@
 
@@ -694,17 +716,16 @@ function New-CAM-KeyVault() {
     $spContext = Get-AzureRMContext
     Set-AzureRMContext -Context $adminAzureContext | Out-Null
 	
-    Write-Host "Set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
     try {
         Set-AzureRmKeyVaultAccessPolicy `
             -VaultName $kvName `
             -UserPrincipalName $adminAzureContext.Account.Id `
             -PermissionsToSecrets Get, Set `
             -ErrorAction stop | Out-Null
-    }
+        Write-Host "Successfully set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
+        }
     catch {
-        Write-Host "Failed to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)."
-        Write-Host "Please set key vault access policies in the Azure Portal or through Azure API's when needed."
+        # Silently swallow exception
     }
 
     # Set context back to service principal
@@ -1012,7 +1033,7 @@ function New-CAMAppSP() {
 
     # Get tenant ID for this subscription
     $subForTenantID = Get-AzureRmContext
-    $tenantID = $subForTenantID.Tenant.Id
+    $tenantID = $subForTenantID.Tenant.TenantId
 
     $spInfo = @{}
     $spInfo.Add("spCreds", $spCreds);
@@ -1135,242 +1156,339 @@ function New-ConnectionServiceDeployment() {
     param(
         $RGName,
         $subscriptionId,
+        $tenantId,
+        $spCredential,
         $keyVault,
         $testDeployment
     )
 
     $kvID = $keyVault.ResourceId
     $kvName = $keyVault.Name
-    # TODO - make sure user account has keyvault secret access here. Try to add self if not
-    # and if doesn't work, probably fail.
 
-    # Find a connection service resource group name that can be used.
-    # An incrementing count is used to find a free resource group. This count is
-    # stored in the key vault to ensure every connection service in the deployment has a unique
-    # identifier, even if old connection services have been deleted.
-    $csRGName = $null
-    while(-not $csRGName)
+    # First, let's find the Service Principal 
+    $adminAzureContext = Get-AzureRMContext
+    
+    $client = $null
+    $key = $null
+
+    if (-not $spCredential)
     {
-        $secret = Get-AzureKeyVaultSecret `
-            -VaultName $kvName `
-            -Name "connectionServiceNumber" `
-            -ErrorAction stop
-
-        if ($secret -eq $null) {
-            $connectionServiceNumber = 1
+        try{
+            $secret = Get-AzureKeyVaultSecret `
+                -VaultName $kvName `
+                -Name "AzureSPClientID" `
+                -ErrorAction stop
+            $client = $secret.SecretValueText
         }
-        else {
-            # increment connectionServiceNumber
-            $connectionServiceNumber = ([int]$secret.SecretValueText) + 1
-        }
-
-        Set-AzureKeyVaultSecret `
-            -VaultName $kvName `
-            -Name "connectionServiceNumber" `
-            -SecretValue (ConvertTo-SecureString $connectionServiceNumber -AsPlainText -Force) `
-            -ErrorAction stop | Out-Null
+        catch {
+            $err = $_
+            if ($err.Exception.Message -eq "Access denied") {
+                Write-Host "Cannot access key vault secret. Attempting to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
+                try {
+                    Set-AzureRmKeyVaultAccessPolicy `
+                        -VaultName $kvName `
+                        -UserPrincipalName $adminAzureContext.Account.Id `
+                        -PermissionsToSecrets Get, Set `
+                        -ErrorAction stop | Out-Null
         
-        Write-Host "Checking available resource group for connection service number $connectionServiceNumber"
-
-        $csRGName = $RGName + "-CS" + $connectionServiceNumber
-        $rg = Get-AzureRmResourceGroup -ResourceGroupName $csRGName -ErrorAction SilentlyContinue
-        if($rg)
+                    $secret = Get-AzureKeyVaultSecret `
+                        -VaultName $kvName `
+                        -Name "AzureSPClientID" `
+                        -ErrorAction stop
+                    $client = $secret.SecretValueText
+                }
+                catch {
+                    Write-Host "Failed to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)."
+                }
+            }
+        }
+        
+        # we may have gotten the secret if success (above) in which case we do not need to prompt.
+        if($client)
         {
-            # found the resource group - do the loop with an incremented number try to find a free name
-            $csRGName = $null
+            # get the password (key)
+            $secret = Get-AzureKeyVaultSecret `
+                -VaultName $kvName `
+                -Name "AzureSPKey" `
+                -ErrorAction stop
+            $key = $secret.SecretValueText
         }
     }
+    else {
+        # function was passed SPcredential
+        $client = $spCredential.UserName
+        $key = $spCredential.GetNetworkCredential().Password
+    }
 
-    $rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName -ErrorAction stop
-    $location = $rg.Location
+    if (-not $client) {
+        Write-Host "Unable to read service principal information from key vault and none was provided on command-line."
+        Write-Host "Please enter the credentials for the service principal for this Cloud Access Manager deployment."
+        Write-Host "The username is the AzureSPClientID secret in $kvName key vault."
+        Write-Host "The password is the AzureSPKey secret in $kvName key vault."
+        $spCredential = Get-Credential -Message "Please enter service principal credential."
 
-    Write-Host "Creating resource group $csRGName"
-    New-AzureRmResourceGroup -Name $csRGName -Location $location -ErrorAction stop | Out-Null
-    
+        $client = $spCredential.UserName
+        $key = $spCredential.GetNetworkCredential().Password
+    }
 
-    # deploy as the service principal to ensure that the service principal has appropriate rights for where it's
-    # being deployed
-    $secret = Get-AzureKeyVaultSecret `
-        -VaultName $kvName `
-        -Name "AzureSPClientID" `
-        -ErrorAction stop
-    $client = $secret.SecretValueText
-
-    $secret = Get-AzureKeyVaultSecret `
-        -VaultName $kvName `
-        -Name "AzureSPKey" `
-        -ErrorAction stop
-    $key = $secret.SecretValueText
-
-    $secret = Get-AzureKeyVaultSecret `
-        -VaultName $kvName `
-        -Name "AzureSPTenantID" `
-        -ErrorAction stop
-    $tenant = $secret.SecretValueText
-
-    $secret = Get-AzureKeyVaultSecret `
-        -VaultName $kvName `
-        -Name "artifactsLocation" `
-        -ErrorAction stop
-    $artifactsLocation = $secret.SecretValueText
-
-    Write-Host "Using service principal $client in tenant $tenant and subscription $subscriptionId"
-    New-AzureRmRoleAssignment `
-        -RoleDefinitionName Contributor `
-        -ResourceGroupName $csRGName `
-        -ServicePrincipalName $client `
-        -ErrorAction Stop | Out-Null
-    
     $spCreds = New-Object PSCredential $client, (ConvertTo-SecureString $key -AsPlainText -Force)
 
-    $azureContext = Get-AzureRMContext
+    # put everything in a try block so that if any errors occur we revert to $azureAdminContext
+    try {
+        Write-Host "Using service principal $client in tenant $tenantId and subscription $subscriptionId"
+        
+        # Find a connection service resource group name that can be used.
+        # An incrementing count is used to find a free resource group. This count is
+        # identifier, even if old connection services have been deleted.
+        $csRGName = $null
+        while(-not $csRGName)
+        {
+            # Note this doesn't return the same type of context as for a standard account
+            # so we'll just keep logging in when needed rather than switching context.
+            Add-AzureRmAccount `
+                -Credential $spCreds `
+                -ServicePrincipal `
+                -TenantId $tenantId `
+                -ErrorAction Stop | Out-Null
+            $secret = Get-AzureKeyVaultSecret `
+                -VaultName $kvName `
+                -Name "connectionServiceNumber" `
+                -ErrorAction stop
 
+            if ($secret -eq $null) {
+                $connectionServiceNumber = 1
+            }
+            else {
+                # increment connectionServiceNumber
+                $connectionServiceNumber = ([int]$secret.SecretValueText) + 1
+            }
 
-    $generatedDeploymentParameters = @"
-{
-    "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
-        "CSUniqueSuffix": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "connectionServiceNumber"
-            }
-        },
-        "domainAdminUsername": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "domainAdminUsername"
-            }
-        },
-        "domainAdminPassword": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "domainJoinPassword"
-            }
-        },
-        "domainName": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "domainName"
-            }
-        },
-        "LocalAdminUsername": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "connectionServiceLocalAdminUsername"
-            }
-        },
-        "LocalAdminPassword": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "connectionServiceLocalAdminPassword"
-            }
-        },
-        "CSsubnetId": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "connectionServiceSubnet"
-            }
-        },
-        "GWsubnetId": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "gatewaySubnet"
-            }
-        },
-        "binaryLocation": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "binaryLocation"
-            }
-        },
-        "certData": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "CAMCSCertificate"
-            }
-        },
-        "certPassword": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "CAMCSCertificatePassword"
-            }
-        },
-        "remoteWorkstationDomainGroup": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "remoteWorkstationDomainGroup"
-            }
-        },
-        "CAMDeploymentInfo": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "CAMDeploymentInfo"
-            }
-        },
-        "_baseArtifactsLocation": {
-            "reference": {
-                "keyVault": {
-                    "id": "$kvID"
-                },
-                "secretName": "artifactsLocation"
+            Set-AzureKeyVaultSecret `
+                -VaultName $kvName `
+                -Name "connectionServiceNumber" `
+                -SecretValue (ConvertTo-SecureString $connectionServiceNumber -AsPlainText -Force) `
+                -ErrorAction stop | Out-Null
+            
+            Write-Host "Checking available resource group for connection service number $connectionServiceNumber"
+
+            $csRGName = $RGName + "-CS" + $connectionServiceNumber
+            Set-AzureRMContext -Context $adminAzureContext | Out-Null
+            $rg = Get-AzureRmResourceGroup -ResourceGroupName $csRGName -ErrorAction SilentlyContinue
+
+            if($rg)
+            {
+                # Check if Resource Group is empty
+                $Resources = Find-AzureRmResource -ResourceGroupNameEquals $csRGName
+                if( -not $Resources.Length -eq 0)
+                {
+                    # found the resource group was not empty - do the loop with an incremented number try to find a free name
+                    $csRGName = $null
+                }
             }
         }
-    }
-}
-"@
+        
+		Set-AzureRMContext -Context $adminAzureContext | Out-Null
+        # Create Connection Service Resource Group if it doesn't exist
+        if (-not (Find-AzureRmResourceGroup | ?{$_.name -eq $csRGName}) ) {
+            Write-Host "Creating resource group $csRGName"
 
-    # make temporary directory for intermediate files
-    $folderName = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
-    $tempDir = Join-Path $env:TEMP $folderName
-    Write-Host "Using temporary directory $tempDir for intermediate files"
-    if (-not (Test-Path $tempDir)) {
-        New-Item $tempDir -type directory | Out-Null
-    }
+			# Grab the root location and use that
+	        $rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName -ErrorAction stop
+	        $location = $rg.Location
 
-    $outputParametersFileName = "csdeploymentparameters.json"
-    $CSDeploymentTemplateURI = $artifactsLocation + "/connection-service/azuredeploy.json"
-    try {
+            New-AzureRmResourceGroup -Name $csRGName -Location $location -ErrorAction stop | Out-Null
+        }
+
+        $csRG = Get-AzureRmResourceGroup -Name $csRGName
+
+        # Get-AzureRmRoleAssignment responds much more rationally if given a scope with an ID
+        # than a resource group name.
+        $spRoles = Get-AzureRmRoleAssignment -ServicePrincipalName $client -Scope $csRG.ResourceId
+
+        # filter on an exact resource group ID match as Get-AzureRmRoleAssignment seems to do a more loose pattern match
+        $spRoles = $spRoles | Where-Object `
+            {($_.Scope -eq $csRG.ResourceId) -or ($_.Scope -eq "/subscriptions/$subscriptionId")}
+                    
+        # spRoles could be no object, a single object or an array. foreach works with all.
+        $hasAccess = $false
+        foreach($role in $spRoles) {
+            $roleName = $role.RoleDefinitionName
+            if (($roleName -eq "Contributor") -or ($roleName -eq "Owner")) {
+                Write-Host "$client already has $roleName for $csRGName."
+                $hasAccess = $true
+                break
+            }
+        }
+
+        if(-not $hasAccess) {
+            Write-Host "Giving $client Contributor access to $csRGName."
+            Set-AzureRMContext -Context $adminAzureContext | Out-Null
+            New-AzureRmRoleAssignment `
+                -RoleDefinitionName Contributor `
+                -ResourceGroupName $csRGName `
+                -ServicePrincipalName $client `
+                -ErrorAction Stop | Out-Null
+        }
+    
+        # SP has proper rights - do deployment with SP
+        Write-Host "Using service principal $client in tenant $tenant and subscription $subscriptionId"
         Add-AzureRmAccount `
             -Credential $spCreds `
             -ServicePrincipal `
-            -TenantId $tenant `
+            -TenantId $tenantId `
             -ErrorAction Stop | Out-Null
 
+        # make temporary directory for intermediate files
+        $folderName = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
+        $tempDir = Join-Path $env:TEMP $folderName
+        Write-Host "Using temporary directory $tempDir for intermediate files"
+        if (-not (Test-Path $tempDir)) {
+            New-Item $tempDir -type directory | Out-Null
+        }
+
+        # Refresh the CAMDeploymentInfo structure
+        New-CAMDeploymentInfo `
+            -kvName $CAMRootKeyvault.Name
+
+        # Get the template URI
+        $secret = Get-AzureKeyVaultSecret `
+            -VaultName $kvName `
+            -Name "artifactsLocation" `
+            -ErrorAction stop
+        $artifactsLocation = $secret.SecretValueText
+        $CSDeploymentTemplateURI = $artifactsLocation + "/connection-service/azuredeploy.json"
+
+        $generatedDeploymentParameters = @"
+        {
+            "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+            "contentVersion": "1.0.0.0",
+            "parameters": {
+                "CSUniqueSuffix": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "connectionServiceNumber"
+                    }
+                },
+                "domainAdminUsername": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "domainAdminUsername"
+                    }
+                },
+                "domainAdminPassword": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "domainJoinPassword"
+                    }
+                },
+                "domainName": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "domainName"
+                    }
+                },
+                "LocalAdminUsername": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "connectionServiceLocalAdminUsername"
+                    }
+                },
+                "LocalAdminPassword": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "connectionServiceLocalAdminPassword"
+                    }
+                },
+                "CSsubnetId": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "connectionServiceSubnet"
+                    }
+                },
+                "GWsubnetId": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "gatewaySubnet"
+                    }
+                },
+                "binaryLocation": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "binaryLocation"
+                    }
+                },
+                "certData": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "CAMCSCertificate"
+                    }
+                },
+                "certPassword": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "CAMCSCertificatePassword"
+                    }
+                },
+                "remoteWorkstationDomainGroup": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "remoteWorkstationDomainGroup"
+                    }
+                },
+                "CAMDeploymentInfo": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "CAMDeploymentInfo"
+                    }
+                },
+                "_baseArtifactsLocation": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvID"
+                        },
+                        "secretName": "artifactsLocation"
+                    }
+                }
+            }
+        }
+"@
+
+        $outputParametersFileName = "csdeploymentparameters.json"
         $outputParametersFilePath = Join-Path $tempDir $outputParametersFileName
         Set-Content $outputParametersFilePath  $generatedDeploymentParameters
 
         Write-Host "`nDeploying Cloud Access Manager Connection Service. This process can take up to 60 minutes."
         Write-Host "Please feel free to watch here for early errors for a few minutes and then go do something else. Or go for coffee!"
         Write-Host "If this script is running in Azure Cloud Shell then you may let the shell timeout and the deployment will continue."
-        Write-Host "Please watch the resource group $csRGName in the Azure Portal for current status."
+        Write-Host "Please watch the resource group $csRGName in the Azure Portal for current status. The Connection Service deployment is"
+        Write-Host "complete when all deployments are showing as 'Succeeded'. Error information is also available through the deployments"
+        Write-Host "area of the resource group pane."
 
         if ($testDeployment) {
             # just do a test if $true
@@ -1411,8 +1529,8 @@ function New-ConnectionServiceDeployment() {
         throw
     }
     finally {
-        if ($azureContext) {
-            Set-AzureRMContext -Context $azureContext | Out-Null
+        if ($adminAzureContext) {
+            Set-AzureRMContext -Context $adminAzureContext | Out-Null
         }
     }
 }
@@ -1561,7 +1679,14 @@ function Deploy-CAM() {
 
         [parameter(Mandatory = $false)]
         [bool]
-        $testDeployment = $false
+        $testDeployment = $false,
+
+        [parameter(Mandatory = $false)]
+        [bool]
+        $deployOverDC = $false,
+
+        [parameter(Mandatory = $true)]
+        $vnetConfig
 
     )
 
@@ -1633,13 +1758,12 @@ function Deploy-CAM() {
     $CAMConfig.parameters.AzureKeyVaultName = @{}
 	
     $CAMConfig.internal = @{}
-    $CAMConfig.internal.vnetName = "vnet-CloudAccessManager"
+    $CAMConfig.internal.vnetID = $vnetConfig.vnetID
+    $CAMConfig.internal.vnetName = $CAMConfig.internal.vnetID.split("/")[-1]
     $CAMConfig.internal.rootSubnetName = "subnet-CAMRoot"
-    $CAMConfig.internal.RWSubnetName = "subnet-RemoteWorkstation"
-    $CAMConfig.internal.CSSubnetName = "subnet-ConnectionService"
-    $CAMConfig.internal.GWSubnetName = "subnet-Gateway"
-    $CAMConfig.internal.vnetID = `
-        "/subscriptions/$subscriptionId/resourceGroups/$RGName/providers/Microsoft.Network/virtualNetworks/$($CAMConfig.internal.vnetName)"
+    $CAMConfig.internal.RWSubnetName = $vnetConfig.RWSubnetName
+    $CAMConfig.internal.CSSubnetName = $vnetConfig.CSSubnetName
+    $CAMConfig.internal.GWSubnetName = $vnetConfig.GWSubnetName
 
     $CAMConfig.internal.RWSubnetID = $CAMConfig.internal.vnetID + "/subnets/$($CAMConfig.internal.RWSubnetName)"
     $CAMConfig.internal.CSSubnetID = $CAMConfig.internal.vnetID + "/subnets/$($CAMConfig.internal.CSSubnetName)"
@@ -1676,26 +1800,38 @@ function Deploy-CAM() {
         New-Item $tempDir -type directory | Out-Null
     }
 
-    $spInfo = $null
-    if (-not $spCredential)	{
+    # if the current context tenantId does not match the desired tenantId then we can't make service principal's
+    $currentContext = Get-AzureRmContext
+    $currentContextTenant = $currentContext.Tenant.Id 
+    $tenantIDsMatch = ($currentContextTenant -eq $tenantId)
 
-        # if there's no service principal provided then we either need to make one or ask for one
-
-        # if the current context tenantId does not match the desired tenantId then we can't make service principal's
-        $currentContext = Get-AzureRmContext
-        $currentContextTenant = $currentContext.Tenant.Id 
-        $tenantIDsMatch = ($currentContextTenant -eq $tenantId)
-
-        if (-not $tenantIDsMatch) {
-            Write-Host "The Current Azure context is for a different tenant ($currentContextTenant) that"
-            Write-Host "does not match the tenant of the deploment ($tenantId)."
-            Write-Host "This can happen in Azure Cloud Powershell when an account has access to multiple tenants."
+    if (-not $tenantIDsMatch) {
+        Write-Host "The Current Azure context is for a different tenant ($currentContextTenant) that"
+        Write-Host "does not match the tenant of the deploment ($tenantId)."
+        Write-Host "This can happen in Azure Cloud Powershell when an account has access to multiple tenants."
+        if (-not $spCredential)	{
             Write-Host "Please make a service principal through the Azure Portal or other means and provide here."
         }
         else {
-            Write-Host "The Cloud Access Manager deployment script was not passed service principal credentials. It will attempt to create a service principal."
-            $requestSPGeneration = Read-Host `
-                "Please hit enter to continue or 'no' to manually enter service principal credentials from a pre-made service principal"
+            Write-Host "Thank-you for providing service principal credentials."
+        }
+        Write-Host "Note - the service principal must already have Contributor rights to the subscription or target"
+        Write-Host "resource groups because role assignment is not possible in this case."
+    }
+
+    $spInfo = $null
+    if (-not $spCredential)	{
+        # if there's no service principal provided then we either need to make one or ask for one
+
+
+        if ($tenantIDsMatch) {
+            if( -not $ignorePrompts ) {
+                Write-Host "The Cloud Access Manager deployment script was not passed service principal credentials. It will attempt to create a service principal."
+                $requestSPGeneration = Read-Host `
+                    "Please hit enter to continue or 'no' to manually enter service principal credentials from a pre-made service principal"
+            } else {
+                $requestSPGeneration=""
+            }
         }
 
         if ((-not $tenantIDsMatch) -or ($requestSPGeneration -like "*n*")) {
@@ -1725,71 +1861,112 @@ function Deploy-CAM() {
 
     Write-Host "Using service principal $client in tenant $tenant and subscription $subscriptionId"
 
-    # Service principal info exists but needs to get rights to the required resource groups
-    Write-Host "Adding role assignments for the service principal account."
-    
-    # Retry required since it can take a few seconds for app registration to percolate through Azure.
-    # (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
-    $rollAssignmentRetry = 120
-    while ($rollAssignmentRetry -ne 0) {
-        $rollAssignmentRetry--
+    if($tenantIDsMatch) {
+        # Service principal info exists but needs to get rights to the required resource groups
+        Write-Host "Adding role assignments for the service principal account."
+        
+        # Retry required since it can take a few seconds for app registration to percolate through Azure.
+        # (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
+        $rollAssignmentRetry = 120
+        while ($rollAssignmentRetry -ne 0) {
+            $rollAssignmentRetry--
 
-        try {
-            # Only assign contributor access if needed
-            $rgNames = @($RGName, $csRGName, $rwRGName)
-            ForEach ($rgn in $rgNames) {
-                $rg = Get-AzureRmResourceGroup -Name $rgn
+            try {
+                # Only assign contributor access if needed
+                $rgNames = @($RGName, $csRGName, $rwRGName)
+                ForEach ($rgn in $rgNames) {
+                    $rg = Get-AzureRmResourceGroup -Name $rgn
 
-                # Get-AzureRmRoleAssignment responds much more rationally if given a scope with an ID
-                # than a resource group name.
-                $spRoles = Get-AzureRmRoleAssignment -ServicePrincipalName $client -Scope $rg.ResourceId
+                    # Get-AzureRmRoleAssignment responds much more rationally if given a scope with an ID
+                    # than a resource group name.
+                    $spRoles = Get-AzureRmRoleAssignment -ServicePrincipalName $client -Scope $rg.ResourceId
 
-                # filter on an exact resource group ID match as Get-AzureRmRoleAssignment seems to do a more loose pattern match
-                $spRoles = $spRoles | Where-Object `
-                    {($_.Scope -eq $rg.ResourceId) -or ($_.Scope -eq "/subscriptions/$subscriptionID")}
-                
-                # spRoles could be no object, a single object or an array. foreach works with all.
-                $hasAccess = $false
-                foreach($role in $spRoles) {
-                    $roleName = $role.RoleDefinitionName
-                    if (($roleName -eq "Contributor") -or ($roleName -eq "Owner")) {
-                        Write-Host "$client already has $roleName for $rgn."
-                        $hasAccess = $true
-                        break
+                    # filter on an exact resource group ID match as Get-AzureRmRoleAssignment seems to do a more loose pattern match
+                    $spRoles = $spRoles | Where-Object `
+                        {($_.Scope -eq $rg.ResourceId) -or ($_.Scope -eq "/subscriptions/$subscriptionID")}
+                    
+                    # spRoles could be no object, a single object or an array. foreach works with all.
+                    $hasAccess = $false
+                    foreach($role in $spRoles) {
+                        $roleName = $role.RoleDefinitionName
+                        if (($roleName -eq "Contributor") -or ($roleName -eq "Owner")) {
+                            Write-Host "$client already has $roleName for $rgn."
+                            $hasAccess = $true
+                            break
+                        }
+                    }
+
+                    if(-not $hasAccess) {
+                        Write-Host "Giving $client Contributor access to $rgn."
+                        New-AzureRmRoleAssignment `
+                            -RoleDefinitionName Contributor `
+                            -ResourceGroupName $rgn `
+                            -ServicePrincipalName $client `
+                            -ErrorAction Stop | Out-Null
                     }
                 }
+            
+                # Add Scope to vNet if vNet already exists and scope does not already exist
+                $vnetRG = $CAMConfig.internal.vnetID.Split("/")[4]
+                if( Find-AzureRmResource -ResourceNameEquals $CAMConfig.internal.vnetName -ResourceType "Microsoft.Network/virtualNetworks" -ResourceGroupNameEquals $vnetRG )
+                {
+                    # Get-AzureRmRoleAssignment responds much more rationally if given a scope with an ID
+                    # than a resource group name.
+                    $spRoles = Get-AzureRmRoleAssignment -ServicePrincipalName $client -Scope $CAMConfig.internal.vnetID
 
-                if(-not $hasAccess) {
-                    Write-Host "Giving $client Contributor access to $rgn."
-                    New-AzureRmRoleAssignment `
-                        -RoleDefinitionName Contributor `
-                        -ResourceGroupName $rgn `
-                        -ServicePrincipalName $client `
-                        -ErrorAction Stop | Out-Null
+                    # filter on an exact resource group ID match as Get-AzureRmRoleAssignment seems to do a more loose pattern match
+                    $spRoles = $spRoles | Where-Object `
+                        {($_.Scope -eq $csRG.ResourceId) -or ($_.Scope -eq "/subscriptions/$subscriptionId")}
+                    
+                    # spRoles could be no object, a single object or an array. foreach works with all.
+                    $hasAccess = $false
+                    foreach($role in $spRoles) {
+                        $roleName = $role.RoleDefinitionName
+                        if (($roleName -eq "Contributor") -or ($roleName -eq "Owner")) {
+                            Write-Host "$client already has $roleName for $($CAMConfig.internal.vnetName)."
+                            $hasAccess = $true
+                            break
+                        }
+                    }
+
+                    if(-not $hasAccess) {
+                        if( -not $ignorePrompts ) {
+                            $prompt = Read-Host "The Service Principal credentials need to be given Contributor access to the vNet $($CAMConfig.internal.vnetName). Press enter to accept and continue or 'no' to cancel deployment"
+                        } else {
+                            $prompt = $false
+                        }
+                        if ( -not $prompt )
+                        {
+                            Write-Host "Giving $client Contributor access to $($CAMConfig.internal.vnetName)"
+                            New-AzureRmRoleAssignment `
+                                -RoleDefinitionName Contributor `
+                                -Scope $CAMConfig.internal.vnetID `
+                                -ServicePrincipalName $client `
+                                -ErrorAction Stop | Out-Null
+                        } else {
+                            Write-Host "Cancelling Deployment"
+                            exit
+                        }
+                    }
                 }
-            }
-
-            break # while
-        }
-        catch {
-            #TODO: we should only be catching the 'Service principal or app not found' error
-            Write-Host "Waiting for service principal. Remaining: $rollAssignmentRetry"
-            Start-sleep -Seconds 1
-            if ($rollAssignmentRetry -eq 0) {
-                #re-throw whatever the original exception was
-                $exceptionContext = Get-AzureRmContext
-                $exceptionSubscriptionId = $exceptionContext.Subscription.Id
-                Write-Error "Failure to create Contributor role for $client. Subscription: $exceptionSubscriptionId. Please check your subscription permissions."
-                throw
+                break # while loop
+            } catch {
+                #TODO: we should only be catching the 'Service principal or app not found' error
+                Write-Host "Waiting for service principal. Remaining: $rollAssignmentRetry"
+                Start-sleep -Seconds 1
+                if ($rollAssignmentRetry -eq 0) {
+                    #re-throw whatever the original exception was
+                    $exceptionContext = Get-AzureRmContext
+                    $exceptionSubscriptionId = $exceptionContext.Subscription.Id
+                    Write-Error "Failure to create Contributor role for $client. Subscription: $exceptionSubscriptionId. Please check your subscription permissions."
+                    throw
+                }
             }
         }
     }
 
-
-
     # Login with service principal since some Powershell contexts (with token auth - like Azure Cloud PowerShell or Visual Studio)
     # can't do operations on keyvaults
-
     
     # cache the current context and sign in as service principal
     $azureContext = Get-AzureRMContext
@@ -1824,29 +2001,53 @@ function Deploy-CAM() {
         }
     }
 
+    
+    $kvInfo = New-CAMDeploymentRoot `
+        -RGName $RGName `
+        -rwRGName $rwRGName `
+        -spInfo $spInfo `
+        -azureContext $azureContext `
+        -CAMConfig $CAMConfig `
+        -tempDir $tempDir `
+        -certificateFile $certificateFile `
+        -certificateFilePassword $certificateFilePassword `
+        -camSaasUri $camSaasUri `
+        -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
+        -subscriptionID $subscriptionID
+
+
     try {
-
-        $kvInfo = New-CAMDeploymentRoot `
-            -RGName $RGName `
-            -rwRGName $rwRGName `
-            -spInfo $spInfo `
-            -azureContext $azureContext `
-            -CAMConfig $CAMConfig `
-            -tempDir $tempDir `
-            -certificateFile $certificateFile `
-            -certificateFilePassword $certificateFilePassword `
-            -camSaasUri $camSaasUri `
-            -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
-            -subscriptionID $subscriptionID
-
         # Populate/re-populate CAMDeploymentInfo before deploying any connection service
         New-CAMDeploymentInfo `
             -kvName $kvInfo.VaultName
 
-        # keyvault ID of the form: /subscriptions/$subscriptionID/resourceGroups/$azureRGName/providers/Microsoft.KeyVault/vaults/$kvName
-        $kvId = $kvInfo.ResourceId
+        if( $deployOverDC)
+        {
+            # Need to change to admin context for this to work
+            Write-Host "Reverting to initial Azure context for $($azureContext.Account.Id)"
+            Set-AzureRMContext -Context $azureContext | Out-Null
 
-        $generatedDeploymentParameters = @"
+            # Should only be one KeyVault at this step (verified in an earlier step in main script)
+            $CAMRootKeyvault = Get-AzureRmResource `
+                -ResourceGroupName $rgName `
+                -ResourceType "Microsoft.KeyVault/vaults" `
+                | Where-object {$_.Name -like "CAM-*"}
+
+            New-ConnectionServiceDeployment `
+                -spCredential $spInfo.spCreds `
+                -RGName $rgName `
+                -subscriptionId $subscriptionID `
+                -keyVault $CAMRootKeyvault `
+                -tenantId $tenantId `
+                -testDeployment $testDeployment `
+                -tempDir $tempDir
+        }
+        else
+        {
+            # keyvault ID of the form: /subscriptions/$subscriptionID/resourceGroups/$azureRGName/providers/Microsoft.KeyVault/vaults/$kvName
+            $kvId = $kvInfo.ResourceId
+
+            $generatedDeploymentParameters = @"
 {
 	"`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
 	"contentVersion": "1.0.0.0",
@@ -1911,7 +2112,7 @@ function Deploy-CAM() {
 				},
 				"secretName": "artifactsLocation"
 			}
-        },
+		},
         "userStorageAccountName": {
 			"reference": {
 				"keyVault": {
@@ -1944,7 +2145,7 @@ function Deploy-CAM() {
 				"secretName": "userStorageAccountKey"
 			}
 		},
-        "LocalAdminUsername": {
+		"LocalAdminUsername": {
 			"reference": {
 				"keyVault": {
 					"id": "$kvId"
@@ -2015,33 +2216,36 @@ function Deploy-CAM() {
 				},
 				"secretName": "cloudAccessRegistrationCode"
 			}
-        }
+		}
 	}
 }
 "@
 
-        $outputParametersFilePath = Join-Path $tempDir $outputParametersFileName
-        Set-Content $outputParametersFilePath  $generatedDeploymentParameters
+            $outputParametersFilePath = Join-Path $tempDir $outputParametersFileName
+            Set-Content $outputParametersFilePath  $generatedDeploymentParameters
 
-        Write-Host "`nDeploying Cloud Access Manager Connection Service. This process can take up to 90 minutes."
-        Write-Host "Please feel free to watch here for early errors for a few minutes and then go do something else. Or go for coffee!"
-        Write-Host "If this script is running in Azure Cloud Shell then you may let the shell timeout and the deployment will continue."
-        Write-Host "Please watch the resource group $RGName in the Azure Portal for current status."
+            Write-Host "`nDeploying Cloud Access Manager. This process can take up to 90 minutes."
+            Write-Host "Please feel free to watch here for early errors for a few minutes and then go do something else. Or go for coffee!"
+            Write-Host "If this script is running in Azure Cloud Shell then you may let the shell timeout and the deployment will continue."
+            Write-Host "Please watch the resource group $RGName in the Azure Portal for current status. Cloud Access Manager deployment is"
+            Write-Host "complete when all deployments are showing as 'Succeeded'. Error information is also available through the deployments"
+            Write-Host "area of the resource group pane."
 
-        if ($testDeployment) {
-            # just do a test if $true
-            Test-AzureRmResourceGroupDeployment `
-                -ResourceGroupName $RGName `
-                -TemplateFile $CAMDeploymentTemplateURI `
-                -TemplateParameterFile $outputParametersFilePath `
-                -Verbose
-        }
-        else {
-            New-AzureRmResourceGroupDeployment `
-                -DeploymentName "CAM" `
-                -ResourceGroupName $RGName `
-                -TemplateFile $CAMDeploymentTemplateURI `
-                -TemplateParameterFile $outputParametersFilePath 
+            if ($testDeployment) {
+                # just do a test if $true
+                Test-AzureRmResourceGroupDeployment `
+                    -ResourceGroupName $RGName `
+                    -TemplateFile $CAMDeploymentTemplateURI `
+                    -TemplateParameterFile $outputParametersFilePath `
+                    -Verbose
+            }
+            else {
+                New-AzureRmResourceGroupDeployment `
+                    -DeploymentName "CAM" `
+                    -ResourceGroupName $RGName `
+                    -TemplateFile $CAMDeploymentTemplateURI `
+                    -TemplateParameterFile $outputParametersFilePath 
+            }
         }
     }
     catch {
@@ -2108,9 +2312,14 @@ else {
 
     $chosenSubscriptionNumber = 0 #invalid
     while ( -not (( $chosenSubscriptionNumber -ge 1) -and ( $chosenSubscriptionNumber -le $subscriptionsToDisplay.Length))) {
-        $chosenSubscriptionNumber = 
-        if (($chosenSubscriptionNumber = Read-Host "Please enter the Number of the subscription you would like to use or press enter to accept the current one [$currentSubscriptionNumber]") -eq '') `
-        {$currentSubscriptionNumber} else {$chosenSubscriptionNumber}
+        if( -not $ignorePrompts ) {
+            $chosenSubscriptionNumber = `
+            if (($chosenSubscriptionNumber = Read-Host "Please enter the Number of the subscription you would like to use or press enter to accept the current one [$currentSubscriptionNumber]") -eq '') `
+            {$currentSubscriptionNumber} else {$chosenSubscriptionNumber}
+        }
+        else {
+            $chosenSubscriptionNumber = $currentSubscriptionNumber
+        }
     }
     Write-Host "Chosen Subscription:"
 }
@@ -2124,16 +2333,29 @@ $rmContext = Set-AzureRmContext -SubscriptionId $subscriptionsToDisplay[$chosenS
 $selectedTenantId = $subscriptionsToDisplay[$chosenSubscriptionIndex].TenantId
 $selectedSubcriptionId = $subscriptionsToDisplay[$chosenSubscriptionIndex].SubscriptionId
 
-# Now we have the subscription set. Time to find the CAM root RG.
+# Now we have the subscription set. Ensure it has keyvault resource provider
+$keyVaultProviderExists = [bool](Get-AzureRmResourceProvider | Where-Object {$_.ProviderNamespace -eq "Microsoft.Keyvault"})
+
+if(-not $keyVaultProviderExists) {
+    Write-Host "Microsoft.Keyvault is not registered as a resource provider for this subscription."
+    Write-Host "Cloud Access Manager requires a key vault to operate."
+    if(-not $ignorePrompts) {
+        $cancelDeployment = (Read-Host "Please hit enter to register Microsoft.Keyvault with subscription $($rmContext.Subscription.Id) or 'no' to cancel deployment") -like "*n*"
+        if ($cancelDeployment) { exit }
+    }
+    Register-AzureRmResourceProvider -ProviderNamespace "Microsoft.KeyVault" -ErrorAction stop | Out-Null
+}
+
+# Find the CAM root RG.
 $resouceGroups = Get-AzureRmResourceGroup
 
 # if a user has provided ResourceGroupName as parameter:
 # - Check if user group exists. If it does deploy there.
 # - If it doesn't, create it in which case location parameter must be provided 
 if ($ResourceGroupName) {
-    Write-Host "RGNAME PROVIDED: $ResourceGroupName"
+    Write-Host "Provided resource group name: $ResourceGroupName"
     if (-not (Get-AzureRMResourceGroup -name $ResourceGroupName -ErrorAction SilentlyContinue)) {
-        Write-Host "Resource group $ResourceGroupName does not exist! Creating in location: $location"
+        Write-Host "Resource group $ResourceGroupName does not exist. Creating in location: $location"
         New-AzureRmResourceGroup -Name $ResourceGroupName -Location $location
     } 
     $rgMatch = Get-AzureRmResourceGroup -Name $ResourceGroupName
@@ -2218,22 +2440,23 @@ if ($CAMRootKeyvault) {
     Write-Host "The resource group $($rgMatch.ResourceGroupName) has a CAM deployment already."
     Write-Host "Using key vault $($CAMRootKeyvault.Name)"
 
-    $requestNewCS = Read-Host `
+    if( -not $ignorePrompts ) {
+        $requestNewCS = Read-Host `
         "Please hit enter to create a new connection service for this Cloud Access Manager deployment or 'no' to cancel"
 
-    if ($requestNewCS -like "*n*") {
-        Write-Host "Not deploying a new connection service. Exiting."
-        exit
+        if ($requestNewCS -like "*n*") {
+            Write-Host "Not deploying a new connection service. Exiting."
+            exit
+        }
     }
 
     Write-Host "Deploying a new CAM Connection Service with updated CAMDeploymentInfo"
-	
-    New-CAMDeploymentInfo `
-        -kvName $CAMRootKeyvault.Name
 
     New-ConnectionServiceDeployment `
         -RGName $rgMatch.ResourceGroupName `
         -subscriptionId $selectedSubcriptionId `
+        -tenantId $selectedTenantId `
+        -spCredential $spCredential `
         -keyVault $CAMRootKeyvault `
         -testDeployment $testDeployment `
         -tempDir $tempDir
@@ -2241,6 +2464,16 @@ if ($CAMRootKeyvault) {
 }
 else {
     # New deployment - either complete or a root + Remote Workstation deployment
+
+    # Check if deploying Root only (ie, DC and vnet already exist)
+    if( -not $ignorePrompts) {
+        if( -not $deployOverDC ) {
+            Write-Host "Do you want to create a new domain controller and VNet?"
+            $deployOverDC = (Read-Host "Please hit enter to continue with deploying a new domain and VNet or 'no' to connect to an existing domain") -like "*n*"
+        }
+    }
+
+
     # Now let's create the other required resource groups
 
     $csRGName = $rgMatch.ResourceGroupName + "-CS1"
@@ -2269,14 +2502,123 @@ else {
     }
 
 
-    # allow interactive input of a bunch of parameters. spCredential is handled in the service principal functions elsewhere in this file
+    # allow interactive input of a bunch of parameters. spCredential is handled in the SP functions elsewhere in this file
+
+
+    $vnetConfig = @{}
+    $vnetConfig.vnetID = $vnetID
+    $vnetConfig.CSsubnetName = $CloudServiceSubnetName
+    $vnetConfig.GWsubnetName = $GatewaySubnetName
+    $vnetConfig.RWsubnetName = $RemoteWorkstationSubnetName
+    if( $deployOverDC ) {
+        # Don't create new DC and vnets
+        # prompt for vnet name, gateway subnet name, remote workstation subnet name, connection service subnet name
+        do {
+            if ( -not $vnetConfig.vnetID ) {
+                Write-Host "Please provide the VNet resource ID for the VNet Cloud Access Manager connection service, gateways, and remote workstations will be using"
+                Write-Host "In the form /subscriptions/{subscriptionID}/resourceGroups/{vnetResourceGroupName}/providers/Microsoft.Network/virtualNetworks/{vnetName}"
+                $vnetConfig.vnetID = Read-Host "VNet resource ID"
+            }
+            # vnetID is a reference ID that is like: 
+            # "/subscriptions/{subscription}/resourceGroups/{vnetRG}/providers/Microsoft.Network/virtualNetworks/{vnetName}"
+            $vnetName = $vnetConfig.vnetID.split("/")[-1]
+            $vnetRgName = $vnetConfig.vnetID.split("/")[4]
+            if ( (-not $vnetRgName) -or (-not $vnetName) -or `
+                (-not (Find-AzureRmResource -ResourceGroupNameEquals $vnetRgName `
+                -ResourceType "Microsoft.Network/virtualNetworks" `
+                -ResourceNameEquals $vnetName)) ) {
+                    # Does not exist
+                    Write-Host ("{0} not found" -f ($vnetConfig.vnetID))
+                    $vnetConfig.vnetID = $null
+            }
+        } while (-not $vnetConfig.vnetID)
+
+        $vnet = Get-AzureRmVirtualNetwork -Name $vnetName -ResourceGroupName $vnetRgName
+
+        # Connection Service Subnet
+        do {
+            if ( -not $vnetConfig.CSsubnetName ) {
+                $vnetConfig.CSsubnetName = Read-Host "Provide Connection Service Subnet Name"
+            }
+            if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.CSsubnetName}) ) {
+                # Does not exist
+                Write-Host ("{0} not found in root resource group VNet {1}" -f ($vnetConfig.CSsubnetName,$vnet.Name))
+                $vnetConfig.CSsubnetName = $null
+            }
+        } while (-not $vnetConfig.CSsubnetName)
+
+        # Gateway Subnet
+        do {
+            if ( -not $vnetConfig.GWsubnetName ) {
+                $vnetConfig.GWsubnetName = Read-Host "Provide Gateway Subnet Name"
+            }
+            if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.GWsubnetName}) ) {
+                # Does not exist
+                Write-Host ("{0} not found in root resource group VNet {1}" -f ($vnetConfig.GWsubnetName,$vnet.Name))
+                $vnetConfig.GWsubnetName = $null
+            }
+        } while (-not $vnetConfig.GWsubnetName)
+        
+        # Remote Workstation Subnet
+        do {
+            if ( -not $vnetConfig.RWsubnetName ) {
+                $vnetConfig.RWsubnetName = Read-Host "Provide Remote Workstation Subnet Name"
+            }
+            if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.RWsubnetName}) ) {
+                # Does not exist
+                Write-Host ("{0} not found in root resource group VNet {1}" -f ($vnetConfig.RWsubnetName,$vnet.Name))
+                $vnetConfig.RWsubnetName = $null
+            }
+        } while (-not $vnetConfig.RWsubnetName)
+    } else {
+        # create new DC and vnets. Default values populated here.
+        if( -not $vnetConfig.vnetID ) {
+            $vnetConfig.vnetID = "/subscriptions/$selectedSubcriptionId/resourceGroups/$($rgMatch.ResourceGroupName)/providers/Microsoft.Network/virtualNetworks/vnet-CloudAccessManager"
+        }
+        if( -not $vnetConfig.CSSubnetName ) {
+            $vnetConfig.CSSubnetName = "subnet-ConnectionService"
+        }
+        if( -not $vnetConfig.GWSubnetName ) {
+            $vnetConfig.GWSubnetName = "subnet-Gateway"
+        }
+        if( -not $vnetConfig.RWSubnetName ) {
+            $vnetConfig.RWSubnetName = "subnet-RemoteWorkstation"
+        }
+    }
+
+    do {
+        if ( -not $domainName ) {
+            if( -not $deployOverDC ) {
+                $domainNameMessage = "Please enter new fully qualified domain name of the domain which will be created, including a '.' such as example.com"
+            }
+            else {
+                $domainNameMessage = "Please enter the fully qualified domain name of the domain to connect to. The name must include a '.' such as example.com"
+            }
+            Write-Host $domainNameMessage
+            $domainName = Read-Host "Domain name"
+        }
+
+        # https://social.technet.microsoft.com/Forums/scriptcenter/en-US/db2d8388-f2c2-4f67-9f84-c17b060504e1/regex-for-computer-fqdn?forum=winserverpowershell
+        if (-not $($domainName -imatch '(?=^.{1,254}$)(^(?:(?!\d+\.|-)[a-zA-Z0-9_\-]{1,63}(?<!-)\.?)+(?:[a-zA-Z]{2,})$)')) {
+            Write-Host "The domain name must include two or more components separated by a '.'"
+            $domainName = $null
+        }
+    } while (-not $domainName)
+
     do {
         if ( -not $domainAdminCredential ) {
-            $domainAdminCredential = Get-Credential -Message "Please enter admin credential for new domain"
+            if( -not $deployOverDC ) {
+                $domainAdminMessage = "Please enter the new domain administrator username for the new domain being created"
+            }
+            else {
+                $domainAdminMessage = "Please enter the username of the service account for Cloud Access Manager to use with the connected domain"
+            }
+
+            $domainAdminCredential = Get-Credential -Message $domainAdminMessage
             $confirmedPassword = Read-Host -AsSecureString "Please re-enter the password"
 
             if (-not ($domainAdminCredential.UserName -imatch '\w+') -Or ($domainAdminCredential.Username.Length -gt 20)) {
-                Write-Host "Please enter a valid username. It can contain letters and numbers and cannot be longer than 20 characters."
+                Write-Host "Please enter a valid username. It can only contain letters and numbers and cannot be longer than 20 characters."
                 $domainAdminCredential = $null
                 continue
             }
@@ -2298,18 +2640,6 @@ else {
             $domainAdminCredential = $null
         }
     } while ( -not $domainAdminCredential )
-
-    do {
-        if ( -not $domainName ) {
-            $domainName = Read-Host "Please enter new fully qualified domain name including a '.' such as example.com"
-        }
-
-        # https://social.technet.microsoft.com/Forums/scriptcenter/en-US/db2d8388-f2c2-4f67-9f84-c17b060504e1/regex-for-computer-fqdn?forum=winserverpowershell
-        if (-not $($domainName -imatch '(?=^.{1,254}$)(^(?:(?!\d+\.|-)[a-zA-Z0-9_\-]{1,63}(?<!-)\.?)+(?:[a-zA-Z]{2,})$)')) {
-            Write-Host "The domain name must include two or more components separated by a '.'"
-            $domainName = $null
-        }
-    } while (-not $domainName)
 
     do {
         if (-not $registrationCode ) {
@@ -2343,5 +2673,7 @@ else {
         -testDeployment $testDeployment `
         -certificateFile $certificateFile `
         -certificateFilePassword $certificateFilePassword `
-		-AgentChannel $AgentChannel
+		-AgentChannel $AgentChannel `
+        -deployOverDC $deployOverDC `
+        -vnetConfig $vnetConfig
 }
