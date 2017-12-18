@@ -2574,6 +2574,25 @@ else {
     }
 
     do {
+        if ( -not $domainName ) {
+            if( -not $deployOverDC ) {
+                $domainNameMessage = "Please enter new fully qualified domain name of the domain which will be created, including a '.' such as example.com"
+            }
+            else {
+                $domainNameMessage = "Please enter the fully qualified domain name of the domain to connect to. The name must include a '.' such as example.com"
+            }
+            Write-Host $domainNameMessage
+            $domainName = Read-Host "Domain name"
+        }
+
+        # https://social.technet.microsoft.com/Forums/scriptcenter/en-US/db2d8388-f2c2-4f67-9f84-c17b060504e1/regex-for-computer-fqdn?forum=winserverpowershell
+        if (-not $($domainName -imatch '(?=^.{1,254}$)(^(?:(?!\d+\.|-)[a-zA-Z0-9_\-]{1,63}(?<!-)\.?)+(?:[a-zA-Z]{2,})$)')) {
+            Write-Host "The domain name must include two or more components separated by a '.'"
+            $domainName = $null
+        }
+    } while (-not $domainName)
+
+    do {
         if ( -not $domainAdminCredential ) {
             if( -not $deployOverDC ) {
                 $domainAdminMessage = "Please enter the new domain administrator username for the new domain being created"
@@ -2608,25 +2627,6 @@ else {
             $domainAdminCredential = $null
         }
     } while ( -not $domainAdminCredential )
-
-    do {
-        if ( -not $domainName ) {
-            if( -not $deployOverDC ) {
-                $domainNameMessage = "Please enter new fully qualified domain name of the domain which will be created, including a '.' such as example.com"
-            }
-            else {
-                $domainNameMessage = "Please enter the fully qualified domain name of the domain to connect to. The name must include a '.' such as example.com"
-            }
-            Write-Host $domainNameMessage
-            $domainName = Read-Host "Domain name"
-        }
-
-        # https://social.technet.microsoft.com/Forums/scriptcenter/en-US/db2d8388-f2c2-4f67-9f84-c17b060504e1/regex-for-computer-fqdn?forum=winserverpowershell
-        if (-not $($domainName -imatch '(?=^.{1,254}$)(^(?:(?!\d+\.|-)[a-zA-Z0-9_\-]{1,63}(?<!-)\.?)+(?:[a-zA-Z]{2,})$)')) {
-            Write-Host "The domain name must include two or more components separated by a '.'"
-            $domainName = $null
-        }
-    } while (-not $domainName)
 
     do {
         if (-not $registrationCode ) {
