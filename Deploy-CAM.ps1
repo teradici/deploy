@@ -2313,7 +2313,7 @@ else {
     $chosenSubscriptionNumber = 0 #invalid
     while ( -not (( $chosenSubscriptionNumber -ge 1) -and ( $chosenSubscriptionNumber -le $subscriptionsToDisplay.Length))) {
         if( -not $ignorePrompts ) {
-            $chosenSubscriptionNumber = 
+            $chosenSubscriptionNumber = `
             if (($chosenSubscriptionNumber = Read-Host "Please enter the Number of the subscription you would like to use or press enter to accept the current one [$currentSubscriptionNumber]") -eq '') `
             {$currentSubscriptionNumber} else {$chosenSubscriptionNumber}
         }
