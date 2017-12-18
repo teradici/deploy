@@ -1830,7 +1830,7 @@ function Deploy-CAM() {
                 $requestSPGeneration = Read-Host `
                     "Please hit enter to continue or 'no' to manually enter service principal credentials from a pre-made service principal"
             } else {
-                $requestSPGeneration="no"
+                $requestSPGeneration=""
             }
         }
 
