@@ -1506,7 +1506,8 @@ function New-ConnectionServiceDeployment() {
                         -DeploymentName "CS" `
                         -ResourceGroupName $csRGName `
                         -TemplateFile $CSDeploymentTemplateURI `
-                        -TemplateParameterFile $outputParametersFilePath
+                        -TemplateParameterFile $outputParametersFilePath `
+                        -ErrorAction stop
                     # success!
                     break
                 }
@@ -2244,7 +2245,8 @@ function Deploy-CAM() {
                     -DeploymentName "CAM" `
                     -ResourceGroupName $RGName `
                     -TemplateFile $CAMDeploymentTemplateURI `
-                    -TemplateParameterFile $outputParametersFilePath 
+                    -TemplateParameterFile $outputParametersFilePath `
+                    -ErrorAction stop
             }
         }
     }
