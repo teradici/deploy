@@ -73,7 +73,7 @@
     }
   },
   "variables": {
-    "storageAccountName": "[concat('adsa', uniquestring(resourceGroup().id))]",
+    "storageAccountName": "[concat('vmdc', uniquestring(resourceGroup().id))]",
     "adVMName": "vm-dc",
     "serverRootName": "vm",
     "networkSettings" : {
