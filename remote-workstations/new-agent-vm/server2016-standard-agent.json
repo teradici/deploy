@@ -93,12 +93,6 @@
             "description": "PCoIP Standard Agent License Registration Code."
           }
         },
-        "storageAccountName": {
-            "type": "string",
-            "metadata": {
-                "description": "Storage account to use for VM data and VHD's"
-            }
-        },
         "enableAutoShutdown": {
             "type": "bool",
             "defaultValue": true,
@@ -225,7 +219,7 @@
                     "osDisk": {
                         "name": "osdisk",
                         "vhd": {
-                            "uri": "[concat('http://',parameters('storageAccountName'),'.blob.core.windows.net/vhds/',parameters('dnsLabelPrefix'), 'disk0.vhd')]"
+                          "uri": "[concat('http://',parameters('userStorageAccountName'),'.blob.core.windows.net/vhds/',parameters('dnsLabelPrefix'), 'disk0.vhd')]"
                         },
                         "caching": "ReadWrite",
                         "createOption": "FromImage"
@@ -234,7 +228,7 @@
                         {
                             "name": "myvm-data-disk1",
                             "vhd": {
-                                "uri": "[concat('http://',parameters('storageAccountName'),'.blob.core.windows.net/vhds/',parameters('dnsLabelPrefix'), 'disk1.vhd')]"
+                                "uri": "[concat('http://',parameters('userStorageAccountName'),'.blob.core.windows.net/vhds/',parameters('dnsLabelPrefix'), 'disk1.vhd')]"
                             },
                             "caching": "None",
                             "createOption": "Empty",
