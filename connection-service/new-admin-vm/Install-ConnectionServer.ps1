@@ -17,28 +17,28 @@
 #
 Configuration InstallConnectionServer
 {
-	# One day pull from Oracle as per here? https://github.com/gregjhogan/cJre8/blob/master/DSCResources/cJre8/cJre8.schema.psm1
+    # One day pull from Oracle as per here? https://github.com/gregjhogan/cJre8/blob/master/DSCResources/cJre8/cJre8.schema.psm1
     param
     (
         [string]
         $LocalDLPath = "$env:systemdrive\WindowsAzure\PCoIPCAMInstall",
 
         [Parameter(Mandatory)]
-		[String]$sourceURI,
+        [String]$sourceURI,
 
         [Parameter(Mandatory)]
-		[System.Management.Automation.PSCredential]$CAMDeploymentInfo,
+        [System.Management.Automation.PSCredential]$CAMDeploymentInfo,
 
         [string]
-		$javaInstaller = "jdk-8u144-windows-x64.exe",
+        $javaInstaller = "jdk-8u144-windows-x64.exe",
 
-		[string]
-		$sumoConf = "sumo.conf",
+        [string]
+        $sumoConf = "sumo.conf",
 
-		[string]
-		$tomcatInstaller = "apache-tomcat-8.5.23-windows-x64.zip",
+        [string]
+        $tomcatInstaller = "apache-tomcat-8.5.23-windows-x64.zip",
 
-		[string]
+        [string]
         $brokerWAR = "pcoip-broker.war",
 
         [string]
@@ -65,44 +65,44 @@ Configuration InstallConnectionServer
         [Parameter(Mandatory)]
         [String]$sumoCollectorID,
 
-		[Parameter(Mandatory=$false)]
+        [Parameter(Mandatory=$false)]
         [String]$brokerPort = "8444"
-	)
+    )
 
-	# Get domain information
-	$domainFQDN = (Get-WmiObject win32_computersystem).domain
-	$myDomainInfo = (Get-WMIObject Win32_NTDomain) `
-					| Where-Object {$_.DnsForestName -eq $domainFQDN} `
-					| Select-Object -First 1
-	$DCVMName = ($myDomainInfo.DomainControllerName -replace "\\", "")
+    # Get domain information
+    $domainFQDN = (Get-WmiObject win32_computersystem).domain
+    $myDomainInfo = (Get-WMIObject Win32_NTDomain) `
+                    | Where-Object {$_.DnsForestName -eq $domainFQDN} `
+                    | Select-Object -First 1
+    $DCVMName = ($myDomainInfo.DomainControllerName -replace "\\", "")
 
-	$dcvmfqdn = "$DCVMName.$domainFQDN"
-	$pbvmfqdn = "$env:computername.$domainFQDN"
-	$family   = "Windows Server 2016"
+    $dcvmfqdn = "$DCVMName.$domainFQDN"
+    $pbvmfqdn = "$env:computername.$domainFQDN"
+    $family   = "Windows Server 2016"
 
-	#Java locations
-	$JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_144"
-	$JavaBinLocation = $JavaRootLocation + "\bin"
-	$JavaLibLocation = $JavaRootLocation + "\jre\lib"
+    #Java locations
+    $JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_144"
+    $JavaBinLocation = $JavaRootLocation + "\bin"
+    $JavaLibLocation = $JavaRootLocation + "\jre\lib"
 
-	#Tomcat locations
-	$localtomcatpath = "$env:systemdrive\tomcat"
-	$CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.5.23"
-	$CatalinaBinLocation = $CatalinaHomeLocation + "\bin"
+    #Tomcat locations
+    $localtomcatpath = "$env:systemdrive\tomcat"
+    $CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.5.23"
+    $CatalinaBinLocation = $CatalinaHomeLocation + "\bin"
 
-	$brokerServiceName = "CAMBroker"
-	$AUIServiceName = "CAMAUI"
+    $brokerServiceName = "CAMBroker"
+    $AUIServiceName = "CAMAUI"
 
-	# CAM Deployment Info
-	$CAMDeploymentInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode( `
-		$CAMDeploymentInfo.GetNetworkCredential().Password)
-	$CAMDeploymentInfoDecoded = ConvertFrom-Json $CAMDeploymentInfoJSONDecoded
+    # CAM Deployment Info
+    $CAMDeploymentInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode( `
+        $CAMDeploymentInfo.GetNetworkCredential().Password)
+    $CAMDeploymentInfoDecoded = ConvertFrom-Json $CAMDeploymentInfoJSONDecoded
 
-	# Retry for CAM Registration
-	$retryCount = 3
-	$delay = 10
+    # Retry for CAM Registration
+    $retryCount = 3
+    $delay = 10
 
-	Import-DscResource -ModuleName xPSDesiredStateConfiguration
+    Import-DscResource -ModuleName xPSDesiredStateConfiguration
 
     Node "localhost"
     {
@@ -111,47 +111,47 @@ Configuration InstallConnectionServer
             RebootNodeIfNeeded = $true
         }
 
-		xRemoteFile Download_Java_Installer
-		{
-			Uri = "$sourceURI/$javaInstaller"
-			DestinationPath = "$LocalDLPath\$javaInstaller"
-			MatchSource = $false
-		}
+        xRemoteFile Download_Java_Installer
+        {
+            Uri = "$sourceURI/$javaInstaller"
+            DestinationPath = "$LocalDLPath\$javaInstaller"
+            MatchSource = $false
+        }
 
-		xRemoteFile Download_Tomcat_Installer
-		{
-			Uri = "$sourceURI/$tomcatInstaller"
-			DestinationPath = "$LocalDLPath\$tomcatInstaller"
-			MatchSource = $false
-		}
+        xRemoteFile Download_Tomcat_Installer
+        {
+            Uri = "$sourceURI/$tomcatInstaller"
+            DestinationPath = "$LocalDLPath\$tomcatInstaller"
+            MatchSource = $false
+        }
 
-		xRemoteFile Download_Keystore
-		{
-			Uri = "$sourceURI/.keystore"
-			DestinationPath = "$LocalDLPath\.keystore"
-			MatchSource = $false
-		}
+        xRemoteFile Download_Keystore
+        {
+            Uri = "$sourceURI/.keystore"
+            DestinationPath = "$LocalDLPath\.keystore"
+            MatchSource = $false
+        }
 
-		xRemoteFile Download_Broker_WAR
-		{
-			Uri = "$sourceURI/$brokerWAR"
-			DestinationPath = "$LocalDLPath\$brokerWAR"
-			MatchSource = $false
-		}
+        xRemoteFile Download_Broker_WAR
+        {
+            Uri = "$sourceURI/$brokerWAR"
+            DestinationPath = "$LocalDLPath\$brokerWAR"
+            MatchSource = $false
+        }
 
-		xRemoteFile Download_Admin_WAR
-		{
-			Uri = "$sourceURI/$adminWAR"
-			DestinationPath = "$LocalDLPath\$adminWAR"
-			MatchSource = $false
-		}
+        xRemoteFile Download_Admin_WAR
+        {
+            Uri = "$sourceURI/$adminWAR"
+            DestinationPath = "$LocalDLPath\$adminWAR"
+            MatchSource = $false
+        }
 
-		xRemoteFile Download_Sumo_Conf 
-		{
-				Uri = "$gitLocation/$sumoConf"
-				DestinationPath = "$LocalDLPath\$sumoConf"
-				MatchSource = $false
-		}
+        xRemoteFile Download_Sumo_Conf 
+        {
+                Uri = "$gitLocation/$sumoConf"
+                DestinationPath = "$LocalDLPath\$sumoConf"
+                MatchSource = $false
+        }
 
         File Sumo_Directory 
         {
@@ -176,59 +176,59 @@ Configuration InstallConnectionServer
 
                 $installerFileName = "SumoCollector.exe"
                 $sumo_package = 'https://collectors.sumologic.com/rest/download/win64'
-				$sumo_config = "$using:gitLocation/$using:sumoConf"
+                $sumo_config = "$using:gitLocation/$using:sumoConf"
                 $sumo_collector_json = "$using:gitLocation/sumo-admin-vm.json"
-				$dest = "C:\sumo"
-				$destConf = "$dest\$using:sumoConf"
+                $dest = "C:\sumo"
+                $destConf = "$dest\$using:sumoConf"
 
-				Write-Host "Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile $destConf"
+                Write-Host "Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile $destConf"
                 Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile $destConf
 
-				Write-Host "Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile $dest\sumo-admin-vm.conf"
+                Write-Host "Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile $dest\sumo-admin-vm.conf"
                 Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile "$dest\sumo-admin-vm.json"
-				
+                
                 # Insert unique ID
                 $collectorID = "$using:sumoCollectorID"
                 (Get-Content -Path $destConf).Replace("collectorID", $collectorID) | Set-Content -Path $destConf
                 
-				Write-Host "Before Invoke-WebRequest $sumo_package -Outfile $dest\$installerFileName"
+                Write-Host "Before Invoke-WebRequest $sumo_package -Outfile $dest\$installerFileName"
                 Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
                 
                 # Install the collector
-				Write-Host "Installing the collector"
+                Write-Host "Installing the collector"
                 $command = "$dest\$installerFileName -console -q"
                 Invoke-Expression $command
 
-				# Wait for collector to be installed before exiting this configuration.
-				#### Note if we change binary versions we will need to change registry path - 7857-4527-9352-4688 will change ####
-				$retrycount = 1800
-				while ($retryCount -gt 0)
-				{
-					$readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\7857-4527-9352-4688"  -ErrorAction SilentlyContinue )
+                # Wait for collector to be installed before exiting this configuration.
+                #### Note if we change binary versions we will need to change registry path - 7857-4527-9352-4688 will change ####
+                $retrycount = 1800
+                while ($retryCount -gt 0)
+                {
+                    $readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\7857-4527-9352-4688"  -ErrorAction SilentlyContinue )
 
-					if ($readyToConfigure)
-					{
-						break   #success
-					}
-					else
-					{
-						Start-Sleep -s 1;
-						$retrycount = $retrycount - 1;
-						if ( $retrycount -eq 0)
-						{
-							throw "Sumo collector not installed in time."
-						}
-						else
-						{
-							Write-Host "Waiting for Sumo collector to be installed"
-						}
-					}
-				}
+                    if ($readyToConfigure)
+                    {
+                        break   #success
+                    }
+                    else
+                    {
+                        Start-Sleep -s 1;
+                        $retrycount = $retrycount - 1;
+                        if ( $retrycount -eq 0)
+                        {
+                            throw "Sumo collector not installed in time."
+                        }
+                        else
+                        {
+                            Write-Host "Waiting for Sumo collector to be installed"
+                        }
+                    }
+                }
             }
         }
         #
-		# One day can split this to 'install java' and 'configure java environemnt' and use 'package' dsc like here:
-		# http://stackoverflow.com/questions/31562451/installing-jre-using-powershell-dsc-hangs
+        # One day can split this to 'install java' and 'configure java environemnt' and use 'package' dsc like here:
+        # http://stackoverflow.com/questions/31562451/installing-jre-using-powershell-dsc-hangs
         Script Install_Java
         {
             DependsOn  = "[xRemoteFile]Download_Java_Installer"
@@ -237,295 +237,295 @@ Configuration InstallConnectionServer
             #TODO: Just check for a directory being present? What to do when Java version changes? (Can also check registry key as in SetScript.)
             TestScript = {
                 return Test-Path "$using:JavaBinLocation"
-			}
+            }
             SetScript  = {
                 Write-Verbose "Install_Java"
 
-				# Run the installer. Start-Process does not work due to permissions issue however '&' calling will not wait so looks for registry key as 'completion.'
-				# Start-Process $LocalDLPath\$javaInstaller -ArgumentList '/s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"' -Wait
-				& "$using:LocalDLPath\$using:javaInstaller" /s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"
+                # Run the installer. Start-Process does not work due to permissions issue however '&' calling will not wait so looks for registry key as 'completion.'
+                # Start-Process $LocalDLPath\$javaInstaller -ArgumentList '/s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"' -Wait
+                & "$using:LocalDLPath\$using:javaInstaller" /s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"
 
-				$retrycount = 1800
-				while ($retryCount -gt 0)
-				{
-					$readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{26A24AE4-039D-4CA4-87B4-2F64180144F0}"	-ErrorAction SilentlyContinue )
-					# don't wait for {64A3A4F4-B792-11D6-A78A-00B0D0180144} - that's the JDK. The JRE is installed 2nd {26A...} so wait for that.
+                $retrycount = 1800
+                while ($retryCount -gt 0)
+                {
+                    $readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{26A24AE4-039D-4CA4-87B4-2F64180144F0}"    -ErrorAction SilentlyContinue )
+                    # don't wait for {64A3A4F4-B792-11D6-A78A-00B0D0180144} - that's the JDK. The JRE is installed 2nd {26A...} so wait for that.
 
-					if ($readyToConfigure)
-					{
-						break   #success
-					}
-					else
-					{
-    					Start-Sleep -s 1;
-						$retrycount = $retrycount - 1;
-						if ( $retrycount -eq 0)
-						{
-							throw "Java not installed in time."
-						}
-						else
-						{
-							Write-Host "Waiting for Java to be installed"
-						}
-					}
-				}
+                    if ($readyToConfigure)
+                    {
+                        break   #success
+                    }
+                    else
+                    {
+                        Start-Sleep -s 1;
+                        $retrycount = $retrycount - 1;
+                        if ( $retrycount -eq 0)
+                        {
+                            throw "Java not installed in time."
+                        }
+                        else
+                        {
+                            Write-Host "Waiting for Java to be installed"
+                        }
+                    }
+                }
 
-				Write-Host "Setting up Java paths and environment"
+                Write-Host "Setting up Java paths and environment"
 
-				#set path. Don't add strings that are already there...
+                #set path. Don't add strings that are already there...
 
-				$NewPath = $env:Path
-				if ($NewPath -notlike "*"+$using:JavaBinLocation+"*")
-				{
-    				#put java path in front of the Oracle defined path
-				    $NewPath= $using:JavaBinLocation + ";" + $NewPath
-				}
+                $NewPath = $env:Path
+                if ($NewPath -notlike "*"+$using:JavaBinLocation+"*")
+                {
+                    #put java path in front of the Oracle defined path
+                    $NewPath= $using:JavaBinLocation + ";" + $NewPath
+                }
 
-				[System.Environment]::SetEnvironmentVariable("Path", $NewPath, "Machine")
-				[System.Environment]::SetEnvironmentVariable("JAVA_HOME", $using:JavaRootLocation, "Machine")
-				[System.Environment]::SetEnvironmentVariable("classpath", $using:JavaLibLocation, "Machine")
-				$env:Path = $NewPath
-				$env:JAVA_HOME = $using:JavaRootLocation
-				$env:classpath = $using:JavaLibLocation
+                [System.Environment]::SetEnvironmentVariable("Path", $NewPath, "Machine")
+                [System.Environment]::SetEnvironmentVariable("JAVA_HOME", $using:JavaRootLocation, "Machine")
+                [System.Environment]::SetEnvironmentVariable("classpath", $using:JavaLibLocation, "Machine")
+                $env:Path = $NewPath
+                $env:JAVA_HOME = $using:JavaRootLocation
+                $env:classpath = $using:JavaLibLocation
 
 
-				Write-Host "Waiting for JVM.dll"
-				$JREHome = $using:JavaRootLocation + "\jre"
-				$JVMServerdll = $JREHome + "\bin\server\jvm.dll"
+                Write-Host "Waiting for JVM.dll"
+                $JREHome = $using:JavaRootLocation + "\jre"
+                $JVMServerdll = $JREHome + "\bin\server\jvm.dll"
 
-				$retrycount = 1800
-				while ($retryCount -gt 0)
-				{
-					$readyToConfigure = ( Get-Item $JVMServerdll -ErrorAction SilentlyContinue )
+                $retrycount = 1800
+                while ($retryCount -gt 0)
+                {
+                    $readyToConfigure = ( Get-Item $JVMServerdll -ErrorAction SilentlyContinue )
 
-					if ($readyToConfigure)
-					{
-						break   #success
-					}
-					else
-					{
-    					Start-Sleep -s 1;
-						$retrycount = $retrycount - 1;
-						if ( $retrycount -eq 0)
-						{
-							throw "JVM.dll not installed in time."
-						}
-						else
-						{
-							Write-Host "Waiting for JVM.dll to be installed"
-						}
-					}
-				}
+                    if ($readyToConfigure)
+                    {
+                        break   #success
+                    }
+                    else
+                    {
+                        Start-Sleep -s 1;
+                        $retrycount = $retrycount - 1;
+                        if ( $retrycount -eq 0)
+                        {
+                            throw "JVM.dll not installed in time."
+                        }
+                        else
+                        {
+                            Write-Host "Waiting for JVM.dll to be installed"
+                        }
+                    }
+                }
 
-				# Reboot machine - seems to need to happen to get Tomcat to install??? Perhaps not after environment fixes. Needs testing.
-				$global:DSCMachineStatus = 1
+                # Reboot machine - seems to need to happen to get Tomcat to install??? Perhaps not after environment fixes. Needs testing.
+                $global:DSCMachineStatus = 1
             }
         }
 
-		Script Install_Tomcat
+        Script Install_Tomcat
         {
             DependsOn = @("[xRemoteFile]Download_Tomcat_Installer", "[Script]Install_Java", "[xRemoteFile]Download_Keystore")
             GetScript  = { @{ Result = "Install_Tomcat" } }
 
             TestScript = { 
-				if ( $env:CATALINA_HOME )
+                if ( $env:CATALINA_HOME )
                 {
-					return $true
-				}
-				else
-				{
-					return $false
-				}
-			}
+                    return $true
+                }
+                else
+                {
+                    return $false
+                }
+            }
             SetScript  = {
                 Write-Verbose "Install_Tomcat"
 
-				#just going 'manual' now since installer has been a massive PITA
+                #just going 'manual' now since installer has been a massive PITA
                 #(but perhaps unfairly so since it might have been affected by some Java install issues I had previously as well.)
 
-		        $LocalDLPath = $using:LocalDLPath
-		        $tomcatInstaller = $using:tomcatInstaller
-				$localtomcatpath = $using:localtomcatpath
-				$CatalinaHomeLocation = $using:CatalinaHomeLocation
-				$CatalinaBinLocation = $using:CatalinaBinLocation
+                $LocalDLPath = $using:LocalDLPath
+                $tomcatInstaller = $using:tomcatInstaller
+                $localtomcatpath = $using:localtomcatpath
+                $CatalinaHomeLocation = $using:CatalinaHomeLocation
+                $CatalinaBinLocation = $using:CatalinaBinLocation
 
-				#make sure we get a clean install
-				Remove-Item $localtomcatpath -Force -Recurse -ErrorAction SilentlyContinue
+                #make sure we get a clean install
+                Remove-Item $localtomcatpath -Force -Recurse -ErrorAction SilentlyContinue
 
-				Expand-Archive "$LocalDLPath\$tomcatInstaller" -DestinationPath $localtomcatpath
+                Expand-Archive "$LocalDLPath\$tomcatInstaller" -DestinationPath $localtomcatpath
 
 
-				Write-Host "Setting Paths and Tomcat environment"
+                Write-Host "Setting Paths and Tomcat environment"
 
-				$NewPath = $env:Path
-				if ($NewPath -notlike "*"+$CatalinaBinLocation+"*")
-				{
-				    #put tomcat path at the end
-				    $NewPath= $NewPath + ";" + $CatalinaBinLocation
-				}
+                $NewPath = $env:Path
+                if ($NewPath -notlike "*"+$CatalinaBinLocation+"*")
+                {
+                    #put tomcat path at the end
+                    $NewPath= $NewPath + ";" + $CatalinaBinLocation
+                }
 
-				[System.Environment]::SetEnvironmentVariable("Path", $NewPath, "Machine")
-				[System.Environment]::SetEnvironmentVariable("CATALINA_HOME", $CatalinaHomeLocation, "Machine")
-				$env:Path = $NewPath
-				$env:CATALINA_HOME = $CatalinaHomeLocation
-	        }
+                [System.Environment]::SetEnvironmentVariable("Path", $NewPath, "Machine")
+                [System.Environment]::SetEnvironmentVariable("CATALINA_HOME", $CatalinaHomeLocation, "Machine")
+                $env:Path = $NewPath
+                $env:CATALINA_HOME = $CatalinaHomeLocation
+            }
         }
 
-		Script Setup_AUI_Service
+        Script Setup_AUI_Service
         {
             DependsOn = @("[Script]Install_Tomcat", "[xRemoteFile]Download_Keystore")
             GetScript  = { @{ Result = "Setup_AUI_Service" } }
 
             TestScript = {
-				return !!(Get-Service $using:AUIServiceName -ErrorAction SilentlyContinue)
-			}
+                return !!(Get-Service $using:AUIServiceName -ErrorAction SilentlyContinue)
+            }
 
-			SetScript = {
+            SetScript = {
 
-				Write-Host "Configuring Tomcat for $using:AUIServiceName service"
+                Write-Host "Configuring Tomcat for $using:AUIServiceName service"
 
-				$catalinaHome = $using:CatalinaHomeLocation
-				$catalinaBase = "$catalinaHome" #\$using:AUIServiceName" <---- don't change this without changing log collector location currently in sumo-admin-vm.json
+                $catalinaHome = $using:CatalinaHomeLocation
+                $catalinaBase = "$catalinaHome" #\$using:AUIServiceName" <---- don't change this without changing log collector location currently in sumo-admin-vm.json
 
-				$env:CATALINA_BASE = $catalinaBase
+                $env:CATALINA_BASE = $catalinaBase
 
-				# make new instance location - copying the directories specified
-				# here: https://tomcat.apache.org/tomcat-8.0-doc/windows-service-howto.html
+                # make new instance location - copying the directories specified
+                # here: https://tomcat.apache.org/tomcat-8.0-doc/windows-service-howto.html
 
-				# clear out any old cruft first
-#				Remove-Item "$catalinaBase" -Force -Recurse -ErrorAction SilentlyContinue
-#				Copy-Item "$catalinaHome\conf" "$catalinaBase\conf" -Recurse -ErrorAction SilentlyContinue
-#				Copy-Item "$catalinaHome\logs" "$catalinaBase\logs" -Recurse -ErrorAction SilentlyContinue
-#				Copy-Item "$catalinaHome\temp" "$catalinaBase\temp" -Recurse -ErrorAction SilentlyContinue
-#				Copy-Item "$catalinaHome\webapps" "$catalinaBase\webapps" -Recurse -ErrorAction SilentlyContinue
-#				Copy-Item "$catalinaHome\work" "$catalinaBase\work" -Recurse -ErrorAction SilentlyContinue
+                # clear out any old cruft first
+#                Remove-Item "$catalinaBase" -Force -Recurse -ErrorAction SilentlyContinue
+#                Copy-Item "$catalinaHome\conf" "$catalinaBase\conf" -Recurse -ErrorAction SilentlyContinue
+#                Copy-Item "$catalinaHome\logs" "$catalinaBase\logs" -Recurse -ErrorAction SilentlyContinue
+#                Copy-Item "$catalinaHome\temp" "$catalinaBase\temp" -Recurse -ErrorAction SilentlyContinue
+#                Copy-Item "$catalinaHome\webapps" "$catalinaBase\webapps" -Recurse -ErrorAction SilentlyContinue
+#                Copy-Item "$catalinaHome\work" "$catalinaBase\work" -Recurse -ErrorAction SilentlyContinue
 
-				$serverXMLFile = $catalinaBase + '\conf\server.xml'
-				$origServerXMLFile = $catalinaBase + '\conf\server.xml.orig'
+                $serverXMLFile = $catalinaBase + '\conf\server.xml'
+                $origServerXMLFile = $catalinaBase + '\conf\server.xml.orig'
 
-				# back up server.xml file if not done in a previous round
-				if( -not ( Get-Item ($origServerXMLFile) -ErrorAction SilentlyContinue ) )
-				{
-					Copy-Item -Path ($serverXMLFile) `
-						-Destination ($origServerXMLFile)
-				}
+                # back up server.xml file if not done in a previous round
+                if( -not ( Get-Item ($origServerXMLFile) -ErrorAction SilentlyContinue ) )
+                {
+                    Copy-Item -Path ($serverXMLFile) `
+                        -Destination ($origServerXMLFile)
+                }
 
-				#update server.xml file
-				$xml = [xml](Get-Content ($origServerXMLFile))
+                #update server.xml file
+                $xml = [xml](Get-Content ($origServerXMLFile))
 
-				# port 8080 unencrypted connector - is there by default
-				#$unencConnector = [xml] ('<Connector port="8080" protocol="HTTP/1.1" connectionTimeout="20000" redirectPort="8443" />')
+                # port 8080 unencrypted connector - is there by default
+                #$unencConnector = [xml] ('<Connector port="8080" protocol="HTTP/1.1" connectionTimeout="20000" redirectPort="8443" />')
 
-				#$xml.Server.Service.InsertBefore(
-					# new child
-				#	$xml.ImportNode($unencConnector.Connector,$true),
-					#ref child
-			    #	$xml.Server.Service.Engine )
+                #$xml.Server.Service.InsertBefore(
+                    # new child
+                #    $xml.ImportNode($unencConnector.Connector,$true),
+                    #ref child
+                #    $xml.Server.Service.Engine )
 
-				$NewConnector = [xml] ('<Connector
-					port="8443"
-					protocol="org.apache.coyote.http11.Http11NioProtocol"
-					SSLEnabled="true"
-					keystoreFile="'+$using:LocalDLPath+'\.keystore"
-					maxThreads="2000" scheme="https" secure="true"
-					clientAuth="false" sslProtocol="TLS"
-					SSLEngine="on" keystorePass="changeit"
-					SSLPassword="changeit"
-					sslEnabledProtocols="TLSv1.0,TLSv1.1,TLSv1.2"
-					ciphers="TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_CBC_SHA"
-					/>')
+                $NewConnector = [xml] ('<Connector
+                    port="8443"
+                    protocol="org.apache.coyote.http11.Http11NioProtocol"
+                    SSLEnabled="true"
+                    keystoreFile="'+$using:LocalDLPath+'\.keystore"
+                    maxThreads="2000" scheme="https" secure="true"
+                    clientAuth="false" sslProtocol="TLS"
+                    SSLEngine="on" keystorePass="changeit"
+                    SSLPassword="changeit"
+                    sslEnabledProtocols="TLSv1.0,TLSv1.1,TLSv1.2"
+                    ciphers="TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_CBC_SHA"
+                    />')
 
-				# port 8443 encrypted connector 
+                # port 8443 encrypted connector 
 
-				$xml.Server.Service.InsertBefore(
-					# new child
-					$xml.ImportNode($NewConnector.Connector,$true),
-					#ref child
-					$xml.Server.Service.Engine )
+                $xml.Server.Service.InsertBefore(
+                    # new child
+                    $xml.ImportNode($NewConnector.Connector,$true),
+                    #ref child
+                    $xml.Server.Service.Engine )
 
-				$xml.save($ServerXMLFile)
-
-
-
-				Write-Host "Opening port 8443 and 8080"
-
-				#open port in firewall
-				netsh advfirewall firewall add rule name="Tomcat Port 8443" dir=in action=allow protocol=TCP localport=8443
-				netsh advfirewall firewall add rule name="Tomcat Port 8080" dir=in action=allow protocol=TCP localport=8080
+                $xml.save($ServerXMLFile)
 
 
-				# Install and set service to start automatically
 
-				& "$using:CatalinaBinLocation\service.bat" install $using:AUIServiceName
-				Write-Host "Tomcat Installer exit code: $LASTEXITCODE"
-				Start-Sleep -s 10  #TODO: Is this sleep ACTUALLY needed?
+                Write-Host "Opening port 8443 and 8080"
 
-				Write-Host "Starting Tomcat Service for $using:AUIServiceName"
-				Set-Service $using:AUIServiceName -startuptype "automatic"
-	        }
+                #open port in firewall
+                netsh advfirewall firewall add rule name="Tomcat Port 8443" dir=in action=allow protocol=TCP localport=8443
+                netsh advfirewall firewall add rule name="Tomcat Port 8080" dir=in action=allow protocol=TCP localport=8080
+
+
+                # Install and set service to start automatically
+
+                & "$using:CatalinaBinLocation\service.bat" install $using:AUIServiceName
+                Write-Host "Tomcat Installer exit code: $LASTEXITCODE"
+                Start-Sleep -s 10  #TODO: Is this sleep ACTUALLY needed?
+
+                Write-Host "Starting Tomcat Service for $using:AUIServiceName"
+                Set-Service $using:AUIServiceName -startuptype "automatic"
+            }
         }
 
         Script Install_AUI
         {
             DependsOn  = @("[xRemoteFile]Download_Admin_WAR",
-						   "[Script]Setup_AUI_Service")
+                           "[Script]Setup_AUI_Service")
 
             GetScript  = { @{ Result = "Install_AUI" } }
 
             TestScript = {
-				$CatalinaHomeLocation = $using:CatalinaHomeLocation
-				$catalinaBase = "$CatalinaHomeLocation" # \$using:AUIServiceName"
-				$WARPath = "$catalinaBase\webapps\$using:adminWAR"
+                $CatalinaHomeLocation = $using:CatalinaHomeLocation
+                $catalinaBase = "$CatalinaHomeLocation" # \$using:AUIServiceName"
+                $WARPath = "$catalinaBase\webapps\$using:adminWAR"
 
                 return Test-Path $WARPath -PathType Leaf
-			}
+            }
 
             SetScript  = {
-		        $LocalDLPath = $using:LocalDLPath
-				$adminWAR = $using:adminWAR
-				$localtomcatpath = $using:localtomcatpath
-				$CatalinaHomeLocation = $using:CatalinaHomeLocation
-				$catalinaBase = "$CatalinaHomeLocation" #\$using:AUIServiceName"
+                $LocalDLPath = $using:LocalDLPath
+                $adminWAR = $using:adminWAR
+                $localtomcatpath = $using:localtomcatpath
+                $CatalinaHomeLocation = $using:CatalinaHomeLocation
+                $catalinaBase = "$CatalinaHomeLocation" #\$using:AUIServiceName"
 
                 Write-Verbose "Ensure Nuget Package Provider and AzureRM module are installed"
 
-				If(-not [bool](Get-PackageProvider -ListAvailable | where {$_.Name -eq "NuGet"}))
-				{
-	                Write-Verbose "Installing NuGet"
-					Install-packageProvider -Name NuGet -Force
-				}
+                If(-not [bool](Get-PackageProvider -ListAvailable | where {$_.Name -eq "NuGet"}))
+                {
+                    Write-Verbose "Installing NuGet"
+                    Install-packageProvider -Name NuGet -Force
+                }
 
-				If(-not [bool](Get-InstalledModule | where {$_.Name -eq "AzureRM"}))
-				{
-	                Write-Verbose "Installing AzureRM"
-					Install-Module -Name AzureRM -MaximumVersion 4.4.1 -Force
-				}
+                If(-not [bool](Get-InstalledModule | where {$_.Name -eq "AzureRM"}))
+                {
+                    Write-Verbose "Installing AzureRM"
+                    Install-Module -Name AzureRM -MaximumVersion 4.4.1 -Force
+                }
 
                 Write-Verbose "Install_CAM"
 
-				Copy-Item "$LocalDLPath\$adminWAR" ($catalinaBase + "\webapps")
+                Copy-Item "$LocalDLPath\$adminWAR" ($catalinaBase + "\webapps")
 
-				$svc = Get-Service $using:AUIServiceName
-				if ($svc.Status -ne "Stopped") {$svc.stop()}
+                $svc = Get-Service $using:AUIServiceName
+                if ($svc.Status -ne "Stopped") {$svc.stop()}
 
-				Write-Host "Re-generating CAM configuration file."
+                Write-Host "Re-generating CAM configuration file."
 
-				#Now create the new output file.
-				#TODO - really only a couple parameters are used and set properly now. Needs cleanup.
-				$domainsplit = $using:domainFQDN
-				$domainsplit = $domainsplit.split(".".2)
-				$domainleaf = $domainsplit[0]  # get the first part of the domain name (before .local or .???)
-				$domainroot = $domainsplit[1]  # get the second part of the domain name
-				$date = Get-Date
-				$domainControllerFQDN = $using:dcvmfqdn
-				$regInfo = $using:camDeploymentInfoDecoded.RegistrationInfo
-				$remoteWorkstationResourceGroup = $regInfo.CAM_RESOURCEGROUP
+                #Now create the new output file.
+                #TODO - really only a couple parameters are used and set properly now. Needs cleanup.
+                $domainsplit = $using:domainFQDN
+                $domainsplit = $domainsplit.split(".".2)
+                $domainleaf = $domainsplit[0]  # get the first part of the domain name (before .local or .???)
+                $domainroot = $domainsplit[1]  # get the second part of the domain name
+                $date = Get-Date
+                $domainControllerFQDN = $using:dcvmfqdn
+                $regInfo = $using:camDeploymentInfoDecoded.RegistrationInfo
+                $remoteWorkstationResourceGroup = $regInfo.CAM_RESOURCEGROUP
 
-				$localAdminCreds = $using:DomainAdminCreds
-				$adminUsername = $localAdminCreds.GetNetworkCredential().Username
-				$adminPassword = $localAdminCreds.GetNetworkCredential().Password
+                $localAdminCreds = $using:DomainAdminCreds
+                $adminUsername = $localAdminCreds.GetNetworkCredential().Username
+                $adminPassword = $localAdminCreds.GetNetworkCredential().Password
 
-				$auProperties = @"
+                $auProperties = @"
 #$date
 cn=Users
 dom=$domainleaf
@@ -541,42 +541,42 @@ ldapAdminPassword=$adminPassword
 ldapDomain=$Using:domainFQDN
 "@
 
-				$targetDir = "$CatalinaHomeLocation\adminproperty"
-				$configFileName = "$targetDir\config.properties"
+                $targetDir = "$CatalinaHomeLocation\adminproperty"
+                $configFileName = "$targetDir\config.properties"
 
-				if(-not (Test-Path $targetDir))
-				{
-					New-Item $targetDir -type directory
-				}
+                if(-not (Test-Path $targetDir))
+                {
+                    New-Item $targetDir -type directory
+                }
 
-				if(-not (Test-Path $configFileName))
-				{
-					New-Item $configFileName -type file
-				}
+                if(-not (Test-Path $configFileName))
+                {
+                    New-Item $configFileName -type file
+                }
 
-				Set-Content $configFileName $auProperties -Force
-				Write-Host "CAM configuration file re-generated."
+                Set-Content $configFileName $auProperties -Force
+                Write-Host "CAM configuration file re-generated."
 
-		        Write-Host "Redirecting ROOT to Cloud Access Manager."
+                Write-Host "Redirecting ROOT to Cloud Access Manager."
 
                 $redirectString = '<%response.sendRedirect("CloudAccessManager/login.jsp");%>'
-				$targetDir = "$CatalinaBase\webapps\ROOT"
-				$indexFileName = "$targetDir\index.jsp"
+                $targetDir = "$CatalinaBase\webapps\ROOT"
+                $indexFileName = "$targetDir\index.jsp"
 
-				if(-not (Test-Path $targetDir))
-				{
-					New-Item $targetDir -type directory
-				}
+                if(-not (Test-Path $targetDir))
+                {
+                    New-Item $targetDir -type directory
+                }
 
-				if(-not (Test-Path $indexFileName))
-				{
-					New-Item $indexFileName -type file
-				}
+                if(-not (Test-Path $indexFileName))
+                {
+                    New-Item $indexFileName -type file
+                }
 
-				Set-Content $indexFileName $redirectString -Force
+                Set-Content $indexFileName $redirectString -Force
 
-			}
-		}
+            }
+        }
 
         Script Install_Auth_file
         {
@@ -585,286 +585,286 @@ ldapDomain=$Using:domainFQDN
             GetScript  = { @{ Result = "Install_Auth_file" } }
 
             TestScript = {
-				$targetDir = "$env:CATALINA_HOME\adminproperty"
-				$authFilePath = "$targetDir\authfile.txt"
+                $targetDir = "$env:CATALINA_HOME\adminproperty"
+                $authFilePath = "$targetDir\authfile.txt"
  
                 return Test-Path $authFilePath -PathType Leaf
-			}
+            }
             SetScript  = {
 
 
-				Write-Host "Writing auth file."
+                Write-Host "Writing auth file."
 
-				# Auth file format as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
+                # Auth file format as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
 
-				$authFileContent = [System.Web.HttpUtility]::UrlDecode($using:CAMDeploymentInfoDecoded.AzureAuthFile)
-				$targetDir = "$env:CATALINA_HOME\adminproperty"
-				$authFilePath = "$targetDir\authfile.txt"
+                $authFileContent = [System.Web.HttpUtility]::UrlDecode($using:CAMDeploymentInfoDecoded.AzureAuthFile)
+                $targetDir = "$env:CATALINA_HOME\adminproperty"
+                $authFilePath = "$targetDir\authfile.txt"
 
-				if(-not (Test-Path $authFilePath))
-				{
-					New-Item $authFilePath -type file
-				}
+                if(-not (Test-Path $authFilePath))
+                {
+                    New-Item $authFilePath -type file
+                }
 
-				Set-Content $authFilePath $authFileContent -Force
-
-
-				Write-Host "Update environment so AZURE_AUTH_LOCATION points to auth file."
-
-				[System.Environment]::SetEnvironmentVariable("AZURE_AUTH_LOCATION", $authFilePath, "Machine")
-				$env:AZURE_AUTH_LOCATION = $authFilePath
+                Set-Content $authFilePath $authFileContent -Force
 
 
-				################################
+                Write-Host "Update environment so AZURE_AUTH_LOCATION points to auth file."
 
-				#login to Azure and get storage context so we can pull the right files out of the blob storage
+                [System.Environment]::SetEnvironmentVariable("AZURE_AUTH_LOCATION", $authFilePath, "Machine")
+                $env:AZURE_AUTH_LOCATION = $authFilePath
 
-				$regInfo = $using:camDeploymentInfoDecoded.RegistrationInfo
 
-				$spName = $regInfo.CAM_USERNAME
-				$spPass = ConvertTo-SecureString $regInfo.CAM_PASSWORD -AsPlainText -Force
-				$tenantID = $regInfo.CAM_TENANTID
+                ################################
 
-				Write-Host "Logging in SP $spName with tenantID $tenantID"
+                #login to Azure and get storage context so we can pull the right files out of the blob storage
 
-				$spCreds = New-Object -TypeName pscredential -ArgumentList  $spName, $spPass
+                $regInfo = $using:camDeploymentInfoDecoded.RegistrationInfo
 
-				Add-AzureRmAccount `
-					-ServicePrincipal `
-					-Credential $spCreds `
-					-TenantId $tenantID `
-					-ErrorAction Stop
+                $spName = $regInfo.CAM_USERNAME
+                $spPass = ConvertTo-SecureString $regInfo.CAM_PASSWORD -AsPlainText -Force
+                $tenantID = $regInfo.CAM_TENANTID
 
-				# Now get Keyvault Secrets
-				$kvName = $regInfo.CAM_KEY_VAULT_NAME
-				$saSecretName = $regInfo.CAM_USER_STORAGE_ACCOUNT_NAME
-				$sakeySecretName = $regInfo.CAM_USER_STORAGE_ACCOUNT_KEY
+                Write-Host "Logging in SP $spName with tenantID $tenantID"
 
-				$container_name = "cloudaccessmanager"
-				$storageAccount = Get-AzureKeyVaultSecret -VaultName $kvName -Name $saSecretName
-				$storageAccountKey = Get-AzureKeyVaultSecret -VaultName $kvName -Name $sakeySecretName
+                $spCreds = New-Object -TypeName pscredential -ArgumentList  $spName, $spPass
 
-				$ctx = New-AzureStorageContext `
-					-StorageAccountName $storageAccount.SecretValueText `
-					-StorageAccountKey $storageAccountKey.SecretValueText
+                Add-AzureRmAccount `
+                    -ServicePrincipal `
+                    -Credential $spCreds `
+                    -TenantId $tenantID `
+                    -ErrorAction Stop
 
-				Write-Host "Creating default template parameters files"
+                # Now get Keyvault Secrets
+                $kvName = $regInfo.CAM_KEY_VAULT_NAME
+                $saSecretName = $regInfo.CAM_USER_STORAGE_ACCOUNT_NAME
+                $sakeySecretName = $regInfo.CAM_USER_STORAGE_ACCOUNT_KEY
 
-				#now make the default parameters filenames - same root name but different suffix as the templates
+                $container_name = "cloudaccessmanager"
+                $storageAccount = Get-AzureKeyVaultSecret -VaultName $kvName -Name $saSecretName
+                $storageAccountKey = Get-AzureKeyVaultSecret -VaultName $kvName -Name $sakeySecretName
+
+                $ctx = New-AzureStorageContext `
+                    -StorageAccountName $storageAccount.SecretValueText `
+                    -StorageAccountKey $storageAccountKey.SecretValueText
+
+                Write-Host "Creating default template parameters files"
+
+                #now make the default parameters filenames - same root name but different suffix as the templates
                 $agentARM = $using:agentARM
                 $gaAgentARM = $using:gaAgentARM
-				$linuxAgentARM = $using:linuxAgentARM
+                $linuxAgentARM = $using:linuxAgentARM
 
-		        Write-Host "Pulling in Agent machine deployment templates."
+                Write-Host "Pulling in Agent machine deployment templates."
 
-				$templateLoc = "$using:CatalinaHomeLocation\ARMtemplateFiles"
-				
-				if(-not (Test-Path $templateLoc))
-				{
-					New-Item $templateLoc -type directory
-				}
+                $templateLoc = "$using:CatalinaHomeLocation\ARMtemplateFiles"
+                
+                if(-not (Test-Path $templateLoc))
+                {
+                    New-Item $templateLoc -type directory
+                }
 
-				#clear out whatever was stuffed in from the deployment WAR file
-				Remove-Item "$templateLoc\*" -Recurse
-				
+                #clear out whatever was stuffed in from the deployment WAR file
+                Remove-Item "$templateLoc\*" -Recurse
+                
 
-				$agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
-				$gaAgentARMparam = ($gaAgentARM.split('.')[0]) + ".customparameters.json"
-				$linuxAgentARMparam = ($linuxAgentARM.split('.')[0]) + ".customparameters.json"
+                $agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
+                $gaAgentARMparam = ($gaAgentARM.split('.')[0]) + ".customparameters.json"
+                $linuxAgentARMparam = ($linuxAgentARM.split('.')[0]) + ".customparameters.json"
 
-				$ParamTargetDir = $using:CatalinaHomeLocation + "\ARMParametertemplateFiles"
-				$ParamTargetFilePath = "$ParamTargetDir\$agentARMparam"
-				$GaParamTargetFilePath = "$ParamTargetDir\$gaAgentARMparam"
-				$LinuxParamTargetFilePath = "$ParamTargetDir\$linuxAgentARMparam"
+                $ParamTargetDir = $using:CatalinaHomeLocation + "\ARMParametertemplateFiles"
+                $ParamTargetFilePath = "$ParamTargetDir\$agentARMparam"
+                $GaParamTargetFilePath = "$ParamTargetDir\$gaAgentARMparam"
+                $LinuxParamTargetFilePath = "$ParamTargetDir\$linuxAgentARMparam"
                 $ARMTargetFilePath = "$templateLoc\$agentARM"
                 $GaARMTargetFilePath = "$templateLoc\$gaAgentARM"
                 $linuxARMTargetFilePath = "$templateLoc\$linuxAgentARM"
 
-				if(-not (Test-Path $ParamTargetDir))
-				{
-					New-Item $ParamTargetDir -type directory
-				}
+                if(-not (Test-Path $ParamTargetDir))
+                {
+                    New-Item $ParamTargetDir -type directory
+                }
 
-				#clear out whatever was stuffed in from the deployment WAR file
-				Remove-Item "$ParamTargetDir\*" -Recurse
+                #clear out whatever was stuffed in from the deployment WAR file
+                Remove-Item "$ParamTargetDir\*" -Recurse
 
-				$ARMFiles = @(
-					$ParamTargetFilePath,
-					$GaParamTargetFilePath,
-					$LinuxParamTargetFilePath,
-	                $ARMTargetFilePath,
-	                $GaARMTargetFilePath,
-	                $linuxARMTargetFilePath
-				)
+                $ARMFiles = @(
+                    $ParamTargetFilePath,
+                    $GaParamTargetFilePath,
+                    $LinuxParamTargetFilePath,
+                    $ARMTargetFilePath,
+                    $GaARMTargetFilePath,
+                    $linuxARMTargetFilePath
+                )
 
 
-				# download the files from the blob
+                # download the files from the blob
 
-				ForEach($item in $ARMFiles) {
-					$targetpath = $item
-					$filename = Split-Path $targetpath -leaf
-					$sourcepath = "remote-workstation-template/$filename"
+                ForEach($item in $ARMFiles) {
+                    $targetpath = $item
+                    $filename = Split-Path $targetpath -leaf
+                    $sourcepath = "remote-workstation-template/$filename"
 
-					Write-Host "Downloading $sourcepath from blob container $container_name.."
-					Get-AzureStorageBlobContent `
-						-Destination $targetpath `
-						-Container $container_name `
-						-Blob $sourcepath `
-						-Context $ctx
-				}
+                    Write-Host "Downloading $sourcepath from blob container $container_name.."
+                    Get-AzureStorageBlobContent `
+                        -Destination $targetpath `
+                        -Container $container_name `
+                        -Blob $sourcepath `
+                        -Context $ctx
+                }
 
-		        Write-Host "Finished Creating default template parameters file data."
+                Write-Host "Finished Creating default template parameters file data."
             }
-		}
+        }
 
-		Script Setup_Broker_Service
+        Script Setup_Broker_Service
         {
             DependsOn = @("[Script]Install_Tomcat", "[xRemoteFile]Download_Keystore")
             GetScript  = { @{ Result = "Setup_Broker_Service" } }
 
             TestScript = {
-				return !!(Get-Service $using:brokerServiceName -ErrorAction SilentlyContinue)
-			}
+                return !!(Get-Service $using:brokerServiceName -ErrorAction SilentlyContinue)
+            }
             SetScript  = {
-				Write-Host "Configuring Tomcat for $using:brokerServiceName service"
+                Write-Host "Configuring Tomcat for $using:brokerServiceName service"
 
-				$catalinaHome = $using:CatalinaHomeLocation
-				$catalinaBase = "$catalinaHome\$using:brokerServiceName"
+                $catalinaHome = $using:CatalinaHomeLocation
+                $catalinaBase = "$catalinaHome\$using:brokerServiceName"
 
                 #set the current (temporary) environment
-				$env:CATALINA_BASE = $catalinaBase
+                $env:CATALINA_BASE = $catalinaBase
 
-				# make new broker instance location - copying the directories specified
-				# here: https://tomcat.apache.org/tomcat-8.0-doc/windows-service-howto.html
+                # make new broker instance location - copying the directories specified
+                # here: https://tomcat.apache.org/tomcat-8.0-doc/windows-service-howto.html
 
-				# clear out any old cruft first
-				Remove-Item "$catalinaBase" -Force -Recurse -ErrorAction SilentlyContinue
-				Copy-Item "$catalinaHome\conf" "$catalinaBase\conf" -Recurse -ErrorAction SilentlyContinue
-				Copy-Item "$catalinaHome\logs" "$catalinaBase\logs" -Recurse -ErrorAction SilentlyContinue
-				Copy-Item "$catalinaHome\temp" "$catalinaBase\temp" -Recurse -ErrorAction SilentlyContinue
-				Copy-Item "$catalinaHome\work" "$catalinaBase\work" -Recurse -ErrorAction SilentlyContinue
+                # clear out any old cruft first
+                Remove-Item "$catalinaBase" -Force -Recurse -ErrorAction SilentlyContinue
+                Copy-Item "$catalinaHome\conf" "$catalinaBase\conf" -Recurse -ErrorAction SilentlyContinue
+                Copy-Item "$catalinaHome\logs" "$catalinaBase\logs" -Recurse -ErrorAction SilentlyContinue
+                Copy-Item "$catalinaHome\temp" "$catalinaBase\temp" -Recurse -ErrorAction SilentlyContinue
+                Copy-Item "$catalinaHome\work" "$catalinaBase\work" -Recurse -ErrorAction SilentlyContinue
 
-				# Make empty webapps directory if it does not exist. 
-				New-Item -ItemType Directory -Force -Path "$catalinaBase\webapps"
+                # Make empty webapps directory if it does not exist. 
+                New-Item -ItemType Directory -Force -Path "$catalinaBase\webapps"
 
-				$serverXMLFile = $catalinaBase + '\conf\server.xml'
-				$origServerXMLFile = $catalinaBase + '\conf\server.xml.orig'
+                $serverXMLFile = $catalinaBase + '\conf\server.xml'
+                $origServerXMLFile = $catalinaBase + '\conf\server.xml.orig'
 
-				# back up server.xml file if not done in a previous round
-				if( -not ( Get-Item ($origServerXMLFile) -ErrorAction SilentlyContinue ) )
-				{
-					Copy-Item -Path ($serverXMLFile) `
-						-Destination ($origServerXMLFile)
-				}
+                # back up server.xml file if not done in a previous round
+                if( -not ( Get-Item ($origServerXMLFile) -ErrorAction SilentlyContinue ) )
+                {
+                    Copy-Item -Path ($serverXMLFile) `
+                        -Destination ($origServerXMLFile)
+                }
 
-				# --------- update server.xml file ---------
-				$xml = [xml](Get-Content ($origServerXMLFile))
+                # --------- update server.xml file ---------
+                $xml = [xml](Get-Content ($origServerXMLFile))
 
-				# Set the local server control port to something different than the default 8005 to enable the service to start.
-				$xml.server.port = "8006"
+                # Set the local server control port to something different than the default 8005 to enable the service to start.
+                $xml.server.port = "8006"
 
-				#remove unwanted default connectors
-				($xml.Server.Service.Connector) | ForEach-Object { [void]$_.ParentNode.removeChild($_) }
+                #remove unwanted default connectors
+                ($xml.Server.Service.Connector) | ForEach-Object { [void]$_.ParentNode.removeChild($_) }
 
-				$NewConnector = [xml] ('<Connector
-					port="'+$using:brokerPort+'"
-					protocol="org.apache.coyote.http11.Http11NioProtocol"
-					SSLEnabled="true"
-					keystoreFile="'+$using:LocalDLPath+'\.keystore"
-					maxThreads="2000" scheme="https" secure="true"
-					clientAuth="false" sslProtocol="TLS"
-					SSLEngine="on" keystorePass="changeit"
-					SSLPassword="changeit"
-					sslEnabledProtocols="TLSv1.0,TLSv1.1,TLSv1.2"
-					ciphers="TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_CBC_SHA"
-					/>')
+                $NewConnector = [xml] ('<Connector
+                    port="'+$using:brokerPort+'"
+                    protocol="org.apache.coyote.http11.Http11NioProtocol"
+                    SSLEnabled="true"
+                    keystoreFile="'+$using:LocalDLPath+'\.keystore"
+                    maxThreads="2000" scheme="https" secure="true"
+                    clientAuth="false" sslProtocol="TLS"
+                    SSLEngine="on" keystorePass="changeit"
+                    SSLPassword="changeit"
+                    sslEnabledProtocols="TLSv1.0,TLSv1.1,TLSv1.2"
+                    ciphers="TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_CBC_SHA"
+                    />')
 
-				$xml.Server.Service.InsertBefore(
-					# new child
-					$xml.ImportNode($NewConnector.Connector,$true),
-					#ref child
-					$xml.Server.Service.Engine )
+                $xml.Server.Service.InsertBefore(
+                    # new child
+                    $xml.ImportNode($NewConnector.Connector,$true),
+                    #ref child
+                    $xml.Server.Service.Engine )
 
-				$xml.save($serverXMLFile)
+                $xml.save($serverXMLFile)
 
 
 
-				Write-Host "Opening port $using:brokerPort"
+                Write-Host "Opening port $using:brokerPort"
 
-				#open port in firewall
-				netsh advfirewall firewall add rule name="Open Port $using:brokerPort" dir=in action=allow protocol=TCP localport=$using:brokerPort
+                #open port in firewall
+                netsh advfirewall firewall add rule name="Open Port $using:brokerPort" dir=in action=allow protocol=TCP localport=$using:brokerPort
 
-				# Install and start service for new config
+                # Install and start service for new config
 
-				& "$using:CatalinaBinLocation\service.bat" install $using:brokerServiceName
-				Write-Host "Tomcat Installer exit code: $LASTEXITCODE"
-				Start-Sleep -s 10  #TODO: Is this sleep ACTUALLY needed?
+                & "$using:CatalinaBinLocation\service.bat" install $using:brokerServiceName
+                Write-Host "Tomcat Installer exit code: $LASTEXITCODE"
+                Start-Sleep -s 10  #TODO: Is this sleep ACTUALLY needed?
 
-				Write-Host "Setting Tomcat Service for $using:brokerServiceName to automatically startup."
-				Set-Service $using:brokerServiceName -startuptype "automatic"
-	        }
+                Write-Host "Setting Tomcat Service for $using:brokerServiceName to automatically startup."
+                Set-Service $using:brokerServiceName -startuptype "automatic"
+            }
         }
 
-		Script Install_Broker
+        Script Install_Broker
         {
             DependsOn  = @("[xRemoteFile]Download_Broker_WAR", "[Script]Setup_Broker_Service")
             GetScript  = { @{ Result = "Install_Broker" } }
 
             TestScript = {
-				$WARPath = "$using:CatalinaHomeLocation\$using:brokerServiceName\webapps\$using:brokerWAR"
+                $WARPath = "$using:CatalinaHomeLocation\$using:brokerServiceName\webapps\$using:brokerWAR"
  
                 return Test-Path $WARPath -PathType Leaf
-			}
+            }
             SetScript  = {
                 Write-Verbose "Install_Broker"
 
-				$catalinaHome = $using:CatalinaHomeLocation
-				$catalinaBase = "$catalinaHome\$using:brokerServiceName"
+                $catalinaHome = $using:CatalinaHomeLocation
+                $catalinaBase = "$catalinaHome\$using:brokerServiceName"
 
-				Copy-Item "$using:LocalDLPath\$using:brokerWAR" ($catalinaBase + "\webapps")
+                Copy-Item "$using:LocalDLPath\$using:brokerWAR" ($catalinaBase + "\webapps")
 
-				# $svc = get-service $using:brokerServiceName
-				# if ($svc.Status -ne "Stopped") {$svc.stop()}
+                # $svc = get-service $using:brokerServiceName
+                # if ($svc.Status -ne "Stopped") {$svc.stop()}
 
-				Write-Host "Generating broker configuration file."
-				$targetDir = $catalinaBase + "\brokerproperty"
-				$cbPropertiesFile = "$targetDir\connectionbroker.properties"
+                Write-Host "Generating broker configuration file."
+                $targetDir = $catalinaBase + "\brokerproperty"
+                $cbPropertiesFile = "$targetDir\connectionbroker.properties"
 
-				if(-not (Test-Path $targetDir))
-				{
-					New-Item $targetDir -type directory
-				}
+                if(-not (Test-Path $targetDir))
+                {
+                    New-Item $targetDir -type directory
+                }
 
-				if(-not (Test-Path $cbPropertiesFile))
-				{
-					New-Item $cbPropertiesFile -type file
-				}
+                if(-not (Test-Path $cbPropertiesFile))
+                {
+                    New-Item $cbPropertiesFile -type file
+                }
 
-				#making another copy in catalinaHome until the paths are figured out...
-				Write-Host "Generating broker configuration file in CatalinaHome."
-				$targetDir = $catalinaHome + "\brokerproperty"
-				$cbHomePropertiesFile = "$targetDir\connectionbroker.properties"
+                #making another copy in catalinaHome until the paths are figured out...
+                Write-Host "Generating broker configuration file in CatalinaHome."
+                $targetDir = $catalinaHome + "\brokerproperty"
+                $cbHomePropertiesFile = "$targetDir\connectionbroker.properties"
 
-				if(-not (Test-Path $targetDir))
-				{
-					New-Item $targetDir -type directory
-				}
+                if(-not (Test-Path $targetDir))
+                {
+                    New-Item $targetDir -type directory
+                }
 
-				if(-not (Test-Path $cbHomePropertiesFile))
-				{
-					New-Item $cbHomePropertiesFile -type file
-				}
-
-
-				$firstIPv4IP = Get-NetIPAddress | Where-Object {$_.AddressFamily -eq "IPv4"} | select -First 1
-				$ipaddressString = $firstIPv4IP.IPAddress
-
-				$localAdminCreds = $using:DomainAdminCreds
-				$adminUsername = $localAdminCreds.GetNetworkCredential().Username
-				$adminPassword = $localAdminCreds.GetNetworkCredential().Password
+                if(-not (Test-Path $cbHomePropertiesFile))
+                {
+                    New-Item $cbHomePropertiesFile -type file
+                }
 
 
-				$cbProperties = @"
+                $firstIPv4IP = Get-NetIPAddress | Where-Object {$_.AddressFamily -eq "IPv4"} | select -First 1
+                $ipaddressString = $firstIPv4IP.IPAddress
+
+                $localAdminCreds = $using:DomainAdminCreds
+                $adminUsername = $localAdminCreds.GetNetworkCredential().Username
+                $adminPassword = $localAdminCreds.GetNetworkCredential().Password
+
+
+                $cbProperties = @"
 ldapHost=ldaps://$Using:dcvmfqdn
 ldapAdminUsername=$adminUsername
 ldapAdminPassword=$adminPassword
@@ -877,122 +877,123 @@ brokerIpaddress=$ipaddressString
 brokerLocale=en_US
 "@
 
-				Set-Content $cbPropertiesFile $cbProperties
-				Set-Content $cbHomePropertiesFile $cbProperties
-				Write-Host "Broker configuration file generated."
+                Set-Content $cbPropertiesFile $cbProperties
+                Set-Content $cbHomePropertiesFile $cbProperties
+                Write-Host "Broker configuration file generated."
 
-				#----- setup security trust for LDAP certificate from DC -----
+                #----- setup security trust for LDAP certificate from DC -----
 
-				#second, get the certificate file
+                #second, get the certificate file
+                $issuerCertFileName = "issuercert.cert"
+				$dcvmfqdn = $using:dcvmfqdn
+                Write-Host "Looking for Issuer certificate for $dcvmfqdn"
 
-				$ldapCertFileName = "ldapcert.cert"
-				$certStoreLocationOnDC = "c:\" + $ldapCertFileName
+                $foundCert = $false
+                $caCert = $null
+                $loopCountRemaining = 180
 
-				$issuerCertFileName = "issuercert.cert"
-				$issuerCertStoreLocationOnDC = "c:\" + $issuerCertFileName
+                # LDAPS Port and Host
+                $port=636
+                $hostname=$dcvmfqdn
+                #loop until it's created
+                while(-not $foundCert)
+                {
+                    $cert = $null
+                    try {
+                        Write-Host "Looking for LDAPS certificate for $hostname"
+                        $tcpclient = new-object System.Net.Sockets.tcpclient
+                        $tcpclient.Connect($hostname,$port)
 
-				$certSubject = "CN=$using:dcvmfqdn"
+                        #Authenticate with SSL
+                        $sslstream = new-object System.Net.Security.SslStream -ArgumentList $tcpclient.GetStream(),$false
 
-				Write-Host "Looking for cert with $certSubject on $dcvmfqdn"
+                        $sslstream.AuthenticateAsClient($hostname)
+                        $cert =  [System.Security.Cryptography.X509Certificates.X509Certificate2]($sslstream.remotecertificate)
+                        Write-Host "Found Certificate for $hostname, looking for Issuer Certificate"
 
-				$foundCert = $false
-				$loopCountRemaining = 180
-				#loop until it's created
-				while(-not $foundCert)
-				{
-					Write-Host "Waiting for LDAP certificate. Seconds remaining: $loopCountRemaining"
+                        $chain = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Chain
+                        # Build the certificate chain from the file certificate
+                        $chain.Build($cert)                        
+                        $listOfCertificates = ($chain.ChainElements | ForEach-Object {$_.Certificate})
+                        
+                        #last one is the root in chain
+                        $caCert=$listOfCertificates[-1]
+                        $content = @(
+                            '-----BEGIN CERTIFICATE-----'
+                            [System.Convert]::ToBase64String($caCert.RawData, 'InsertLineBreaks')
+                            '-----END CERTIFICATE-----'
+                        )
+                       
+                        $content | Out-File -FilePath "$env:systemdrive\$issuerCertFileName" -Encoding ascii
+                        $foundCert=$true
+                    } catch {
+                        Write-Host "Failed to retrieve issuer certificate from $hostname`:$port because $_"
 
-					$DCSession = New-PSSession $using:dcvmfqdn -Credential $using:DomainAdminCreds
+						# Run 'pulse' on the DC as that can resolve the situation.
+						$DCSession = New-PSSession $dcvmfqdn -Credential $using:DomainAdminCreds
 
-					$foundCert = `
-						Invoke-Command -Session $DCSession -ArgumentList $certSubject, $certStoreLocationOnDC, $issuerCertStoreLocationOnDC `
-						  -ScriptBlock {
-								$cs = $args[0]
-								$cloc = $args[1]
-								$icloc = $args[2]
+						Invoke-Command {& "certutil" -pulse > $null} -Session $DCSession | Out-Null
+						Remove-PSSession $DCSession | Out-Null
+                    } finally {
+                        #cleanup
+                        if ($sslStream) {
+                            $sslstream.close()
+                        }
+                        if ($tcpclient) {
+                            $tcpclient.close()
+                        }
+                    }
+                    
+                    if(-not $foundCert)
+                    {
+                        Start-Sleep -Seconds 10
+                        $loopCountRemaining = $loopCountRemaining - 1
+                        if( $loopCountRemaining -eq 0 ) {
+                            throw "Unable to get Issuer Certificate after multiple tries"
+                        }
+                    }
+                }
 
-								$cert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cs }
-								if(-not $cert)
-								{
-									Write-Host "Did not find LDAP certificate."
-									#maybe a certutil -pulse will help?
-									# NOTE - must redirect stdout to $null otherwise the success return here pollutes the return value of $foundCert
-									& "certutil" -pulse > $null
-									return $false
-								}
-								else
-								{
-									Export-Certificate -Cert $cert -filepath  $cloc -force
-									Write-Host "Exported LDAP certificate."
+                # Have the certificate file, add to keystore
 
-									#Now export issuer Certificate
-									$issuerCert = get-childItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Subject -eq $cert.Issuer }
-									Export-Certificate -Cert $issuerCert -filepath	$icloc -force
+                # keytool seems to be causing an error but succeeding. Ignore and continue.
+                $eap = $ErrorActionPreference
+                $ErrorActionPreference = 'SilentlyContinue'
+                & "keytool" -import -file "$env:systemdrive\$issuerCertFileName" -keystore ($env:classpath + "\security\cacerts") -storepass changeit -noprompt
+                $ErrorActionPreference = $eap
 
-									return $true
-								}
-							}
-
-					if(-not $foundCert)
-					{
-						Start-Sleep -Seconds 10
-						$loopCountRemaining = $loopCountRemaining - 1
-						if ($loopCountRemaining -eq 0)
-						{
-							Remove-PSSession $DCSession
-							throw "No LDAP certificate!"
-						}
-					}
-					else
-					{
-						#found it! copy
-						Write-Host "Copying certs and exiting DC Session"
-						Copy-Item -Path $certStoreLocationOnDC -Destination "$env:systemdrive\$ldapCertFileName" -FromSession $DCSession
-						Copy-Item -Path $issuerCertStoreLocationOnDC -Destination "$env:systemdrive\$issuerCertFileName" -FromSession $DCSession
-					}
-					Remove-PSSession $DCSession
-				}
-
-				# Have the certificate file, add to keystore
-
-				# keytool seems to be causing an error but succeeding. Ignore and continue.
-				$eap = $ErrorActionPreference
-				$ErrorActionPreference = 'SilentlyContinue'
-				& "keytool" -import -file "$env:systemdrive\$issuerCertFileName" -keystore ($env:classpath + "\security\cacerts") -storepass changeit -noprompt
-				$ErrorActionPreference = $eap
-
-				Write-Host "Finished importing LDAP certificate to keystore."
-			}
-		}
+                Write-Host "Finished importing LDAP certificate to keystore."
+            }
+        }
 
 
-		Script Set_CAM_Envionment_And_Reboot
-		{
-		    # depends on both services being installed to ensure the reboot at the end will start both services properly.
-			DependsOn  = @("[Script]Install_Auth_file", "[Script]Install_Broker")
-			GetScript  = { @{ Result = "Set_CAM_Envionment_And_Reboot" } }
+        Script Set_CAM_Envionment_And_Reboot
+        {
+            # depends on both services being installed to ensure the reboot at the end will start both services properly.
+            DependsOn  = @("[Script]Install_Auth_file", "[Script]Install_Broker")
+            GetScript  = { @{ Result = "Set_CAM_Envionment_And_Reboot" } }
 
             TestScript = { 
-				[bool]( $env:CAM_USERNAME `
-				   -and $env:CAM_PASSWORD `
-				   -and $env:CAM_TENANTID `
-				   -and $env:CAM_URI `
-				   -and $env:CAM_DEPLOYMENTID)
-			}
+                [bool]( $env:CAM_USERNAME `
+                   -and $env:CAM_PASSWORD `
+                   -and $env:CAM_TENANTID `
+                   -and $env:CAM_URI `
+                   -and $env:CAM_DEPLOYMENTID)
+            }
 
             SetScript  = {
-				##
-				$regInfo = $using:camDeploymentInfoDecoded.RegistrationInfo
+                ##
+                $regInfo = $using:camDeploymentInfoDecoded.RegistrationInfo
 
-				# now have an object with key value pairs - set environment (to be active after reboot)
-				$regInfo.psobject.properties | Foreach-Object {
-					[System.Environment]::SetEnvironmentVariable($_.Name, $_.Value, "Machine")
-				}
+                # now have an object with key value pairs - set environment (to be active after reboot)
+                $regInfo.psobject.properties | Foreach-Object {
+                    [System.Environment]::SetEnvironmentVariable($_.Name, $_.Value, "Machine")
+                }
 
-				# Reboot machine to ensure all changes are picked up by all services.
-				$global:DSCMachineStatus = 1
-			}
-		}
+                # Reboot machine to ensure all changes are picked up by all services.
+                $global:DSCMachineStatus = 1
+            }
+        }
     }
 }
 
