@@ -294,7 +294,7 @@ done
 
 # register license code
 echo "-->Register license code"
-for idx in {1..3}
+for idx in {1..5}
 do
     pcoip-register-host --registration-code="$REGISTRATION_CODE"
     pcoip-validate-license    
@@ -304,13 +304,13 @@ do
     then
         break
     else
-        if [ $idx -eq 3 ]
+        if [ $idx -eq 5 ]
         then
             echo "failed to register pcoip agent license."
             # let's define exit code 102 for this case
             exit 102
         fi
-        sleep 5
+        sleep 60
     fi
 done
 

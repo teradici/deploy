@@ -41,8 +41,8 @@ Configuration InstallPCoIPAgent
 			   Else {
 					"HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\PCoIP Graphics Agent"
 			   }
-	$retryCount = 3
-	$delay = 10 # seconds
+	$retryCount = 5
+	$delay = 60 # seconds
 	$orderNumArray = @('1st', '2nd', '3rd')
 
 	$agentInstallerDLDirectory = "C:\WindowsAzure\PCoIPAgentInstaller"
