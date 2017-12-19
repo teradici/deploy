@@ -2547,10 +2547,10 @@ else {
             }
         } while (-not $vnetConfig.CSsubnetName)
 
-        # Gateway Subnet
+        # Application Gateway Subnet
         do {
             if ( -not $vnetConfig.GWsubnetName ) {
-                $vnetConfig.GWsubnetName = Read-Host "Provide Gateway Subnet Name"
+                $vnetConfig.GWsubnetName = Read-Host "Provide Application Gateway Subnet Name"
             }
             if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.GWsubnetName}) ) {
                 # Does not exist
@@ -2579,7 +2579,7 @@ else {
             $vnetConfig.CSSubnetName = "subnet-ConnectionService"
         }
         if( -not $vnetConfig.GWSubnetName ) {
-            $vnetConfig.GWSubnetName = "subnet-Gateway"
+            $vnetConfig.GWSubnetName = "subnet-AppGateway"
         }
         if( -not $vnetConfig.RWSubnetName ) {
             $vnetConfig.RWSubnetName = "subnet-RemoteWorkstation"
