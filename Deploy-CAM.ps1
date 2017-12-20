@@ -2261,10 +2261,19 @@ function Deploy-CAM() {
     }
 }
 
+function Confirm-ModuleVersion {
+    # Check Azure RM version
+    $MinVersion="5.0.1"
+    if ( [version](Get-Module -ListAvailable -Name "AzureRM").Version.ToString() -lt [version]$MinVersion) {
+        Write-Host ("AzureRM version must be equal or greater than " + $MinVersion)
+        exit
+    }
+}
 ##############################################
 ############# Script starts here #############
 ##############################################
 
+Confirm-ModuleVersion
 # Get the correct modules and assemblies
 Add-Type -AssemblyName System.Web
 
