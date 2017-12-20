@@ -89,10 +89,10 @@
           }
         },
         "storageAccountName": {
-            "type": "string",
-            "metadata": {
-                "description": "Storage account to use for VM data and VHD's"
-            }
+          "type": "string",
+          "metadata": {
+            "description": "Storage account to use for VM data and VHD's"
+          }
         },
         "enableAutoShutdown": {
             "type": "bool",

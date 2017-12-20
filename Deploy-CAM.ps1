@@ -331,7 +331,8 @@ function New-UserStorageAccount {
         $location
     )
 
-    $saName = -join ((97..122) | Get-Random -Count 18 | % {[char]$_})
+    $saName = -join ((97..122) | Get-Random -Count 16 | % {[char]$_})
+    $saName = 'cam0' + $saName
 
     Write-Host "Creating user data storage account $saName in resource group $RGName and location $location."
 
@@ -369,8 +370,8 @@ function New-RemoteWorstationTemplates {
     $domainFQDN = $CAMConfig.parameters.domainName.clearValue
 
     #Put the VHD's in the user storage account until we move to managed storage...
-    $VHDStorageAccountName = $storageAccountContext.StorageAccountName
-	
+    $VHDStorageAccountName = $storageAccountContext.StorageAccountName	
+
 	$agentChannel = $CAMConfig.internal.agentChannel
 
     $armParamContent = @"
@@ -459,9 +460,8 @@ function New-RemoteWorstationTemplates {
 		},
 		"domainToJoin": { "value": "$domainFQDN" },
 		"storageAccountName": { "value": "$VHDStorageAccountName" }
-			}
-		}
-
+	}
+}
 "@
 
     $standardArmParamContent = $armParamContent -replace "%vmSize%", $standardVMSize

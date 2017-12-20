@@ -73,8 +73,7 @@
     }
   },
   "variables": {
-    "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'adsa')]",
-    "templateStorageAccountName": "[concat(uniquestring(resourceGroup().id), 'data')]",
+    "storageAccountName": "[concat('vmdc', uniquestring(resourceGroup().id))]",
     "adVMName": "vm-dc",
     "serverRootName": "vm",
     "networkSettings" : {
@@ -111,17 +110,6 @@
     {
       "type": "Microsoft.Storage/storageAccounts",
       "name": "[variables('storageAccountName')]",
-      "apiVersion": "2016-01-01",
-      "location": "[resourceGroup().location]",
-      "sku": {
-        "name": "Standard_LRS"
-      },
-      "kind": "Storage",
-      "properties": {}
-    },
-    {
-      "type": "Microsoft.Storage/storageAccounts",
-      "name": "[variables('templateStorageAccountName')]",
       "apiVersion": "2016-01-01",
       "location": "[resourceGroup().location]",
       "sku": {
@@ -393,10 +381,6 @@
     "dcnsgName" : {
       "type": "string",
       "value": "[variables('networkSettings').networkSecurityGroups.dcnsgName]"
-    },
-    "templateStorageAccountName" : {
-      "type": "string",
-      "value": "[variables('templateStorageAccountName')]"
     }
   }
 }

@@ -94,10 +94,10 @@
           }
         },
         "storageAccountName": {
-            "type": "string",
-            "metadata": {
-                "description": "Storage account to use for VM data and VHD's"
-            }
+          "type": "string",
+          "metadata": {
+            "description": "Storage account to use for VM data and VHD's"
+          }
         },
         "enableAutoShutdown": {
             "type": "bool",
@@ -225,7 +225,7 @@
                     "osDisk": {
                         "name": "osdisk",
                         "vhd": {
-                            "uri": "[concat('http://',parameters('storageAccountName'),'.blob.core.windows.net/vhds/',parameters('dnsLabelPrefix'), 'disk0.vhd')]"
+                          "uri": "[concat('http://',parameters('storageAccountName'),'.blob.core.windows.net/vhds/',parameters('dnsLabelPrefix'), 'disk0.vhd')]"
                         },
                         "caching": "ReadWrite",
                         "createOption": "FromImage"
