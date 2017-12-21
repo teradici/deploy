@@ -17,7 +17,7 @@
         "instanceCount": {
             "value": 1
         },
-        "cmnsgName": {
+        "sgnsgName": {
             "value": "networkSecurityGroup"
         },
         "appGwbackendAddressPoolId": {
