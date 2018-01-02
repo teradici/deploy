@@ -91,7 +91,7 @@
       "scriptFileName":  "cm_setup_0.1.sh",
       "scriptFileURI":  "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'), parameters('_artifactsLocationSasToken'))]",
       "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-CM-',subscription().subscriptionId)]",
-      "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',variables('sumoCollectorID'),' ',parameters('_artifactsLocation'))]"
+      "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',variables('sumoCollectorID'),' ',parameters('_artifactsLocation'),'SecurityGatewayEnabled=true')]"
     },
     "resources": [
     {

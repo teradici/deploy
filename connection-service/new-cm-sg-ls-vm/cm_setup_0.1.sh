@@ -12,7 +12,7 @@ wget "https://collectors.sumologic.com/rest/download/linux/64" -O /tmp/sumo/Sumo
 wget "$3/user.properties" -O /tmp/sumo/user.properties
 wget "$3/sumo_cm_vm.json" -O /tmp/sumo/sumo_cm_vm.json
 JSON_FILE=/tmp/sumo/sumo_cm_vm.json
-echo "Attemtping to set sumo collector ID to: " "$2"
+echo "Attempting to set sumo collector ID to: " "$2"
 sed -i s/collectorID/"$2"/ /tmp/sumo/user.properties
 sed -i 's|syncsourceFile|'$JSON_FILE'|' /tmp/sumo/user.properties
 
@@ -40,9 +40,24 @@ iptables -I INPUT 1 -p tcp --dport 4172 -j ACCEPT
 iptables -I INPUT 1 -p udp --dport 4172 -j ACCEPT
 service iptables save
 
+# 4th parameter is if the SG should be enabled. If not present, assume true. Using the value after the '='
+if [ -n "${4}" ]
+then
+	$SGENABLED="${4#*=}"
+	if [ "${SGENABLED^^}" = "TRUE" ]; then sge=true; else sge=false; fi
+else
+	sge=true
+fi
+
 
 #get current networking configuration and use that for system setup. If there are dynamic IP's in the system THIS WILL EVENTUALLY FAIL.
-mypublicip=$(dig +short myip.opendns.com @resolver1.opendns.com)
+if [ ${sge} = "true" ]
+then
+	mypublicip=$(dig +short myip.opendns.com @resolver1.opendns.com)
+else
+	mypublicip= "Did not search."
+fi
+
 #alternates if opendns turns off: curl ipinfo.io/ip    curl ipecho.net/plain ; echo
 myhostname=$(hostname)
 myprivateip=$(ifconfig eth0 | awk '/inet addr/ {gsub("addr:", "", $2); print $2}')
@@ -63,7 +78,7 @@ case "$FOLDER_NAME" in
 		   FOLDER_NAME=cm_sg
           ;;
        *)
-           echo "no space in directoy name"
+           echo "no space in directory name"
            ;;
 esac
 
@@ -95,22 +110,22 @@ awk '/xmlValidation=\"false\" xmlNamespaceAware=\"false\"/{print $0; print "<Con
 echo "Finished setting up CM without SG"
 
 
-# external IP is set, setup SG
-if [ -n "$mypublicip" ]; then
+# external IP is set and want to set up SG -> setup SG
+if [ ${sge} = "true" ]; then
+	if [ -n "$mypublicip" ]; then
 
-	#first, enable sg in CM config and copy it back again
-	awk '/^SecurityGatewayEnabled/{printf "SecurityGatewayEnabled = true\n";next};{print}'  /etc/ConnectionManager.conf >  ConnectionManager.conf
-	cp -f ConnectionManager.conf /etc/ConnectionManager.conf
+		#first, enable sg in CM config and copy it back again
+		awk '/^SecurityGatewayEnabled/{printf "SecurityGatewayEnabled = true\n";next};{print}'  /etc/ConnectionManager.conf >  ConnectionManager.conf
+		cp -f ConnectionManager.conf /etc/ConnectionManager.conf
 
-	#make the 'original' file one time only
-	cp -n /etc/SecurityGateway.conf /etc/SecurityGateway.conf.orig
-	awk -v externalip="$mypublicip" '/^ExternalRoutableIP/{printf "ExternalRoutableIP = %s\n",externalip;next};{print}' /etc/SecurityGateway.conf.orig > SecurityGateway.conf
-	cp -f SecurityGateway.conf /etc/SecurityGateway.conf
+		#make the 'original' file one time only
+		cp -n /etc/SecurityGateway.conf /etc/SecurityGateway.conf.orig
+		awk -v externalip="$mypublicip" '/^ExternalRoutableIP/{printf "ExternalRoutableIP = %s\n",externalip;next};{print}' /etc/SecurityGateway.conf.orig > SecurityGateway.conf
+		cp -f SecurityGateway.conf /etc/SecurityGateway.conf
 
-	echo "Finished setting up SG"
+		echo "Finished setting up SG"
+	fi
 fi
-
-
 
 
 #restart all the services
@@ -123,6 +138,3 @@ service connection_manager restart
 
 
 exit 0
-
-
-
