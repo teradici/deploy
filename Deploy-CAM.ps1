@@ -1499,7 +1499,7 @@ function New-ConnectionServiceDeployment() {
                 -Verbose
         }
         else {
-            for($idx = 3;$idx -gt 0;$idx--)
+            for($idx = 10;$idx -gt 0;$idx--)
             {
                 try {
                     New-AzureRmResourceGroupDeployment `
