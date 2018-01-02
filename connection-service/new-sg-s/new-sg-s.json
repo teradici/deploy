@@ -3,7 +3,7 @@
     "contentVersion": "1.0.0.0",
 
     "parameters": {
-        "sgnsgName": {
+        "sgNsgName": {
             "type": "string",
             "defaultValue": "cm-nsg",
             "metadata": {
@@ -24,7 +24,7 @@
         {
             "apiVersion": "[variables('apiVersion')]",
             "type": "Microsoft.Network/networkSecurityGroups",
-            "name": "[parameters('sgnsgName')]",
+            "name": "[parameters('sgNsgName')]",
             "location": "[resourceGroup().location]",
             "tags": {
                 "displayName": "NSG - Connection Manager"

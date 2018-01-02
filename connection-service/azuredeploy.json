@@ -105,7 +105,7 @@
     "appGwSGPoolID": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/applicationGateways/', variables('appGwName'), '/backendAddressPools/', variables('appGwSGPoolName'))]",
     "appGwCSPoolName": "CSBackendPool",
     "appGwCSPoolID": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/applicationGateways/', variables('appGwName'), '/backendAddressPools/', variables('appGwCSPoolName'))]",
-    "sgnsgName": "[concat('sgNSG',parameters('CSUniqueSuffix'))]",
+    "sgNsgName": "[concat('sgNSG',parameters('CSUniqueSuffix'))]",
     "connectionServerName": "[concat('conn-srvr',parameters('CSUniqueSuffix'))]",
     "connectionServerBrokerFQDN": "[concat(variables('connectionServerName'),'.',parameters('domainName'),':',variables('brokerPort'))]"
 },
@@ -132,8 +132,8 @@
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
-          "sgnsgName": {
-            "value": "[variables('sgnsgName')]"
+          "sgNsgName": {
+            "value": "[variables('sgNsgName')]"
           }
         }
       }
@@ -294,8 +294,8 @@
           "subnetId": {
             "value": "[parameters('CSsubnetId')]"
           },
-          "sgnsgName": {
-            "value": "[variables('sgnsgName')]"
+          "sgNsgName": {
+            "value": "[variables('sgNsgName')]"
           },
           "vmSku": {
             "value": "Standard_A1_v2"
