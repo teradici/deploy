@@ -4,9 +4,7 @@
 
 
 param(
-    $subscriptionId,
     $ResourceGroupName,
-    $tenantId,
 
     [System.Management.Automation.PSCredential]
     $domainAdminCredential,
