@@ -29,7 +29,7 @@
               "description": "ID of the subnet that the SG's NIC's attach to"
           }
       },
-      "cmnsgName": {
+      "sgNsgName": {
           "type": "string",
           "metadata": {
               "description": "Name of the network security group.",
@@ -130,7 +130,7 @@
                 "name": "[variables('nicName')]",
                 "properties": {
                   "networkSecurityGroup": {
-                      "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('cmnsgName'))]"
+                      "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('sgNsgName'))]"
                   },
                   "primary": true,
                   "ipConfigurations": [
