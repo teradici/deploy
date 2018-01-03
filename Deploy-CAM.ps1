@@ -1497,11 +1497,12 @@ function New-ConnectionServiceDeployment() {
                 -Verbose
         }
         else {
-            for($idx = 10;$idx -gt 0;$idx--)
+            $maxRetries = 30
+            for($idx = 0;$idx -lt $maxRetries;$idx++)
             {
                 try {
                     New-AzureRmResourceGroupDeployment `
-                        -DeploymentName "CS" `
+                        -DeploymentName "CS$connectionServiceNumber-$idx" `
                         -ResourceGroupName $csRGName `
                         -TemplateFile $CSDeploymentTemplateURI `
                         -TemplateParameterFile $outputParametersFilePath `
@@ -1512,13 +1513,20 @@ function New-ConnectionServiceDeployment() {
                 catch {
                     # Seems there can be a race condition on the role assignment of the service principal with
                     # the resource group before getting here - setting a retry loop
+                    if ($idx -eq ($maxRetries - 1))
+                    {
+                        # last try - just throw
+                        throw
+                    }
                     if ($_.Exception.Message -like "*does not have authorization*")
                     {
-                        Write-host "Authorization error. Retrying. Remaining: $idx"
+                        $remaining = $maxRetries - $idx - 1
+                        Write-Host "Authorization error. Usually this means we are waiting for the authorization to percolate through Azure."
+                        Write-Host "Retrying deployment. Retries remaining: $remaining. If this countdown stops the deployment is happening."
                         Start-sleep -Seconds 10
                     }
                     else {
-                        throw $_
+                        throw
                     }
                 }
             }
