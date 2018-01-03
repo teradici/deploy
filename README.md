@@ -27,11 +27,11 @@ Click the **Deploy Azure** button for instructions on how to begin.
 
 **NOTE:** By clicking one of the following Deploy on Azure buttons, you accept the terms of the Teradici Cloud Access Software End User License Agreement and you have read and agree to be bound by the software license for use of the third-party drivers.
 
-<a target="_blank" href="http://www.teradici.com/web-help/ter1708002/Default.htm">
+<a target="_blank" href="http://www.teradici.com/web-help/CAM/site/index.html">
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
 
-Copyright 2017 Teradici Corporation. All Rights Reserved.
+Copyright 2018 Teradici Corporation. All Rights Reserved.
 
 Some content is based off of the Azure Quickstart Templates, Copyright (c) Microsoft Azure. With the following license: https://github.com/Azure/azure-quickstart-templates/blob/master/LICENSE
