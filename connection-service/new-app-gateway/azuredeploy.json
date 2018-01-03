@@ -78,6 +78,7 @@
     "applicationGatewayID": "[resourceId('Microsoft.Network/applicationGateways',parameters('applicationGatewayName'))]",
     "apiVersion": "2015-06-15",
     "appGwFrontendPort": 443,
+    "appGwFrontendPrivatePort": 8443,
     "appGwBackendPort": 8080
   },
   "resources": [
@@ -151,7 +152,7 @@
           {
             "name": "appGatewayFrontendPrivatePort",
             "properties": {
-              "Port": "[variables('appGwFrontendPort')]"
+              "Port": "[variables('appGwFrontendPrivatePort')]"
             }
           }
         ],
