@@ -2267,19 +2267,43 @@ function Deploy-CAM() {
     }
 }
 
-function Confirm-ModuleVersion {
+function Confirm-ModuleVersion()
+{
     # Check Azure RM version
-    $MinVersion="5.0.1"
-    if ( [version](Get-Module -ListAvailable -Name "AzureRM").Version.ToString() -lt [version]$MinVersion) {
-        Write-Host ("AzureRM version must be equal or greater than " + $MinVersion)
-        exit
+    $MinAzureRMVersion="5.0.1"
+    $AzureRMModule = Get-Module -ListAvailable -Name "AzureRM"
+    if ( $AzureRMModule ) {
+        # have an AzureRM version - check that.
+        if ( [version]$AzureRMModule.Version.ToString() -lt [version]$MinAzureRMVersion) {
+            Write-Host ("AzureRM module version must be equal or greater than " + $MinAzureRMVersion)
+            return $false
+        }
     }
+    else {
+        # the Azure SDK doesn't install 'AzureRM' as a base module any more, just Azure
+        $MinAzureVersion="5.0.0"
+        $AzureModule = Get-Module -ListAvailable -Name "Azure"
+
+        if ( $AzureModule ) {
+            if ( [version]$AzureModule.Version.ToString() -lt [version]$MinAzureVersion) {
+                Write-Host ("Azure module version must be equal or greater than " + $MinAzureVersion)
+                return $false
+            }
+        }
+    }
+    return $true
 }
+
+
 ##############################################
 ############# Script starts here #############
 ##############################################
 
-Confirm-ModuleVersion
+if (-not (Confirm-ModuleVersion) ) {
+    exit
+}
+
+
 # Get the correct modules and assemblies
 Add-Type -AssemblyName System.Web
 
