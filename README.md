@@ -32,6 +32,6 @@ Click the **Deploy Azure** button for instructions on how to begin.
 </a>
 
 
-Copyright 2017 Teradici Corporation. All Rights Reserved.
+Copyright 2018 Teradici Corporation. All Rights Reserved.
 
 Some content is based off of the Azure Quickstart Templates, Copyright (c) Microsoft Azure. With the following license: https://github.com/Azure/azure-quickstart-templates/blob/master/LICENSE
