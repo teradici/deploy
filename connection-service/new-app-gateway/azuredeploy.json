@@ -147,6 +147,12 @@
             "properties": {
               "Port": "[variables('appGwFrontendPort')]"
             }
+          },
+          {
+            "name": "appGatewayFrontendPrivatePort",
+            "properties": {
+              "Port": "[variables('appGwFrontendPort')]"
+            }
           }
         ],
         "backendAddressPools": [
@@ -190,7 +196,7 @@
                 "Id": "[concat(variables('applicationGatewayID'), '/frontendIPConfigurations/appGatewayFrontendPrivateIP')]"
               },
               "FrontendPort": {
-                "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendPort')]"
+                "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendPrivatePort')]"
               },
               "Protocol": "Https",
               "SslCertificate": {
