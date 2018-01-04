@@ -42,7 +42,7 @@ service iptables save
 
 # 4th parameter is if the SG should be enabled. If not present, assume true. Using the value after the '='
 if [ -n "${4}" ]; then
-	$SGENABLED="${4#*=}"
+	SGENABLED="${4#*=}"
 	if [ "${SGENABLED^^}" = "TRUE" ]; then sge=true; else sge=false; fi
 else
 	sge=true
@@ -56,13 +56,13 @@ if [ ${sge} = "true" ]; then
 	mypublicip=$(dig +short myip.opendns.com @resolver1.opendns.com)
 else
 	echo "Not enabling PCoIP security gateway"
-	mypublicip= "Did not search."
+	mypublicip="Did not search."
 fi
 
 myhostname=$(hostname)
 myprivateip=$(ifconfig eth0 | awk '/inet / {gsub("addr:", "", $2); print $2}')
 
-echo "Detected hostname= $myhostname privateIP = $myprivateip publicip = $mypublicip"
+echo "Detected hostname= $myhostname privateIP = $myprivateip publicIP = $mypublicip"
 
 # add local IP and name to hosts file.
 echo " $myprivateip   $myhostname" >> /etc/hosts
