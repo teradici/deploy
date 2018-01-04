@@ -420,7 +420,7 @@ function New-RemoteWorstationTemplates {
 				"keyVault": {
 				"id": "$kvId"
 				},
-				"secretName": "domainJoinPassword"
+				"secretName": "domainServiceAccountPassword"
 			}		
 		},
 		"registrationCode": {
@@ -1382,7 +1382,7 @@ function New-ConnectionServiceDeployment() {
                         "keyVault": {
                             "id": "$kvID"
                         },
-                        "secretName": "domainJoinPassword"
+                        "secretName": "domainServiceAccountPassword"
                     }
                 },
                 "domainName": {
@@ -1727,7 +1727,7 @@ function Deploy-CAM() {
 
     $CAMConfig.parameters.cloudAccessRegistrationCode = @{value = $registrationCode}
 
-    $CAMConfig.parameters.domainJoinPassword = @{value = $domainAdminCredential.Password}
+    $CAMConfig.parameters.domainServiceAccountPassword = @{value = $domainAdminCredential.Password}
 
     # Set in Generate-Certificate-And-Passwords
     $CAMConfig.parameters.CAMCSCertificate = @{}
@@ -2189,7 +2189,7 @@ function Deploy-CAM() {
 				"keyVault": {
 					"id": "$kvId"
 				},
-				"secretName": "domainJoinPassword"
+				"secretName": "domainServiceAccountPassword"
 			}
 		},
 		"certData": {
