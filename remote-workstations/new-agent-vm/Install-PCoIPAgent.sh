@@ -74,6 +74,8 @@ STORAGEURI="$9"
 COLLECTOR_ID="${10}"
 # the eleventh argument is the SaS Storage account token
 SAS_TOKEN="${11}"
+# the twelfth arguement is the Computer OU string
+OU="${12}"
 
 # Make sure Linux OS is up to date
 echo "--> Updating Linux OS to latest"
@@ -102,7 +104,19 @@ sudo yum -y install sssd realmd oddjob oddjob-mkhomedir adcli samba-common samba
 sudo systemctl enable sssd
 
 echo "-->Joining the domain"
-echo "$PASSWORD" | sudo realm join --user="$USERNAME" "$DOMAIN_NAME"
+if [ ${OU} ]
+then
+    echo "$PASSWORD" | sudo realm join --user="$USERNAME" --computer-ou=${OU} "$DOMAIN_NAME" >&2
+else
+    echo "$PASSWORD" | sudo realm join --user="$USERNAME" "$DOMAIN_NAME" >&2
+fi
+if [ $? -eq 0 ]
+then
+    echo "Joined Domain ${DOMAIN_NAME} and OU ${OU}"
+else
+    echo "Failed to join Domain ${DOMAIN_NAME} and OU ${OU}"
+    exit 106
+fi
 
 echo "-->Configuring settings"
 sudo sed -i '$ a\dyndns_update = True\ndyndns_ttl = 3600\ndyndns_refresh_interval = 43200\ndyndns_update_ptr = True\nldap_user_principal = nosuchattribute' /etc/sssd/sssd.conf

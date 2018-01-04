@@ -379,6 +379,7 @@ function New-RemoteWorstationTemplates {
 	"`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
 	"contentVersion": "1.0.0.0",
 	"parameters": {
+        "domainOrganizationUnitToJoin": { "value": "" },
 		"agentType": { "value": "%agentType%" },
 		"vmSize": { "value": "%vmSize%" },
 		"AgentChannel": { "value": "$agentChannel"},
