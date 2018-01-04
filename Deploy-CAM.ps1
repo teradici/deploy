@@ -2284,11 +2284,13 @@ function Confirm-ModuleVersion()
         $MinAzureVersion="5.0.0"
         $AzureModule = Get-Module -ListAvailable -Name "Azure"
 
-        if ( $AzureModule ) {
-            if ( [version]$AzureModule.Version.ToString() -lt [version]$MinAzureVersion) {
-                Write-Host ("Azure module version must be equal or greater than " + $MinAzureVersion)
-                return $false
-            }
+        if ( -not $AzureModule ) {
+            # neither module found
+            return $false
+        }
+        if ( [version]$AzureModule.Version.ToString() -lt [version]$MinAzureVersion) {
+            Write-Host ("Azure module version must be equal or greater than " + $MinAzureVersion)
+            return $false
         }
     }
     return $true
