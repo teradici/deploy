@@ -63,7 +63,7 @@
       },
       "securityGatewayEnabled": {
         "type": "string",
-            "defaultValue": "false",
+            "defaultValue": "true",
         "metadata": {
             "description": "'true' if the security gateway should be enabled and a Public IP address created, otherwise 'false'."
         }
