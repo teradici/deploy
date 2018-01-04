@@ -18,7 +18,7 @@
     "domainName": {
       "type": "string",
       "metadata": {
-        "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
+        "description": "The fully qualified domain name of the domain to connect to. The name must include a '.' such as example.com"
       }
     },
     "localAdminUsername": {
@@ -30,7 +30,7 @@
     "localAdminPassword": {
       "type": "securestring",
       "metadata": {
-        "description": "The password/key for the local VM accounts."
+        "description": "The password of the local admin account for connection service VM's"
       }
     },
     "CSUniqueSuffix": {
@@ -43,13 +43,13 @@
     "CSsubnetId": {
       "type": "string",
       "metadata": {
-          "description": "ID of the subnet that the Conection Service Machines' NIC's attach to"
+          "description": "The ID of the subnet that the Conection Service Machines' NIC's attach to"
       }
     },
     "GWsubnetId": {
       "type": "string",
       "metadata": {
-          "description": "ID of the subnet that the Conection Service gateway(s) attach to"
+          "description": "The ID of the subnet that the Conection Service gateway(s) attach to"
       }
     },
     "CAMDeploymentInfo": {
