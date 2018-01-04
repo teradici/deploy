@@ -146,7 +146,7 @@
                           "id": "[parameters('subnetId')]"
                         },
                         "publicipaddressconfiguration": {
-                          "condition": "[equals(parameters('securityGatewayEnabled'), 'true')]",
+                          "condition": "[equals(parameters('enableSecurityGateway'), 'true')]",
                             "name": "pub1",
                             "properties": {
                               "idleTimeoutInMinutes": 15
