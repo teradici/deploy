@@ -49,7 +49,7 @@
                     ],
         "cutoffTimestamp":  0,
         "encoding":  "UTF-8",
-        "pathExpression": "/var/lib/waagent/Microsoft.OSTCExtensions.CustomScriptForLinux-1.5.2.1/download/0/*out",
+        "pathExpression": "/var/lib/waagent/Microsoft.OSTCExtensions.CustomScriptForLinux-*/download/*/*out",
         "blacklist":  [
                       ],
         "sourceType":  "LocalFile",
@@ -67,7 +67,7 @@
                     ],
         "cutoffTimestamp":  0,
         "encoding":  "UTF-8",
-        "pathExpression": "/var/log/azure/Microsoft.OSTCExtensions.CustomScriptForLinux/1.5.2.1/*.log",
+        "pathExpression": "/var/log/azure/Microsoft.OSTCExtensions.CustomScriptForLinux/*/*.log",
         "blacklist":  [
                       ],
         "sourceType":  "LocalFile",
