@@ -61,9 +61,8 @@
               "description": "IP or FQDN of the broker machine from the CM's perspective"
           }
       },
-      "securityGatewayEnabled": {
+      "enableSecurityGateway": {
         "type": "string",
-            "defaultValue": "true",
         "metadata": {
             "description": "'true' if the security gateway should be enabled and a Public IP address created, otherwise 'false'."
         }
@@ -97,7 +96,7 @@
       "scriptFileName":  "cm_setup_0.1.sh",
       "scriptFileURI":  "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'), parameters('_artifactsLocationSasToken'))]",
       "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-CM-',subscription().subscriptionId)]",
-      "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',variables('sumoCollectorID'),' ',parameters('_artifactsLocation'),' securityGatewayEnabled=',parameters('securityGatewayEnabled'))]"
+      "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',variables('sumoCollectorID'),' ',parameters('_artifactsLocation'),' SecurityGatewayEnabled=',parameters('enableSecurityGateway'))]"
     },
     "resources": [
     {

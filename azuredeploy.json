@@ -275,6 +275,9 @@
           "binaryLocation": {
             "value": "[parameters('binaryLocation')]"
           },
+          "enableSecurityGateway": {
+            "value": "true"
+          },
           "_baseArtifactsLocation": {
             "value": "[parameters('_artifactsLocation')]"
           },

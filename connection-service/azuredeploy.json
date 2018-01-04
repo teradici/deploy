@@ -82,6 +82,12 @@
         "description": "The location of CAM binaries"
       }
     },
+    "enableSecurityGateway": {
+      "type": "string",
+      "metadata": {
+          "description": "'true' if the security gateway should be enabled and a Public IP address created, otherwise 'false'."
+      }
+    },
     "_baseArtifactsLocation": {
       "type": "string",
       "metadata": {
@@ -317,6 +323,9 @@
           },
           "brokerFQDN": {
             "value": "[variables('connectionServerBrokerFQDN')]"
+          },
+          "enableSecurityGateway": {
+            "value": "[parameters('enableSecurityGateway')]"
           },
           "_artifactsLocation": {
             "value": "[concat(variables('_artifactsLocation'), '/new-cm-sg-ls-vm')]"
