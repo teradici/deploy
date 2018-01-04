@@ -248,7 +248,7 @@
           "domainName": {
             "value": "[parameters('domainName')]"
           },
-          "domainAdminUsername": {
+          "domainServiceAccountUsername": {
             "value": "[parameters('domainAdminUsername')]"
           },
           "domainAdminPassword": {
