@@ -17,9 +17,14 @@ param(
     [SecureString]
     $registrationCode,
 
+    [parameter(Mandatory = $false)]
     [bool]
     $verifyCAMSaaSCertificate = $true,
 
+    [parameter(Mandatory = $false)]
+    [bool]
+    $enableSecurityGateway = $true, # Only matters if not doing CAM-in-a-box isolated install
+    
     [parameter(Mandatory = $false)]
     [bool]
     $testDeployment = $false,
@@ -1157,7 +1162,8 @@ function New-ConnectionServiceDeployment() {
         $tenantId,
         $spCredential,
         $keyVault,
-        $testDeployment
+        $testDeployment,
+        [bool]$enableSecurityGateway
     )
 
     $kvID = $keyVault.ResourceId
@@ -1348,6 +1354,11 @@ function New-ConnectionServiceDeployment() {
         New-CAMDeploymentInfo `
             -kvName $CAMRootKeyvault.Name
 
+        $enableSecurityGatewayString = "false"
+        if ($enableSecurityGateway) {
+            $enableSecurityGatewayString = "true"
+        }
+
         # Get the template URI
         $secret = Get-AzureKeyVaultSecret `
             -VaultName $kvName `
@@ -1361,7 +1372,10 @@ function New-ConnectionServiceDeployment() {
             "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
             "contentVersion": "1.0.0.0",
             "parameters": {
-                "CSUniqueSuffix": {
+                "enableSecurityGateway": {
+                    "value": "$enableSecurityGatewayString"
+                  },
+                  "CSUniqueSuffix": {
                     "reference": {
                         "keyVault": {
                             "id": "$kvID"
@@ -1627,6 +1641,10 @@ function Deploy-CAM() {
         [parameter(Mandatory = $false)] 
         [bool]
         $verifyCAMSaaSCertificate = $true,
+
+        [parameter(Mandatory = $true)]
+        [bool]
+        $enableSecurityGateway,
 
         [parameter(Mandatory = $true)] 
         $CAMDeploymentTemplateURI,
@@ -2047,7 +2065,8 @@ function Deploy-CAM() {
                 -keyVault $CAMRootKeyvault `
                 -tenantId $tenantId `
                 -testDeployment $testDeployment `
-                -tempDir $tempDir
+                -tempDir $tempDir `
+                -enableSecurityGateway $enableSecurityGateway
         }
         else
         {
@@ -2500,7 +2519,8 @@ if ($CAMRootKeyvault) {
         -spCredential $spCredential `
         -keyVault $CAMRootKeyvault `
         -testDeployment $testDeployment `
-        -tempDir $tempDir
+        -tempDir $tempDir `
+        -enableSecurityGateway $enableSecurityGateway
 
 }
 else {
@@ -2716,5 +2736,6 @@ else {
         -certificateFilePassword $certificateFilePassword `
 		-AgentChannel $AgentChannel `
         -deployOverDC $deployOverDC `
-        -vnetConfig $vnetConfig
+        -vnetConfig $vnetConfig `
+        -enableSecurityGateway $enableSecurityGateway
 }
