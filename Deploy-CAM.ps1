@@ -2286,6 +2286,7 @@ function Confirm-ModuleVersion()
 
         if ( -not $AzureModule ) {
             # neither module found
+            Write-Host ("Please install the Azure Command Line tools for Powershell from Microsoft. The Azure and AzureRM modules must be present.")
             return $false
         }
         if ( [version]$AzureModule.Version.ToString() -lt [version]$MinAzureVersion) {
