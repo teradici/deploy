@@ -163,7 +163,7 @@
       "metadata": {
         "description": "The location of resources, such as templates and DSC modules, that the template depends on"
       },
-      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/master"
+      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/rw-join-ou"
     },
     "_artifactsLocationSasToken": {
       "type": "securestring",
