@@ -8,7 +8,7 @@
         "domainServiceAccountUsername": {
             "value": "GEN-USER"
         },
-        "domainAdminPassword": {
+        "domainServiceAccountPassword": {
             "value": "GEN-PASSWORD"
         },
         "domainName": {

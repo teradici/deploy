@@ -1377,7 +1377,7 @@ function New-ConnectionServiceDeployment() {
                         "secretName": "domainServiceAccountUsername"
                     }
                 },
-                "domainAdminPassword": {
+                "domainServiceAccountPassword": {
                     "reference": {
                         "keyVault": {
                             "id": "$kvID"

@@ -251,7 +251,7 @@
           "domainServiceAccountUsername": {
             "value": "[parameters('domainAdminUsername')]"
           },
-          "domainAdminPassword": {
+          "domainServiceAccountPassword": {
             "value": "[parameters('domainAdminPassword')]"
           },
           "remoteWorkstationDomainGroup": {

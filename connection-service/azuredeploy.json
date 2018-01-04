@@ -9,7 +9,7 @@
         "description": "The name of the administrator account of the new VM and domain"
       }
     },
-    "domainAdminPassword": {
+    "domainServiceAccountPassword": {
       "type": "securestring",
       "metadata": {
         "description": "The password for the administrator account of the new VM and domain"
@@ -169,7 +169,7 @@
             "value": "[parameters('domainServiceAccountUsername')]"
           },
           "domainPassword": {
-            "value": "[parameters('domainAdminPassword')]"
+            "value": "[parameters('domainServiceAccountPassword')]"
           },
           "domainJoinOptions": {
             "value": 3
@@ -213,7 +213,7 @@
             "value": "[parameters('domainServiceAccountUsername')]"
           },
           "domainPassword": {
-            "value": "[parameters('domainAdminPassword')]"
+            "value": "[parameters('domainServiceAccountPassword')]"
           },
           "binaryLocation": {
             "value": "[parameters('binaryLocation')]"
