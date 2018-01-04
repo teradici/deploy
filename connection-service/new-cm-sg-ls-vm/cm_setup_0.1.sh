@@ -41,8 +41,7 @@ iptables -I INPUT 1 -p udp --dport 4172 -j ACCEPT
 service iptables save
 
 # 4th parameter is if the SG should be enabled. If not present, assume true. Using the value after the '='
-if [ -n "${4}" ]
-then
+if [ -n "${4}" ]; then
 	$SGENABLED="${4#*=}"
 	if [ "${SGENABLED^^}" = "TRUE" ]; then sge=true; else sge=false; fi
 else
@@ -52,8 +51,7 @@ fi
 
 # get current networking configuration and use that for system setup. If there are dynamic IP's in the system THIS WILL EVENTUALLY FAIL.
 # alternates if opendns turns off: curl ipinfo.io/ip    curl ipecho.net/plain ; echo
-if [ ${sge} = "true" ]
-then
+if [ ${sge} = "true" ]; then
 	echo "Enabling PCoIP security gateway"
 	mypublicip=$(dig +short myip.opendns.com @resolver1.opendns.com)
 else
@@ -116,7 +114,6 @@ echo "Finished setting up CM without SG"
 # external IP is set and want to set up SG -> setup SG
 if [ ${sge} = "true" ]; then
 	if [ -n "$mypublicip" ]; then
-
 		# first, enable sg in CM config and copy it back again
 		awk '/^SecurityGatewayEnabled/{printf "SecurityGatewayEnabled = true\n";next};{print}'  /etc/ConnectionManager.conf >  ConnectionManager.conf
 		cp -f ConnectionManager.conf /etc/ConnectionManager.conf
@@ -127,6 +124,9 @@ if [ ${sge} = "true" ]; then
 		cp -f SecurityGateway.conf /etc/SecurityGateway.conf
 
 		echo "Finished setting up SG"
+	else
+		echo "Enabling the security gateway but there is no detected public IP. Exiting."
+		exit 1
 	fi
 fi
 
