@@ -177,11 +177,37 @@
             ]
         },
         {
+            "type": "Microsoft.Resources/deployments",
+            "name": "[concat(variables('nicName'),'-updateip')]",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('dnsLabelPrefix'))]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[variables('updateipTemplateUri')]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "nicName": {
+                        "value": "[variables('nicName')]"
+                    },
+                    "SubnetRef": {
+                        "value": "[parameters('subnetId')]"
+                    },
+                    "privateIp": {
+                        "value": "[reference(concat('Microsoft.Network/networkInterfaces/', variables('nicName'))).ipConfigurations[0].properties.privateIPAddress]"
+                    }
+                }
+            }
+        },
+        {
             "type": "Microsoft.Compute/virtualMachines/extensions",
             "name": "[concat(parameters('dnsLabelPrefix'),'/joindomain')]",
             "apiVersion": "[variables('apiVersion')]",
             "dependsOn": [
-                "[concat('Microsoft.Compute/virtualMachines/', parameters('dnsLabelPrefix'))]"
+                "[concat('Microsoft.Resources/deployments/',variables('nicName'),'-updateip')]"
             ],
             "location": "[resourceGroup().location]",
             "properties": {
@@ -199,33 +225,7 @@
                     "Password": "[parameters('domainPassword')]"
                 }
             }
-        },
-        {
-            "type": "Microsoft.Resources/deployments",
-            "name": "[concat(variables('nicName'),'-updateip')]",
-            "apiVersion": "2015-01-01",
-            "dependsOn": [
-                "[concat(parameters('dnsLabelPrefix'),'/joindomain')]"
-            ],
-            "properties": {
-              "mode": "Incremental",
-              "templateLink": {
-                "uri": "[variables('updateipTemplateUri')]",
-                "contentVersion": "1.0.0.0"
-              },
-              "parameters": {
-                "nicName": {
-                  "value": "[variables('nicName')]"
-                },
-                "SubnetRef": {
-                  "value": "[parameters('subnetId')]"
-                },
-                "privateIp": {
-                  "value": "[reference(concat('Microsoft.Network/networkInterfaces/', variables('nicName'))).ipConfigurations[0].properties.privateIPAddress]"
-                }
-            }
         }
-    }
     ],
     "outputs": {
         "privateIp": {
