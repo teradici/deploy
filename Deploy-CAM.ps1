@@ -212,7 +212,7 @@ function Get-OwnerUpn() {
     try {
 		$accessToken = Get-AzureRmCachedAccessToken
 		$decodedToken = Get-DecodedJWT `
-			-Token $accessToken `
+			-Token $accessToken
 
 		$decodedToken.claims.upn
 	}
@@ -243,8 +243,8 @@ function Register-CAM() {
 		
         [parameter(Mandatory = $true)]
         $tenant,
-
-		[parameter(Mandatory = $true)]
+        
+        [parameter(Mandatory = $true)]
         $ownerTenant,
 
         [parameter(Mandatory = $true)]
@@ -1654,7 +1654,7 @@ function New-CAMDeploymentRoot()
         $camSaasUri,
         $verifyCAMSaaSCertificate,
         $subscriptionID,
-		$ownerUpn
+        $ownerUpn
     )
 
     $rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName
@@ -1697,7 +1697,7 @@ function New-CAMDeploymentRoot()
         -client $client `
         -key $key `
         -tenant $tenant `
-		-ownerTenant $ownerTenant `
+        -ownerTenant $ownerTenant `
         -ownerUpn $ownerUpn `
         -RGName $rwRGName `
         -registrationCode $registrationCode `
@@ -1793,8 +1793,8 @@ function Deploy-CAM() {
 
         [parameter(Mandatory = $true)]
         $vnetConfig,
-
-		[parameter(Mandatory = $true)]
+        
+        [parameter(Mandatory = $true)]
         $ownerUpn
     )
 
@@ -2799,8 +2799,9 @@ else {
             $registrationCode = $null
         }
     } while (-not $registrationCode )
-
-	$ownerUpn = Get-OwnerUpn
+    
+    $ownerUpn = Get-OwnerUpn
+    
     Deploy-CAM `
         -domainAdminCredential $domainAdminCredential `
         -domainName $domainName `
@@ -2819,8 +2820,8 @@ else {
         -testDeployment $testDeployment `
         -certificateFile $certificateFile `
         -certificateFilePassword $certificateFilePassword `
-		-AgentChannel $AgentChannel `
+        -AgentChannel $AgentChannel `
         -deployOverDC $deployOverDC `
         -vnetConfig $vnetConfig `
-		-ownerUpn $ownerUpn
+        -ownerUpn $ownerUpn
 }
