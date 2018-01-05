@@ -73,7 +73,7 @@
             "defaultValue": "",
             "type": "string",
             "metadata": {
-                "description": "OU for VM to join to"
+                "description": "OU for VM to join"
             }
         },
         "vmAdminUsername": {

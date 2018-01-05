@@ -74,7 +74,7 @@ STORAGEURI="$9"
 COLLECTOR_ID="${10}"
 # the eleventh argument is the SaS Storage account token
 SAS_TOKEN="${11}"
-# the twelfth arguement is the Computer OU string
+# the twelfth argument is the Computer OU string
 OU="${12}"
 
 # Make sure Linux OS is up to date
