@@ -104,9 +104,9 @@ sudo yum -y install sssd realmd oddjob oddjob-mkhomedir adcli samba-common samba
 sudo systemctl enable sssd
 
 echo "-->Joining the domain"
-if [ ${OU} ]
+if [ -n "${OU}" ]
 then
-    echo "$PASSWORD" | sudo realm join --user="$USERNAME" --computer-ou=${OU} "$DOMAIN_NAME" >&2
+    echo "$PASSWORD" | sudo realm join --user="$USERNAME" --computer-ou="${OU}" "$DOMAIN_NAME" >&2
 else
     echo "$PASSWORD" | sudo realm join --user="$USERNAME" "$DOMAIN_NAME" >&2
 fi
