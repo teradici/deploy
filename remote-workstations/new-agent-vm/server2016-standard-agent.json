@@ -174,7 +174,7 @@
                 "videoDriverUrl": ""
             },
             "Graphics": {
-                "videoDriverUrl": "[concat(parameters('binaryLocation'), '/385.41_grid_win10_server2016_64bit_international')]"
+                "videoDriverUrl": "[concat(parameters('binaryLocation'), '/385.41_grid_win10_server2016_64bit_international.exe')]"
             }
         },
           
