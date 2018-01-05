@@ -191,6 +191,12 @@
           },
           "storageAccountName": {
             "value": "[variables('storageAccountName')]"
+          },
+          "_artifactsLocation": {
+            "value": "[concat(variables('_artifactsLocation'), '/new-vm-join-domain')]"
+          },
+          "_artifactsLocationSasToken": {
+            "value": "[parameters('_artifactsLocationSasToken')]"
           }
         }
       }
