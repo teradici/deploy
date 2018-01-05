@@ -76,7 +76,7 @@
         "imageOffer": "WindowsServer",
         "windowsOSVersion": "2016-Datacenter",
         "apiVersion": "2015-06-15",
-        "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
+        "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]"
     },
     "resources": [
         {
@@ -89,6 +89,7 @@
                     {
                         "name": "ipconfig",
                         "properties": {
+                            "privateIPAllocationMethod": "Static",
                             "subnet": {
                                 "id": "[parameters('subnetId')]"
                             },
