@@ -26,6 +26,7 @@
         },
         "agentType": {
             "type": "string",
+            "defaultValue": "Standard",
             "allowedValues": [
               "Standard",
               "Graphics"
@@ -66,6 +67,13 @@
             "type": "int",
             "metadata": {
                 "description": "Set of bit flags that define the join options. Default value of 3 is a combination of NETSETUP_JOIN_DOMAIN (0x00000001) & NETSETUP_ACCT_CREATE (0x00000002) i.e. will join the domain and create the account on the domain. For more information see https://msdn.microsoft.com/en-us/library/aa392154(v=vs.85).aspx"
+            }
+        },
+        "domainOrganizationUnitToJoin": {
+            "defaultValue": "",
+            "type": "string",
+            "metadata": {
+                "description": "OU for VM to join"
             }
         },
         "vmAdminUsername": {
@@ -135,7 +143,7 @@
         "userStorageAccountKey": {
             "type": "securestring",
             "metadata": {
-                "description": "Key for acccessing user's storage account"
+                "description": "Key for accessing user's storage account"
             },
             "defaultValue": ""
         },
@@ -147,10 +155,8 @@
         }
     },
     "variables": {
-
         "apiVersion": "2015-06-15",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
-        
         "osSettings": {
             "Windows Server 2016": {
               "publisher": "MicrosoftWindowsServer",
@@ -159,7 +165,6 @@
               "version": "latest"
             }
         },
-
         "vmSettings": {
             "vmNamePrefix": "[parameters('dnsLabelPrefix')]",
             "adminUserName": "[parameters('vmAdminUsername')]",
@@ -225,7 +230,7 @@
                     "osDisk": {
                         "name": "osdisk",
                         "vhd": {
-                          "uri": "[concat('http://',parameters('storageAccountName'),'.blob.core.windows.net/vhds/',parameters('dnsLabelPrefix'), 'disk0.vhd')]"
+                            "uri": "[concat('http://',parameters('storageAccountName'),'.blob.core.windows.net/vhds/',parameters('dnsLabelPrefix'), 'disk0.vhd')]"
                         },
                         "caching": "ReadWrite",
                         "createOption": "FromImage"
@@ -269,6 +274,7 @@
                     "Name": "[parameters('domainToJoin')]",
                     "User": "[concat(parameters('domainToJoin'), '\\', parameters('domainUsername'))]",
                     "Restart": "true",
+                    "OUPath": "[parameters('domainOrganizationUnitToJoin')]",
                     "Options": "[parameters('domainJoinOptions')]"
                 },
                 "protectedsettings": {

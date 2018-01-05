@@ -26,6 +26,7 @@
         },
         "agentType": {
             "type": "string",
+            "defaultValue": "Graphics",
             "allowedValues": [
               "Standard",
               "Graphics"
@@ -68,6 +69,13 @@
                 "description": "Set of bit flags that define the join options. Default value of 3 is a combination of NETSETUP_JOIN_DOMAIN (0x00000001) & NETSETUP_ACCT_CREATE (0x00000002) i.e. will join the domain and create the account on the domain. For more information see https://msdn.microsoft.com/en-us/library/aa392154(v=vs.85).aspx"
             }
         },
+        "domainOrganizationUnitToJoin": {
+            "defaultValue": "",
+            "type": "string",
+            "metadata": {
+                "description": "OU for VM to join"
+            }
+        },
         "vmAdminUsername": {
             "type": "string",
             "metadata": {
@@ -80,37 +88,10 @@
                 "description": "The password for the administrator account of the new VM and the domain"
             }
         },
-        "userStorageAccountName": {
-            "type": "string",
-            "metadata": {
-                "description": "Name of user's storage account"
-            },
-            "defaultValue": ""
-        },
-        "userStorageAccountKey": {
-            "type": "securestring",
-            "metadata": {
-                "description": "Key for accessing user's storage account"
-            },
-            "defaultValue": ""
-        },
-        "userStorageAccountUri": {
-            "type": "string",
-            "metadata": {
-                "description": "URI of the user's storage account"
-            }
-        },
-        "userStorageAccountSasToken": {
-            "type": "securestring",
-            "metadata": {
-                "description": "SAS token for accessing user's storage account"
-            },
-            "defaultValue": "?public"
-        },
         "binaryLocation": {
             "type": "string",
             "metadata": {
-                "description": "The location of the blobs for admin GUI machine installation"
+                "description": "The location of the CAM binaries"
             }
         },
         "registrationCode": {
@@ -140,6 +121,32 @@
             },
             "defaultValue": "null"
         },
+        "userStorageAccountName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of user's storage account"
+            },
+            "defaultValue": ""
+        },
+        "userStorageAccountUri": {
+            "type": "string",
+            "metadata": {
+                "description": "The URI of the user's storage account"
+            }
+        },
+        "userStorageAccountSasToken": {
+            "type": "securestring",
+            "metadata": {
+                "description": "SAS token for accessing user's storage account"
+            }
+        },
+        "userStorageAccountKey": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Key for accessing user's storage account"
+            },
+            "defaultValue": ""
+        },
         "AgentChannel": {
             "type": "string",
             "metadata": {
@@ -148,10 +155,8 @@
         }
     },
     "variables": {
-
         "apiVersion": "2015-06-15",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
-
         "osSettings": {
             "Windows Server 2016": {
               "publisher": "MicrosoftWindowsServer",
@@ -160,7 +165,6 @@
               "version": "latest"
             }
         },
-      
         "vmSettings": {
             "vmNamePrefix": "[parameters('dnsLabelPrefix')]",
             "adminUserName": "[parameters('vmAdminUsername')]",
@@ -270,6 +274,7 @@
                     "Name": "[parameters('domainToJoin')]",
                     "User": "[concat(parameters('domainToJoin'), '\\', parameters('domainUsername'))]",
                     "Restart": "true",
+                    "OUPath": "[parameters('domainOrganizationUnitToJoin')]",
                     "Options": "[parameters('domainJoinOptions')]"
                 },
                 "protectedsettings": {
