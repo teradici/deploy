@@ -205,7 +205,7 @@ function Get-AzureRmCachedAccessToken() {
     $profileClient = New-Object Microsoft.Azure.Commands.ResourceManager.Common.RMProfileClient($azureRmProfile)
     Write-Debug ("Getting access token for tenant" + $currentAzureContext.Subscription.TenantId)
     $token = $profileClient.AcquireAccessToken($currentAzureContext.Subscription.TenantId)
-    $token.AccessToken
+    return $token.AccessToken
 }
 
 function Get-OwnerUpn() {
@@ -214,7 +214,7 @@ function Get-OwnerUpn() {
 		$decodedToken = Get-DecodedJWT `
 			-Token $accessToken
 
-		$decodedToken.claims.upn
+		return $decodedToken.claims.upn
 	}
 	catch {
 		$errorMessage = "An error occured while retrieving owner upn."
@@ -2801,6 +2801,7 @@ else {
     } while (-not $registrationCode )
     
     $ownerUpn = Get-OwnerUpn
+    Write-Host "The owner UPN is $ownerUpn"
     
     Deploy-CAM `
         -domainAdminCredential $domainAdminCredential `
