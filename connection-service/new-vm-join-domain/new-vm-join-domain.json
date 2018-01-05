@@ -180,6 +180,9 @@
             "type": "Microsoft.Compute/virtualMachines/extensions",
             "name": "[concat(parameters('dnsLabelPrefix'),'/joindomain')]",
             "apiVersion": "[variables('apiVersion')]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('dnsLabelPrefix'))]"
+            ],
             "location": "[resourceGroup().location]",
             "properties": {
                 "publisher": "Microsoft.Compute",
@@ -195,17 +198,14 @@
                 "protectedsettings": {
                     "Password": "[parameters('domainPassword')]"
                 }
-            },
-            "dependsOn": [
-                "[concat('Microsoft.Compute/virtualMachines/', parameters('dnsLabelPrefix'))]"
-            ]
+            }
         },
         {
             "type": "Microsoft.Resources/deployments",
             "name": "[concat(variables('nicName'),'-updateip')]",
             "apiVersion": "2015-01-01",
             "dependsOn": [
-              "[concat('Microsoft.Compute/virtualMachines/extensions/', parameters('dnsLabelPrefix'),'/joindomain')]"
+                "[concat(parameters('dnsLabelPrefix'),'/joindomain')]"
             ],
             "properties": {
               "mode": "Incremental",
