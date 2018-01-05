@@ -39,7 +39,7 @@
             "value": "https://teradeploy.blob.core.windows.net/binaries"
         },
         "_artifactsLocation": {
-            "value": "https://raw.githubusercontent.com/teradici/deploy/rw-join-ou"
+            "value": "https://raw.githubusercontent.com/teradici/deploy/master"
         }
     }
 }
