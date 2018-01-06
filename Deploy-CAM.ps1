@@ -2801,7 +2801,6 @@ else {
     } while (-not $registrationCode )
     
     $ownerUpn = Get-OwnerUpn
-    Write-Host "The owner UPN is $ownerUpn"
     
     Deploy-CAM `
         -domainAdminCredential $domainAdminCredential `
