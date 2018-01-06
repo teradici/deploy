@@ -25,7 +25,7 @@
         "properties": {
           "ipConfigurations": [
             {
-              "name": "ipconfig1",
+              "name": "ipconfig",
               "properties": {
                 "privateIPAllocationMethod": "Static",
                 "privateIPAddress": "[parameters('privateIp')]",
