@@ -112,8 +112,7 @@
     "appGwCSPoolName": "CSBackendPool",
     "appGwCSPoolID": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/applicationGateways/', variables('appGwName'), '/backendAddressPools/', variables('appGwCSPoolName'))]",
     "sgNsgName": "[concat('sgNSG',parameters('CSUniqueSuffix'))]",
-    "connectionServerName": "[concat('conn-srvr',parameters('CSUniqueSuffix'))]",
-    "connectionServerBrokerFQDN": "[concat(variables('connectionServerName'),'.',parameters('domainName'),':',variables('brokerPort'))]"
+    "connectionServerName": "[concat('conn-srvr',parameters('CSUniqueSuffix'))]"
 },
   "resources": [
     {
@@ -328,7 +327,7 @@
             "value": "[parameters('localAdminPassword')]"
           },
           "brokerFQDN": {
-            "value": "[variables('connectionServerBrokerFQDN')]"
+            "value": "[concat(reference('CreateConnectionServer').outputs.privateIp.value,':',variables('brokerPort'))]"
           },
           "enableSecurityGateway": {
             "value": "[parameters('enableSecurityGateway')]"
