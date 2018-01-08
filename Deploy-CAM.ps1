@@ -249,6 +249,7 @@ function Register-CAM() {
 
         [parameter(Mandatory = $true)]
         $ownerUpn,
+
         [parameter(Mandatory = $true)]
         $RGName,
 
@@ -2126,7 +2127,7 @@ function Deploy-CAM() {
         -camSaasUri $camSaasUri `
         -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
         -subscriptionID $subscriptionID `
-		-ownerTenantId $ownerTenantId `
+        -ownerTenantId $ownerTenantId `
         -ownerUpn $ownerUpn
 
     try {
