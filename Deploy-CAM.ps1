@@ -208,13 +208,13 @@ function Get-AzureRmCachedAccessToken() {
     return $token.AccessToken
 }
 
-function Get-OwnerUpn() {
+function Get-Claims() {
     try {
 		$accessToken = Get-AzureRmCachedAccessToken
 		$decodedToken = Get-DecodedJWT `
 			-Token $accessToken
 
-		return $decodedToken.claims.upn
+		return $decodedToken.claims
 	}
 	catch {
 		$errorMessage = "An error occured while retrieving owner upn."
@@ -294,7 +294,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
                 username = $client
                 password = $key
                 tenantId = $tenant
-				ownerTenantId = $ownerTenant
+                ownerTenantId = $ownerTenant
                 ownerUpn = $ownerUpn
             }
             $registerUserResult = ""
@@ -1654,6 +1654,7 @@ function New-CAMDeploymentRoot()
         $camSaasUri,
         $verifyCAMSaaSCertificate,
         $subscriptionID,
+        $ownerTenantId,
         $ownerUpn
     )
 
@@ -1661,7 +1662,7 @@ function New-CAMDeploymentRoot()
     $client = $spInfo.spCreds.UserName
     $key = $spInfo.spCreds.GetNetworkCredential().Password
     $tenant = $spInfo.tenantId
-	$ownerTenant = $spInfo.tenantId
+	$ownerTenant = $ownerTenantId
 	$registrationCode = $CAMConfig.parameters.cloudAccessRegistrationCode.value
     $artifactsLocation = $CAMConfig.parameters.artifactsLocation.clearValue
     $binaryLocation = $CAMConfig.parameters.binaryLocation.clearValue
@@ -1795,7 +1796,10 @@ function Deploy-CAM() {
         $vnetConfig,
         
         [parameter(Mandatory = $true)]
-        $ownerUpn
+        $ownerTenantId,
+
+        [parameter(Mandatory = $true)]
+        $ownerUpn        
     )
 
     # Artifacts location 'folder' is where the template is stored
@@ -2122,7 +2126,8 @@ function Deploy-CAM() {
         -camSaasUri $camSaasUri `
         -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
         -subscriptionID $subscriptionID `
-		-ownerUpn $ownerUpn
+		-ownerTenantId $ownerTenantId `
+        -ownerUpn $ownerUpn
 
     try {
         # Populate/re-populate CAMDeploymentInfo before deploying any connection service
@@ -2800,7 +2805,7 @@ else {
         }
     } while (-not $registrationCode )
     
-    $ownerUpn = Get-OwnerUpn
+    $claims = Get-Claims
     
     Deploy-CAM `
         -domainAdminCredential $domainAdminCredential `
@@ -2823,5 +2828,6 @@ else {
         -AgentChannel $AgentChannel `
         -deployOverDC $deployOverDC `
         -vnetConfig $vnetConfig `
-        -ownerUpn $ownerUpn
+        -ownerTenantId $claims.tid `
+        -ownerUpn $claims.upn
 }
