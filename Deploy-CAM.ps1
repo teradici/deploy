@@ -2678,12 +2678,6 @@ else {
             $domainAdminCredential = Get-Credential -Message $domainAdminMessage
             $confirmedPassword = Read-Host -AsSecureString "Please re-enter the password"
 
-            if (-not ($domainAdminCredential.UserName -imatch '\w+') -Or ($domainAdminCredential.Username.Length -gt 20)) {
-                Write-Host "Please enter a valid username. It can only contain letters and numbers and cannot be longer than 20 characters."
-                $domainAdminCredential = $null
-                continue
-            }
-
             # Need plaintext password to check if same
             $clearPassword = ConvertTo-Plaintext $confirmedPassword
             if (-not ($domainAdminCredential.GetNetworkCredential().Password -ceq $clearPassword)) {
@@ -2694,10 +2688,17 @@ else {
             }
         }
 
-		
-        if ($domainAdminCredential.GetNetworkCredential().Password.Length -lt 12) {
+        if ((-not ($domainAdminCredential.UserName -imatch '\w+')) -or ($domainAdminCredential.Username.Length -gt 20)) {
+            Write-Host "Please enter a valid username. It can only contain letters and numbers and cannot be longer than 20 characters."
+            $domainAdminCredential = $null
+            continue
+        }
+
+        if ((-not $deployOverDC) `
+            -and ( $domainAdminCredential.GetNetworkCredential().Password.Length -lt 12 ) ) {
             # too short- try again.
-            Write-Host "The domain service account/admin password must be at least 12 characters long"
+            # Don't check length if deploying over DC since in that case it's the DC's password complexity rules.
+            Write-Host "The domain admin password must be at least 12 characters long"
             $domainAdminCredential = $null
         }
     } while ( -not $domainAdminCredential )
