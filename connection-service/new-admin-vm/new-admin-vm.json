@@ -50,7 +50,28 @@
                 "description": "Auto-generated token to access _artifactsLocation"
             },
             "defaultValue": ""
-        }
+        },
+        "radiusServerHost" : {
+            "type": "string",
+            "metadata": {
+              "description": "RADIUS server host name/IP address for MFA"
+            },
+            "defaultValue": ""
+          },
+          "radiusServerPort" : {
+            "type": "int",
+            "metadata": {
+              "description": "RADIUS server listen port for MFA"
+            },
+            "defaultValue": ""
+          },
+          "radiusSharedSecret" : {
+            "type": "securestring",
+            "metadata": {
+              "description": "Shared secret between RADIUS server and client"
+            },
+            "defaultValue": ""
+          }
     },
     "variables": {
         "imagePublisher": "MicrosoftWindowsServer",
@@ -89,7 +110,10 @@
                             "Password": "PrivateSettingsRef:CAMDeploymentInfo"
                         },
                         "gitLocation": "[parameters('_artifactsLocation')]",
-                        "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-AdminUI-',subscription().subscriptionId)]"
+                        "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-AdminUI-',subscription().subscriptionId)]",
+                        "radiusServerHost": "[parameters('radiusServerHost')]",
+                        "radiusServerPort" : "[parameters('radiusServerPort')]",
+                        "radiusSharedSecret" : "[parameters('radiusSharedSecret')]"
                     }
                 },
                 "protectedSettings": {

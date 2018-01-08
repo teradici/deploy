@@ -66,7 +66,21 @@ Configuration InstallConnectionServer
         [String]$sumoCollectorID,
 
         [Parameter(Mandatory=$false)]
-        [String]$brokerPort = "8444"
+        [String]$brokerPort = "8444",
+
+        
+        [Parameter(Mandatory = $false)]
+        [String]$radiusServerHost,
+
+        
+        [Parameter(Mandatory = $false)]
+        [String]$radiusServerPort,
+
+        
+        [Parameter(Mandatory = $false)]
+        [SecureString]$radiusSharedSecret
+
+
     )
 
     # Get domain information
@@ -863,6 +877,14 @@ ldapDomain=$Using:domainFQDN
                 $adminUsername = $localAdminCreds.GetNetworkCredential().Username
                 $adminPassword = $localAdminCreds.GetNetworkCredential().Password
 
+                #set up RADIUS MFA related attributes
+                if(!$radiusServerHost.Equals("") -and $radiusServerPort -is [int]) {
+                    $mfaEnabled = "true"
+                }
+                else {
+                    $mfaEnabled = "false"
+                }
+
 
                 $cbProperties = @"
 ldapHost=ldaps://$Using:dcvmfqdn
@@ -875,6 +897,10 @@ brokerPlatform=$Using:family
 brokerProductVersion=1.0
 brokerIpaddress=$ipaddressString
 brokerLocale=en_US
+isMultiFactorAuthenticate=$mfaEnabled
+radiusServerIPAddress=$radiusServerHost
+authPort=$radiusServerPort
+radiusSecretKey=$radiusSharedSecret
 "@
 
                 Set-Content $cbPropertiesFile $cbProperties

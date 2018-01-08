@@ -163,12 +163,33 @@
       "metadata": {
         "description": "The location of resources, such as templates and DSC modules, that the template depends on"
       },
-      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/master"
+      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/cam-radius-settings"
     },
     "_artifactsLocationSasToken": {
       "type": "securestring",
       "metadata": {
         "description": "Auto-generated token to access _artifactsLocation"
+      },
+      "defaultValue": ""
+    },
+    "radiusServerHost" : {
+      "type": "string",
+      "metadata": {
+        "description": "RADIUS server host name/IP address for MFA"
+      },
+      "defaultValue": ""
+    },
+    "radiusServerPort" : {
+      "type": "int",
+      "metadata": {
+        "description": "RADIUS server listen port for MFA"
+      },
+      "defaultValue": 1812
+    },
+    "radiusSharedSecret" : {
+      "type": "securestring",
+      "metadata": {
+        "description": "Shared secret between RADIUS server and client"
       },
       "defaultValue": ""
     }
@@ -280,6 +301,15 @@
           },
           "_artifactsLocationSasToken": {
             "value": "[parameters('_artifactsLocationSasToken')]"
+          },
+          "radiusServerHost": {
+            "value": "[parameters('radiusServerHost')]"
+          },
+          "radiusServerPort": {
+            "value": "[parameters('radiusServerPort')]"
+          },
+          "radiusSharedSecret": {
+            "value": "[parameters('radiusSharedSecret')]"
           }
         }
       }
