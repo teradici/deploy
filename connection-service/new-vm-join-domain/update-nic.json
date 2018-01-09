@@ -10,8 +10,14 @@
         },
         "privateIp": {
           "type": "string"
-        }
-    },
+        },
+        "applicationGatewayPoolReference": {
+          "type": "string",
+          "metadata": {
+              "description": "Application gateway backend pool this machine is a member of"
+          }
+      }
+  },
     "variables": {
     },
     "resources": [
@@ -31,7 +37,12 @@
                 "privateIPAddress": "[parameters('privateIp')]",
                 "subnet": {
                   "id": "[parameters('SubnetRef')]"
-                }
+                },
+                "ApplicationGatewayBackendAddressPools": [
+                  {
+                      "id": "[parameters('applicationGatewayPoolReference')]"
+                  }
+                ]
               }
             }
           ]

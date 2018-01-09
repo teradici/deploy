@@ -105,12 +105,7 @@
                         "properties": {
                             "subnet": {
                                 "id": "[parameters('subnetId')]"
-                            },
-                            "ApplicationGatewayBackendAddressPools": [
-                                {
-                                    "id": "[parameters('applicationGatewayPoolReference')]"
-                                }
-                            ]
+                            }
                         }
                     }
                 ]
@@ -198,6 +193,9 @@
                     },
                     "privateIp": {
                         "value": "[reference(concat('Microsoft.Network/networkInterfaces/', variables('nicName'))).ipConfigurations[0].properties.privateIPAddress]"
+                    },
+                    "applicationGatewayPoolReference": {
+                        "value": "[parameters('applicationGatewayPoolReference')]"
                     }
                 }
             }
