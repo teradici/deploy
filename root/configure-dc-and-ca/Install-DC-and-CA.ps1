@@ -117,20 +117,98 @@
             DependsOn = '[WindowsFeature]ADCS-Web-Enrollment','[xADCSCertificationAuthority]ADCS'
         }
 
-        Script Reboot_DC
+        Script Ensure_LDAPS_is_Active
         {
             DependsOn  = @("[xADCSWebEnrollment]CertSrv")
-            GetScript  = { @{ Result = "Reboot_DC" } }
+            GetScript  = { @{ Result = "Ensure_LDAPS_is_Active" } }
 
             TestScript = {
-                Test-Path -Path "C:\rebootmarker"
-                }
-            SetScript  = {
-                $file = New-Item "C:\rebootmarker" -type File
-                Set-Content -Path $file -Value "DSC reboot initiated"
+#                Test-Path -Path "C:\rebootmarker"
+                $port=636
+                $hostname = "localhost"
+                Write-Host "Looking for LDAPS certificate for $hostname"
+                try {
+                    $tcpclient = new-object System.Net.Sockets.tcpclient
+                    $tcpclient.Connect($hostname,$port)
 
-                # Reboot machine - might help getting a certificate made???
-				$global:DSCMachineStatus = 1
+                    #Authenticate with SSL - trusting all certificates
+                    $sslstream = new-object System.Net.Security.SslStream -ArgumentList $tcpclient.GetStream(),$false,{$true}
+
+                    $sslstream.AuthenticateAsClient($hostname)
+                    $cert =  [System.Security.Cryptography.X509Certificates.X509Certificate2]($sslstream.remotecertificate)
+                    if($cert) {
+                        return $true
+                    }
+                    else {
+                        # Didn't get a certificate somehow - usually because LDAPS isn't setup yet. Return $false.
+                        return $false
+                    }
+                }
+                catch {
+                    return $false
+                }
+                finally {
+                    #cleanup
+                    if ($sslStream) {
+                        $sslstream.close() | Out-Null
+                    }
+                    if ($tcpclient) {
+                        $tcpclient.close() | Out-Null
+                    }
+                }
+            }
+
+            SetScript  = {
+
+                function Test-LDAPS-Cert()
+                {
+                    $port=636
+                    $hostname = "localhost"
+                    Write-Host "Looking for LDAPS certificate for $hostname"
+                    try {
+                        $tcpclient = new-object System.Net.Sockets.tcpclient
+                        $tcpclient.Connect($hostname,$port)
+    
+                        #Authenticate with SSL - trusting all certificates
+                        $sslstream = new-object System.Net.Security.SslStream -ArgumentList $tcpclient.GetStream(),$false,{$true}
+    
+                        $sslstream.AuthenticateAsClient($hostname)
+                        $cert =  [System.Security.Cryptography.X509Certificates.X509Certificate2]($sslstream.remotecertificate)
+                        if($cert) {
+                            return $true
+                        }
+                        else {
+                            return $false
+                        }
+                    }
+                    catch {
+                        # Didn't get a certificate somehow - usually because LDAPS isn't setup yet. Return $false.
+                        return $false
+                    }
+                    finally {
+                        #cleanup
+                        if ($sslStream) {
+                            $sslstream.close() | Out-Null
+                        }
+                        if ($tcpclient) {
+                            $tcpclient.close() | Out-Null
+                        }
+                    }
+                }
+
+                $retries = 30 # about 5 minutes
+                while(-not (Test-LDAPS-Cert) ) {
+                    Write-Host "LDAPS port not open. Retries remining: $retries"
+                    if(($retries--) -eq 0) {
+                        throw "LDAPS port did not open."
+                    }
+                    # Login as the domain admin, not the DSC user, for access rights.
+                    $DCSession = New-PSSession localhost -Credential $using:DomainCreds
+                    Invoke-Command {& "certutil" -pulse > $null} -Session $DCSession | Out-Null
+                    Remove-PSSession $DCSession | Out-Null
+
+                    Start-Sleep -seconds 10 #wait a few seconds for the certificate to show up
+                }
 			}
 		}
 	}
