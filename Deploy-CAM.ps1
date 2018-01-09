@@ -72,10 +72,10 @@ param(
 
     [parameter(Mandatory=$false)]
     [SecureString]
-    $radiusServerSharedSecret,
+    $radiusSharedSecret,
 
     $camSaasUri = "https://cam-antar.teradici.com",
-	$CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/master/azuredeploy.json",
+	$CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/cam-radius-settings/azuredeploy.json",
     $binaryLocation = "https://teradeploy.blob.core.windows.net/binaries",
     $outputParametersFileName = "cam-output.parameters.json",
     $location
@@ -1505,12 +1505,12 @@ function New-ConnectionServiceDeployment() {
                         "secretName": "radiusServerPort"
                     }
                 },
-                "radiusServerSharedSecret": {
+                "radiusSharedSecret": {
                     "reference": {
                         "keyVault": {
                         "id": "$kvId"
                         },
-                        "secretName": "radiusServerSharedSecret"
+                        "secretName": "radiusSharedSecret"
                     }
                 },
                 "_baseArtifactsLocation": {
@@ -1859,8 +1859,8 @@ function Deploy-CAM() {
     $CAMConfig.parameters.radiusServerPort = @{
         value=(ConvertTo-SecureString $radiusConfig.radiusServerPort -AsPlainText -Force)
     }
-    $CAMConfig.parameters.radiusServerSharedSecret = @{
-        value=$radiusConfig.radiusServerSharedSecret
+    $CAMConfig.parameters.radiusSharedSecret = @{
+        value=$radiusConfig.radiusSharedSecret
     }
 
     # make temporary directory for intermediate files
@@ -2312,12 +2312,12 @@ function Deploy-CAM() {
 				"secretName": "radiusServerPort"
 			}
 		},
-		"radiusServerSharedSecret": {
+		"radiusSharedSecret": {
 			"reference": {
 				"keyVault": {
 				"id": "$kvId"
 				},
-				"secretName": "radiusServerSharedSecret"
+				"secretName": "radiusSharedSecret"
 			}
 		}
 	}
@@ -2785,7 +2785,7 @@ else {
         enableRadiusMfa = $enableRadiusMfa
         radiusServerHost = $radiusServerHost
         radiusServerPort = $radiusServerPort 
-        radiusServerSharedSecret = $radiusServerSharedSecret
+        radiusSharedSecret = $radiusSharedSecret
     }
     if ( ($enableRadiusMfa -eq $null) -or $enableRadiusMfa ) {
         if ( $enableRadiusMfa -eq $null -and (-not $ignorePrompts) ) {
@@ -2816,15 +2816,17 @@ else {
                 }
             } while (-not $radiusConfig.radiusServerPort )
 
-            if (-not $radiusConfig.radiusServerSharedSecret ) {
-                $radiusConfig.radiusServerSharedSecret = Read-Host -AsSecureString "Please enter your Radius Server's Shared Secret"
+            if (-not $radiusConfig.radiusSharedSecret ) {
+                $radiusConfig.radiusSharedSecret = Read-Host -AsSecureString "Please enter your Radius Server's Shared Secret"
             }
         }
         $radiusConfig.enableRadiusMfa = $enableRadiusMfa
     } 
+    $varType = $enableRadiusMfa.getType()
+    Write-Host "Value of RADIUS flag is  $enableRadiusMfa with type $varType"
     if ( -not $enableRadiusMfa) {
         # Placeholder value for the radius secret and port is required in order to create KeyVault entry
-        $radiusConfig.radiusServerSharedSecret = ConvertTo-SecureString "radiusSecret" -AsPlainText -Force
+        $radiusConfig.radiusSharedSecret = ConvertTo-SecureString "radiusSecret" -AsPlainText -Force
         $radiusConfig.radiusServerPort = ConvertTo-SecureString 0 -AsPlainText -Force
         $radiusConfig.radiusServerHost = ConvertTo-SecureString "radiusServer" -AsPlainText -Force
     }

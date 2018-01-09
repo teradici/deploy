@@ -51,6 +51,13 @@
             },
             "defaultValue": ""
         },
+        "enableRadiusMfa" : {
+            "type": "string",
+            "metadata": {
+              "description": "Enable RAIDUS based MFA?"
+            },
+            "defaultValue": "False"
+          },
         "radiusServerHost" : {
             "type": "string",
             "metadata": {
@@ -63,7 +70,7 @@
             "metadata": {
               "description": "RADIUS server listen port for MFA"
             },
-            "defaultValue": ""
+            "defaultValue": 1812
           },
           "radiusSharedSecret" : {
             "type": "securestring",
@@ -111,6 +118,7 @@
                         },
                         "gitLocation": "[parameters('_artifactsLocation')]",
                         "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-AdminUI-',subscription().subscriptionId)]",
+                        "enableRadiusMfa": "[parameters('enableRadiusMfa')]",
                         "radiusServerHost": "[parameters('radiusServerHost')]",
                         "radiusServerPort" : "[parameters('radiusServerPort')]",
                         "radiusSharedSecret" : "[parameters('radiusSharedSecret')]"

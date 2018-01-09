@@ -95,6 +95,13 @@
       },
       "defaultValue": ""
     },
+    "enableRadiusMfa" : {
+      "type": "string",
+      "metadata": {
+        "description": "Enable RAIDUS based MFA?"
+      },
+      "defaultValue": "False"
+    },
     "radiusServerHost" : {
       "type": "string",
       "metadata": {
@@ -107,7 +114,7 @@
       "metadata": {
         "description": "RADIUS server listen port for MFA"
       },
-      "defaultValue": ""
+      "defaultValue": 1812
     },
     "radiusSharedSecret" : {
       "type": "securestring",
@@ -244,6 +251,9 @@
           },
           "CAMDeploymentInfo": {
             "value": "[parameters('CAMDeploymentInfo')]"
+          },
+          "enableRadiusMfa" : {
+            "value" : "[parameters('enableRadiusMfa')]"
           },
           "radiusServerHost" : {
             "value" : "[parameters('radiusServerHost')]"

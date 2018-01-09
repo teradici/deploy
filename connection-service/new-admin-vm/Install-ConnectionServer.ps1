@@ -68,6 +68,9 @@ Configuration InstallConnectionServer
         [Parameter(Mandatory=$false)]
         [String]$brokerPort = "8444",
 
+        [Parameter(Mandatory = $false)]
+        [String]$enableRadiusMfa,
+
         
         [Parameter(Mandatory = $false)]
         [String]$radiusServerHost,
@@ -877,15 +880,6 @@ ldapDomain=$Using:domainFQDN
                 $adminUsername = $localAdminCreds.GetNetworkCredential().Username
                 $adminPassword = $localAdminCreds.GetNetworkCredential().Password
 
-                #set up RADIUS MFA related attributes
-                if(!$radiusServerHost.Equals("") -and $radiusServerPort -is [int]) {
-                    $mfaEnabled = "true"
-                }
-                else {
-                    $mfaEnabled = "false"
-                }
-
-
                 $cbProperties = @"
 ldapHost=ldaps://$Using:dcvmfqdn
 ldapAdminUsername=$adminUsername
@@ -897,11 +891,27 @@ brokerPlatform=$Using:family
 brokerProductVersion=1.0
 brokerIpaddress=$ipaddressString
 brokerLocale=en_US
-isMultiFactorAuthenticate=$mfaEnabled
+"@
+                #stick in RADIUS MFA related attributes if RADIUS MFA is turned on
+                if($enableRadiusMfa) {
+                $cbProperties = @"
+ldapHost=ldaps://$Using:dcvmfqdn
+ldapAdminUsername=$adminUsername
+ldapAdminPassword=$adminPassword
+ldapDomain=$Using:domainFQDN
+brokerHostName=$Using:pbvmfqdn
+brokerProductName=CAM Connection Broker
+brokerPlatform=$Using:family
+brokerProductVersion=1.0
+brokerIpaddress=$ipaddressString
+brokerLocale=en_US
+isMultiFactorAuthenticate=$enableRadiusMfa
 radiusServerIPAddress=$radiusServerHost
 authPort=$radiusServerPort
 radiusSecretKey=$radiusSharedSecret
 "@
+
+}
 
                 Set-Content $cbPropertiesFile $cbProperties
                 Set-Content $cbHomePropertiesFile $cbProperties

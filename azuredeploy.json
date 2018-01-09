@@ -172,6 +172,13 @@
       },
       "defaultValue": ""
     },
+    "enableRadiusMfa" : {
+      "type": "string",
+      "metadata": {
+        "description": "RADIUS server host name/IP address for MFA"
+      },
+      "defaultValue": "False"
+    },
     "radiusServerHost" : {
       "type": "string",
       "metadata": {
@@ -301,6 +308,9 @@
           },
           "_artifactsLocationSasToken": {
             "value": "[parameters('_artifactsLocationSasToken')]"
+          },
+          "enableRadiusMfa": {
+            "value": "[parameters('enableRadiusMfa')]"
           },
           "radiusServerHost": {
             "value": "[parameters('radiusServerHost')]"
