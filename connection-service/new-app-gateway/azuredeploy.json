@@ -73,11 +73,12 @@
     }
   },
   "variables": {
-    "publicIPAddressName": "[concat('publicIp1',parameters('CSUniqueSuffix'))]",
+    "publicIPAddressName": "[concat('appGatewayPublicIP',parameters('CSUniqueSuffix'))]",
     "publicIPRef": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]",
     "applicationGatewayID": "[resourceId('Microsoft.Network/applicationGateways',parameters('applicationGatewayName'))]",
     "apiVersion": "2015-06-15",
     "appGwFrontendPort": 443,
+    "appGwFrontendPrivatePort": 8443,
     "appGwBackendPort": 8080
   },
   "resources": [
@@ -131,6 +132,14 @@
                 "id": "[variables('publicIPRef')]"
               }
             }
+          },
+          {
+            "name": "appGatewayFrontendPrivateIP",
+            "properties": {
+                "subnet": {
+                  "id": "[parameters('subnetRef')]"
+                }
+            }
           }
         ],
         "frontendPorts": [
@@ -138,6 +147,12 @@
             "name": "appGatewayFrontendPort",
             "properties": {
               "Port": "[variables('appGwFrontendPort')]"
+            }
+          },
+          {
+            "name": "appGatewayFrontendPrivatePort",
+            "properties": {
+              "Port": "[variables('appGwFrontendPrivatePort')]"
             }
           }
         ],
@@ -147,7 +162,7 @@
           },
           {
             "name": "[parameters('SGBackendPoolName')]"
-          },
+          }
         ],
         "backendHttpSettingsCollection": [
           {
@@ -168,6 +183,21 @@
               },
               "FrontendPort": {
                 "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendPort')]"
+              },
+              "Protocol": "Https",
+              "SslCertificate": {
+                "Id": "[concat(variables('applicationGatewayID'), '/sslCertificates/appGatewaySslCert')]"
+              }
+            }
+          },
+          {
+            "name": "appGatewayPrivateHttpListener",
+            "properties": {
+              "FrontendIPConfiguration": {
+                "Id": "[concat(variables('applicationGatewayID'), '/frontendIPConfigurations/appGatewayFrontendPrivateIP')]"
+              },
+              "FrontendPort": {
+                "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendPrivatePort')]"
               },
               "Protocol": "Https",
               "SslCertificate": {
@@ -207,11 +237,23 @@
         ],
         "requestRoutingRules": [
           {
-            "Name": "rule1",
+            "Name": "externalRule",
             "properties": {
               "RuleType": "PathBasedRouting",
               "httpListener": {
                 "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayHttpListener')]"
+              },
+              "urlPathMap": {
+                "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/urlPathMap1')]"
+              }
+            }
+          },
+          {
+            "Name": "internalRule",
+            "properties": {
+              "RuleType": "PathBasedRouting",
+              "httpListener": {
+                "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayPrivateHttpListener')]"
               },
               "urlPathMap": {
                 "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/urlPathMap1')]"
