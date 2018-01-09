@@ -890,7 +890,7 @@ brokerLocale=en_US
 
                 $foundCert = $false
                 $caCert = $null
-                $loopCountRemaining = 180
+                $loopCountRemaining = 30
 
                 # LDAPS Port and Host
                 $port=636
@@ -904,8 +904,8 @@ brokerLocale=en_US
                         $tcpclient = new-object System.Net.Sockets.tcpclient
                         $tcpclient.Connect($hostname,$port)
 
-                        #Authenticate with SSL
-                        $sslstream = new-object System.Net.Security.SslStream -ArgumentList $tcpclient.GetStream(),$false
+                        # Authenticate with SSL - trusting all certificates
+                        $sslstream = new-object System.Net.Security.SslStream -ArgumentList $tcpclient.GetStream(),$false,{$true}
 
                         $sslstream.AuthenticateAsClient($hostname)
                         $cert =  [System.Security.Cryptography.X509Certificates.X509Certificate2]($sslstream.remotecertificate)
@@ -928,19 +928,13 @@ brokerLocale=en_US
                         $foundCert=$true
                     } catch {
                         Write-Host "Failed to retrieve issuer certificate from $hostname`:$port because $_"
-
-						# Run 'pulse' on the DC as that can resolve the situation.
-						$DCSession = New-PSSession $dcvmfqdn -Credential $using:DomainAdminCreds
-
-						Invoke-Command {& "certutil" -pulse > $null} -Session $DCSession | Out-Null
-						Remove-PSSession $DCSession | Out-Null
                     } finally {
                         #cleanup
                         if ($sslStream) {
-                            $sslstream.close()
+                            $sslstream.close()  | Out-Null
                         }
                         if ($tcpclient) {
-                            $tcpclient.close()
+                            $tcpclient.close()  | Out-Null
                         }
                     }
                     
