@@ -59,6 +59,21 @@ param(
 
     [switch]$ignorePrompts,
 
+    [parameter(Mandatory = $false)]
+    $enableRadiusMfa=$null,
+
+    [parameter(Mandatory=$false)]
+    [String]
+    $radiusServerHost,
+
+    [parameter(Mandatory=$false)]
+    [int]
+    $radiusServerPort,
+
+    [parameter(Mandatory=$false)]
+    [SecureString]
+    $radiusServerSharedSecret,
+
     $camSaasUri = "https://cam-antar.teradici.com",
 	$CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/master/azuredeploy.json",
     $binaryLocation = "https://teradeploy.blob.core.windows.net/binaries",
@@ -1466,6 +1481,38 @@ function New-ConnectionServiceDeployment() {
                         "secretName": "CAMDeploymentInfo"
                     }
                 },
+                "enableRadiusMfa": {
+                    "reference": {
+                        "keyVault": {
+                        "id": "$kvId"
+                        },
+                        "secretName": "enableRadiusMfa"
+                    }
+                },
+                "radiusServerHost": {
+                    "reference": {
+                        "keyVault": {
+                        "id": "$kvId"
+                        },
+                        "secretName": "radiusServerHost"
+                    }
+                },
+                "radiusServerPort": {
+                    "reference": {
+                        "keyVault": {
+                        "id": "$kvId"
+                        },
+                        "secretName": "radiusServerPort"
+                    }
+                },
+                "radiusServerSharedSecret": {
+                    "reference": {
+                        "keyVault": {
+                        "id": "$kvId"
+                        },
+                        "secretName": "radiusServerSharedSecret"
+                    }
+                },
                 "_baseArtifactsLocation": {
                     "reference": {
                         "keyVault": {
@@ -1694,8 +1741,10 @@ function Deploy-CAM() {
         $deployOverDC = $false,
 
         [parameter(Mandatory = $true)]
-        $vnetConfig
+        $vnetConfig,
 
+        [parameter(Mandatory=$false)]
+        $radiusConfig=@{}
     )
 
     # Artifacts location 'folder' is where the template is stored
@@ -1799,6 +1848,20 @@ function Deploy-CAM() {
     $CAMConfig.internal.agentARM = "server2016-standard-agent.json"
     $CAMConfig.internal.gaAgentARM = "server2016-graphics-agent.json"
     $CAMConfig.internal.linuxAgentARM = "rhel-standard-agent.json"
+
+    # Radius MFA Configuration Parameters
+    $CAMConfig.parameters.enableRadiusMfa = @{
+        value=(ConvertTo-SecureString $radiusConfig.enableRadiusMfa -AsPlainText -Force)
+    }
+    $CAMConfig.parameters.radiusServerHost = @{
+        value=(ConvertTo-SecureString $radiusConfig.radiusServerHost -AsPlainText -Force)
+    }
+    $CAMConfig.parameters.radiusServerPort = @{
+        value=(ConvertTo-SecureString $radiusConfig.radiusServerPort -AsPlainText -Force)
+    }
+    $CAMConfig.parameters.radiusServerSharedSecret = @{
+        value=$radiusConfig.radiusServerSharedSecret
+    }
 
     # make temporary directory for intermediate files
     $folderName = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
@@ -2223,6 +2286,38 @@ function Deploy-CAM() {
 				"id": "$kvId"
 				},
 				"secretName": "cloudAccessRegistrationCode"
+			}
+		},
+        "enableRadiusMfa": {
+            "reference": {
+                "keyVault": {
+                "id": "$kvId"
+                },
+                "secretName": "enableRadiusMfa"
+            }
+        },
+		"radiusServerHost": {
+			"reference": {
+				"keyVault": {
+				"id": "$kvId"
+				},
+				"secretName": "radiusServerHost"
+			}
+		},
+		"radiusServerPort": {
+			"reference": {
+				"keyVault": {
+				"id": "$kvId"
+				},
+				"secretName": "radiusServerPort"
+			}
+		},
+		"radiusServerSharedSecret": {
+			"reference": {
+				"keyVault": {
+				"id": "$kvId"
+				},
+				"secretName": "radiusServerSharedSecret"
 			}
 		}
 	}
@@ -2686,6 +2781,54 @@ else {
         }
     } while ( -not $domainAdminCredential )
 
+    $radiusConfig = @{
+        enableRadiusMfa = $enableRadiusMfa
+        radiusServerHost = $radiusServerHost
+        radiusServerPort = $radiusServerPort 
+        radiusServerSharedSecret = $radiusServerSharedSecret
+    }
+    if ( ($enableRadiusMfa -eq $null) -or $enableRadiusMfa ) {
+        if ( $enableRadiusMfa -eq $null -and (-not $ignorePrompts) ) {
+            $enableRadiusMfa = (Read-Host "Do you want to enable Multi-Factor Authentication using your Radius Server? (yes/no)") -like "*y*"
+        } elseif ( $enableRadiusMfa -eq $null -and $ignorePrompts ) {
+            $enableRadiusMfa = $false
+        }
+
+        if ($enableRadiusMfa) {
+            if (-not $radiusConfig.radiusServerHost ) {
+                $radiusConfig.radiusServerHost = Read-Host "Please enter your Radius Server's Hostname or IP"
+            }
+
+            do {
+                if (-not $radiusConfig.radiusServerPort ) {
+                    try {
+                        $radiusConfig.radiusServerPort = [int](Read-Host  "Please enter your Radius Server's Listening port")
+                    } catch {
+                        $radiusConfig.radiusServerPort = $null
+                        Write-Host "Selected port is not an Integer"
+                    }
+                    if ( ($radiusConfig.radiusServerPort -le 0) -or ($radiusConfig.radiusServerPort -gt 65535) ) {
+                        Write-Host "Selected port is invalid. Should be between 1 and 65535."
+                        $radiusConfig.radiusServerPort = $null
+                    } else {
+                        $radiusConfig.radiusServerPort = $radiusConfig.radiusServerPort
+                    }
+                }
+            } while (-not $radiusConfig.radiusServerPort )
+
+            if (-not $radiusConfig.radiusServerSharedSecret ) {
+                $radiusConfig.radiusServerSharedSecret = Read-Host -AsSecureString "Please enter your Radius Server's Shared Secret"
+            }
+        }
+        $radiusConfig.enableRadiusMfa = $enableRadiusMfa
+    } 
+    if ( -not $enableRadiusMfa) {
+        # Placeholder value for the radius secret and port is required in order to create KeyVault entry
+        $radiusConfig.radiusServerSharedSecret = ConvertTo-SecureString "radiusSecret" -AsPlainText -Force
+        $radiusConfig.radiusServerPort = ConvertTo-SecureString 0 -AsPlainText -Force
+        $radiusConfig.radiusServerHost = ConvertTo-SecureString "radiusServer" -AsPlainText -Force
+    }
+
     do {
         if (-not $registrationCode ) {
             $registrationCode = Read-Host -AsSecureString "Please enter your Cloud Access registration code"
@@ -2720,5 +2863,6 @@ else {
         -certificateFilePassword $certificateFilePassword `
 		-AgentChannel $AgentChannel `
         -deployOverDC $deployOverDC `
+        -radiusConfig $radiusConfig, `
         -vnetConfig $vnetConfig
 }
