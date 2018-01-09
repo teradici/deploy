@@ -1857,7 +1857,8 @@ function Deploy-CAM() {
         value=(ConvertTo-SecureString $radiusConfig.radiusServerHost -AsPlainText -Force)
     }
     $CAMConfig.parameters.radiusServerPort = @{
-        value=(ConvertTo-SecureString $radiusConfig.radiusServerPort -AsPlainText -Force)
+      #  value=(ConvertTo-SecureString $radiusConfig.radiusServerPort -AsPlainText -Force)
+      value=$radiusConfig.radiusServerPort 
     }
     $CAMConfig.parameters.radiusSharedSecret = @{
         value=$radiusConfig.radiusSharedSecret
@@ -2827,7 +2828,8 @@ else {
     if ( -not $enableRadiusMfa) {
         # Placeholder value for the radius secret and port is required in order to create KeyVault entry
         $radiusConfig.radiusSharedSecret = ConvertTo-SecureString "radiusSecret" -AsPlainText -Force
-        $radiusConfig.radiusServerPort = ConvertTo-SecureString 0 -AsPlainText -Force
+        # $radiusConfig.radiusServerPort = ConvertTo-SecureString 0 -AsPlainText -Force
+        $radiusConfig.radiusServerPort =  0 
         $radiusConfig.radiusServerHost = ConvertTo-SecureString "radiusServer" -AsPlainText -Force
     }
 

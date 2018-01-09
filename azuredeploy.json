@@ -187,11 +187,11 @@
       "defaultValue": ""
     },
     "radiusServerPort" : {
-      "type": "int",
+      "type": "string",
       "metadata": {
         "description": "RADIUS server listen port for MFA"
       },
-      "defaultValue": 1812
+      "defaultValue": "1812"
     },
     "radiusSharedSecret" : {
       "type": "securestring",
