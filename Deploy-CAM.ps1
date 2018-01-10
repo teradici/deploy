@@ -76,7 +76,7 @@ param(
 
     $camSaasUri = "https://cam-antar.teradici.com",
 	$CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/cam-radius-settings/azuredeploy.json",
-    $binaryLocation = "https://teradeploy.blob.core.windows.net/binaries",
+    $binaryLocation = "https://sroyrg2diag351.blob.core.windows.net/temp-container/",
     $outputParametersFileName = "cam-output.parameters.json",
     $location
 )
@@ -1857,8 +1857,8 @@ function Deploy-CAM() {
         value=(ConvertTo-SecureString $radiusConfig.radiusServerHost -AsPlainText -Force)
     }
     $CAMConfig.parameters.radiusServerPort = @{
-      #  value=(ConvertTo-SecureString $radiusConfig.radiusServerPort -AsPlainText -Force)
-      value=$radiusConfig.radiusServerPort 
+       value=(ConvertTo-SecureString $radiusConfig.radiusServerPort -AsPlainText -Force)
+     
     }
     $CAMConfig.parameters.radiusSharedSecret = @{
         value=$radiusConfig.radiusSharedSecret
@@ -2828,8 +2828,8 @@ else {
     if ( -not $enableRadiusMfa) {
         # Placeholder value for the radius secret and port is required in order to create KeyVault entry
         $radiusConfig.radiusSharedSecret = ConvertTo-SecureString "radiusSecret" -AsPlainText -Force
-        # $radiusConfig.radiusServerPort = ConvertTo-SecureString 0 -AsPlainText -Force
-        $radiusConfig.radiusServerPort =  0 
+        $radiusConfig.radiusServerPort = ConvertTo-SecureString 0 -AsPlainText -Force
+        
         $radiusConfig.radiusServerHost = ConvertTo-SecureString "radiusServer" -AsPlainText -Force
     }
 

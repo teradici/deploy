@@ -81,7 +81,7 @@ Configuration InstallConnectionServer
 
         
         [Parameter(Mandatory = $false)]
-        [SecureString]$radiusSharedSecret
+        [System.Management.Automation.PSCredential]$radiusSharedSecretContainer
 
 
     )
@@ -892,8 +892,12 @@ brokerProductVersion=1.0
 brokerIpaddress=$ipaddressString
 brokerLocale=en_US
 "@
-                #stick in RADIUS MFA related attributes if RADIUS MFA is turned on
-                if($enableRadiusMfa) {
+              
+                Write-Host "MFA setting is $enableRadiusMfa"
+#stick in RADIUS MFA related attributes if RADIUS MFA is turned on
+                if($enableRadiusMfa -eq "True") {
+                    $radiusSecretPlainText = $radiusSharedSecretContainer.GetNetworkCredential().Password
+
                 $cbProperties = @"
 ldapHost=ldaps://$Using:dcvmfqdn
 ldapAdminUsername=$adminUsername
@@ -908,7 +912,7 @@ brokerLocale=en_US
 isMultiFactorAuthenticate=$enableRadiusMfa
 radiusServerIPAddress=$radiusServerHost
 authPort=$radiusServerPort
-radiusSecretKey=$radiusSharedSecret
+radiusSecretKey=$radiusSecretPlainText
 "@
 
 }
