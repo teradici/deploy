@@ -2807,6 +2807,12 @@ else {
     } while (-not $registrationCode )
     
     $claims = Get-Claims
+
+    $upn = ""
+    if (-not ([string]::IsNullOrEmpty($claims.upn)))
+    {
+        $upn = $claims.upn
+    }
     
     Deploy-CAM `
         -domainAdminCredential $domainAdminCredential `
@@ -2830,5 +2836,5 @@ else {
         -deployOverDC $deployOverDC `
         -vnetConfig $vnetConfig `
         -ownerTenantId $claims.tid `
-        -ownerUpn $claims.upn
+        -ownerUpn $upn
 }
