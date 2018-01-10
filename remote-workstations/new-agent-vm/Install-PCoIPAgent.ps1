@@ -1,51 +1,51 @@
 # Install-PCoIPAgent.ps1
 Configuration InstallPCoIPAgent
 {
-	param(
-     	[Parameter(Mandatory=$true)]
-     	[String] $pcoipAgentInstallerUrl,
+    param(
+        [Parameter(Mandatory=$true)]
+        [String] $pcoipAgentInstallerUrl,
 
-     	[Parameter(Mandatory=$false)]
-     	[String] $videoDriverUrl,
+        [Parameter(Mandatory=$false)]
+        [String] $videoDriverUrl,
     
-     	[Parameter(Mandatory=$true)]
-     	[PSCredential] $registrationCodeCredential,
+        [Parameter(Mandatory=$true)]
+        [PSCredential] $registrationCodeCredential,
 
         [Parameter(Mandatory=$false)]
         [String] $sumoCollectorID,
 
         [Parameter(Mandatory=$false)]
-		[PSCredential] $sasTokenAsCred,
+        [PSCredential] $sasTokenAsCred,
 
         [Parameter(Mandatory=$false)]
-     	[PSCredential] $domainJoinCredential,
+        [PSCredential] $domainJoinCredential,
 
         [Parameter(Mandatory=$false)]
-		[string] $domainGroupToJoin,
-
-		[Parameter(Mandatory=$false)]
-		[bool]$enableAutoShutdown,
+        [string] $domainGroupToJoin,
 
         [Parameter(Mandatory=$false)]
-		[System.Management.Automation.PSCredential]$CAMDeploymentInfo,
+        [bool]$enableAutoShutdown,
 
-		[Parameter(Mandatory=$false)]
-		[bool]$verifyCAMSaaSCertificate=$true
-		)
+        [Parameter(Mandatory=$false)]
+        [System.Management.Automation.PSCredential]$CAMDeploymentInfo,
+
+        [Parameter(Mandatory=$false)]
+        [bool]$verifyCAMSaaSCertificate=$true
+        )
     
     $isSA = [string]::IsNullOrWhiteSpace($videoDriverUrl)
 
     $regPath = If ($isSA) {
-				    "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\PCoIP Standard Agent"
-			   }
-			   Else {
-					"HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\PCoIP Graphics Agent"
-			   }
-	$retryCount = 5
-	$delay = 60 # seconds
-	$orderNumArray = @('1st', '2nd', '3rd')
+                    "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\PCoIP Standard Agent"
+               }
+               Else {
+                    "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\PCoIP Graphics Agent"
+               }
+    $retryCount = 5
+    $delay = 60 # seconds
+    $orderNumArray = @('1st', '2nd', '3rd')
 
-	$agentInstallerDLDirectory = "C:\WindowsAzure\PCoIPAgentInstaller"
+    $agentInstallerDLDirectory = "C:\WindowsAzure\PCoIPAgentInstaller"
 
     Node "localhost"
     {
@@ -93,8 +93,8 @@ Configuration InstallPCoIPAgent
 
                 $installerFileName = "SumoCollector.exe"
 
-				$sasToken = ($using:sasTokenAsCred).GetNetworkCredential().password
-				$blobLocation = ($using:sasTokenAsCred).GetNetworkCredential().username
+                $sasToken = ($using:sasTokenAsCred).GetNetworkCredential().password
+                $blobLocation = ($using:sasTokenAsCred).GetNetworkCredential().username
 
                 $sumo_package = 'https://collectors.sumologic.com/rest/download/win64'
                 $sumo_config = "$blobLocation/sumo.conf${sasToken}"
@@ -113,29 +113,29 @@ Configuration InstallPCoIPAgent
                 $command = "$dest\$installerFileName -console -q"
                 Invoke-Expression $command
 
-				# Wait for collector to be installed before exiting this configuration.
-				$retryCount = 1800
-				while ($retryCount -gt 0)
-				{
-					try
-					{
-						Get-Service sumo-collector -ErrorAction Stop
-						break
-					}
-					catch
-					{
-						Start-Sleep -s 1;
-						$retryCount = $retryCount - 1;
-						if ( $retryCount -eq 0)
-						{
-							throw "Sumo collector not installed in time."
-						}
-						else
-						{
-							Write-Host "Waiting for Sumo collector to be installed"
-						}
-					}
-				}
+                # Wait for collector to be installed before exiting this configuration.
+                $retryCount = 1800
+                while ($retryCount -gt 0)
+                {
+                    try
+                    {
+                        Get-Service sumo-collector -ErrorAction Stop
+                        break
+                    }
+                    catch
+                    {
+                        Start-Sleep -s 1;
+                        $retryCount = $retryCount - 1;
+                        if ( $retryCount -eq 0)
+                        {
+                            throw "Sumo collector not installed in time."
+                        }
+                        else
+                        {
+                            Write-Host "Waiting for Sumo collector to be installed"
+                        }
+                    }
+                }
             }
         }
 
@@ -149,11 +149,11 @@ Configuration InstallPCoIPAgent
                 $isSA = $using:isSA
 
                 if ($isSA -or (Test-Path -path "HKLM:\SOFTWARE\NVIDIA Corporation\Installer2\Drivers")) {
-					return $true
-				}else {
-					return $false
-				} 
-			}
+                    return $true
+                }else {
+                    return $false
+                } 
+            }
 
             SetScript  = {
                 Write-Verbose "Downloading Nvidia driver"
@@ -161,47 +161,47 @@ Configuration InstallPCoIPAgent
                 $installerFileName = [System.IO.Path]::GetFileName($videoDriverUrl)
                 $destFile = "c:\WindowsAzure\NvidiaInstaller\" + $installerFileName
 
-				$orderNumArray = $using:orderNumArray
-				$retryCount = $using:retryCount
+                $orderNumArray = $using:orderNumArray
+                $retryCount = $using:retryCount
 
-				for ($idx = 1; $idx -le $retryCount; $idx++) {
-					Write-Verbose ('It is the {0} try downloading video driver from {1} ...' -f $orderNumArray[$idx -1], $videoDriverUrl)
-					Try{
-						Invoke-WebRequest $videoDriverUrl -OutFile $destFile -UseBasicParsing -PassThru  -ErrorAction Stop
-						break
-					}Catch{
-						$errMsg = "Attempt {0} of {1} to download video driver failed. Error Infomation: {2} " -f $idx, $retryCount, $_.Exception.Message 
-						Write-Verbose $errMsg
-						if ($idx -ne $retryCount) {
-							Start-Sleep -s $using:delay
-						} else {
-							throw $errMsg
-						}
-					}
-				}
+                for ($idx = 1; $idx -le $retryCount; $idx++) {
+                    Write-Verbose ('It is the {0} try downloading video driver from {1} ...' -f $orderNumArray[$idx -1], $videoDriverUrl)
+                    Try{
+                        Invoke-WebRequest $videoDriverUrl -OutFile $destFile -UseBasicParsing -PassThru  -ErrorAction Stop
+                        break
+                    }Catch{
+                        $errMsg = "Attempt {0} of {1} to download video driver failed. Error Infomation: {2} " -f $idx, $retryCount, $_.Exception.Message 
+                        Write-Verbose $errMsg
+                        if ($idx -ne $retryCount) {
+                            Start-Sleep -s $using:delay
+                        } else {
+                            throw $errMsg
+                        }
+                    }
+                }
 
-				for ($idx = 1; $idx -le $retryCount; $idx++) {
-					Write-Verbose ('It is the {0} try installing Nvidia driver...' -f $orderNumArray[$idx -1])
+                for ($idx = 1; $idx -le $retryCount; $idx++) {
+                    Write-Verbose ('It is the {0} try installing Nvidia driver...' -f $orderNumArray[$idx -1])
 
-	                $ret = Start-Process -FilePath $destFile -ArgumentList "/s /noeula /noreboot" -PassThru -Wait
-					
-					# treat exit code 0 or 1 as success
-					if (($ret.ExitCode -eq 0) -or ($ret.ExitCode -eq 1)) {
-						Write-Verbose "Request reboot machine after Installing Video Driver."
-						# Setting the global:DSCMachineStatus = 1 tells DSC that a reboot is required
-						$global:DSCMachineStatus = 1
-						Write-Verbose "Finished Nvidia driver Installation"
-						break
-					} else {
-						$errMsg = "Attempt {0} of {1} to install nvidia driver failed. Exit Code: {2} ." -f  $idx, $retryCount,  $ret.ExitCode
-						Write-Verbose $errMsg
-						if ($idx -ne $retryCount) {
-							Start-Sleep -s $using:delay
-						} else {
-							throw $errMsg
-						}
-					}
-				}
+                    $ret = Start-Process -FilePath $destFile -ArgumentList "/s /noeula /noreboot" -PassThru -Wait
+                    
+                    # treat exit code 0 or 1 as success
+                    if (($ret.ExitCode -eq 0) -or ($ret.ExitCode -eq 1)) {
+                        Write-Verbose "Request reboot machine after Installing Video Driver."
+                        # Setting the global:DSCMachineStatus = 1 tells DSC that a reboot is required
+                        $global:DSCMachineStatus = 1
+                        Write-Verbose "Finished Nvidia driver Installation"
+                        break
+                    } else {
+                        $errMsg = "Attempt {0} of {1} to install nvidia driver failed. Exit Code: {2} ." -f  $idx, $retryCount,  $ret.ExitCode
+                        Write-Verbose $errMsg
+                        if ($idx -ne $retryCount) {
+                            Start-Sleep -s $using:delay
+                        } else {
+                            throw $errMsg
+                        }
+                    }
+                }
             }
         }
 
@@ -213,78 +213,78 @@ Configuration InstallPCoIPAgent
             #TODO: Check for other agent types as well?
             TestScript = {
                 $regPath = $using:regPath
-				if ( Test-Path -path $regPath)  {
-					return $true
-				}else {
-					return $false
-				} 
-			}
+                if ( Test-Path -path $regPath)  {
+                    return $true
+                }else {
+                    return $false
+                } 
+            }
 
             SetScript  = {
                 Write-Verbose "Starting to Install PCoIPAgent"
 
-				#agent installer exit code 1641 require reboot machine
-				Set-Variable EXIT_CODE_REBOOT 1641 -Option Constant
+                #agent installer exit code 1641 require reboot machine
+                Set-Variable EXIT_CODE_REBOOT 1641 -Option Constant
 
                 $installerFileName = "PCoIP_agent_release_installer_standard.exe"
 
-				if (! $using:isSA) {
-					$installerFileName = "PCoIP_agent_release_installer_graphics.exe"
-				}
+                if (! $using:isSA) {
+                    $installerFileName = "PCoIP_agent_release_installer_graphics.exe"
+                }
 
                 $pcoipAgentInstallerUrl = $using:pcoipAgentInstallerUrl
 
-				if (! $pcoipAgentInstallerUrl.EndsWith('/') ) {
-					 $pcoipAgentInstallerUrl =  $pcoipAgentInstallerUrl + '/';
-				}
+                if (! $pcoipAgentInstallerUrl.EndsWith('/') ) {
+                     $pcoipAgentInstallerUrl =  $pcoipAgentInstallerUrl + '/';
+                }
 
-				$pcoipAgentInstallerUrl =  $pcoipAgentInstallerUrl + $installerFileName;
+                $pcoipAgentInstallerUrl =  $pcoipAgentInstallerUrl + $installerFileName;
                 
                 $destFile = $using:agentInstallerDLDirectory + '\' + $installerFileName
 
-				$orderNumArray = $using:orderNumArray
-				$retryCount = $using:retryCount
+                $orderNumArray = $using:orderNumArray
+                $retryCount = $using:retryCount
 
-				for ($idx = 1; $idx -le $retryCount; $idx++) {
-					Write-Verbose ('It is the {0} try downloading PCoIP Agent installer from {1} ...' -f $orderNumArray[$idx -1], $pcoipAgentInstallerUrl)
-					Try{
-						Invoke-WebRequest $pcoipAgentInstallerUrl -OutFile $destFile -UseBasicParsing -PassThru -ErrorAction Stop
-						break
-					} Catch {
-						$errMsg = "Attempt {0} of {1} to download PCoIP Agent installer failed. Error Infomation: {2} " -f $idx, $retryCount, $_.Exception.Message 
-						Write-Verbose $errMsg
-						if ($idx -ne $retryCount) {
-							Start-Sleep -s $using:delay
-						} else {
-							throw $errMsg
-						}
-					}
-				}
+                for ($idx = 1; $idx -le $retryCount; $idx++) {
+                    Write-Verbose ('It is the {0} try downloading PCoIP Agent installer from {1} ...' -f $orderNumArray[$idx -1], $pcoipAgentInstallerUrl)
+                    Try{
+                        Invoke-WebRequest $pcoipAgentInstallerUrl -OutFile $destFile -UseBasicParsing -PassThru -ErrorAction Stop
+                        break
+                    } Catch {
+                        $errMsg = "Attempt {0} of {1} to download PCoIP Agent installer failed. Error Infomation: {2} " -f $idx, $retryCount, $_.Exception.Message 
+                        Write-Verbose $errMsg
+                        if ($idx -ne $retryCount) {
+                            Start-Sleep -s $using:delay
+                        } else {
+                            throw $errMsg
+                        }
+                    }
+                }
 
                 #install the agent
-				for ($idx = 1; $idx -le $retryCount; $idx++) {
-					Write-Verbose ('It is the {0} try intalling PCoIP Agent...' -f $orderNumArray[$idx -1])
+                for ($idx = 1; $idx -le $retryCount; $idx++) {
+                    Write-Verbose ('It is the {0} try intalling PCoIP Agent...' -f $orderNumArray[$idx -1])
 
-					$ret = Start-Process -FilePath $destFile -ArgumentList "/S /nopostreboot" -PassThru -Wait
+                    $ret = Start-Process -FilePath $destFile -ArgumentList "/S /nopostreboot" -PassThru -Wait
 
-					if (($ret.ExitCode -eq 0) -or ($ret.ExitCode -eq $EXIT_CODE_REBOOT)) {
-						if ($ret.ExitCode -eq $EXIT_CODE_REBOOT) {
-							Write-Verbose "Request reboot machine after Installing pcoip agent."
-							# Setting the global:DSCMachineStatus = 1 tells DSC that a reboot is required
-							$global:DSCMachineStatus = 1
-						}
-						Write-Verbose "Finished PCoIP Agent Installation"
-						break
-					} else {
-						$errMsg = "Attempt {0} of [1} to install PCoIP Agent failed. Exit Code: {2}." -f $idx, $retryCount, $ret.ExitCode
-						Write-Verbose $errMsg
-						if ($idx -ne $retryCount) {
-							Start-Sleep -s $using:delay
-						} else {
-							throw $errMsg
-						}
-					}
-				}
+                    if (($ret.ExitCode -eq 0) -or ($ret.ExitCode -eq $EXIT_CODE_REBOOT)) {
+                        if ($ret.ExitCode -eq $EXIT_CODE_REBOOT) {
+                            Write-Verbose "Request reboot machine after Installing pcoip agent."
+                            # Setting the global:DSCMachineStatus = 1 tells DSC that a reboot is required
+                            $global:DSCMachineStatus = 1
+                        }
+                        Write-Verbose "Finished PCoIP Agent Installation"
+                        break
+                    } else {
+                        $errMsg = "Attempt {0} of [1} to install PCoIP Agent failed. Exit Code: {2}." -f $idx, $retryCount, $ret.ExitCode
+                        Write-Verbose $errMsg
+                        if ($idx -ne $retryCount) {
+                            Start-Sleep -s $using:delay
+                        } else {
+                            throw $errMsg
+                        }
+                    }
+                }
             }
         }
 
@@ -296,49 +296,49 @@ Configuration InstallPCoIPAgent
             
             TestScript = { 
                 cd "C:\Program Files (x86)\Teradici\PCoIP Agent"
- 	            $ret = & .\pcoip-validate-license.ps1
+                 $ret = & .\pcoip-validate-license.ps1
 
-				# the powershell variable $? to indicate the last executing command status
-				return $?
+                # the powershell variable $? to indicate the last executing command status
+                return $?
             }
 
             SetScript  = {
                 #register code is stored at the password property of PSCredential object
                 $registrationCode = ($using:registrationCodeCredential).GetNetworkCredential().password
                 if ($registrationCode) {
-					# Insert a delay before registering
-	                cd "C:\Program Files (x86)\Teradici\PCoIP Agent"
+                    # Insert a delay before registering
+                    cd "C:\Program Files (x86)\Teradici\PCoIP Agent"
 
-					$retryCount = $using:retryCount
-					$orderNumArray = $using:orderNumArray
+                    $retryCount = $using:retryCount
+                    $orderNumArray = $using:orderNumArray
 
-					for ($idx = 1; $idx -le $retryCount; $idx++) {
-						Write-Verbose ('It is the {0} try registering the registration code.' -f $orderNumArray[$idx -1])
-						$ret = & .\pcoip-register-host.ps1 -RegistrationCode $registrationCode
-						$isExeSucc = $?
-						
-						if ($isExeSucc) {
-							#only do validation when command pcoip-register-host.ps1 passed
-							Write-Verbose ('It is the {0} try registering the registration code.' -f $orderNumArray[$idx -1])
-		 	                $ret = & .\pcoip-validate-license.ps1
-							$isExeSucc = $?
-						}
+                    for ($idx = 1; $idx -le $retryCount; $idx++) {
+                        Write-Verbose ('It is the {0} try registering the registration code.' -f $orderNumArray[$idx -1])
+                        $ret = & .\pcoip-register-host.ps1 -RegistrationCode $registrationCode
+                        $isExeSucc = $?
+                        
+                        if ($isExeSucc) {
+                            #only do validation when command pcoip-register-host.ps1 passed
+                            Write-Verbose ('It is the {0} try registering the registration code.' -f $orderNumArray[$idx -1])
+                             $ret = & .\pcoip-validate-license.ps1
+                            $isExeSucc = $?
+                        }
 
-						if ($isExeSucc) {
-							Write-Verbose "Succeeded to register the registration code." 
-							break
-						} else {
-							$retMsg = $ret | Out-String
-							$errMsg = "Attempt {0} of {1} to register the registration code failed. Error Message: {2} " -f $idx, $retryCount, $retMsg
-							Write-Verbose  $errMsg     
+                        if ($isExeSucc) {
+                            Write-Verbose "Succeeded to register the registration code." 
+                            break
+                        } else {
+                            $retMsg = $ret | Out-String
+                            $errMsg = "Attempt {0} of {1} to register the registration code failed. Error Message: {2} " -f $idx, $retryCount, $retMsg
+                            Write-Verbose  $errMsg     
 
-							if ($idx -ne $retryCount) {
-								Start-Sleep -s $using:delay
-							} else {
-								throw $errMsg
-							}
-						}
-					}
+                            if ($idx -ne $retryCount) {
+                                Start-Sleep -s $using:delay
+                            } else {
+                                throw $errMsg
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -350,117 +350,117 @@ Configuration InstallPCoIPAgent
             GetScript  = { return 'Start PcoIP Service'}
 
             TestScript = { 
-				$serviceName = "PCoIPAgent"
+                $serviceName = "PCoIPAgent"
 
-				$svc = Get-Service -Name $serviceName   
+                $svc = Get-Service -Name $serviceName   
             
-				return $svc.Status -eq "Running"
+                return $svc.Status -eq "Running"
             }
 
             SetScript  = {
-				$serviceName = "PCoIPAgent"
-				$svc = Get-Service -Name $serviceName   
+                $serviceName = "PCoIPAgent"
+                $svc = Get-Service -Name $serviceName   
 
-				if ($svc.StartType -ne "Automatic") {
-					$msg = "try setting {0} Service start type to automatic." -f $serviceName
-					Write-Verbose $msg
+                if ($svc.StartType -ne "Automatic") {
+                    $msg = "try setting {0} Service start type to automatic." -f $serviceName
+                    Write-Verbose $msg
 
-					Set-Service -name  $serviceName -StartupType Automatic
+                    Set-Service -name  $serviceName -StartupType Automatic
 
-					$status = If ($?) {"succeeded"} Else {"failed"}
-					$msg = "{0} to change start type of {1} service to Automatic." -f $status, $serviceName
-					Write-Verbose $msg
-				}
-					
-				if ($svc.status -eq "Paused") {
-					Write-Verbose "try resuming PCoIPAgent Service ."
-					try{
-						$svc.Continue()
-						Write-Verbose "succeeded to resume PCoIPAgent service."
-					}catch{
-						throw "failed to resume PCoIP Agent Service."
-					}
-				}
+                    $status = If ($?) {"succeeded"} Else {"failed"}
+                    $msg = "{0} to change start type of {1} service to Automatic." -f $status, $serviceName
+                    Write-Verbose $msg
+                }
+                    
+                if ($svc.status -eq "Paused") {
+                    Write-Verbose "try resuming PCoIPAgent Service ."
+                    try{
+                        $svc.Continue()
+                        Write-Verbose "succeeded to resume PCoIPAgent service."
+                    }catch{
+                        throw "failed to resume PCoIP Agent Service."
+                    }
+                }
 
-				if ( $svc.status -eq "Stopped" )	{
-					Write-Verbose "Starting PCoIP Agent Service ..."
-					try{
-						$svc.Start()
-						$svc.WaitForStatus("Running", 120)
-					}catch{
-						throw "failed to start PCoIP Agent Service"
-					}
-				}
-			}
-		}
+                if ( $svc.status -eq "Stopped" )    {
+                    Write-Verbose "Starting PCoIP Agent Service ..."
+                    try{
+                        $svc.Start()
+                        $svc.WaitForStatus("Running", 120)
+                    }catch{
+                        throw "failed to start PCoIP Agent Service"
+                    }
+                }
+            }
+        }
 
-		Script StartCAMIdleShutdownService
+        Script StartCAMIdleShutdownService
         {
             DependsOn  = @("[Script]StartPcoIPService")
 
             GetScript  = { return 'Start CAM Idle Shutdown Service'}
 
             TestScript = { 
-				$serviceName = "CAMIdleShutdown"
-				
-				if (!$using:enableAutoShutdown) {
-					return $true
-				}
+                $serviceName = "CAMIdleShutdown"
+                
+                if (!$using:enableAutoShutdown) {
+                    return $true
+                }
 
-				try {
-					$svc = Get-WmiObject -Class Win32_Service -Filter "Name='$ServiceName'" -ErrorAction Stop
-					return $svc.State -eq "Running"
-				} catch {
-					return $false
-				}
+                try {
+                    $svc = Get-WmiObject -Class Win32_Service -Filter "Name='$ServiceName'" -ErrorAction Stop
+                    return $svc.State -eq "Running"
+                } catch {
+                    return $false
+                }
             }
 
             SetScript  = {
-				cd "C:\Program Files (x86)\Teradici\PCoIP Agent\bin\"
-				$serviceName = "CAMIdleShutdown"
+                cd "C:\Program Files (x86)\Teradici\PCoIP Agent\bin\"
+                $serviceName = "CAMIdleShutdown"
 
-				$ret = .\IdleShutdownAgent.exe -install
-				# Check for success
-				if( !$? ) {
-					$msg = "Failed to install {0} because: {1}" -f $serviceName, $ret
-					Write-Verbose $msg
-					throw $msg
-				}
+                $ret = .\IdleShutdownAgent.exe -install
+                # Check for success
+                if( !$? ) {
+                    $msg = "Failed to install {0} because: {1}" -f $serviceName, $ret
+                    Write-Verbose $msg
+                    throw $msg
+                }
 
-				$svc = Get-Service -Name $serviceName   
+                $svc = Get-Service -Name $serviceName   
 
-				if ($svc.StartType -ne "Automatic") {
-					$msg = "try setting {0} Service start type to automatic." -f $serviceName
-					Write-Verbose $msg
+                if ($svc.StartType -ne "Automatic") {
+                    $msg = "try setting {0} Service start type to automatic." -f $serviceName
+                    Write-Verbose $msg
 
-					Set-Service -name  $serviceName -StartupType Automatic
+                    Set-Service -name  $serviceName -StartupType Automatic
 
-					$status = If ($?) {"succeeded"} Else {"failed"}
-					$msg = "{0} to change start type of {1} service to Automatic." -f $status, $serviceName
-					Write-Verbose $msg
-				}
-					
-				if ($svc.status -eq "Paused") {
-					Write-Verbose "try resuming CAMIdleShutdown Service ."
-					try{
-						$svc.Continue()
-						Write-Verbose "succeeded to resume CAMIdleShutdown service."
-					}catch{
-						throw "failed to resume CAMIdleShutdown Service."
-					}
-				}
+                    $status = If ($?) {"succeeded"} Else {"failed"}
+                    $msg = "{0} to change start type of {1} service to Automatic." -f $status, $serviceName
+                    Write-Verbose $msg
+                }
+                    
+                if ($svc.status -eq "Paused") {
+                    Write-Verbose "try resuming CAMIdleShutdown Service ."
+                    try{
+                        $svc.Continue()
+                        Write-Verbose "succeeded to resume CAMIdleShutdown service."
+                    }catch{
+                        throw "failed to resume CAMIdleShutdown Service."
+                    }
+                }
 
-				if ( $svc.status -eq "Stopped" )	{
-					Write-Verbose "Starting CAMIdleShutdown Service ..."
-					try{
-						$svc.Start()
-						$svc.WaitForStatus("Running", 120)
-					}catch{
-						throw "failed to start CAMIdleShutdown Service"
-					}
-				}
-			}
-		}
+                if ( $svc.status -eq "Stopped" )    {
+                    Write-Verbose "Starting CAMIdleShutdown Service ..."
+                    try{
+                        $svc.Start()
+                        $svc.WaitForStatus("Running", 120)
+                    }catch{
+                        throw "failed to start CAMIdleShutdown Service"
+                    }
+                }
+            }
+        }
 
 
         Script JoinDomainGroup
@@ -470,42 +470,42 @@ Configuration InstallPCoIPAgent
             GetScript  = { return 'Join a Domain Group'}
 
             TestScript = { 
-				if( -not $using:domainGroupToJoin )
-				{
-					Write-Host "No Domain group to join."
-					return $true
-				}
-				Test-Path "$using:agentInstallerDLDirectory\domainGroupJoinFile.txt"
+                if( -not $using:domainGroupToJoin )
+                {
+                    Write-Host "No Domain group to join."
+                    return $true
+                }
+                Test-Path "$using:agentInstallerDLDirectory\domainGroupJoinFile.txt"
             }
 
             SetScript  = {
-				#TODO: Handle OU's and GroupScope like in this article: https://gallery.technet.microsoft.com/scriptcenter/PowerShell-Bulk-AD-Group-4d873f35
+                #TODO: Handle OU's and GroupScope like in this article: https://gallery.technet.microsoft.com/scriptcenter/PowerShell-Bulk-AD-Group-4d873f35
 
-				$domainGroupToJoin = $using:domainGroupToJoin
-				$machineToJoin = $env:computername
+                $domainGroupToJoin = $using:domainGroupToJoin
+                $machineToJoin = $env:computername
 
-				if( -not ((Get-WmiObject win32_computersystem).partofdomain))
-				{
-					Write-Host "$machineToJoin is not part of a domain so is not joining domain group $domainGroupToJoin."
-				}
-				else
-				{
-					$domain = (Get-WmiObject win32_computersystem).domain
-					$domainInfo = (Get-WMIObject Win32_NTDomain) | Where-Object {$_.DnsForestName -eq $domain} | Select-Object -First 1
-					$dcname = ($domainInfo.DomainControllerName -replace "\\", "")
+                if( -not ((Get-WmiObject win32_computersystem).partofdomain))
+                {
+                    Write-Host "$machineToJoin is not part of a domain so is not joining domain group $domainGroupToJoin."
+                }
+                else
+                {
+                    $domain = (Get-WmiObject win32_computersystem).domain
+                    $domainInfo = (Get-WMIObject Win32_NTDomain) | Where-Object {$_.DnsForestName -eq $domain} | Select-Object -First 1
+                    $dcname = ($domainInfo.DomainControllerName -replace "\\", "")
 
-					Write-Host "Connecting to DC to add $machineToJoin to $domainGroupToJoin."
-					
-					# Create a PSSession with the domain controller that we used to login
-					$psSession = New-PSSession -ComputerName $dcname -Credential $using:domainJoinCredential
+                    Write-Host "Connecting to DC to add $machineToJoin to $domainGroupToJoin."
+                    
+                    # Create a PSSession with the domain controller that we used to login
+                    $psSession = New-PSSession -ComputerName $dcname -Credential $using:domainJoinCredential
 
-					Invoke-Command -Session $psSession -ArgumentList $domainGroupToJoin, $machineToJoin `
-					-ScriptBlock {
-						$domainGroupToJoin = $args[0]
-						$machineToJoin = $args[1]
+                    Invoke-Command -Session $psSession -ArgumentList $domainGroupToJoin, $machineToJoin `
+                    -ScriptBlock {
+                        $domainGroupToJoin = $args[0]
+                        $machineToJoin = $args[1]
 
-						# Make the AD group for machines if needed
-						try
+                        # Make the AD group for machines if needed
+                        try
                         {
                             Get-ADGroup $domainGroupToJoin -ErrorAction Stop
                         }
@@ -513,217 +513,217 @@ Configuration InstallPCoIPAgent
                         {
                             Write-Host "Domain Group `"$domainGroupToJoin`" not found. Creating."
 
-							New-ADGroup -name $domainGroupToJoin -GroupScope Global
-						}
+                            New-ADGroup -name $domainGroupToJoin -GroupScope Global
+                        }
 
-						# Add-ADGroupMember uses the SAM account name for the computer which has a trailing '$'
-						Add-ADGroupMember -Identity $domainGroupToJoin -Members ($machineToJoin + "$")
-					}
-					Remove-PSSession $psSession
-				}
-					
-				#make placeholder file so this is only run once
-				New-Item "$using:agentInstallerDLDirectory\domainGroupJoinFile.txt" -type file
-			}
-		}
+                        # Add-ADGroupMember uses the SAM account name for the computer which has a trailing '$'
+                        Add-ADGroupMember -Identity $domainGroupToJoin -Members ($machineToJoin + "$")
+                    }
+                    Remove-PSSession $psSession
+                }
+                    
+                #make placeholder file so this is only run once
+                New-Item "$using:agentInstallerDLDirectory\domainGroupJoinFile.txt" -type file
+            }
+        }
 
-		Script RegisterUserEntitlement
-		{
-			DependsOn  = @("[File]Agent_Download_Directory")
+        Script RegisterUserEntitlement
+        {
+            DependsOn  = @("[File]Agent_Download_Directory")
 
-			GetScript  = { return 'RegisterUserEntitlement'}
+            GetScript  = { return 'RegisterUserEntitlement'}
 
-			TestScript = { 
-				if( -not $using:CAMDeploymentInfo ) {
-					Write-Host "No CAM info to register user to remote workstation."
-					return $true
-				} else {
-					$CAMDeploymentInfoCred = $using:CAMDeploymentInfo;
-					$CAMDeploymentInfo = $CAMDeploymentInfoCred.GetNetworkCredential().Password
-					if( (-not $CAMDeploymentInfo) -or ($CAMDeploymentInfo -eq "null")) {
-						Write-Host "No CAM info to register user to remote workstation."
-						return $true
-					}
-				}
-				# Otherwise check marker file if complete
-				Test-Path "$using:agentInstallerDLDirectory\RegisterUserEntitlementFile.txt"
-			}
+            TestScript = { 
+                if( -not $using:CAMDeploymentInfo ) {
+                    Write-Host "No CAM info to register user to remote workstation."
+                    return $true
+                } else {
+                    $CAMDeploymentInfoCred = $using:CAMDeploymentInfo;
+                    $CAMDeploymentInfo = $CAMDeploymentInfoCred.GetNetworkCredential().Password
+                    if( (-not $CAMDeploymentInfo) -or ($CAMDeploymentInfo -eq "null")) {
+                        Write-Host "No CAM info to register user to remote workstation."
+                        return $true
+                    }
+                }
+                # Otherwise check marker file if complete
+                Test-Path "$using:agentInstallerDLDirectory\RegisterUserEntitlementFile.txt"
+            }
 
-			SetScript  = {
-				$machineToJoin = $env:computername
+            SetScript  = {
+                $machineToJoin = $env:computername
 
-				if( -not ((Get-WmiObject win32_computersystem).partofdomain))
-				{
-					throw "$machineToJoin is not part of a domain."
-				}
+                if( -not ((Get-WmiObject win32_computersystem).partofdomain))
+                {
+                    throw "$machineToJoin is not part of a domain."
+                }
 
-				$domain = (Get-WmiObject win32_computersystem).domain
-				$domainInfo = (Get-WMIObject Win32_NTDomain) | Where-Object {$_.DnsForestName -eq $domain} | Select-Object -First 1
-				$dcname = ($domainInfo.DomainControllerName -replace "\\", "")
+                $domain = (Get-WmiObject win32_computersystem).domain
+                $domainInfo = (Get-WMIObject Win32_NTDomain) | Where-Object {$_.DnsForestName -eq $domain} | Select-Object -First 1
+                $dcname = ($domainInfo.DomainControllerName -replace "\\", "")
 
-				#create a PSSession with the domain controller that we used to login
-				$psSession = New-PSSession -ComputerName $dcname -Credential $using:domainJoinCredential
+                #create a PSSession with the domain controller that we used to login
+                $psSession = New-PSSession -ComputerName $dcname -Credential $using:domainJoinCredential
 
-				# Get User Guid for Domain User
-				# TODO: Can we just do this on Localhost?
-				$userGuid = Invoke-Command -Session $psSession -ScriptBlock {
-					Add-Type -AssemblyName System.DirectoryServices.AccountManagement
-					[System.DirectoryServices.AccountManagement.UserPrincipal]::Current.Guid.Guid
-				}
-				Remove-PSSession $psSession
+                # Get User Guid for Domain User
+                # TODO: Can we just do this on Localhost?
+                $userGuid = Invoke-Command -Session $psSession -ScriptBlock {
+                    Add-Type -AssemblyName System.DirectoryServices.AccountManagement
+                    [System.DirectoryServices.AccountManagement.UserPrincipal]::Current.Guid.Guid
+                }
+                Remove-PSSession $psSession
 
-				# get the CAM cred's and info we need.
-				$CAMDeploymentInfoCred = $using:CAMDeploymentInfo;
-				$CAMDeploymentInfo = $CAMDeploymentInfoCred.GetNetworkCredential().Password
-				$CAMDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($CAMDeploymentInfo)
-				$CAMDeploymenInfoDecoded = ConvertFrom-Json $CAMDeploymenInfoJSONDecoded
-				$regInfo = $camDeploymenInfoDecoded.RegistrationInfo
-				
-				$camSaasBaseUri = $regInfo.CAM_URI
-				$camSaasBaseUri = $camSaasBaseUri.Trim().TrimEnd('/')
+                # get the CAM cred's and info we need.
+                $CAMDeploymentInfoCred = $using:CAMDeploymentInfo;
+                $CAMDeploymentInfo = $CAMDeploymentInfoCred.GetNetworkCredential().Password
+                $CAMDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($CAMDeploymentInfo)
+                $CAMDeploymenInfoDecoded = ConvertFrom-Json $CAMDeploymenInfoJSONDecoded
+                $regInfo = $camDeploymenInfoDecoded.RegistrationInfo
+                
+                $camSaasBaseUri = $regInfo.CAM_URI
+                $camSaasBaseUri = $camSaasBaseUri.Trim().TrimEnd('/')
 
-				$camRegistrationError = ""
-				for($idx = 0; $idx -lt $using:retryCount; $idx++) {
-					try {
-						$userRequest = @{
-							username = $regInfo.CAM_USERNAME
-							password = $regInfo.CAM_PASSWORD
-							tenantId = $regInfo.CAM_TENANTID
-						}
-						$certificatePolicy = [System.Net.ServicePointManager]::CertificatePolicy
-						
-						if (!$using:verifyCAMSaaSCertificate) {
-							# Do this so SSL Errors are ignored
-							Write-Host "Warning - Ignoring SSL errors!"
-							add-type @"
+                $camRegistrationError = ""
+                for($idx = 0; $idx -lt $using:retryCount; $idx++) {
+                    try {
+                        $userRequest = @{
+                            username = $regInfo.CAM_USERNAME
+                            password = $regInfo.CAM_PASSWORD
+                            tenantId = $regInfo.CAM_TENANTID
+                        }
+                        $certificatePolicy = [System.Net.ServicePointManager]::CertificatePolicy
+                        
+                        if (!$using:verifyCAMSaaSCertificate) {
+                            # Do this so SSL Errors are ignored
+                            Write-Host "Warning - Ignoring SSL errors!"
+                            add-type @"
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 public class TrustAllCertsPolicy : ICertificatePolicy {
-	public bool CheckValidationResult(
-		ServicePoint srvPoint, X509Certificate certificate,
-		WebRequest request, int certificateProblem) {
-		return true;
-	}
+    public bool CheckValidationResult(
+        ServicePoint srvPoint, X509Certificate certificate,
+        WebRequest request, int certificateProblem) {
+        return true;
+    }
 }
 "@
-						
-							[System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
-						}
-						[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-						
-						# Get a Sign-in token
-						$signInResult = ""
-						try {
-							$signInResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/signin") -Body $userRequest
-						} catch {
-							if ($_.ErrorDetails.Message) {
-								$signInResult = ConvertFrom-Json $_.ErrorDetails.Message
-							} else {
-								throw $_
-							}
-						}
-						Write-Verbose ((ConvertTo-Json $signInResult) -replace "\.*token.*", 'Token": "Sanitized"')
-						# Check if signIn succeded
-						if ($signInResult.code -ne 200) {
-							throw ("Signing in failed. Result was: " + (ConvertTo-Json $signInResult))
-						}
-						$tokenHeader = @{
-							authorization=$signInResult.data.token
-						}
-						Write-Host "Cloud Access Manager sign in succeeded"
+                        
+                            [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+                        }
+                        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                        
+                        # Get a Sign-in token
+                        $signInResult = ""
+                        try {
+                            $signInResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/signin") -Body $userRequest
+                        } catch {
+                            if ($_.ErrorDetails.Message) {
+                                $signInResult = ConvertFrom-Json $_.ErrorDetails.Message
+                            } else {
+                                throw $_
+                            }
+                        }
+                        Write-Verbose ((ConvertTo-Json $signInResult) -replace "\.*token.*", 'Token": "Sanitized"')
+                        # Check if signIn succeded
+                        if ($signInResult.code -ne 200) {
+                            throw ("Signing in failed. Result was: " + (ConvertTo-Json $signInResult))
+                        }
+                        $tokenHeader = @{
+                            authorization=$signInResult.data.token
+                        }
+                        Write-Host "Cloud Access Manager sign in succeeded"
 
-						# Register Remote Workstation
-						$machineRequest = @{
-							deploymentId = $regInfo.CAM_DEPLOYMENTID
-							resourceGroup = $regInfo.CAM_RESOURCEGROUP
-							machineName = $machineToJoin
-							subscriptionId = $regInfo.CAM_SUBSCRIPTIONID
-						}
-						$registerMachineResult = ""
-						try {
-							$registerMachineResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/machines") -Body $machineRequest -Headers $tokenHeader
-						} catch {
-							if ($_.ErrorDetails.Message) {
-								$registerMachineResult = ConvertFrom-Json $_.ErrorDetails.Message
-							} else {
-								throw $_
-							}
-						}
-						Write-Verbose (ConvertTo-Json $registerMachineResult)
-						# Check if registration succeeded
-						if( !(($registerMachineResult.code -eq 201) -or ($registerMachineResult.data.reason.ToLower().Contains("exists")))) {
-							throw ("Registering Machine failed. Result was: " + (ConvertTo-Json $registerMachineResult))
-						}
-						$machineId = ""
-						# Get the machineId
-						if( ($registerMachineResult.code -eq 409) -and ($registerMachineResult.data.reason.ToLower().Contains("already exist")) ) {
-							# Deployment is already registered so the deplymentId needs to be retrieved
-							$registeredMachine = ""
-							try {
-								$registeredMachine = Invoke-RestMethod `
-									-Method Get `
-									-Uri ($camSaasBaseUri + "/api/v1/machines") `
-									-Body $machineRequest `
-									-Headers $tokenHeader
-								$machineId = $registeredMachine.data.machineId
-							} catch {
-								if ($_.ErrorDetails.Message) {
-									$registeredMachine = ConvertFrom-Json $_.ErrorDetails.Message
-									throw ("Getting Deployment ID failed. Result was: " + (ConvertTo-Json $registeredMachine))
-								} else {
-									throw $_
-								}								
-							}
-						} else {
-							$machineId = $registerMachineResult.data.machineId
-						}
-						Write-Host "Remote Workstation $machineToJoin has been registered successfully with Cloud Access Manager"
-						
-						# Register User Entitlement to Machine
+                        # Register Remote Workstation
+                        $machineRequest = @{
+                            deploymentId = $regInfo.CAM_DEPLOYMENTID
+                            resourceGroup = $regInfo.CAM_RESOURCEGROUP
+                            machineName = $machineToJoin
+                            subscriptionId = $regInfo.CAM_SUBSCRIPTIONID
+                        }
+                        $registerMachineResult = ""
+                        try {
+                            $registerMachineResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/machines") -Body $machineRequest -Headers $tokenHeader
+                        } catch {
+                            if ($_.ErrorDetails.Message) {
+                                $registerMachineResult = ConvertFrom-Json $_.ErrorDetails.Message
+                            } else {
+                                throw $_
+                            }
+                        }
+                        Write-Verbose (ConvertTo-Json $registerMachineResult)
+                        # Check if registration succeeded
+                        if( !(($registerMachineResult.code -eq 201) -or ($registerMachineResult.data.reason.ToLower().Contains("exists")))) {
+                            throw ("Registering Machine failed. Result was: " + (ConvertTo-Json $registerMachineResult))
+                        }
+                        $machineId = ""
+                        # Get the machineId
+                        if( ($registerMachineResult.code -eq 409) -and ($registerMachineResult.data.reason.ToLower().Contains("already exist")) ) {
+                            # Deployment is already registered so the deplymentId needs to be retrieved
+                            $registeredMachine = ""
+                            try {
+                                $registeredMachine = Invoke-RestMethod `
+                                    -Method Get `
+                                    -Uri ($camSaasBaseUri + "/api/v1/machines") `
+                                    -Body $machineRequest `
+                                    -Headers $tokenHeader
+                                $machineId = $registeredMachine.data.machineId
+                            } catch {
+                                if ($_.ErrorDetails.Message) {
+                                    $registeredMachine = ConvertFrom-Json $_.ErrorDetails.Message
+                                    throw ("Getting Deployment ID failed. Result was: " + (ConvertTo-Json $registeredMachine))
+                                } else {
+                                    throw $_
+                                }                                
+                            }
+                        } else {
+                            $machineId = $registerMachineResult.data.machineId
+                        }
+                        Write-Host "Remote Workstation $machineToJoin has been registered successfully with Cloud Access Manager"
+                        
+                        # Register User Entitlement to Machine
 
-						$entitlementRequest = @{
-							machineId = $machineId
-							deploymentId = $regInfo.CAM_DEPLOYMENTID
-							userGuid = $userGuid
-						}
-						$registerEntitlementResult = ""
-						try {
-							$registerEntitlementResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/machines/entitlements") -Body $entitlementRequest -Headers $tokenHeader
-						} catch {
-							if ($_.ErrorDetails.Message) {
-								$registerEntitlementResult = ConvertFrom-Json $_.ErrorDetails.Message
-							} else {
-								throw $_
-							}
-						}
-						Write-Verbose (ConvertTo-Json $registerEntitlementResult)
-						# Check if entitlement succeeded
-						if( !(($registerEntitlementResult.code -eq 201) -or ($registerEntitlementResult.data.reason.ToLower().Contains("exists")))) {
-							throw ("Registering User Entitlement failed. Result was: " + (ConvertTo-Json $registerEntitlementResult))
-						}
-						Write-Host "User Entitlement has been registered succesfully with Cloud Access Manager"
+                        $entitlementRequest = @{
+                            machineId = $machineId
+                            deploymentId = $regInfo.CAM_DEPLOYMENTID
+                            userGuid = $userGuid
+                        }
+                        $registerEntitlementResult = ""
+                        try {
+                            $registerEntitlementResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/machines/entitlements") -Body $entitlementRequest -Headers $tokenHeader
+                        } catch {
+                            if ($_.ErrorDetails.Message) {
+                                $registerEntitlementResult = ConvertFrom-Json $_.ErrorDetails.Message
+                            } else {
+                                throw $_
+                            }
+                        }
+                        Write-Verbose (ConvertTo-Json $registerEntitlementResult)
+                        # Check if entitlement succeeded
+                        if( !(($registerEntitlementResult.code -eq 201) -or ($registerEntitlementResult.data.reason.ToLower().Contains("exists")))) {
+                            throw ("Registering User Entitlement failed. Result was: " + (ConvertTo-Json $registerEntitlementResult))
+                        }
+                        Write-Host "User Entitlement has been registered succesfully with Cloud Access Manager"
 
-						$camRegistrationError = ""
-						break;
-					} catch {
-						$camRegistrationError = $_
-						Write-Verbose ( "Attempt {0} of $using:retryCount failed due to Error: {1}" -f ($idx+1), $camRegistrationError )
-						Start-Sleep -s $using:delay
-					} finally {
-						# restore CertificatePolicy 
-						[System.Net.ServicePointManager]::CertificatePolicy = $certificatePolicy
-					}
-				}
+                        $camRegistrationError = ""
+                        break;
+                    } catch {
+                        $camRegistrationError = $_
+                        Write-Verbose ( "Attempt {0} of $using:retryCount failed due to Error: {1}" -f ($idx+1), $camRegistrationError )
+                        Start-Sleep -s $using:delay
+                    } finally {
+                        # restore CertificatePolicy 
+                        [System.Net.ServicePointManager]::CertificatePolicy = $certificatePolicy
+                    }
+                }
 
-				if($camRegistrationError) {
-					throw $camRegistrationError
-				}
+                if($camRegistrationError) {
+                    throw $camRegistrationError
+                }
 
-				#make placeholder file so this is only run once
-				New-Item "$using:agentInstallerDLDirectory\RegisterUserEntitlementFile.txt" -type file
-			}
-		}
-	}
+                #make placeholder file so this is only run once
+                New-Item "$using:agentInstallerDLDirectory\RegisterUserEntitlementFile.txt" -type file
+            }
+        }
+    }
 }
 
 
@@ -759,18 +759,18 @@ Configuration InstallFirefox
     (
         [string]$VersionNumber = "latest",
         [string]$Language = "en-US",
-	    [string]$OS = "win",
+        [string]$OS = "win",
         [string]$MachineBits = "x86",
-	    [string]$LocalPath = "$env:SystemDrive\Windows\DtlDownloads\Firefox Setup " + $versionNumber +".exe"
+        [string]$LocalPath = "$env:SystemDrive\Windows\DtlDownloads\Firefox Setup " + $versionNumber +".exe"
     )
     Import-DscResource -ModuleName xPSDesiredStateConfiguration
 
     xRemoteFile Downloader
     {
         Uri = "http://download.mozilla.org/?product=firefox-" + $VersionNumber +"&os="+$OS+"&lang=" + $Language 
-	    DestinationPath = $LocalPath
+        DestinationPath = $LocalPath
     }
-	 
+     
     Script Install_Firefox
     {
         DependsOn = "[xRemoteFile]Downloader"
@@ -779,37 +779,37 @@ Configuration InstallFirefox
         TestScript = {
             $regPath = "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Mozilla Firefox*"
 
-			if ( Test-Path -path $regPath)  {
-				return $true
-			} else {
-				return $false
-			} 
-		}
+            if ( Test-Path -path $regPath)  {
+                return $true
+            } else {
+                return $false
+            } 
+        }
 
         SetScript  = {
             Write-Verbose "Will install firefox"
             $destFile = $using:LocalPath
 
-			$retryCount = 3
-			$delay = 10
-			$orderNumArray = @('1st', '2nd', '3rd')
+            $retryCount = 3
+            $delay = 10
+            $orderNumArray = @('1st', '2nd', '3rd')
 
-			for ($idx = 1; $idx -le $retryCount; $idx++) {
-				Write-Verbose ('It is the {0} try installing firefox ...' -f $orderNumArray[$idx -1])
+            for ($idx = 1; $idx -le $retryCount; $idx++) {
+                Write-Verbose ('It is the {0} try installing firefox ...' -f $orderNumArray[$idx -1])
 
-	            $ret = Start-Process -FilePath $destFile -ArgumentList "/SilentMode" -PassThru -Wait
+                $ret = Start-Process -FilePath $destFile -ArgumentList "/SilentMode" -PassThru -Wait
 
-				if ($ret.ExitCode -eq 0) {
+                if ($ret.ExitCode -eq 0) {
                     Write-Verbose "Finished firefox Installation."
-					break
-				} else {
-				    $errMsg = "Attempt {0} of {1} to install firefox failed. Exit Code: {2}" -f $idx, $retryCount, $ret.ExitCode
-				    Write-Verbose $errMsg
-					if ($idx -ne $retryCount) {
-						Start-Sleep -s $delay
-					}
-				}
-			}
+                    break
+                } else {
+                    $errMsg = "Attempt {0} of {1} to install firefox failed. Exit Code: {2}" -f $idx, $retryCount, $ret.ExitCode
+                    Write-Verbose $errMsg
+                    if ($idx -ne $retryCount) {
+                        Start-Sleep -s $delay
+                    }
+                }
+            }
         }
     }
 }
@@ -818,48 +818,48 @@ Configuration AudioService
 {
     Node "localhost"
     {
-		$serviceName = "Audiosrv"
+        $serviceName = "Audiosrv"
 
         Script SetAudioServiceAutomaticAndRunning
         {
             GetScript  = { @{ Result = "Audio_Service" } }
 
             TestScript = {
-				$serviceName = $using:serviceName 
-				$svc = Get-Service -Name $serviceName   
+                $serviceName = $using:serviceName 
+                $svc = Get-Service -Name $serviceName   
 
-				return $svc.Status -eq "Running"
-			}
+                return $svc.Status -eq "Running"
+            }
 
             SetScript  = {
-				$serviceName = $using:serviceName 
-				$svc = Get-Service -Name $serviceName   
+                $serviceName = $using:serviceName 
+                $svc = Get-Service -Name $serviceName   
 
-				if ($svc.StartType -ne "Automatic") {
-					$msg = "start type of " + $servicename + " is: " + $svc.StartType
-					Write-Verbose $msg
-					Set-Service -name  $serviceName -StartupType Automatic
-					if ($?) {
-						$msg = "changed start type of " + $servicename + " to: Automatic"
-					} else {
-						$msg = "falied to change start type of " + $servicename + " to: Automatic"
-					}
-					Write-Verbose $msg
-				}
-					
-				if ($svc.status -ne "Running") {
-					$msg = "status of " + $servicename + " is: " + $svc.status
-					Write-Verbose $msg
-					Set-Service -Name $serviceName -Status Running
-					if ($?) {
-						$msg = "changed status of " + $servicename + " to: Running"
-					} else {
-						$msg = "falied to change status of " + $servicename + " to: Running"
-					}
+                if ($svc.StartType -ne "Automatic") {
+                    $msg = "start type of " + $servicename + " is: " + $svc.StartType
+                    Write-Verbose $msg
+                    Set-Service -name  $serviceName -StartupType Automatic
+                    if ($?) {
+                        $msg = "changed start type of " + $servicename + " to: Automatic"
+                    } else {
+                        $msg = "falied to change start type of " + $servicename + " to: Automatic"
+                    }
+                    Write-Verbose $msg
+                }
+                    
+                if ($svc.status -ne "Running") {
+                    $msg = "status of " + $servicename + " is: " + $svc.status
+                    Write-Verbose $msg
+                    Set-Service -Name $serviceName -Status Running
+                    if ($?) {
+                        $msg = "changed status of " + $servicename + " to: Running"
+                    } else {
+                        $msg = "falied to change status of " + $servicename + " to: Running"
+                    }
 
-					Write-Verbose $msg
-				}
+                    Write-Verbose $msg
+                }
             }
-		}
-	}
+        }
+    }
 }
