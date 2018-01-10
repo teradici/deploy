@@ -120,8 +120,7 @@
       "type": "securestring",
       "metadata": {
         "description": "Shared secret between RADIUS server and client"
-      },
-      "defaultValue": ""
+      }
     }
   },
   "variables": {

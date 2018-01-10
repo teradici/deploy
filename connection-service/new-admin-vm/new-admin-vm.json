@@ -76,8 +76,7 @@
             "type": "securestring",
             "metadata": {
               "description": "Shared secret between RADIUS server and client"
-            },
-            "defaultValue": ""
+            }
           }
     },
     "variables": {
@@ -121,13 +120,17 @@
                         "enableRadiusMfa": "[parameters('enableRadiusMfa')]",
                         "radiusServerHost": "[parameters('radiusServerHost')]",
                         "radiusServerPort" : "[parameters('radiusServerPort')]",
-                        "radiusSharedSecret" : "[parameters('radiusSharedSecret')]"
+                        "radiusSharedSecretContainer" : {
+                            "UserName": "dummy",
+                            "Password": "PrivateSettingsRef:radiusSharedSecretValue"
+                        }
                     }
                 },
                 "protectedSettings": {
                     "Items": {
                         "DomainAdminPassword": "[parameters('domainPassword')]",
-                        "CAMDeploymentInfo": "[parameters('CAMDeploymentInfo')]"
+                        "CAMDeploymentInfo": "[parameters('CAMDeploymentInfo')]",
+                        "radiusSharedSecretValue": "[parameters('radiusSharedSecret')]"
                     }
                 }
             }

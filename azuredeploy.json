@@ -175,7 +175,7 @@
     "enableRadiusMfa" : {
       "type": "string",
       "metadata": {
-        "description": "RADIUS server host name/IP address for MFA"
+        "description": "Is RADIUS MFA enabled?"
       },
       "defaultValue": "False"
     },
@@ -197,8 +197,7 @@
       "type": "securestring",
       "metadata": {
         "description": "Shared secret between RADIUS server and client"
-      },
-      "defaultValue": ""
+      }
     }
   },
   "variables": {
