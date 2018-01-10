@@ -119,10 +119,9 @@ Configuration InstallConnectionServer
     $retryCount = 3
     $delay = 10
 
-    Write-Host "Passed in param enableRadiusMfa value is $using:enableRadiusMfa"
-    Write-Host "Passed in param radiusServerHost is $using:radiusServerHost"
-    Write-Host "Passed in param radiusServerPort is $using:radiusServerPort"
-    Write-Host "Passed in radius shared secret is $radiusSharedSecretText"
+    Write-Host "Passed in param enableRadiusMfa value is $enableRadiusMfa"
+    Write-Host "Passed in param radiusServerHost is $radiusServerHost"
+    Write-Host "Passed in param radiusServerPort is $radiusServerPort"
 
     Import-DscResource -ModuleName xPSDesiredStateConfiguration
 
@@ -898,15 +897,18 @@ brokerIpaddress=$ipaddressString
 brokerLocale=en_US
 "@
               
-                Write-Host "MFA setting is $using:enableRadiusMfa"
+                $isMfa = $using:enableRadiusMfa
+                Write-Host "MFA setting is $isMfa"
 #stick in RADIUS MFA related attributes if RADIUS MFA is turned on
-                if($using:enableRadiusMfa -eq "True") {
+                if($isMfa -eq "True") {
+                    $localRadiusHost = $using:radiusServerHost
+                    $localRadiusPort = $using:radiusServerPort
                     $localRadiusSecretContainer = $using:radiusSharedSecretContainer
                     $radiusSecretPlainText = $localRadiusSecretContainer.GetNetworkCredential().Password
                     $radiusProperties =@"
-isMultiFactorAuthenticate=$using:enableRadiusMfa
-radiusServerIPAddress=$using:radiusServerHost
-authPort=$using:radiusServerPort
+isMultiFactorAuthenticate=$isMfa
+radiusServerIPAddress=$localRadiusHost
+authPort=$localRadiusPort
 radiusSecretKey=$radiusSecretPlainText
 "@
                     $cbProperties = $cbProperties + "`n" + $radiusProperties
