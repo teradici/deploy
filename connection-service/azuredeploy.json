@@ -226,6 +226,9 @@
           "domainPassword": {
             "value": "[parameters('domainServiceAccountPassword')]"
           },
+          "domainName": {
+            "value": "[parameters('domainName')]"
+          },
           "binaryLocation": {
             "value": "[parameters('binaryLocation')]"
           },

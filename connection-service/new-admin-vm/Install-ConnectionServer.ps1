@@ -54,6 +54,9 @@ Configuration InstallConnectionServer
         $linuxAgentARM = "rhel-standard-agent.json",
 
         [Parameter(Mandatory)]
+        [String]$domainName,
+
+        [Parameter(Mandatory)]
         [String]$remoteWorkstationDomainGroup,
 
         [Parameter(Mandatory)]
@@ -69,15 +72,22 @@ Configuration InstallConnectionServer
         [String]$brokerPort = "8444"
     )
 
-    # Get domain information
-    $domainFQDN = (Get-WmiObject win32_computersystem).domain
-    $myDomainInfo = (Get-WMIObject Win32_NTDomain) `
-                    | Where-Object {$_.DnsForestName -eq $domainFQDN} `
-                    | Select-Object -First 1
-    $DCVMName = ($myDomainInfo.DomainControllerName -replace "\\", "")
+    # Get DC information
+    
+    $directoryContext = new-object 'System.DirectoryServices.ActiveDirectory.DirectoryContext'("domain", $domainName )
+    $dcs = [System.DirectoryServices.ActiveDirectory.DomainController]::FindAll($directoryContext)
+   
+    if($dcs.Count) {
+        Write-Host "Number of domain controllers found: $($dcs.Count)"
+    }
+    else {
+        throw "No domain controllers found for domain $domainName"
+    }
 
-    $dcvmfqdn = "$DCVMName.$domainFQDN"
-    $pbvmfqdn = "$env:computername.$domainFQDN"
+    $dcvmfqdn = $dcs[0].Name
+    Write-Host "Using domain controller: $dcvmfqdn"
+
+    $pbvmfqdn = "$env:computername"
     $family   = "Windows Server 2016"
 
     #Java locations
@@ -512,7 +522,7 @@ Configuration InstallConnectionServer
 
                 #Now create the new output file.
                 #TODO - really only a couple parameters are used and set properly now. Needs cleanup.
-                $domainsplit = $using:domainFQDN
+                $domainsplit = $using:domainName
                 $domainsplit = $domainsplit.split(".".2)
                 $domainleaf = $domainsplit[0]  # get the first part of the domain name (before .local or .???)
                 $domainroot = $domainsplit[1]  # get the second part of the domain name
@@ -538,7 +548,7 @@ domainGroupAppServersJoin="$using:remoteWorkstationDomainGroup"
 ldapHost=ldaps://$domainControllerFQDN
 ldapAdminUsername=$adminUsername
 ldapAdminPassword=$adminPassword
-ldapDomain=$Using:domainFQDN
+ldapDomain=$Using:domainName
 "@
 
                 $targetDir = "$CatalinaHomeLocation\adminproperty"
@@ -868,7 +878,7 @@ ldapDomain=$Using:domainFQDN
 ldapHost=ldaps://$Using:dcvmfqdn
 ldapAdminUsername=$adminUsername
 ldapAdminPassword=$adminPassword
-ldapDomain=$Using:domainFQDN
+ldapDomain=$Using:domainName
 brokerHostName=$Using:pbvmfqdn
 brokerProductName=CAM Connection Broker
 brokerPlatform=$Using:family
