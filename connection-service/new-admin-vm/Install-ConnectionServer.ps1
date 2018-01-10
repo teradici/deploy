@@ -119,6 +119,11 @@ Configuration InstallConnectionServer
     $retryCount = 3
     $delay = 10
 
+    Write-Host "Passed in param enableRadiusMfa value is $using:enableRadiusMfa"
+    Write-Host "Passed in param radiusServerHost is $using:radiusServerHost"
+    Write-Host "Passed in param radiusServerPort is $using:radiusServerPort"
+    Write-Host "Passed in radius shared secret is $radiusSharedSecretText"
+
     Import-DscResource -ModuleName xPSDesiredStateConfiguration
 
     Node "localhost"
@@ -893,28 +898,18 @@ brokerIpaddress=$ipaddressString
 brokerLocale=en_US
 "@
               
-                Write-Host "MFA setting is $enableRadiusMfa"
+                Write-Host "MFA setting is $using:enableRadiusMfa"
 #stick in RADIUS MFA related attributes if RADIUS MFA is turned on
-                if($enableRadiusMfa -eq "True") {
-                    $radiusSecretPlainText = $radiusSharedSecretContainer.GetNetworkCredential().Password
-
-                $cbProperties = @"
-ldapHost=ldaps://$Using:dcvmfqdn
-ldapAdminUsername=$adminUsername
-ldapAdminPassword=$adminPassword
-ldapDomain=$Using:domainFQDN
-brokerHostName=$Using:pbvmfqdn
-brokerProductName=CAM Connection Broker
-brokerPlatform=$Using:family
-brokerProductVersion=1.0
-brokerIpaddress=$ipaddressString
-brokerLocale=en_US
-isMultiFactorAuthenticate=$enableRadiusMfa
-radiusServerIPAddress=$radiusServerHost
-authPort=$radiusServerPort
+                if($using:enableRadiusMfa -eq "True") {
+                    $localRadiusSecretContainer = $using:radiusSharedSecretContainer
+                    $radiusSecretPlainText = $localRadiusSecretContainer.GetNetworkCredential().Password
+                    $radiusProperties =@"
+isMultiFactorAuthenticate=$using:enableRadiusMfa
+radiusServerIPAddress=$using:radiusServerHost
+authPort=$using:radiusServerPort
 radiusSecretKey=$radiusSecretPlainText
 "@
-
+                    $cbProperties = $cbProperties + "`n" + $radiusProperties
 }
 
                 Set-Content $cbPropertiesFile $cbProperties

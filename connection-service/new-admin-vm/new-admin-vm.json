@@ -106,15 +106,15 @@
                     },
                     "configurationFunction": "Install-ConnectionServer.ps1\\InstallConnectionServer",
                     "Properties": {
-                        "remoteWorkstationDomainGroup": "[parameters('remoteWorkstationDomainGroup')]",
                         "sourceURI": "[parameters('binaryLocation')]",
-                        "DomainAdminCreds": {
-                            "UserName": "[parameters('domainUsername')]",
-                            "Password": "PrivateSettingsRef:DomainAdminPassword"
-                        },
                         "CAMDeploymentInfo": {
                             "UserName": "dummy",
                             "Password": "PrivateSettingsRef:CAMDeploymentInfo"
+                        },
+                        "remoteWorkstationDomainGroup": "[parameters('remoteWorkstationDomainGroup')]",
+                        "DomainAdminCreds": {
+                            "UserName": "[parameters('domainUsername')]",
+                            "Password": "PrivateSettingsRef:DomainAdminPassword"
                         },
                         "gitLocation": "[parameters('_artifactsLocation')]",
                         "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-AdminUI-',subscription().subscriptionId)]",
@@ -123,7 +123,7 @@
                         "radiusServerPort" : "[parameters('radiusServerPort')]",
                         "radiusSharedSecretContainer" : {
                             "UserName": "dummy",
-                            "Password": "PrivateSettingsRef:radiusSharedSecretValue"
+                            "Password": "PrivateSettingsRef:radiusSharedSecretInfo"
                         }
                     }
                 },
@@ -131,7 +131,7 @@
                     "Items": {
                         "DomainAdminPassword": "[parameters('domainPassword')]",
                         "CAMDeploymentInfo": "[parameters('CAMDeploymentInfo')]",
-                        "radiusSharedSecretValue": "[parameters('radiusSharedSecret')]"
+                        "radiusSharedSecretInfo": "[parameters('radiusSharedSecret')]"
                     }
                 }
             }
