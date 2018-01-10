@@ -86,13 +86,12 @@ Configuration InstallPCoIPAgent
 
             TestScript = { 
                 return (Test-Path "C:\sumo\sumo.conf" -PathType leaf) -or (!$using:sumoCollectorID)
-                }
+            }
 
             SetScript  = {
                 Write-Verbose "Install_SumoCollector"
 
                 $installerFileName = "SumoCollector.exe"
-                $uninstallerRegistryID = "7857-4527-9352-4688"  # This will need to change for every installer version change!
 
 				$sasToken = ($using:sasTokenAsCred).GetNetworkCredential().password
 				$blobLocation = ($using:sasTokenAsCred).GetNetworkCredential().username
@@ -118,15 +117,14 @@ Configuration InstallPCoIPAgent
 				$retryCount = 1800
 				while ($retryCount -gt 0)
 				{
-					$readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\$uninstallerRegistryID"  -ErrorAction SilentlyContinue )
-
-					if ($readyToConfigure)
+					try
 					{
-						break   #success
+						Get-Service sumo-collector -ErrorAction Stop
+						break
 					}
-					else
+					catch
 					{
-    					Start-Sleep -s 1;
+						Start-Sleep -s 1;
 						$retryCount = $retryCount - 1;
 						if ( $retryCount -eq 0)
 						{
