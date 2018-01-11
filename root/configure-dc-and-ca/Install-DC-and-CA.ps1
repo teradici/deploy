@@ -29,30 +29,30 @@
         }
 
 
-	    WindowsFeature DNS 
+        WindowsFeature DNS 
         { 
             Ensure = "Present" 
             Name = "DNS"		
         }
 
-	    WindowsFeature RSAT
-	    {
-	        Ensure = "Present"
+        WindowsFeature RSAT
+        {
+            Ensure = "Present"
             Name = "RSAT"
-	    }
+        }
 
-	    WindowsFeature DnsTools
-	    {
-	        Ensure = "Present"
+        WindowsFeature DnsTools
+        {
+            Ensure = "Present"
             Name = "RSAT-DNS-Server"
-	    }
+        }
 
         xDnsServerAddress DnsServerAddress 
         { 
             Address        = '127.0.0.1' 
             InterfaceAlias = $InterfaceAlias
             AddressFamily  = 'IPv4'
-	        DependsOn = "[WindowsFeature]DNS","[WindowsFeature]RSAT","[WindowsFeature]DnsTools"
+            DependsOn = "[WindowsFeature]DNS","[WindowsFeature]RSAT","[WindowsFeature]DnsTools"
         }
 
         xWaitforDisk Disk2
@@ -60,22 +60,22 @@
              DiskNumber = 2
              RetryIntervalSec =$RetryIntervalSec
              RetryCount = $RetryCount
-	 		 #Make sure all the modules are installed before proceeding - this may not be needed...
-	 		 DependsOn = "[xDnsServerAddress]DnsServerAddress"
+             #Make sure all the modules are installed before proceeding - this may not be needed...
+             DependsOn = "[xDnsServerAddress]DnsServerAddress"
         }
 
         cDiskNoRestart ADDataDisk
         {
             DiskNumber = 2
             DriveLetter = "F"
-			DependsOn="[xWaitforDisk]Disk2"
+            DependsOn="[xWaitforDisk]Disk2"
         }
 
         WindowsFeature ADDSInstall 
         { 
             Ensure = "Present" 
             Name = "AD-Domain-Services"
-	        DependsOn="[cDiskNoRestart]ADDataDisk"
+            DependsOn="[cDiskNoRestart]ADDataDisk"
         } 
          
         xADDomain FirstDS 
@@ -86,7 +86,7 @@
             DatabasePath = "F:\NTDS"
             LogPath = "F:\NTDS"
             SysvolPath = "F:\SYSVOL"
-	        DependsOn = "[WindowsFeature]ADDSInstall","[xDnsServerAddress]DnsServerAddress"
+            DependsOn = "[WindowsFeature]ADDSInstall","[xDnsServerAddress]DnsServerAddress"
         }
 
         WindowsFeature ADCS-Cert-Authority
@@ -180,9 +180,9 @@
                 $file = New-Item "C:\rebootmarker" -type File
                 Set-Content -Path $file -Value "DSC reboot initiated"
 
-                # Reboot machine - still unclear if this is needed.
-				# $global:DSCMachineStatus = 1
-			}
-		}
-	}
+                # Reboot machine - needed to get DC into the right state to accept WinRM connections.
+                $global:DSCMachineStatus = 1
+            }
+        }
+    }
 }
