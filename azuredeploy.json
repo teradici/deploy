@@ -31,13 +31,13 @@
     "localAdminUsername": {
       "type": "string",
       "metadata": {
-        "description": "The name of the local admin account for connection service VM's"
+        "description": "The name of the local admin account for connection service VM's and the domain controller, if created"
       }
     },
     "localAdminPassword": {
       "type": "securestring",
       "metadata": {
-        "description": "The password/key for the local VM accounts."
+        "description": "The password of the local admin account for connection service VM's and the domain controller, if created"
       }
     },
     "rwsLocalAdminUsername": {
@@ -49,68 +49,68 @@
     "rwsLocalAdminPassword": {
       "type": "securestring",
       "metadata": {
-        "description": "The password/key for the local remote workstation accounts."
+        "description": "The password of the local admin account for remote workstation VM's"
       }
     },
     "registrationCode": {
       "type": "securestring",
       "minLength": 21,
       "metadata": {
-        "description": "PCoIP Agent License Registration Code."
+        "description": "The Teradici Cloud Access registration code"
       }
     },
     "certData": {
       "type": "string",
       "metadata": {
-        "description": "Base-64 encoded form of the .pfx file for the Application Gateway Certificate"
+        "description": "The .pfx file in base-64 encoded form of the Application Gateway certificate"
       }
     },
     "certPassword": {
       "type": "securestring",
       "metadata": {
-        "description": "Password for .pfx certificate"
+        "description": "The password for the .pfx file for the Application Gateway certificate"
       }
     },
     "connectionServiceResourceGroup": {
       "type": "string",
       "metadata": {
-          "description": "The resource group the connection service is deployed in."
+          "description": "The resource group the connection service is deployed in"
       }
     },
     "remoteWorkstationResourceGroup": {
       "type": "string",
       "metadata": {
-          "description": "The resource group the remote workstations are deployed in."
+          "description": "The resource group where the remote workstations are deployed"
       }
     },
     "vnetName": {
       "type": "string",
       "metadata": {
-          "description": "The name of the virtual network to be created for CAM."
+          "description": "The name of the virtual network to be created for CAM"
       }
     },
     "rootSubnetName": {
       "type": "string",
       "metadata": {
-          "description": "The name of the root subnet in the virtual network."
+          "description": "The name of the root subnet in the virtual network"
       }
     },
     "remoteWorkstationSubnetName": {
       "type": "string",
       "metadata": {
-          "description": "The name of the remote workstation subnet in the virtual network."
+          "description": "The name of the remote workstation subnet in the virtual network"
       }
     },
     "connectionServiceSubnetName": {
       "type": "string",
       "metadata": {
-          "description": "The name of the connection service subnet in the virtual network."
+          "description": "The name of the connection service subnet in the virtual network"
       }
     },
     "gatewaySubnetName": {
       "type": "string",
       "metadata": {
-          "description": "The name of the subnet for application gateways in the virtual network."
+          "description": "The name of the subnet for application gateways in the virtual network"
       }
     },
     "AgentChannel": {
@@ -118,20 +118,20 @@
       "defaultValue": "stable",
       "allowedValues": ["stable","beta","dev"],
       "metadata": {
-        "description": "PCoIP Agent channel to use for installer download."
+        "description": "PCoIP Agent channel to use for installer download"
       }
     },
     "CAMDeploymentInfo": {
       "type": "securestring",
       "metadata": {
-          "description": "Encoded blob of authorization and URL information for the CAM Connection Service."
+          "description": "Encoded blob of authorization and URL information for the CAM Connection Service"
       }
     },
     "binaryLocation": {
       "type": "string",
       "defaultValue": "https://teradeploy.blob.core.windows.net/binaries",
       "metadata": {
-        "description": "The location of the CAM binaries"
+        "description": "The URL of the location of the CAM binaries"
       }
     },
     "userStorageAccountName": {
@@ -161,14 +161,14 @@
     "_artifactsLocation": {
       "type": "string",
       "metadata": {
-        "description": "The location of resources, such as templates and DSC modules, that the template depends on"
+        "description": "The URL of resources, such as templates, scripts, and DSC modules, that the ARM deployment template depends on"
       },
       "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/master"
     },
     "_artifactsLocationSasToken": {
       "type": "securestring",
       "metadata": {
-        "description": "Auto-generated token to access _artifactsLocation"
+        "description": "Token to access _artifactsLocation"
       },
       "defaultValue": ""
     }
@@ -248,10 +248,10 @@
           "domainName": {
             "value": "[parameters('domainName')]"
           },
-          "domainAdminUsername": {
+          "domainServiceAccountUsername": {
             "value": "[parameters('domainAdminUsername')]"
           },
-          "domainAdminPassword": {
+          "domainServiceAccountPassword": {
             "value": "[parameters('domainAdminPassword')]"
           },
           "remoteWorkstationDomainGroup": {
@@ -274,6 +274,9 @@
           },
           "binaryLocation": {
             "value": "[parameters('binaryLocation')]"
+          },
+          "enableSecurityGateway": {
+            "value": "true"
           },
           "_baseArtifactsLocation": {
             "value": "[parameters('_artifactsLocation')]"
