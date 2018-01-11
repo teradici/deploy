@@ -79,9 +79,9 @@ param(
     [SecureString]
     $radiusSharedSecret,
 
-    $camSaasUri = "https://cam-antar.teradici.com",
-	$CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/cam-radius-settings/azuredeploy.json",
-    $binaryLocation = "https://sroyrg2diag351.blob.core.windows.net/temp-container/",
+    $camSaasUri = "https://cam.teradici.com",
+	$CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/master/azuredeploy.json",
+    $binaryLocation = "https://teradeploy.blob.core.windows.net/binaries/",
     $outputParametersFileName = "cam-output.parameters.json",
     $location
 )
