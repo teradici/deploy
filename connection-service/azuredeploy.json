@@ -2,14 +2,14 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "domainAdminUsername": {
+    "domainServiceAccountUsername": {
       "type": "string",
-      "defaultValue": "adminUser",
+      "defaultValue": "adminuser",
       "metadata": {
         "description": "The name of the administrator account of the new VM and domain"
       }
     },
-    "domainAdminPassword": {
+    "domainServiceAccountPassword": {
       "type": "securestring",
       "metadata": {
         "description": "The password for the administrator account of the new VM and domain"
@@ -18,7 +18,7 @@
     "domainName": {
       "type": "string",
       "metadata": {
-        "description": "The FQDN of the Active Directory Domain to be created. Must have a '.' like domain.local"
+        "description": "The fully qualified domain name of the domain to connect to. The name must include a '.' such as example.com"
       }
     },
     "localAdminUsername": {
@@ -30,7 +30,7 @@
     "localAdminPassword": {
       "type": "securestring",
       "metadata": {
-        "description": "The password/key for the local VM accounts."
+        "description": "The password of the local admin account for connection service VM's"
       }
     },
     "CSUniqueSuffix": {
@@ -43,13 +43,13 @@
     "CSsubnetId": {
       "type": "string",
       "metadata": {
-          "description": "ID of the subnet that the Conection Service Machines' NIC's attach to"
+          "description": "The ID of the subnet that the Conection Service Machines' NIC's attach to"
       }
     },
     "GWsubnetId": {
       "type": "string",
       "metadata": {
-          "description": "ID of the subnet that the Conection Service gateway(s) attach to"
+          "description": "The ID of the subnet that the Conection Service gateway(s) attach to"
       }
     },
     "CAMDeploymentInfo": {
@@ -82,6 +82,12 @@
         "description": "The location of CAM binaries"
       }
     },
+    "enableSecurityGateway": {
+      "type": "string",
+      "metadata": {
+          "description": "'true' if the security gateway should be enabled and a Public IP address created, otherwise 'false'."
+      }
+    },
     "_baseArtifactsLocation": {
       "type": "string",
       "metadata": {
@@ -95,6 +101,13 @@
       },
       "defaultValue": ""
     },
+    "enableRadiusMfa" : {
+      "type": "string",
+      "metadata": {
+        "description": "Enable RAIDUS based MFA?"
+      },
+      "defaultValue": "False"
+    },
     "radiusServerHost" : {
       "type": "string",
       "metadata": {
@@ -103,11 +116,11 @@
       "defaultValue": ""
     },
     "radiusServerPort" : {
-      "type": "int",
+      "type": "string",
       "metadata": {
         "description": "RADIUS server listen port for MFA"
       },
-      "defaultValue": ""
+      "defaultValue": "1812"
     },
     "radiusSharedSecret" : {
       "type": "securestring",
@@ -187,10 +200,10 @@
             "value": "[parameters('domainName')]"
           },
           "domainUsername": {
-            "value": "[parameters('domainAdminUsername')]"
+            "value": "[parameters('domainServiceAccountUsername')]"
           },
           "domainPassword": {
-            "value": "[parameters('domainAdminPassword')]"
+            "value": "[parameters('domainServiceAccountPassword')]"
           },
           "domainJoinOptions": {
             "value": 3
@@ -231,10 +244,10 @@
             "value": "[parameters('remoteWorkstationDomainGroup')]"
           },
           "domainUsername": {
-            "value": "[parameters('domainAdminUsername')]"
+            "value": "[parameters('domainServiceAccountUsername')]"
           },
           "domainPassword": {
-            "value": "[parameters('domainAdminPassword')]"
+            "value": "[parameters('domainServiceAccountPassword')]"
           },
           "binaryLocation": {
             "value": "[parameters('binaryLocation')]"
@@ -244,6 +257,9 @@
           },
           "CAMDeploymentInfo": {
             "value": "[parameters('CAMDeploymentInfo')]"
+          },
+          "enableRadiusMfa" : {
+            "value" : "[parameters('enableRadiusMfa')]"
           },
           "radiusServerHost" : {
             "value" : "[parameters('radiusServerHost')]"
@@ -347,6 +363,9 @@
           },
           "brokerFQDN": {
             "value": "[variables('connectionServerBrokerFQDN')]"
+          },
+          "enableSecurityGateway": {
+            "value": "[parameters('enableSecurityGateway')]"
           },
           "_artifactsLocation": {
             "value": "[concat(variables('_artifactsLocation'), '/new-cm-sg-ls-vm')]"

@@ -17,9 +17,14 @@ param(
     [SecureString]
     $registrationCode,
 
+    [parameter(Mandatory = $false)]
     [bool]
     $verifyCAMSaaSCertificate = $true,
 
+    [parameter(Mandatory = $false)]
+    [bool]
+    $enableSecurityGateway = $true, # Only matters if not doing CAM-in-a-box isolated install
+    
     [parameter(Mandatory = $false)]
     [bool]
     $testDeployment = $false,
@@ -72,11 +77,11 @@ param(
 
     [parameter(Mandatory=$false)]
     [SecureString]
-    $radiusServerSharedSecret,
+    $radiusSharedSecret,
 
-    $camSaasUri = "https://cam-antar.teradici.com",
+    $camSaasUri = "https://cam.teradici.com",
 	$CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/master/azuredeploy.json",
-    $binaryLocation = "https://teradeploy.blob.core.windows.net/binaries",
+    $binaryLocation = "https://teradeploy.blob.core.windows.net/binaries/",
     $outputParametersFileName = "cam-output.parameters.json",
     $location
 )
@@ -123,6 +128,51 @@ function ConvertPSObjectToHashtable {
     }
 }
 
+function Convert-FromBase64StringWithNoPadding([string]$data) {
+    $data = $data.Replace('-', '+').Replace('_', '/')
+    switch ($data.Length % 4)
+    {
+        0 { break }
+        2 { $data += '==' }
+        3 { $data += '=' }
+        default { throw New-Object ArgumentException('data') }
+    }
+    return [System.Convert]::FromBase64String($data)
+}
+
+function Decode-JWT([string]$rawToken) {
+    $parts = $rawToken.Split('.');
+    $headers = [System.Text.Encoding]::UTF8.GetString((Convert-FromBase64StringWithNoPadding $parts[0]))
+    $claims = [System.Text.Encoding]::UTF8.GetString((Convert-FromBase64StringWithNoPadding $parts[1]))
+    $signature = (Convert-FromBase64StringWithNoPadding $parts[2])
+
+    $customObject = [PSCustomObject]@{
+        headers = ($headers | ConvertFrom-Json)
+        claims = ($claims | ConvertFrom-Json)
+        signature = $signature
+    }
+
+    return $customObject
+}
+
+function Get-DecodedJWT {
+    [CmdletBinding()]  
+    Param (
+        [Parameter(Mandatory=$true)]
+        [string] $Token,
+        [switch] $Recurse
+    )
+    
+    if ($Recurse) {
+		$decoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Token))
+		$DecodedJwt = Decode-JWT -rawToken $decoded
+	}
+	else
+	{
+		$DecodedJwt = Decode-JWT -rawToken $Token
+	}
+    return $DecodedJwt
+}
 
 function Login-AzureRmAccountWithBetterReporting($Credential) {
     try {
@@ -150,6 +200,48 @@ function Login-AzureRmAccountWithBetterReporting($Credential) {
     }
 }
 
+# uses session instance profile and TokenCache and returns an access token without having to authentication a second time
+function Get-AzureRmCachedAccessToken() {
+    $ErrorActionPreference = 'Stop'
+    if(-not (Get-Module AzureRm.Profile)) {
+        Import-Module AzureRm.Profile
+    }
+    $azureRmProfileModuleVersion = (Get-Module AzureRm.Profile).Version
+    
+    # refactoring performed in AzureRm.Profile v3.0 or later
+    if($azureRmProfileModuleVersion.Major -ge 3) {
+        $azureRmProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile
+        if(-not $azureRmProfile.Accounts.Count) {
+            Write-Error "Ensure you have logged in before calling this function."
+        }
+    } else {
+        # AzureRm.Profile < v3.0
+        $azureRmProfile = [Microsoft.WindowsAzure.Commands.Common.AzureRmProfileProvider]::Instance.Profile
+        if(-not $azureRmProfile.Context.Account.Count) {
+            Write-Error "Ensure you have logged in before calling this function."
+        }
+    }
+    $currentAzureContext = Get-AzureRmContext
+    $profileClient = New-Object Microsoft.Azure.Commands.ResourceManager.Common.RMProfileClient($azureRmProfile)
+    Write-Debug ("Getting access token for tenant" + $currentAzureContext.Subscription.TenantId)
+    $token = $profileClient.AcquireAccessToken($currentAzureContext.Subscription.TenantId)
+    return $token.AccessToken
+}
+
+function Get-Claims() {
+    try {
+		$accessToken = Get-AzureRmCachedAccessToken
+		$decodedToken = Get-DecodedJWT `
+			-Token $accessToken
+
+		return $decodedToken.claims
+	}
+	catch {
+		$errorMessage = "An error occured while retrieving owner upn."
+		throw "$errorMessage"
+	}
+
+}
 # registers CAM and returns the deployment ID
 function Register-CAM() {
     Param(
@@ -171,6 +263,12 @@ function Register-CAM() {
 		
         [parameter(Mandatory = $true)]
         $tenant,
+        
+        [parameter(Mandatory = $true)]
+        $ownerTenant,
+
+        [parameter(Mandatory = $true)]
+        $ownerUpn,
 
         [parameter(Mandatory = $true)]
         $RGName,
@@ -217,6 +315,8 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
                 username = $client
                 password = $key
                 tenantId = $tenant
+                ownerTenantId = $ownerTenant
+                ownerUpn = $ownerUpn
             }
             $registerUserResult = ""
             try {
@@ -379,7 +479,7 @@ function New-RemoteWorstationTemplates {
     $gaAgentARM = $CAMConfig.internal.gaAgentARM
     $linuxAgentARM = $CAMConfig.internal.linuxAgentARM
 
-    $DomainAdminUsername = $CAMConfig.parameters.domainAdminUsername.clearValue
+    $domainServiceAccountUsername = $CAMConfig.parameters.domainServiceAccountUsername.clearValue
     $domainFQDN = $CAMConfig.parameters.domainName.clearValue
 
     #Put the VHD's in the user storage account until we move to managed storage...
@@ -398,7 +498,7 @@ function New-RemoteWorstationTemplates {
 		"AgentChannel": { "value": "$agentChannel"},
 		"binaryLocation": { "value": "$binaryLocation" },
 		"subnetID": { "value": "$($CAMConfig.parameters.remoteWorkstationSubnet.clearValue)" },
-		"domainUsername": { "value": "$DomainAdminUsername" },
+		"domainUsername": { "value": "$domainServiceAccountUsername" },
 		"userStorageAccountName": {
 			"reference": {
 				"keyVault": {
@@ -436,7 +536,7 @@ function New-RemoteWorstationTemplates {
 				"keyVault": {
 				"id": "$kvId"
 				},
-				"secretName": "domainJoinPassword"
+				"secretName": "domainServiceAccountPassword"
 			}		
 		},
 		"registrationCode": {
@@ -1173,7 +1273,8 @@ function New-ConnectionServiceDeployment() {
         $tenantId,
         $spCredential,
         $keyVault,
-        $testDeployment
+        $testDeployment,
+        [bool]$enableSecurityGateway
     )
 
     $kvID = $keyVault.ResourceId
@@ -1364,6 +1465,11 @@ function New-ConnectionServiceDeployment() {
         New-CAMDeploymentInfo `
             -kvName $CAMRootKeyvault.Name
 
+        $enableSecurityGatewayString = "false"
+        if ($enableSecurityGateway) {
+            $enableSecurityGatewayString = "true"
+        }
+
         # Get the template URI
         $secret = Get-AzureKeyVaultSecret `
             -VaultName $kvName `
@@ -1377,7 +1483,10 @@ function New-ConnectionServiceDeployment() {
             "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
             "contentVersion": "1.0.0.0",
             "parameters": {
-                "CSUniqueSuffix": {
+                "enableSecurityGateway": {
+                    "value": "$enableSecurityGatewayString"
+                  },
+                  "CSUniqueSuffix": {
                     "reference": {
                         "keyVault": {
                             "id": "$kvID"
@@ -1385,20 +1494,20 @@ function New-ConnectionServiceDeployment() {
                         "secretName": "connectionServiceNumber"
                     }
                 },
-                "domainAdminUsername": {
+                "domainServiceAccountUsername": {
                     "reference": {
                         "keyVault": {
                             "id": "$kvID"
                         },
-                        "secretName": "domainAdminUsername"
+                        "secretName": "domainServiceAccountUsername"
                     }
                 },
-                "domainAdminPassword": {
+                "domainServiceAccountPassword": {
                     "reference": {
                         "keyVault": {
                             "id": "$kvID"
                         },
-                        "secretName": "domainJoinPassword"
+                        "secretName": "domainServiceAccountPassword"
                     }
                 },
                 "domainName": {
@@ -1505,12 +1614,12 @@ function New-ConnectionServiceDeployment() {
                         "secretName": "radiusServerPort"
                     }
                 },
-                "radiusServerSharedSecret": {
+                "radiusSharedSecret": {
                     "reference": {
                         "keyVault": {
                         "id": "$kvId"
                         },
-                        "secretName": "radiusServerSharedSecret"
+                        "secretName": "radiusSharedSecret"
                     }
                 },
                 "_baseArtifactsLocation": {
@@ -1606,14 +1715,17 @@ function New-CAMDeploymentRoot()
         $certificateFilePassword,
         $camSaasUri,
         $verifyCAMSaaSCertificate,
-        $subscriptionID
+        $subscriptionID,
+        $ownerTenantId,
+        $ownerUpn
     )
 
     $rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName
     $client = $spInfo.spCreds.UserName
     $key = $spInfo.spCreds.GetNetworkCredential().Password
     $tenant = $spInfo.tenantId
-    $registrationCode = $CAMConfig.parameters.cloudAccessRegistrationCode.value
+	$ownerTenant = $ownerTenantId
+	$registrationCode = $CAMConfig.parameters.cloudAccessRegistrationCode.value
     $artifactsLocation = $CAMConfig.parameters.artifactsLocation.clearValue
     $binaryLocation = $CAMConfig.parameters.binaryLocation.clearValue
     
@@ -1648,6 +1760,8 @@ function New-CAMDeploymentRoot()
         -client $client `
         -key $key `
         -tenant $tenant `
+        -ownerTenant $ownerTenant `
+        -ownerUpn $ownerUpn `
         -RGName $rwRGName `
         -registrationCode $registrationCode `
         -camSaasBaseUri $camSaasUri `
@@ -1675,6 +1789,10 @@ function Deploy-CAM() {
         [parameter(Mandatory = $false)] 
         [bool]
         $verifyCAMSaaSCertificate = $true,
+
+        [parameter(Mandatory = $true)]
+        [bool]
+        $enableSecurityGateway,
 
         [parameter(Mandatory = $true)] 
         $CAMDeploymentTemplateURI,
@@ -1744,13 +1862,19 @@ function Deploy-CAM() {
         $vnetConfig,
 
         [parameter(Mandatory=$false)]
-        $radiusConfig=@{}
+        $radiusConfig=@{},
+        
+        [parameter(Mandatory = $true)]
+        $ownerTenantId,
+
+        [parameter(Mandatory = $true)]
+        $ownerUpn        
     )
 
     # Artifacts location 'folder' is where the template is stored
     $artifactsLocation = $CAMDeploymentTemplateURI.Substring(0, $CAMDeploymentTemplateURI.lastIndexOf('/'))
 
-    $domainAdminUsername = $domainAdminCredential.UserName
+    $domainServiceAccountUsername = $domainAdminCredential.UserName
 
     # Setup CAMConfig as a hash table of ARM parameters for Azure (KeyVault)
     # Most parameters are secrets so the KeyVault can be a single configuration source
@@ -1758,9 +1882,9 @@ function Deploy-CAM() {
     # and internal parameters for this script which are not pushed to the key vault
     $CAMConfig = @{} 
     $CAMConfig.parameters = @{}
-    $CAMConfig.parameters.domainAdminUsername = @{
-        value      = (ConvertTo-SecureString $domainAdminUsername -AsPlainText -Force)
-        clearValue = $domainAdminUsername
+    $CAMConfig.parameters.domainServiceAccountUsername = @{
+        value      = (ConvertTo-SecureString $domainServiceAccountUsername -AsPlainText -Force)
+        clearValue = $domainServiceAccountUsername
     }
     $CAMConfig.parameters.domainName = @{
         value      = (ConvertTo-SecureString $domainName -AsPlainText -Force)
@@ -1777,7 +1901,7 @@ function Deploy-CAM() {
 
     $CAMConfig.parameters.cloudAccessRegistrationCode = @{value = $registrationCode}
 
-    $CAMConfig.parameters.domainJoinPassword = @{value = $domainAdminCredential.Password}
+    $CAMConfig.parameters.domainServiceAccountPassword = @{value = $domainAdminCredential.Password}
 
     # Set in Generate-Certificate-And-Passwords
     $CAMConfig.parameters.CAMCSCertificate = @{}
@@ -1857,10 +1981,11 @@ function Deploy-CAM() {
         value=(ConvertTo-SecureString $radiusConfig.radiusServerHost -AsPlainText -Force)
     }
     $CAMConfig.parameters.radiusServerPort = @{
-        value=(ConvertTo-SecureString $radiusConfig.radiusServerPort -AsPlainText -Force)
+       value=(ConvertTo-SecureString $radiusConfig.radiusServerPort -AsPlainText -Force)
+     
     }
-    $CAMConfig.parameters.radiusServerSharedSecret = @{
-        value=$radiusConfig.radiusServerSharedSecret
+    $CAMConfig.parameters.radiusSharedSecret = @{
+        value=$radiusConfig.radiusSharedSecret
     }
 
     # make temporary directory for intermediate files
@@ -2084,8 +2209,9 @@ function Deploy-CAM() {
         -certificateFilePassword $certificateFilePassword `
         -camSaasUri $camSaasUri `
         -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
-        -subscriptionID $subscriptionID
-
+        -subscriptionID $subscriptionID `
+        -ownerTenantId $ownerTenantId `
+        -ownerUpn $ownerUpn
 
     try {
         # Populate/re-populate CAMDeploymentInfo before deploying any connection service
@@ -2111,7 +2237,8 @@ function Deploy-CAM() {
                 -keyVault $CAMRootKeyvault `
                 -tenantId $tenantId `
                 -testDeployment $testDeployment `
-                -tempDir $tempDir
+                -tempDir $tempDir `
+                -enableSecurityGateway $enableSecurityGateway
         }
         else
         {
@@ -2128,7 +2255,7 @@ function Deploy-CAM() {
 				"keyVault": {
 					"id": "$kvId"
 				},
-				"secretName": "domainAdminUsername"
+				"secretName": "domainServiceAccountUsername"
 			}
 		},
 		"domainName": {
@@ -2253,7 +2380,7 @@ function Deploy-CAM() {
 				"keyVault": {
 					"id": "$kvId"
 				},
-				"secretName": "domainJoinPassword"
+				"secretName": "domainServiceAccountPassword"
 			}
 		},
 		"certData": {
@@ -2312,12 +2439,12 @@ function Deploy-CAM() {
 				"secretName": "radiusServerPort"
 			}
 		},
-		"radiusServerSharedSecret": {
+		"radiusSharedSecret": {
 			"reference": {
 				"keyVault": {
 				"id": "$kvId"
 				},
-				"secretName": "radiusServerSharedSecret"
+				"secretName": "radiusSharedSecret"
 			}
 		}
 	}
@@ -2599,7 +2726,8 @@ if ($CAMRootKeyvault) {
         -spCredential $spCredential `
         -keyVault $CAMRootKeyvault `
         -testDeployment $testDeployment `
-        -tempDir $tempDir
+        -tempDir $tempDir `
+        -enableSecurityGateway $enableSecurityGateway
 
 }
 else {
@@ -2785,7 +2913,7 @@ else {
         enableRadiusMfa = $enableRadiusMfa
         radiusServerHost = $radiusServerHost
         radiusServerPort = $radiusServerPort 
-        radiusServerSharedSecret = $radiusServerSharedSecret
+        radiusSharedSecret = $radiusSharedSecret
     }
     if ( ($enableRadiusMfa -eq $null) -or $enableRadiusMfa ) {
         if ( $enableRadiusMfa -eq $null -and (-not $ignorePrompts) ) {
@@ -2816,12 +2944,13 @@ else {
                 }
             } while (-not $radiusConfig.radiusServerPort )
 
-            if (-not $radiusConfig.radiusServerSharedSecret ) {
-                $radiusConfig.radiusServerSharedSecret = Read-Host -AsSecureString "Please enter your Radius Server's Shared Secret"
+            if (-not $radiusConfig.radiusSharedSecret ) {
+                $radiusConfig.radiusSharedSecret = Read-Host -AsSecureString "Please enter your Radius Server's Shared Secret"
             }
         }
         $radiusConfig.enableRadiusMfa = $enableRadiusMfa
     } 
+    
     if ( -not $enableRadiusMfa) {
         # Placeholder value for the radius secret and port is required in order to create KeyVault entry
         $radiusConfig.enableRadiusMfa = $false
@@ -2845,7 +2974,15 @@ else {
             $registrationCode = $null
         }
     } while (-not $registrationCode )
+    
+    $claims = Get-Claims
 
+    $upn = ""
+    if (-not ([string]::IsNullOrEmpty($claims.upn)))
+    {
+        $upn = $claims.upn
+    }
+    
     Deploy-CAM `
         -domainAdminCredential $domainAdminCredential `
         -domainName $domainName `
@@ -2864,8 +3001,11 @@ else {
         -testDeployment $testDeployment `
         -certificateFile $certificateFile `
         -certificateFilePassword $certificateFilePassword `
-		-AgentChannel $AgentChannel `
+        -AgentChannel $AgentChannel `
         -deployOverDC $deployOverDC `
-        -radiusConfig $radiusConfig, `
-        -vnetConfig $vnetConfig
+        -radiusConfig $radiusConfig `
+        -vnetConfig $vnetConfig `
+        -ownerTenantId $claims.tid `
+        -ownerUpn $upn `
+        -enableSecurityGateway $enableSecurityGateway
 }

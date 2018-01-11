@@ -61,6 +61,12 @@
               "description": "IP or FQDN of the broker machine from the CM's perspective"
           }
       },
+      "enableSecurityGateway": {
+        "type": "string",
+        "metadata": {
+            "description": "'true' if the security gateway should be enabled and a Public IP address created, otherwise 'false'."
+        }
+      },
       "_artifactsLocation": {
           "type": "string",
           "metadata": {
@@ -77,7 +83,6 @@
     },
     "variables": {
       "namingInfix": "[toLower(parameters('vmssName'))]",
-      "publicIPAddressName": "[concat(variables('namingInfix'), 'pip')]",
       "nicName": "[concat(variables('namingInfix'), 'nic')]",
       "ipConfigName": "[concat(variables('namingInfix'), 'ipconfig')]",
       "imageReference": {
@@ -91,7 +96,7 @@
       "scriptFileName":  "cm_setup_0.1.sh",
       "scriptFileURI":  "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'), parameters('_artifactsLocationSasToken'))]",
       "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-CM-',subscription().subscriptionId)]",
-      "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',variables('sumoCollectorID'),' ',parameters('_artifactsLocation'))]"
+      "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',variables('sumoCollectorID'),' ',parameters('_artifactsLocation'),' SecurityGatewayEnabled=',parameters('enableSecurityGateway'))]"
     },
     "resources": [
     {
@@ -141,6 +146,7 @@
                           "id": "[parameters('subnetId')]"
                         },
                         "publicipaddressconfiguration": {
+                          "condition": "[equals(parameters('enableSecurityGateway'), 'true')]",
                             "name": "pub1",
                             "properties": {
                               "idleTimeoutInMinutes": 15

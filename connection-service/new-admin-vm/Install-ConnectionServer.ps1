@@ -68,6 +68,9 @@ Configuration InstallConnectionServer
         [Parameter(Mandatory=$false)]
         [String]$brokerPort = "8444",
 
+        [Parameter(Mandatory = $false)]
+        [String]$enableRadiusMfa,
+
         
         [Parameter(Mandatory = $false)]
         [String]$radiusServerHost,
@@ -78,7 +81,7 @@ Configuration InstallConnectionServer
 
         
         [Parameter(Mandatory = $false)]
-        [SecureString]$radiusSharedSecret
+        [System.Management.Automation.PSCredential]$radiusSharedSecretContainer
 
 
     )
@@ -116,6 +119,7 @@ Configuration InstallConnectionServer
     $retryCount = 3
     $delay = 10
 
+   
     Import-DscResource -ModuleName xPSDesiredStateConfiguration
 
     Node "localhost"
@@ -214,21 +218,19 @@ Configuration InstallConnectionServer
                 Invoke-Expression $command
 
                 # Wait for collector to be installed before exiting this configuration.
-                #### Note if we change binary versions we will need to change registry path - 7857-4527-9352-4688 will change ####
-                $retrycount = 1800
+                $retryCount = 1800
                 while ($retryCount -gt 0)
                 {
-                    $readyToConfigure = ( Get-Item "Registry::HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\7857-4527-9352-4688"  -ErrorAction SilentlyContinue )
-
-                    if ($readyToConfigure)
+                    try
                     {
-                        break   #success
+                        Get-Service sumo-collector -ErrorAction Stop
+                        break
                     }
-                    else
+                    catch
                     {
                         Start-Sleep -s 1;
-                        $retrycount = $retrycount - 1;
-                        if ( $retrycount -eq 0)
+                        $retryCount = $retryCount - 1;
+                        if ( $retryCount -eq 0)
                         {
                             throw "Sumo collector not installed in time."
                         }
@@ -877,15 +879,6 @@ ldapDomain=$Using:domainFQDN
                 $adminUsername = $localAdminCreds.GetNetworkCredential().Username
                 $adminPassword = $localAdminCreds.GetNetworkCredential().Password
 
-                #set up RADIUS MFA related attributes
-                if(!$radiusServerHost.Equals("") -and $radiusServerPort -is [int]) {
-                    $mfaEnabled = "true"
-                }
-                else {
-                    $mfaEnabled = "false"
-                }
-
-
                 $cbProperties = @"
 ldapHost=ldaps://$Using:dcvmfqdn
 ldapAdminUsername=$adminUsername
@@ -897,11 +890,24 @@ brokerPlatform=$Using:family
 brokerProductVersion=1.0
 brokerIpaddress=$ipaddressString
 brokerLocale=en_US
-isMultiFactorAuthenticate=$mfaEnabled
-radiusServerIPAddress=$radiusServerHost
-authPort=$radiusServerPort
-radiusSecretKey=$radiusSharedSecret
 "@
+              
+                $isMfa = $using:enableRadiusMfa
+#                Write-Host "MFA setting is $isMfa"
+#stick in RADIUS MFA related attributes if RADIUS MFA is turned on
+                if($isMfa -eq "True") {
+                    $localRadiusHost = $using:radiusServerHost
+                    $localRadiusPort = $using:radiusServerPort
+                    $localRadiusSecretContainer = $using:radiusSharedSecretContainer
+                    $radiusSecretPlainText = $localRadiusSecretContainer.GetNetworkCredential().Password
+                    $radiusProperties =@"
+isMultiFactorAuthenticate=$isMfa
+radiusServerIPAddress=$localRadiusHost
+authPort=$localRadiusPort
+radiusSecretKey=$radiusSecretPlainText
+"@
+                    $cbProperties = $cbProperties + "`n" + $radiusProperties
+}
 
                 Set-Content $cbPropertiesFile $cbProperties
                 Set-Content $cbHomePropertiesFile $cbProperties
@@ -911,7 +917,7 @@ radiusSecretKey=$radiusSharedSecret
 
                 #second, get the certificate file
                 $issuerCertFileName = "issuercert.cert"
-				$dcvmfqdn = $using:dcvmfqdn
+                $dcvmfqdn = $using:dcvmfqdn
                 Write-Host "Looking for Issuer certificate for $dcvmfqdn"
 
                 $foundCert = $false
@@ -955,11 +961,11 @@ radiusSecretKey=$radiusSharedSecret
                     } catch {
                         Write-Host "Failed to retrieve issuer certificate from $hostname`:$port because $_"
 
-						# Run 'pulse' on the DC as that can resolve the situation.
-						$DCSession = New-PSSession $dcvmfqdn -Credential $using:DomainAdminCreds
+                        # Run 'pulse' on the DC as that can resolve the situation.
+                        $DCSession = New-PSSession $dcvmfqdn -Credential $using:DomainAdminCreds
 
-						Invoke-Command {& "certutil" -pulse > $null} -Session $DCSession | Out-Null
-						Remove-PSSession $DCSession | Out-Null
+                        Invoke-Command {& "certutil" -pulse > $null} -Session $DCSession | Out-Null
+                        Remove-PSSession $DCSession | Out-Null
                     } finally {
                         #cleanup
                         if ($sslStream) {

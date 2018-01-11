@@ -51,6 +51,13 @@
             },
             "defaultValue": ""
         },
+        "enableRadiusMfa" : {
+            "type": "string",
+            "metadata": {
+              "description": "Enable RAIDUS based MFA?"
+            },
+            "defaultValue": "False"
+          },
         "radiusServerHost" : {
             "type": "string",
             "metadata": {
@@ -59,11 +66,11 @@
             "defaultValue": ""
           },
           "radiusServerPort" : {
-            "type": "int",
+            "type": "string",
             "metadata": {
               "description": "RADIUS server listen port for MFA"
             },
-            "defaultValue": ""
+            "defaultValue": "1812"
           },
           "radiusSharedSecret" : {
             "type": "securestring",
@@ -99,27 +106,32 @@
                     },
                     "configurationFunction": "Install-ConnectionServer.ps1\\InstallConnectionServer",
                     "Properties": {
-                        "remoteWorkstationDomainGroup": "[parameters('remoteWorkstationDomainGroup')]",
                         "sourceURI": "[parameters('binaryLocation')]",
-                        "DomainAdminCreds": {
-                            "UserName": "[parameters('domainUsername')]",
-                            "Password": "PrivateSettingsRef:DomainAdminPassword"
-                        },
                         "CAMDeploymentInfo": {
                             "UserName": "dummy",
                             "Password": "PrivateSettingsRef:CAMDeploymentInfo"
                         },
+                        "remoteWorkstationDomainGroup": "[parameters('remoteWorkstationDomainGroup')]",
+                        "DomainAdminCreds": {
+                            "UserName": "[parameters('domainUsername')]",
+                            "Password": "PrivateSettingsRef:DomainAdminPassword"
+                        },
                         "gitLocation": "[parameters('_artifactsLocation')]",
                         "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-AdminUI-',subscription().subscriptionId)]",
+                        "enableRadiusMfa": "[parameters('enableRadiusMfa')]",
                         "radiusServerHost": "[parameters('radiusServerHost')]",
                         "radiusServerPort" : "[parameters('radiusServerPort')]",
-                        "radiusSharedSecret" : "[parameters('radiusSharedSecret')]"
+                        "radiusSharedSecretContainer" : {
+                            "UserName": "dummy",
+                            "Password": "PrivateSettingsRef:radiusSharedSecretInfo"
+                        }
                     }
                 },
                 "protectedSettings": {
                     "Items": {
                         "DomainAdminPassword": "[parameters('domainPassword')]",
-                        "CAMDeploymentInfo": "[parameters('CAMDeploymentInfo')]"
+                        "CAMDeploymentInfo": "[parameters('CAMDeploymentInfo')]",
+                        "radiusSharedSecretInfo": "[parameters('radiusSharedSecret')]"
                     }
                 }
             }
