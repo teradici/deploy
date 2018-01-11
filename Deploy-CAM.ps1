@@ -2823,8 +2823,7 @@ else {
         }
         $radiusConfig.enableRadiusMfa = $enableRadiusMfa
     } 
-    $varType = $enableRadiusMfa.getType()
-    Write-Host "Value of RADIUS flag is  $enableRadiusMfa with type $varType"
+    
     if ( -not $enableRadiusMfa) {
         # Placeholder value for the radius secret and port is required in order to create KeyVault entry
         $radiusConfig.radiusSharedSecret = ConvertTo-SecureString "radiusSecret" -AsPlainText -Force

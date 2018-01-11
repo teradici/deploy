@@ -119,10 +119,7 @@ Configuration InstallConnectionServer
     $retryCount = 3
     $delay = 10
 
-    Write-Host "Passed in param enableRadiusMfa value is $enableRadiusMfa"
-    Write-Host "Passed in param radiusServerHost is $radiusServerHost"
-    Write-Host "Passed in param radiusServerPort is $radiusServerPort"
-
+   
     Import-DscResource -ModuleName xPSDesiredStateConfiguration
 
     Node "localhost"
@@ -898,7 +895,7 @@ brokerLocale=en_US
 "@
               
                 $isMfa = $using:enableRadiusMfa
-                Write-Host "MFA setting is $isMfa"
+#                Write-Host "MFA setting is $isMfa"
 #stick in RADIUS MFA related attributes if RADIUS MFA is turned on
                 if($isMfa -eq "True") {
                     $localRadiusHost = $using:radiusServerHost
