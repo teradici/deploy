@@ -73,8 +73,15 @@ Configuration InstallConnectionServer
     )
 
     # Get DC information
+    # The alternate way is to do a nslookup for the dns srv record for: _ldap._tcp.dc._msdcs.<DOMAIN>
+
+    Write-Host "Looking for domain controllers found for domain $domainName"
     
-    $directoryContext = new-object 'System.DirectoryServices.ActiveDirectory.DirectoryContext'("domain", $domainName )
+    $adminUsername = $DomainAdminCreds.GetNetworkCredential().Username
+    $adminPassword = $DomainAdminCreds.GetNetworkCredential().Password
+
+    $directoryContext = new-object 'System.DirectoryServices.ActiveDirectory.DirectoryContext' `
+        ("domain", $domainName, $adminUsername, $adminPassword)
     $dcs = [System.DirectoryServices.ActiveDirectory.DomainController]::FindAll($directoryContext)
    
     if($dcs.Count) {
