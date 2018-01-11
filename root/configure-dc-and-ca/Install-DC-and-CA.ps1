@@ -181,7 +181,7 @@
                 Set-Content -Path $file -Value "DSC reboot initiated"
 
                 # Reboot machine - still unclear if this is needed.
-				$global:DSCMachineStatus = 1
+				# $global:DSCMachineStatus = 1
 			}
 		}
 	}
