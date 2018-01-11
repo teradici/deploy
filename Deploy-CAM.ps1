@@ -2824,9 +2824,12 @@ else {
     } 
     if ( -not $enableRadiusMfa) {
         # Placeholder value for the radius secret and port is required in order to create KeyVault entry
+        $radiusConfig.enableRadiusMfa = $false
         $radiusConfig.radiusServerSharedSecret = ConvertTo-SecureString "radiusSecret" -AsPlainText -Force
-        $radiusConfig.radiusServerPort = ConvertTo-SecureString 0 -AsPlainText -Force
-        $radiusConfig.radiusServerHost = ConvertTo-SecureString "radiusServer" -AsPlainText -Force
+        $radiusConfig.radiusServerPort = 0
+        $radiusConfig.radiusServerHost = "radiusServer"
+    } else {
+        $radiusConfig.enableRadiusMfa = $true
     }
 
     do {
