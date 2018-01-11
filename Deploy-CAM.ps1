@@ -2886,11 +2886,7 @@ else {
         -certificateFilePassword $certificateFilePassword `
 		-AgentChannel $AgentChannel `
         -deployOverDC $deployOverDC `
-<<<<<<< HEAD
-        -radiusConfig $radiusConfig, `
-        -vnetConfig $vnetConfig
-=======
+        -radiusConfig $radiusConfig `
         -vnetConfig $vnetConfig `
         -enableSecurityGateway $enableSecurityGateway
->>>>>>> f3e3ddfb9c026062871f8fb6b10911b275a81352
 }
