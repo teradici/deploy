@@ -5,10 +5,10 @@
         "CSUniqueSuffix": {
             "value": "2"
         },
-        "domainAdminUsername": {
+        "domainServiceAccountUsername": {
             "value": "GEN-USER"
         },
-        "domainAdminPassword": {
+        "domainServiceAccountPassword": {
             "value": "GEN-PASSWORD"
         },
         "domainName": {

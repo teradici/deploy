@@ -17,9 +17,14 @@ param(
     [SecureString]
     $registrationCode,
 
+    [parameter(Mandatory = $false)]
     [bool]
     $verifyCAMSaaSCertificate = $true,
 
+    [parameter(Mandatory = $false)]
+    [bool]
+    $enableSecurityGateway = $true, # Only matters if not doing CAM-in-a-box isolated install
+    
     [parameter(Mandatory = $false)]
     [bool]
     $testDeployment = $false,
@@ -379,7 +384,7 @@ function New-RemoteWorstationTemplates {
     $gaAgentARM = $CAMConfig.internal.gaAgentARM
     $linuxAgentARM = $CAMConfig.internal.linuxAgentARM
 
-    $DomainAdminUsername = $CAMConfig.parameters.domainAdminUsername.clearValue
+    $domainServiceAccountUsername = $CAMConfig.parameters.domainServiceAccountUsername.clearValue
     $domainFQDN = $CAMConfig.parameters.domainName.clearValue
 
     #Put the VHD's in the user storage account until we move to managed storage...
@@ -398,7 +403,7 @@ function New-RemoteWorstationTemplates {
 		"AgentChannel": { "value": "$agentChannel"},
 		"binaryLocation": { "value": "$binaryLocation" },
 		"subnetID": { "value": "$($CAMConfig.parameters.remoteWorkstationSubnet.clearValue)" },
-		"domainUsername": { "value": "$DomainAdminUsername" },
+		"domainUsername": { "value": "$domainServiceAccountUsername" },
 		"userStorageAccountName": {
 			"reference": {
 				"keyVault": {
@@ -436,7 +441,7 @@ function New-RemoteWorstationTemplates {
 				"keyVault": {
 				"id": "$kvId"
 				},
-				"secretName": "domainJoinPassword"
+				"secretName": "domainServiceAccountPassword"
 			}		
 		},
 		"registrationCode": {
@@ -1173,7 +1178,8 @@ function New-ConnectionServiceDeployment() {
         $tenantId,
         $spCredential,
         $keyVault,
-        $testDeployment
+        $testDeployment,
+        [bool]$enableSecurityGateway
     )
 
     $kvID = $keyVault.ResourceId
@@ -1364,6 +1370,11 @@ function New-ConnectionServiceDeployment() {
         New-CAMDeploymentInfo `
             -kvName $CAMRootKeyvault.Name
 
+        $enableSecurityGatewayString = "false"
+        if ($enableSecurityGateway) {
+            $enableSecurityGatewayString = "true"
+        }
+
         # Get the template URI
         $secret = Get-AzureKeyVaultSecret `
             -VaultName $kvName `
@@ -1377,7 +1388,10 @@ function New-ConnectionServiceDeployment() {
             "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
             "contentVersion": "1.0.0.0",
             "parameters": {
-                "CSUniqueSuffix": {
+                "enableSecurityGateway": {
+                    "value": "$enableSecurityGatewayString"
+                  },
+                  "CSUniqueSuffix": {
                     "reference": {
                         "keyVault": {
                             "id": "$kvID"
@@ -1385,20 +1399,20 @@ function New-ConnectionServiceDeployment() {
                         "secretName": "connectionServiceNumber"
                     }
                 },
-                "domainAdminUsername": {
+                "domainServiceAccountUsername": {
                     "reference": {
                         "keyVault": {
                             "id": "$kvID"
                         },
-                        "secretName": "domainAdminUsername"
+                        "secretName": "domainServiceAccountUsername"
                     }
                 },
-                "domainAdminPassword": {
+                "domainServiceAccountPassword": {
                     "reference": {
                         "keyVault": {
                             "id": "$kvID"
                         },
-                        "secretName": "domainJoinPassword"
+                        "secretName": "domainServiceAccountPassword"
                     }
                 },
                 "domainName": {
@@ -1676,6 +1690,10 @@ function Deploy-CAM() {
         [bool]
         $verifyCAMSaaSCertificate = $true,
 
+        [parameter(Mandatory = $true)]
+        [bool]
+        $enableSecurityGateway,
+
         [parameter(Mandatory = $true)] 
         $CAMDeploymentTemplateURI,
 
@@ -1750,7 +1768,7 @@ function Deploy-CAM() {
     # Artifacts location 'folder' is where the template is stored
     $artifactsLocation = $CAMDeploymentTemplateURI.Substring(0, $CAMDeploymentTemplateURI.lastIndexOf('/'))
 
-    $domainAdminUsername = $domainAdminCredential.UserName
+    $domainServiceAccountUsername = $domainAdminCredential.UserName
 
     # Setup CAMConfig as a hash table of ARM parameters for Azure (KeyVault)
     # Most parameters are secrets so the KeyVault can be a single configuration source
@@ -1758,9 +1776,9 @@ function Deploy-CAM() {
     # and internal parameters for this script which are not pushed to the key vault
     $CAMConfig = @{} 
     $CAMConfig.parameters = @{}
-    $CAMConfig.parameters.domainAdminUsername = @{
-        value      = (ConvertTo-SecureString $domainAdminUsername -AsPlainText -Force)
-        clearValue = $domainAdminUsername
+    $CAMConfig.parameters.domainServiceAccountUsername = @{
+        value      = (ConvertTo-SecureString $domainServiceAccountUsername -AsPlainText -Force)
+        clearValue = $domainServiceAccountUsername
     }
     $CAMConfig.parameters.domainName = @{
         value      = (ConvertTo-SecureString $domainName -AsPlainText -Force)
@@ -1777,7 +1795,7 @@ function Deploy-CAM() {
 
     $CAMConfig.parameters.cloudAccessRegistrationCode = @{value = $registrationCode}
 
-    $CAMConfig.parameters.domainJoinPassword = @{value = $domainAdminCredential.Password}
+    $CAMConfig.parameters.domainServiceAccountPassword = @{value = $domainAdminCredential.Password}
 
     # Set in Generate-Certificate-And-Passwords
     $CAMConfig.parameters.CAMCSCertificate = @{}
@@ -2112,7 +2130,8 @@ function Deploy-CAM() {
                 -keyVault $CAMRootKeyvault `
                 -tenantId $tenantId `
                 -testDeployment $testDeployment `
-                -tempDir $tempDir
+                -tempDir $tempDir `
+                -enableSecurityGateway $enableSecurityGateway
         }
         else
         {
@@ -2129,7 +2148,7 @@ function Deploy-CAM() {
 				"keyVault": {
 					"id": "$kvId"
 				},
-				"secretName": "domainAdminUsername"
+				"secretName": "domainServiceAccountUsername"
 			}
 		},
 		"domainName": {
@@ -2254,7 +2273,7 @@ function Deploy-CAM() {
 				"keyVault": {
 					"id": "$kvId"
 				},
-				"secretName": "domainJoinPassword"
+				"secretName": "domainServiceAccountPassword"
 			}
 		},
 		"certData": {
@@ -2600,7 +2619,8 @@ if ($CAMRootKeyvault) {
         -spCredential $spCredential `
         -keyVault $CAMRootKeyvault `
         -testDeployment $testDeployment `
-        -tempDir $tempDir
+        -tempDir $tempDir `
+        -enableSecurityGateway $enableSecurityGateway
 
 }
 else {
@@ -2866,6 +2886,11 @@ else {
         -certificateFilePassword $certificateFilePassword `
 		-AgentChannel $AgentChannel `
         -deployOverDC $deployOverDC `
+<<<<<<< HEAD
         -radiusConfig $radiusConfig, `
         -vnetConfig $vnetConfig
+=======
+        -vnetConfig $vnetConfig `
+        -enableSecurityGateway $enableSecurityGateway
+>>>>>>> f3e3ddfb9c026062871f8fb6b10911b275a81352
 }
