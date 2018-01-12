@@ -54,7 +54,7 @@
         "enableRadiusMfa" : {
             "type": "string",
             "metadata": {
-              "description": "Enable RAIDUS based MFA?"
+              "description": "Enable RADIUS based MFA?"
             },
             "defaultValue": "False"
           },

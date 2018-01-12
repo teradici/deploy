@@ -162,8 +162,7 @@
       "type": "string",
       "metadata": {
         "description": "The URL of resources, such as templates, scripts, and DSC modules, that the ARM deployment template depends on"
-      },
-      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/cam-radius-settings"
+      }
     },
     "_artifactsLocationSasToken": {
       "type": "securestring",

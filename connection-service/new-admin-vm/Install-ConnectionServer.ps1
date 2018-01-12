@@ -896,14 +896,12 @@ brokerLocale=en_US
 #                Write-Host "MFA setting is $isMfa"
 #stick in RADIUS MFA related attributes if RADIUS MFA is turned on
                 if($isMfa -eq "True") {
-                    $localRadiusHost = $using:radiusServerHost
-                    $localRadiusPort = $using:radiusServerPort
                     $localRadiusSecretContainer = $using:radiusSharedSecretContainer
                     $radiusSecretPlainText = $localRadiusSecretContainer.GetNetworkCredential().Password
                     $radiusProperties =@"
 isMultiFactorAuthenticate=$isMfa
-radiusServerIPAddress=$localRadiusHost
-authPort=$localRadiusPort
+radiusServerIPAddress=$using:radiusServerHost
+authPort=$using:radiusServerPort
 radiusSecretKey=$radiusSecretPlainText
 "@
                     $cbProperties = $cbProperties + "`n" + $radiusProperties
