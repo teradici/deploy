@@ -162,13 +162,40 @@
       "type": "string",
       "metadata": {
         "description": "The URL of resources, such as templates, scripts, and DSC modules, that the ARM deployment template depends on"
-      },
-      "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/master"
+      }
     },
     "_artifactsLocationSasToken": {
       "type": "securestring",
       "metadata": {
         "description": "Token to access _artifactsLocation"
+      },
+      "defaultValue": ""
+    },
+    "enableRadiusMfa" : {
+      "type": "string",
+      "metadata": {
+        "description": "Is RADIUS MFA enabled?"
+      },
+      "defaultValue": "False"
+    },
+    "radiusServerHost" : {
+      "type": "string",
+      "metadata": {
+        "description": "RADIUS server host name/IP address for MFA"
+      },
+      "defaultValue": ""
+    },
+    "radiusServerPort" : {
+      "type": "string",
+      "metadata": {
+        "description": "RADIUS server listen port for MFA"
+      },
+      "defaultValue": "1812"
+    },
+    "radiusSharedSecret" : {
+      "type": "securestring",
+      "metadata": {
+        "description": "Shared secret between RADIUS server and client"
       },
       "defaultValue": ""
     }
@@ -283,6 +310,18 @@
           },
           "_artifactsLocationSasToken": {
             "value": "[parameters('_artifactsLocationSasToken')]"
+          },
+          "enableRadiusMfa": {
+            "value": "[parameters('enableRadiusMfa')]"
+          },
+          "radiusServerHost": {
+            "value": "[parameters('radiusServerHost')]"
+          },
+          "radiusServerPort": {
+            "value": "[parameters('radiusServerPort')]"
+          },
+          "radiusSharedSecret": {
+            "value": "[parameters('radiusSharedSecret')]"
           }
         }
       }

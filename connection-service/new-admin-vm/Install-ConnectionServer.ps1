@@ -69,7 +69,24 @@ Configuration InstallConnectionServer
         [String]$sumoCollectorID,
 
         [Parameter(Mandatory=$false)]
-        [String]$brokerPort = "8444"
+        [String]$brokerPort = "8444",
+
+        [Parameter(Mandatory = $false)]
+        [String]$enableRadiusMfa,
+
+        
+        [Parameter(Mandatory = $false)]
+        [String]$radiusServerHost,
+
+        
+        [Parameter(Mandatory = $false)]
+        [String]$radiusServerPort,
+
+        
+        [Parameter(Mandatory = $false)]
+        [System.Management.Automation.PSCredential]$radiusSharedSecretContainer
+
+
     )
 
     # Get DC information
@@ -119,6 +136,7 @@ Configuration InstallConnectionServer
     $retryCount = 3
     $delay = 10
 
+   
     Import-DscResource -ModuleName xPSDesiredStateConfiguration
 
     Node "localhost"
@@ -878,7 +896,6 @@ ldapDomain=$Using:domainName
                 $adminUsername = $localAdminCreds.GetNetworkCredential().Username
                 $adminPassword = $localAdminCreds.GetNetworkCredential().Password
 
-
                 $cbProperties = @"
 ldapHost=ldaps://$Using:dcvmfqdn
 ldapAdminUsername=$adminUsername
@@ -891,6 +908,21 @@ brokerProductVersion=1.0
 brokerIpaddress=$ipaddressString
 brokerLocale=en_US
 "@
+              
+                $isMfa = $using:enableRadiusMfa
+#                Write-Host "MFA setting is $isMfa"
+#stick in RADIUS MFA related attributes if RADIUS MFA is turned on
+                if($isMfa -eq "True") {
+                    $localRadiusSecretContainer = $using:radiusSharedSecretContainer
+                    $radiusSecretPlainText = $localRadiusSecretContainer.GetNetworkCredential().Password
+                    $radiusProperties =@"
+isMultiFactorAuthenticate=$isMfa
+radiusServerIPAddress=$using:radiusServerHost
+authPort=$using:radiusServerPort
+radiusSecretKey=$radiusSecretPlainText
+"@
+                    $cbProperties = $cbProperties + "`n" + $radiusProperties
+}
 
                 Set-Content $cbPropertiesFile $cbProperties
                 Set-Content $cbHomePropertiesFile $cbProperties
