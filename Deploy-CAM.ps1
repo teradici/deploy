@@ -2916,7 +2916,7 @@ else {
     }
     # Prompt for Radius configuration if radius has not been already explicitly been disabled
     if ( -not ($enableRadiusMfa -eq $false) ) {
-        # Prompt for wheather to enable Radius itegration
+        # Prompt for whether to enable Radius itegration
         if ( $enableRadiusMfa -eq $null -and (-not $ignorePrompts) ) {
             $enableRadiusMfa = (Read-Host "Do you want to enable Multi-Factor Authentication using your Radius Server? (yes/no)") -like "*y*"
         } elseif ( $enableRadiusMfa -eq $null -and $ignorePrompts ) {
@@ -2955,8 +2955,8 @@ else {
     if ( -not $enableRadiusMfa) {
         # Set a default value if not set already
         $radiusConfig.enableRadiusMfa = $false
-        if (-not $radiusConfig.radiusServerSharedSecret ) {
-            $radiusConfig.radiusServerSharedSecret = ConvertTo-SecureString "radiusSecret" -AsPlainText -Force
+        if (-not $radiusConfig.radiusSharedSecret ) {
+            $radiusConfig.radiusSharedSecret = ConvertTo-SecureString "radiusSecret" -AsPlainText -Force
         }
         if (-not $radiusConfig.radiusServerPort ) {
             $radiusConfig.radiusServerPort = 0
