@@ -999,6 +999,12 @@ brokerLocale=en_US
                     [System.Environment]::SetEnvironmentVariable($_.Name, $_.Value, "Machine")
                 }
 
+                # Setup primary domain search suffix to match the domain we're brokering
+                $networkRegKey = "HKLM:\System\CurrentControlSet\Services\Tcpip\Parameters"
+                
+                Set-ItemProperty -Path $networkRegKey -Name "Domain" -Type String -Value $using:domainName
+                Set-ItemProperty -Path $networkRegKey -Name "NV Domain" -Type String -Value $using:domainName
+
                 # Reboot machine to ensure all changes are picked up by all services.
                 $global:DSCMachineStatus = 1
             }
