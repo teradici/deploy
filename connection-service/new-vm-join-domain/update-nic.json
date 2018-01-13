@@ -1,0 +1,53 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "nicName": {
+          "type": "string"
+        },
+        "SubnetRef": {
+            "type": "string"
+        },
+        "privateIp": {
+          "type": "string"
+        },
+        "applicationGatewayPoolReference": {
+          "type": "string",
+          "metadata": {
+              "description": "Application gateway backend pool this machine is a member of"
+          }
+      }
+  },
+    "variables": {
+    },
+    "resources": [
+      {
+        "type": "Microsoft.Network/networkInterfaces",
+        "name": "[parameters('nicName')]",
+        "apiVersion": "2015-06-15",
+        "location": "[resourceGroup().location]",
+        "dependsOn": [
+        ],
+        "properties": {
+          "ipConfigurations": [
+            {
+              "name": "ipconfig",
+              "properties": {
+                "privateIPAllocationMethod": "Static",
+                "privateIPAddress": "[parameters('privateIp')]",
+                "subnet": {
+                  "id": "[parameters('SubnetRef')]"
+                },
+                "ApplicationGatewayBackendAddressPools": [
+                  {
+                      "id": "[parameters('applicationGatewayPoolReference')]"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "outputs": {}
+  }

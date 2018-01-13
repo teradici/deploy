@@ -54,6 +54,9 @@ Configuration InstallConnectionServer
         $linuxAgentARM = "rhel-standard-agent.json",
 
         [Parameter(Mandatory)]
+        [String]$domainName,
+
+        [Parameter(Mandatory)]
         [String]$remoteWorkstationDomainGroup,
 
         [Parameter(Mandatory)]
@@ -86,15 +89,29 @@ Configuration InstallConnectionServer
 
     )
 
-    # Get domain information
-    $domainFQDN = (Get-WmiObject win32_computersystem).domain
-    $myDomainInfo = (Get-WMIObject Win32_NTDomain) `
-                    | Where-Object {$_.DnsForestName -eq $domainFQDN} `
-                    | Select-Object -First 1
-    $DCVMName = ($myDomainInfo.DomainControllerName -replace "\\", "")
+    # Get DC information
+    # The alternate way is to do a nslookup for the dns srv record for: _ldap._tcp.dc._msdcs.<DOMAIN>
 
-    $dcvmfqdn = "$DCVMName.$domainFQDN"
-    $pbvmfqdn = "$env:computername.$domainFQDN"
+    Write-Host "Looking for domain controllers found for domain $domainName"
+    
+    $adminUsername = $DomainAdminCreds.GetNetworkCredential().Username
+    $adminPassword = $DomainAdminCreds.GetNetworkCredential().Password
+
+    $directoryContext = new-object 'System.DirectoryServices.ActiveDirectory.DirectoryContext' `
+        ("domain", $domainName, $adminUsername, $adminPassword)
+    $dcs = [System.DirectoryServices.ActiveDirectory.DomainController]::FindAll($directoryContext)
+   
+    if($dcs.Count) {
+        Write-Host "Number of domain controllers found: $($dcs.Count)"
+    }
+    else {
+        throw "No domain controllers found for domain $domainName"
+    }
+
+    $dcvmfqdn = $dcs[0].Name
+    Write-Host "Using domain controller: $dcvmfqdn"
+
+    $pbvmfqdn = "$env:computername"
     $family   = "Windows Server 2016"
 
     #Java locations
@@ -528,7 +545,7 @@ Configuration InstallConnectionServer
 
                 #Now create the new output file.
                 #TODO - really only a couple parameters are used and set properly now. Needs cleanup.
-                $domainsplit = $using:domainFQDN
+                $domainsplit = $using:domainName
                 $domainsplit = $domainsplit.split(".".2)
                 $domainleaf = $domainsplit[0]  # get the first part of the domain name (before .local or .???)
                 $domainroot = $domainsplit[1]  # get the second part of the domain name
@@ -554,7 +571,7 @@ domainGroupAppServersJoin="$using:remoteWorkstationDomainGroup"
 ldapHost=ldaps://$domainControllerFQDN
 ldapAdminUsername=$adminUsername
 ldapAdminPassword=$adminPassword
-ldapDomain=$Using:domainFQDN
+ldapDomain=$Using:domainName
 "@
 
                 $targetDir = "$CatalinaHomeLocation\adminproperty"
@@ -883,7 +900,7 @@ ldapDomain=$Using:domainFQDN
 ldapHost=ldaps://$Using:dcvmfqdn
 ldapAdminUsername=$adminUsername
 ldapAdminPassword=$adminPassword
-ldapDomain=$Using:domainFQDN
+ldapDomain=$Using:domainName
 brokerHostName=$Using:pbvmfqdn
 brokerProductName=CAM Connection Broker
 brokerPlatform=$Using:family
@@ -920,7 +937,7 @@ radiusSecretKey=$radiusSecretPlainText
 
                 $foundCert = $false
                 $caCert = $null
-                $loopCountRemaining = 180
+                $loopCountRemaining = 30
 
                 # LDAPS Port and Host
                 $port=636
@@ -934,8 +951,8 @@ radiusSecretKey=$radiusSecretPlainText
                         $tcpclient = new-object System.Net.Sockets.tcpclient
                         $tcpclient.Connect($hostname,$port)
 
-                        #Authenticate with SSL
-                        $sslstream = new-object System.Net.Security.SslStream -ArgumentList $tcpclient.GetStream(),$false
+                        # Authenticate with SSL - trusting all certificates
+                        $sslstream = new-object System.Net.Security.SslStream -ArgumentList $tcpclient.GetStream(),$false,{$true}
 
                         $sslstream.AuthenticateAsClient($hostname)
                         $cert =  [System.Security.Cryptography.X509Certificates.X509Certificate2]($sslstream.remotecertificate)
@@ -958,19 +975,13 @@ radiusSecretKey=$radiusSecretPlainText
                         $foundCert=$true
                     } catch {
                         Write-Host "Failed to retrieve issuer certificate from $hostname`:$port because $_"
-
-                        # Run 'pulse' on the DC as that can resolve the situation.
-                        $DCSession = New-PSSession $dcvmfqdn -Credential $using:DomainAdminCreds
-
-                        Invoke-Command {& "certutil" -pulse > $null} -Session $DCSession | Out-Null
-                        Remove-PSSession $DCSession | Out-Null
                     } finally {
                         #cleanup
                         if ($sslStream) {
-                            $sslstream.close()
+                            $sslstream.close()  | Out-Null
                         }
                         if ($tcpclient) {
-                            $tcpclient.close()
+                            $tcpclient.close()  | Out-Null
                         }
                     }
                     
@@ -1019,6 +1030,12 @@ radiusSecretKey=$radiusSecretPlainText
                 $regInfo.psobject.properties | Foreach-Object {
                     [System.Environment]::SetEnvironmentVariable($_.Name, $_.Value, "Machine")
                 }
+
+                # Setup primary domain search suffix to match the domain we're brokering
+                $networkRegKey = "HKLM:\System\CurrentControlSet\Services\Tcpip\Parameters"
+                
+                Set-ItemProperty -Path $networkRegKey -Name "Domain" -Type String -Value $using:domainName
+                Set-ItemProperty -Path $networkRegKey -Name "NV Domain" -Type String -Value $using:domainName
 
                 # Reboot machine to ensure all changes are picked up by all services.
                 $global:DSCMachineStatus = 1

@@ -26,6 +26,12 @@
                 "description": "Password of the account on the domain"
             }
         },
+        "domainName": {
+            "type": "string",
+            "metadata": {
+              "description": "The fully qualified domain name of the domain to connect to. The name must include a '.' such as example.com"
+            }
+        },
         "CAMDeploymentInfo": {
             "type": "securestring",
             "metadata": {
@@ -112,6 +118,7 @@
                             "Password": "PrivateSettingsRef:CAMDeploymentInfo"
                         },
                         "remoteWorkstationDomainGroup": "[parameters('remoteWorkstationDomainGroup')]",
+                        "domainName": "[parameters('domainName')]",
                         "DomainAdminCreds": {
                             "UserName": "[parameters('domainUsername')]",
                             "Password": "PrivateSettingsRef:DomainAdminPassword"
