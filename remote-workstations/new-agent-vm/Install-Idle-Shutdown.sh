@@ -1,5 +1,11 @@
 #!/bin/bash
 # Copyright 2017 Teradici Corporation
+#
+# Installs and configures the 'shut down when idle' systemd service and timer
+# definitions, optionally disabling the service at installation.
+#
+# If the '--remove' or '-remove' options are specified, the systemd units
+# and idle monitor script are removed from the system.
 
 SERVICE_NAME="CAMIdleShutdown"
 SERVICE="${SERVICE_NAME}.service"
@@ -12,6 +18,16 @@ TIMER_CONFIG="${TIMER_CONFIG_PATH}/CAMIdleShutdown.conf"
 SERVICE_CONFIG="${SERVICE_CONFIG_PATH}/CAMIdleShutdown.conf"
 
 MONITOR_SCRIPT=/opt/Teradici_CAM_idle_shutdown.py
+
+# Idle time in minutes before auto-shutdown should be engaged
+IDLE_TIMER=240
+# If set to 1, the auto-shutdown service will be disabled
+IS_DISABLED=0
+
+function die() {
+    printf '%s\n' "$1" >&2
+    exit 1
+}
 
 function create_monitor_script() {
     touch ${MONITOR_SCRIPT}
@@ -238,7 +254,7 @@ WantedBy=multi-user.target
 EOF
     cat <<EOF> ${SERVICE_CONFIG}
 [Service]
-Environment="MinutesIdleBeforeShutdown=60"
+Environment="MinutesIdleBeforeShutdown=${IDLE_TIMER}"
 Environment="CPUUtilizationLimit=20"
 EOF
     cat <<EOF> ${TIMER_CONFIG}
@@ -253,12 +269,20 @@ EOF
     systemctl start ${TIMER}
 }
 
-function remove() {
-    echo "Removing"
+function disable() {
+    echo "Disabling auto shutdown"
     systemctl stop ${TIMER}
     systemctl stop ${SERVICE}
     systemctl disable ${TIMER}
     systemctl disable ${SERVICE}
+    if [[ $IS_DISABLED -eq 1 ]]; then
+        systemctl daemon-reload
+    fi
+}
+
+function remove() {
+    echo "Removing"
+    disable_auto_shutdown
     rm -rf "/etc/systemd/system/${SERVICE_NAME}"*
     rm ${MONITOR_SCRIPT}
     systemctl daemon-reload
@@ -266,25 +290,43 @@ function remove() {
 
 function should_be_root() {
     if [[ $EUID -ne 0 ]]; then
-        echo "You must be root for this operation"
-        exit 1
+        die "You must be root for this operation"
     fi
 }
 
 function main() {
-    should_be_root
-    command=$1
-    case "$command" in
-        "--install" | "-install" | "-i")
-            install
-            ;;
-        "--remove" | "-remove" | "-r")
-            remove
-            ;;
-        *)
-            echo "Unkown command, use -install or -remove"
-            ;;
-    esac
+    #should_be_root
+    while :; do
+        case $1 in
+            "--remove" | "-remove" | "-r")
+                remove
+                exit 0
+                ;;
+            "--idle-timout" | "-idle-timeout" | "-i")
+                # This option is only necessary if you want to change the default idle timeout
+                # Here, we check if a value is given and that it's an integer
+                if [[ -n "$2" && $2 == ?(-)+([0-9]) ]]; then
+                    IDLE_TIMER=$2
+                    shift
+                else
+                    die "ERROR: --idle-timeout requires a numeric argument"
+                fi
+                ;;
+            "--disabled" | "-disabled" | "-d")
+                IS_DISABLED=1
+                break
+                ;;
+            *)
+            break
+        esac
+
+        shift
+    done
+
+    install
+    if [[ $IS_DISABLED -eq 1 ]]; then
+        disable
+    fi
 }
 
 main $@
