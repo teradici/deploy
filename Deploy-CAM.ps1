@@ -457,7 +457,7 @@ function New-UserStorageAccount {
     return $acct
 }
 
-function New-RemoteWorstationTemplates {
+function New-RemoteWorkstationTemplates {
     param (
         $CAMConfig,
         $binaryLocation,
@@ -741,7 +741,7 @@ function Populate-UserBlob {
 
         # binaryLocation is the original binaries source location hosted by Teradici
         # blobUri is the new per-deployment blob storage location of the binaries (so a sub-directory in the container)
-        New-RemoteWorstationTemplates `
+        New-RemoteWorkstationTemplates `
             -CAMConfig $CAMConfig `
             -binaryLocation $binaryLocation `
             -kvId $kvId `
@@ -1159,7 +1159,7 @@ function New-CAMAppSP() {
 function New-CAMDeploymentInfo() {
     param(
         [parameter(Mandatory = $true)] 
-        $kvName # Key Vault info
+        $kvName # Key Vault name
     )
 
     Write-Host "Populating CAMDeploymentInfo structure for the Connection Service"
@@ -1972,7 +1972,7 @@ function Deploy-CAM() {
     $CAMConfig.internal.gaAgentARM = "server2016-graphics-agent.json"
     $CAMConfig.internal.linuxAgentARM = "rhel-standard-agent.json"
 
-    # Radius MFA Configuration Parameters
+    # RADIUS MFA Configuration Parameters
     $CAMConfig.parameters.enableRadiusMfa = @{
         value=(ConvertTo-SecureString $radiusConfig.enableRadiusMfa -AsPlainText -Force)
     }
@@ -2916,11 +2916,11 @@ else {
         radiusServerPort = $radiusServerPort 
         radiusSharedSecret = $radiusSharedSecret
     }
-    # Prompt for Radius configuration if radius has not been already explicitly been disabled
+    # Prompt for RADIUS configuration if RADIUS has not been already explicitly been disabled
     if ( -not ($enableRadiusMfa -eq $false) ) {
-        # Prompt for whether to enable Radius itegration
+        # Prompt for whether to enable RADIUS integration
         if ( $enableRadiusMfa -eq $null -and (-not $ignorePrompts) ) {
-            $enableRadiusMfa = (Read-Host "Do you want to enable Multi-Factor Authentication using your Radius Server? (yes/no)") -like "*y*"
+            $enableRadiusMfa = (Read-Host "Do you want to enable Multi-Factor Authentication using your RADIUS Server? (yes/no)") -like "*y*"
         } elseif ( $enableRadiusMfa -eq $null -and $ignorePrompts ) {
             $enableRadiusMfa = $false
         }
@@ -2928,14 +2928,14 @@ else {
         if ($enableRadiusMfa) {
             do {
                 if (-not $radiusConfig.radiusServerHost ) {
-                    $radiusConfig.radiusServerHost = Read-Host "Please enter your Radius Server's Hostname or IP"
+                    $radiusConfig.radiusServerHost = Read-Host "Please enter your RADIUS Server's Hostname or IP"
                 }
             } while (-not $radiusConfig.radiusServerHost)
 
             do {
                 if (-not $radiusConfig.radiusServerPort ) {
                     try {
-                        $radiusConfig.radiusServerPort = [int](Read-Host  "Please enter your Radius Server's Listening port")
+                        $radiusConfig.radiusServerPort = [int](Read-Host  "Please enter your RADIUS Server's Listening port")
                     } catch {
                         $radiusConfig.radiusServerPort = $null
                         Write-Host "Selected port is not an Integer"
@@ -2949,7 +2949,7 @@ else {
 
             do {
                 if (-not $radiusConfig.radiusSharedSecret ) {
-                    $radiusConfig.radiusSharedSecret = Read-Host -AsSecureString "Please enter your Radius Server's Shared Secret"
+                    $radiusConfig.radiusSharedSecret = Read-Host -AsSecureString "Please enter your RADIUS Server's Shared Secret"
                 }
             } while (-not $radiusConfig.radiusSharedSecret )
         }
@@ -2961,7 +2961,7 @@ else {
             $radiusConfig.radiusSharedSecret = ConvertTo-SecureString "radiusSecret" -AsPlainText -Force
         }
         if (-not $radiusConfig.radiusServerPort ) {
-            $radiusConfig.radiusServerPort = 0
+            $radiusConfig.radiusServerPort = 1812
         }
         if (-not $radiusConfig.radiusServerHost ) {
             $radiusConfig.radiusServerHost = "radiusServer"
