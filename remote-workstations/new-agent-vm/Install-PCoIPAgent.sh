@@ -471,6 +471,8 @@ then
     
     EXIT_CODE=$?
     
+    install_idle
+
     if [ $EXIT_CODE -eq 0 ]
     then 
         INST_LAST_STEP="step3 done"			
@@ -555,8 +557,6 @@ fi
 
 #remove job
 sudo crontab -r
-
-install_idle
 
 if [ $EXIT_CODE -eq 0 ]
 then	
