@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $# -eq 1 ]
+if [[ $# -eq 1 ]]
 then
     AGENT_TYPE="$1"
 else
@@ -33,19 +33,15 @@ fi
 update_kernel_dkms() 
 {
   sudo yum -y update
-
   sudo yum -y install kernel-devel
-
   sudo rpm -Uvh --quiet https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-
   sudo yum -y install dkms
 }
 
 # need to reboot after install
-disable_nouveal()
+disable_nouveau()
 {
-    echo 'blacklist nouveau' | sudo tee -a /etc/modprobe.d/nouveau.conf
-    
+    echo 'blacklist nouveau' | sudo tee -a /etc/modprobe.d/nouveau.conf    
     echo 'blacklist lbm-nouveau' | sudo tee -a /etc/modprobe.d/nouveau.conf
 }
 
@@ -54,17 +50,18 @@ install_lis()
 {    
     local LIS_FILE="lis-rpms-4.2.3-4.tar.gz"
     
-    wget --retry-connrefused --tries=3 --waitretry=5  http://download.microsoft.com/download/6/8/F/68FE11B8-FAA4-4F8D-8C7D-74DA7F2CFC8C/$LIS_FILE
-
-    tar xvzf $LIS_FILE
-
-    cd LISISO
-    
-    sudo ./install.sh
-    
+    wget --retry-connrefused --tries=3 --waitretry=5  "https://download.microsoft.com/download/6/8/F/68FE11B8-FAA4-4F8D-8C7D-74DA7F2CFC8C/$LIS_FILE"
     local exitCode=$?
 
-    cd ..
+    if [[ $exitCode -eq 0 ]]
+    then
+        tar xvzf "$LIS_FILE"
+
+        cd LISISO 
+        sudo ./install.sh        
+        exitCode=$?
+        cd ..
+    fi
     
     return $exitCode
 }
@@ -72,20 +69,23 @@ install_lis()
 install_nvidia_driver()
 {
     local FILE_NAME="NVIDIA-Linux-x86_64-384.73-grid.run"
-    
-    wget --retry-connrefused --tries=3 --waitretry=5  https://teradeploy.blob.core.windows.net/binaries/$FILE_NAME  
-
-    chmod +x $FILE_NAME
-
-    sudo ./$FILE_NAME -Z -X -s
-
+       
+    wget --retry-connrefused --tries=3 --waitretry=5  "https://teradeploy.blob.core.windows.net/binaries/$FILE_NAME" 
     local exitCode=$?
 
-    if [ $exitCode -eq 0 ] 
+    if [[ $exitCode -eq 0 ]]
     then
-        sudo cp /etc/nvidia/gridd.conf.template /etc/nvidia/gridd.conf
+        chmod +x "$FILE_NAME"
+
+        sudo "./$FILE_NAME" -Z -X -s
+        exitCode=$?
+
+        if [[ $exitCode -eq 0 ]]
+        then
+            sudo cp /etc/nvidia/gridd.conf.template /etc/nvidia/gridd.conf
         
-        echo 'IgnoreSP=TRUE' | sudo tee -a /etc/nvidia/gridd.conf
+            echo 'IgnoreSP=TRUE' | sudo tee -a /etc/nvidia/gridd.conf
+        fi
     fi
     
     return $exitCode
@@ -99,13 +99,16 @@ join_domain()
     sudo systemctl enable sssd
 
     echo "-->Joining the domain"
-    if [ -n "${OU}" ]
+    if [[ -n "${OU}" ]]
     then
         echo "$PASSWORD" | sudo realm join --user="$USERNAME" --computer-ou="${OU}" "$DOMAIN_NAME" >&2
     else
         echo "$PASSWORD" | sudo realm join --user="$USERNAME" "$DOMAIN_NAME" >&2
     fi
-    if [ $? -eq 0 ]
+
+    local exitCode=$?
+
+    if [[ $exitCode -eq 0 ]]
     then
         echo "Joined Domain ${DOMAIN_NAME} and OU ${OU}"
     else
@@ -244,9 +247,6 @@ EOF
 
 install_gui() 
 {
-    # Make sure Linux OS is up to date
-    echo "--> Updating Linux OS to latest"
-
     sudo yum -y update  # --exclude=WALinuxAgent
 
     # Install Desktop
@@ -290,10 +290,10 @@ install_pcoip_agent()
             ;;       
     esac
     
-    sudo wget --retry-connrefused --tries=3 --waitretry=5 -O /etc/yum.repos.d/pcoip.repo $agent_repo_url
+    sudo wget --retry-connrefused --tries=3 --waitretry=5 -O /etc/yum.repos.d/pcoip.repo "$agent_repo_url"
     
     local exitCode=$?
-    if [ $exitCode -ne 0 ]
+    if [[ $exitCode -ne 0 ]]
     then
         echo "failed to add teradici repository."
         # let's define exit code 100 for this case
@@ -308,17 +308,17 @@ install_pcoip_agent()
     echo "-->Install the PCoIP $AGENT_TYPE agent"
     for idx in {1..3}
     do
-        sudo yum -y install pcoip-agent-$AGENT_TYPE
+        sudo yum -y install "pcoip-agent-$AGENT_TYPE"
         exitCode=$?
         
-        if [ $exitCode -eq 0 ]
+        if [[ $exitCode -eq 0 ]]
         then
             break
         else
             #delay 5 seconds
             sleep 5
-            sudo yum -y remove pcoip-agent-$AGENT_TYPE
-            if [ $idx -eq 3 ]
+            sudo yum -y remove "pcoip-agent-$AGENT_TYPE"
+            if [[ $idx -eq 3 ]]
             then
                 echo "failed to install pcoip agent."
                 # let's define exit code 101 for this case
@@ -342,11 +342,11 @@ register_pcoip_license()
         pcoip-validate-license    
         local exitCode=$?
         
-        if [ $exitCode -eq 0 ]
+        if [[ $exitCode -eq 0 ]]
         then
             break
         else
-            if [ $idx -eq 5 ]
+            if [[ $idx -eq 5 ]]
             then
                 echo "failed to register pcoip agent license."
                 # let's define exit code 102 for this case
@@ -409,25 +409,25 @@ INST_LAST_STEP="initial"
 AGENT_CHANNEL=$(tr '[:upper:]' '[:lower:]' <<<"$AGENT_CHANNEL")
 AGENT_TYPE=$(tr '[:upper:]' '[:lower:]' <<<"$AGENT_TYPE")
 
-if [ "$AGENT_TYPE" != "$AGENT_TYPE_STANDARD" ] && [ "$AGENT_TYPE" != "$AGENT_TYPE_GRAPHICS"  ]
+if [[ "$AGENT_TYPE" != "$AGENT_TYPE_STANDARD" ]] && [[ "$AGENT_TYPE" != "$AGENT_TYPE_GRAPHICS"  ]]
 then
     echo "unknown agent type $AGENT_TYPE."
     # let's define exit code 105 for this case
     exit 105
 fi
 
-if [ -f $INST_LOG_FILE ]
+if [[ -f "$INST_LOG_FILE" ]]
 then
-    INST_LAST_STEP=$(tail -1 $INST_LOG_FILE) 
+    INST_LAST_STEP=$(tail -1 "$INST_LOG_FILE") 
 fi
 
-if [ "$INST_LAST_STEP" == "initial" ]
+if [[ "$INST_LAST_STEP" == "initial" ]]
 then
-    echo "start installing pcoip $AGENT_TYPE agent" | tee $INST_LOG_FILE
+    echo "start installing pcoip $AGENT_TYPE agent" | tee "$INST_LOG_FILE"
 
-    echo "step1 starting" | tee -a $INST_LOG_FILE
+    echo "step1 starting" | tee -a "$INST_LOG_FILE"
 
-    sudo yum install wget
+    sudo yum -y install wget
 
     install_SumoLogic
 
@@ -435,7 +435,7 @@ then
 
     EXIT_CODE=$?
 
-    if [ $EXIT_CODE -eq 0 ]
+    if [[ $EXIT_CODE -eq 0 ]]
     then    
         install_gui
 
@@ -444,36 +444,36 @@ then
         INST_LAST_STEP="step1 failure: $EXIT_CODE"
     fi
 
-    echo "$INST_LAST_STEP" | tee -a $INST_LOG_FILE
+    echo "$INST_LAST_STEP" | tee -a "$INST_LOG_FILE"
 fi	
 
-if [ "$INST_LAST_STEP" == "step1 done" ]
+if [[ "$INST_LAST_STEP" == "step1 done" ]]
 then 
-    echo "step2 starting" | tee -a $INST_LOG_FILE
+    echo "step2 starting" | tee -a "$INST_LOG_FILE"
 
     install_pcoip_agent
     
     EXIT_CODE=$?
     
-    if [ $EXIT_CODE -eq 0 ]
+    if [[ $EXIT_CODE -eq 0 ]]
     then
         INST_LAST_STEP="step2 done"
     else
         INST_LAST_STEP="step2 failure: $EXIT_CODE"
     fi
     
-    echo "$INST_LAST_STEP" | tee -a $INST_LOG_FILE
+    echo "$INST_LAST_STEP" | tee -a "$INST_LOG_FILE"
 fi
 
-if [ "$INST_LAST_STEP" == "step2 done" ]
+if [[ "$INST_LAST_STEP" == "step2 done" ]]
 then 
-    echo "step3 starting" | tee -a $INST_LOG_FILE
+    echo "step3 starting" | tee -a "$INST_LOG_FILE"
 
     register_pcoip_license
     
     EXIT_CODE=$?
     
-    if [ $EXIT_CODE -eq 0 ]
+    if [[ $EXIT_CODE -eq 0 ]]
     then 
         install_idle
 
@@ -482,27 +482,27 @@ then
         INST_LAST_STEP="step3 failure: $EXIT_CODE"
     fi
 
-    echo "$INST_LAST_STEP" | tee -a $INST_LOG_FILE
+    echo "$INST_LAST_STEP" | tee -a "$INST_LOG_FILE"
 fi
 
-if [ $AGENT_TYPE == $AGENT_TYPE_GRAPHICS ]
+if [[ "$AGENT_TYPE" == "$AGENT_TYPE_GRAPHICS" ]]
 then
-    if [ "$INST_LAST_STEP" == "step3 done" ]
+    if [[ "$INST_LAST_STEP" == "step3 done" ]]
     then
-        echo "start installing nvidia driver" | tee -a $INST_LOG_FILE
+        echo "start installing nvidia driver" | tee -a "$INST_LOG_FILE"
 
-        echo "step4 starting" | tee -a $INST_LOG_FILE
+        echo "step4 starting" | tee -a "$INST_LOG_FILE"
         update_kernel_dkms
     
-        disable_nouveal
+        disable_nouveau
     
         INST_LAST_STEP="step4 done"
     
-        echo "$INST_LAST_STEP" | tee -a $INST_LOG_FILE
+        echo "$INST_LAST_STEP" | tee -a "$INST_LOG_FILE"
 
         #schedule job to continue installation	
         script_file=$(realpath "$0")
-        chmod +x $script_file
+        chmod +x "$script_file"
 
         # only need to pass 1 parameter $AGENT_TYPE to continue
         (sudo crontab -l 2>/dev/null; echo "@reboot bash $script_file $AGENT_TYPE") | sudo crontab -
@@ -511,51 +511,51 @@ then
         exit_restart
     fi	
     
-    if [ "$INST_LAST_STEP" == "step4 done" ]
+    if [[ "$INST_LAST_STEP" == "step4 done" ]]
     then
-        echo "step5 starting" | tee -a $INST_LOG_FILE
+        echo "step5 starting" | tee -a "$INST_LOG_FILE"
 
         install_lis
     
         EXIT_CODE=$?
     
-        if [ $EXIT_CODE -eq 0 ]
+        if [[ $EXIT_CODE -eq 0 ]]
         then 
             INST_LAST_STEP="step5 done"
         else
             INST_LAST_STEP="step5 failure: $EXIT_CODE"
         fi
 
-        echo "$INST_LAST_STEP" | tee -a $INST_LOG_FILE
+        echo "$INST_LAST_STEP" | tee -a "$INST_LOG_FILE"
     
-        if [ $EXIT_CODE -eq 0 ]
+        if [[ $EXIT_CODE -eq 0 ]]
         then	
             exit_restart
         fi
     fi
 
-    if [ "$INST_LAST_STEP" == "step5 done" ]
+    if [[ "$INST_LAST_STEP" == "step5 done" ]]
     then
-        echo "step6 starting" | tee -a $INST_LOG_FILE
+        echo "step6 starting" | tee -a "$INST_LOG_FILE"
 
         install_nvidia_driver
         EXIT_CODE=$?
     
-        if [ $EXIT_CODE -eq 0 ]
+        if [[ $EXIT_CODE -eq 0 ]]
         then 
             INST_LAST_STEP="step6 done"
         else
             INST_LAST_STEP="step6 failure: $EXIT_CODE"
         fi
 
-        echo "$INST_LAST_STEP" | tee -a $INST_LOG_FILE
+        echo "$INST_LAST_STEP" | tee -a "$INST_LOG_FILE"
     fi
+
+    #remove job
+    sudo crontab -r
 fi
 
-#remove job
-sudo crontab -r
-
-if [ $EXIT_CODE -eq 0 ]
+if [[ $EXIT_CODE -eq 0 ]]
 then	
     (sleep 1; sudo reboot) &
 fi
