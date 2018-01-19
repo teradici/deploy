@@ -443,8 +443,9 @@ Configuration InstallPCoIPAgent
 
 					try {
 						if ($svc.Status -ne "Stopped") {
+							Start-Sleep -s 15
 							$svc.Stop()
-							$svc.WaitForStatus("Stopped", 120)
+							$svc.WaitForStatus("Stopped", 180)
 						}
 						Set-Service -InputObject $svc -StartupType "Disabled"
 						$status = if ($?) { "succeeded" } else { "failed" }
