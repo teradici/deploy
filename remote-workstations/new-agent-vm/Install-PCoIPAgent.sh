@@ -1,29 +1,34 @@
 #!/bin/bash
 
-# the first argument is the Registration Code of PCoIP agent
-REGISTRATION_CODE="$1"
-# the second argument is the agent type
-AGENT_TYPE="$2"
-# the third argument is the VM name
-VM_NAME="$3"
-# the forth argument is the domain name
-DOMAIN_NAME="$4"
-# the fifith argument is the username
-USERNAME="$5"
-# the sixth argument is the password
-PASSWORD="$6"
-# the seventh argument is the domain group to join
-GROUP="$7"
-# the eighth argument is the agent installer channel
-AGENT_CHANNEL="$8"
-# the ninth argument is the userStorageAccountUri
-STORAGEURI="$9"
-# the tenth argument is the sumo collector ID
-COLLECTOR_ID="${10}"
-# the eleventh argument is the SaS Storage account token
-SAS_TOKEN="${11}"
-# the twelfth argument is the Computer OU string
-OU="${12}"
+if [ $# -eq 1 ]
+then
+    AGENT_TYPE="$1"
+else
+    # the first argument is the Registration Code of PCoIP agent
+    REGISTRATION_CODE="$1"
+    # the second argument is the agent type
+    AGENT_TYPE="$2"
+    # the third argument is the VM name
+    VM_NAME="$3"
+    # the forth argument is the domain name
+    DOMAIN_NAME="$4"
+    # the fifith argument is the username
+    USERNAME="$5"
+    # the sixth argument is the password
+    PASSWORD="$6"
+    # the seventh argument is the domain group to join
+    GROUP="$7"
+    # the eighth argument is the agent installer channel
+    AGENT_CHANNEL="$8"
+    # the ninth argument is the userStorageAccountUri
+    STORAGEURI="$9"
+    # the tenth argument is the sumo collector ID
+    COLLECTOR_ID="${10}"
+    # the eleventh argument is the SaS Storage account token
+    SAS_TOKEN="${11}"
+    # the twelfth argument is the Computer OU string
+    OU="${12}"
+fi
 
 update_kernel_dkms() 
 {
@@ -242,8 +247,7 @@ install_gui()
     # Make sure Linux OS is up to date
     echo "--> Updating Linux OS to latest"
 
-    # Exclude WALinuxAgent due to it failing to update from within an Azure Custom Script
-    sudo yum -y update --exclude=WALinuxAgent
+    sudo yum -y update  # --exclude=WALinuxAgent
 
     # Install Desktop
     echo "-->Install desktop"	
@@ -258,10 +262,10 @@ install_gui()
     
     #echo "-->set default graphical target"
     # The below command will change runlevel from runlevel 3 to runelevel 5 
-    # sudo systemctl set-default graphical.target
+    sudo systemctl set-default graphical.target
     
     #echo "-->start graphical target"
-    # sudo systemctl start graphical.target	
+    sudo systemctl start graphical.target	
 }	
 
 install_pcoip_agent()
@@ -300,8 +304,6 @@ install_pcoip_agent()
     #echo "-->Install the EPEL repository"
     sudo rpm -Uvh --quiet https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
-    sudo yum -y update --exclude=WALinuxAgent
-        
     # Install the PCoIP Agent
     echo "-->Install the PCoIP $AGENT_TYPE agent"
     for idx in {1..3}
@@ -391,7 +393,7 @@ install_idle()
 exit_restart()
 {
     (sleep 1; sudo reboot) &
-    exit;	
+    exit
 }
 
 # run start from here
@@ -429,14 +431,14 @@ then
 
     install_SumoLogic
 
-    install_gui
-
     join_domain
 
     EXIT_CODE=$?
-    
+
     if [ $EXIT_CODE -eq 0 ]
-    then
+    then    
+        install_gui
+
         INST_LAST_STEP="step1 done"
     else
         INST_LAST_STEP="step1 failure: $EXIT_CODE"
@@ -471,10 +473,10 @@ then
     
     EXIT_CODE=$?
     
-    install_idle
-
     if [ $EXIT_CODE -eq 0 ]
     then 
+        install_idle
+
         INST_LAST_STEP="step3 done"			
     else
         INST_LAST_STEP="step3 failure: $EXIT_CODE"
@@ -485,10 +487,10 @@ fi
 
 if [ $AGENT_TYPE == $AGENT_TYPE_GRAPHICS ]
 then
-    echo "start installing nvidia driver" | tee -a $INST_LOG_FILE
-
     if [ "$INST_LAST_STEP" == "step3 done" ]
     then
+        echo "start installing nvidia driver" | tee -a $INST_LOG_FILE
+
         echo "step4 starting" | tee -a $INST_LOG_FILE
         update_kernel_dkms
     
@@ -502,14 +504,9 @@ then
         script_file=$(realpath "$0")
         chmod +x $script_file
 
-        params=""
-        for var in "$@"
-        do
-            params="$params \"$var\""
-        done
+        # only need to pass 1 parameter $AGENT_TYPE to continue
+        (sudo crontab -l 2>/dev/null; echo "@reboot bash $script_file $AGENT_TYPE") | sudo crontab -
 
-        (sudo crontab -l 2>/dev/null; echo "@reboot bash $script_file  $params") | sudo crontab -
-    
         #exit and restart VM
         exit_restart
     fi	
@@ -563,4 +560,4 @@ then
     (sleep 1; sudo reboot) &
 fi
 
-exit $EXIT_CODE;
+exit $EXIT_CODE
