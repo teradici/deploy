@@ -251,11 +251,8 @@ install_gui()
 
     # Install Desktop
     echo "-->Install desktop"	
-    #sudo yum -y groupinstall 'X Window System' 'GNOME'
     sudo yum -y groupinstall "Server with GUI"
     
-    # sudo yum groups mark convert
-
     # install firefox
     echo "-->Install firefox"
     sudo yum -y install firefox
