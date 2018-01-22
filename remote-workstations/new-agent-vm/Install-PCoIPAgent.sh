@@ -388,7 +388,7 @@ install_idle()
     wget "$STORAGEURI/Install-Idle-Shutdown.sh$SAS_TOKEN" -O /tmp/idleShutdown/Install-Idle-Shutdown-raw.sh
     awk '{ sub("\r$", ""); print }' /tmp/idleShutdown/Install-Idle-Shutdown-raw.sh > /tmp/idleShutdown/Install-Idle-Shutdown.sh && sudo chmod +x /tmp/idleShutdown/Install-Idle-Shutdown.sh
     INSTALL_OPTS="--idle-timer ${AUTO_SHUTDOWN_IDLE_TIMER}"
-    if [["${ENABLE_AUTO_SHUTDOWN}" = "false" ]]; then
+    if [[ "${ENABLE_AUTO_SHUTDOWN}" = "false" ]]; then
         INSTALL_OPTS="${INSTALL_OPTS} --disabled"
     fi
     sudo /tmp/idleShutdown/Install-Idle-Shutdown.sh "${INSTALL_OPTS}"

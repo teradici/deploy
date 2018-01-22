@@ -250,7 +250,7 @@ OnUnitActiveSec=15min
 Unit=${SERVICE}
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=timers.target
 EOF
     cat <<EOF> ${SERVICE_CONFIG}
 [Service]
@@ -261,23 +261,29 @@ EOF
 [Timer]
 OnUnitActiveSec=15min
 EOF
-    echo "Starting Service"
+
     systemctl daemon-reload
+    if [[ $IS_DISABLED -eq 0 ]]; then
+        enable_service
+    else
+        disable_service
+    fi
+}
+
+function enable_service() {
+    echo "Starting auto-shutdown service"
     systemctl enable ${SERVICE}
     systemctl enable ${TIMER}
     systemctl start ${SERVICE}
     systemctl start ${TIMER}
 }
 
-function disable() {
+function disable_service() {
     echo "Disabling auto shutdown"
     systemctl stop ${TIMER}
     systemctl stop ${SERVICE}
     systemctl disable ${TIMER}
     systemctl disable ${SERVICE}
-    if [[ $IS_DISABLED -eq 1 ]]; then
-        systemctl daemon-reload
-    fi
 }
 
 function remove() {
@@ -295,21 +301,21 @@ function should_be_root() {
 }
 
 function main() {
-    #should_be_root
+    should_be_root
     while :; do
         case $1 in
             "--remove" | "-remove" | "-r")
                 remove
                 exit 0
                 ;;
-            "--idle-timout" | "-idle-timeout" | "-i")
-                # This option is only necessary if you want to change the default idle timeout
+            "--idle-timer" | "-idle-timer" | "-i")
+                # This option is only necessary if you want to change the default idle timer
                 # Here, we check if a value is given and that it's an integer
                 if [[ -n "$2" && $2 == ?(-)+([0-9]) ]]; then
                     IDLE_TIMER=$2
                     shift
                 else
-                    die "ERROR: --idle-timeout requires a numeric argument"
+                    die "ERROR: --idle-timer requires a numeric argument"
                 fi
                 ;;
             "--disabled" | "-disabled" | "-d")
@@ -324,9 +330,6 @@ function main() {
     done
 
     install
-    if [[ $IS_DISABLED -eq 1 ]]; then
-        disable
-    fi
 }
 
 main $@
