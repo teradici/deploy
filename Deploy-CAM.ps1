@@ -1285,70 +1285,70 @@ function New-ConnectionServiceDeployment() {
     $client = $null
     $key = $null
 
-    if (-not $spCredential)
-    {
-        try{
-            $secret = Get-AzureKeyVaultSecret `
-                -VaultName $kvName `
-                -Name "AzureSPClientID" `
-                -ErrorAction stop
-            $client = $secret.SecretValueText
-        }
-        catch {
-            $err = $_
-            if ($err.Exception.Message -eq "Access denied") {
-                Write-Host "Cannot access key vault secret. Attempting to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
-                try {
-                    Set-AzureRmKeyVaultAccessPolicy `
-                        -VaultName $kvName `
-                        -UserPrincipalName $adminAzureContext.Account.Id `
-                        -PermissionsToSecrets Get, Set `
-                        -ErrorAction stop | Out-Null
-        
-                    $secret = Get-AzureKeyVaultSecret `
-                        -VaultName $kvName `
-                        -Name "AzureSPClientID" `
-                        -ErrorAction stop
-                    $client = $secret.SecretValueText
-                }
-                catch {
-                    Write-Host "Failed to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)."
-                }
-            }
-        }
-        
-        # we may have gotten the secret if success (above) in which case we do not need to prompt.
-        if($client)
-        {
-            # get the password (key)
-            $secret = Get-AzureKeyVaultSecret `
-                -VaultName $kvName `
-                -Name "AzureSPKey" `
-                -ErrorAction stop
-            $key = $secret.SecretValueText
-        }
-    }
-    else {
-        # function was passed SPcredential
-        $client = $spCredential.UserName
-        $key = $spCredential.GetNetworkCredential().Password
-    }
-
-    if (-not $client) {
-        Write-Host "Unable to read service principal information from key vault and none was provided on command-line."
-        Write-Host "Please enter the credentials for the service principal for this Cloud Access Manager deployment."
-        Write-Host "The username is the AzureSPClientID secret in $kvName key vault."
-        Write-Host "The password is the AzureSPKey secret in $kvName key vault."
-        $spCredential = Get-Credential -Message "Please enter service principal credential."
-
-        $client = $spCredential.UserName
-        $key = $spCredential.GetNetworkCredential().Password
-    }
-
-    $spCreds = New-Object PSCredential $client, (ConvertTo-SecureString $key -AsPlainText -Force)
-
     # put everything in a try block so that if any errors occur we revert to $azureAdminContext
     try {
+        if (-not $spCredential)
+        {
+            try{
+                $secret = Get-AzureKeyVaultSecret `
+                    -VaultName $kvName `
+                    -Name "AzureSPClientID" `
+                    -ErrorAction stop
+                $client = $secret.SecretValueText
+            }
+            catch {
+                $err = $_
+                if ($err.Exception.Message -eq "Access denied") {
+                    Write-Host "Cannot access key vault secret. Attempting to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
+                    try {
+                        Set-AzureRmKeyVaultAccessPolicy `
+                            -VaultName $kvName `
+                            -UserPrincipalName $adminAzureContext.Account.Id `
+                            -PermissionsToSecrets Get, Set `
+                            -ErrorAction stop | Out-Null
+        
+                        $secret = Get-AzureKeyVaultSecret `
+                            -VaultName $kvName `
+                            -Name "AzureSPClientID" `
+                            -ErrorAction stop
+                        $client = $secret.SecretValueText
+                    }
+                    catch {
+                        Write-Host "Failed to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)."
+                    }
+                }
+            }
+        
+            # we may have gotten the secret if success (above) in which case we do not need to prompt.
+            if($client)
+            {
+                # get the password (key)
+                $secret = Get-AzureKeyVaultSecret `
+                    -VaultName $kvName `
+                    -Name "AzureSPKey" `
+                    -ErrorAction stop
+                $key = $secret.SecretValueText
+            }
+        }
+        else {
+            # function was passed SPcredential
+            $client = $spCredential.UserName
+            $key = $spCredential.GetNetworkCredential().Password
+        }
+
+        if (-not $client) {
+            Write-Host "Unable to read service principal information from key vault and none was provided on command-line."
+            Write-Host "Please enter the credentials for the service principal for this Cloud Access Manager deployment."
+            Write-Host "The username is the AzureSPClientID secret in $kvName key vault."
+            Write-Host "The password is the AzureSPKey secret in $kvName key vault."
+            $spCredential = Get-Credential -Message "Please enter service principal credential."
+
+            $client = $spCredential.UserName
+            $key = $spCredential.GetNetworkCredential().Password
+        }
+
+        $spCreds = New-Object PSCredential $client, (ConvertTo-SecureString $key -AsPlainText -Force)
+
         Write-Host "Using service principal $client in tenant $tenantId and subscription $subscriptionId"
         
         # Find a connection service resource group name that can be used.
@@ -2196,23 +2196,22 @@ function Deploy-CAM() {
         }
     }
 
-    
-    $kvInfo = New-CAMDeploymentRoot `
-        -RGName $RGName `
-        -rwRGName $rwRGName `
-        -spInfo $spInfo `
-        -azureContext $azureContext `
-        -CAMConfig $CAMConfig `
-        -tempDir $tempDir `
-        -certificateFile $certificateFile `
-        -certificateFilePassword $certificateFilePassword `
-        -camSaasUri $camSaasUri `
-        -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
-        -subscriptionID $subscriptionID `
-        -ownerTenantId $ownerTenantId `
-        -ownerUpn $ownerUpn
+    try {    
+        $kvInfo = New-CAMDeploymentRoot `
+            -RGName $RGName `
+            -rwRGName $rwRGName `
+            -spInfo $spInfo `
+            -azureContext $azureContext `
+            -CAMConfig $CAMConfig `
+            -tempDir $tempDir `
+            -certificateFile $certificateFile `
+            -certificateFilePassword $certificateFilePassword `
+            -camSaasUri $camSaasUri `
+            -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
+            -subscriptionID $subscriptionID `
+            -ownerTenantId $ownerTenantId `
+            -ownerUpn $ownerUpn
 
-    try {
         # Populate/re-populate CAMDeploymentInfo before deploying any connection service
         New-CAMDeploymentInfo `
             -kvName $kvInfo.VaultName
