@@ -494,6 +494,7 @@ function New-RemoteWorkstationTemplates {
         "domainOrganizationUnitToJoin": { "value": "" },
         "agentType": { "value": "%agentType%" },
         "vmSize": { "value": "%vmSize%" },
+        "autoShutdownIdleTime" : { "value": 240 },
         "AgentChannel": { "value": "$agentChannel"},
         "binaryLocation": { "value": "$binaryLocation" },
         "subnetID": { "value": "$($CAMConfig.parameters.remoteWorkstationSubnet.clearValue)" },

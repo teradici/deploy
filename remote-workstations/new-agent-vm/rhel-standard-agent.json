@@ -114,6 +114,13 @@
                 "description": "Flag for enabling auto-shutdown on idle for Agents"
             }
         },
+        "autoShutdownIdleTime": {
+            "type": "int",
+            "defaultValue": 240,
+            "metadata": {
+                "description": "Time in minutes that a remote workstation should be idle for before the automatic shutdown feature is engaged (if enabled)"
+            }
+        },
         "CAMDeploymentInfo": {
             "type": "securestring",
             "metadata": {
@@ -269,7 +276,7 @@
                     "fileUris": [ "[ concat(parameters('userStorageAccountUri'), 'remote-workstation','/', variables('scriptFileName'))]" ]
                 },
                 "protectedSettings": {
-                    "commandToExecute": "[concat('bash ', variables('scriptFileName'), ' \"', parameters('registrationCode'), '\" \"', parameters('agentType'), '\" \"', variables('vmSettings').vmNamePrefix, '\" \"', parameters('domainToJoin'), '\" \"', parameters('domainUsername'), '\" \"', parameters('domainPassword'), '\" \"', parameters('domainGroupToJoin'), '\" \"', parameters('AgentChannel'), '\" \"', parameters('userStorageAccountUri'),'remote-workstation', '\" \"', variables('sumoCollectorID'), '\" \"', parameters('userStorageAccountSasToken'), '\" \"', parameters('domainOrganizationUnitToJoin'), '\"')]",
+                    "commandToExecute": "[concat('bash ', variables('scriptFileName'), ' \"', parameters('registrationCode'), '\" \"', parameters('agentType'), '\" \"', variables('vmSettings').vmNamePrefix, '\" \"', parameters('domainToJoin'), '\" \"', parameters('domainUsername'), '\" \"', parameters('domainPassword'), '\" \"', parameters('domainGroupToJoin'), '\" \"', parameters('AgentChannel'), '\" \"', parameters('userStorageAccountUri'),'remote-workstation', '\" \"', variables('sumoCollectorID'), '\" \"', parameters('userStorageAccountSasToken'), '\" \"', parameters('domainOrganizationUnitToJoin'), '\" \"', parameters('enableAutoShutdown'), '\" \"', parameters('autoShutdownIdleTime'), '\"')]",
                     "storageAccountName": "[parameters('userStorageAccountName')]",
                     "storageAccountKey": "[parameters('userStorageAccountKey')]"
                 }

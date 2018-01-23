@@ -27,6 +27,9 @@ Configuration InstallPCoIPAgent
         [bool]$enableAutoShutdown,
 
         [Parameter(Mandatory=$false)]
+        [int]$autoShutdownIdleTime,
+
+        [Parameter(Mandatory=$false)]
         [System.Management.Automation.PSCredential]$CAMDeploymentInfo,
 
         [Parameter(Mandatory=$false)]
@@ -402,10 +405,6 @@ Configuration InstallPCoIPAgent
 
             TestScript = { 
                 $serviceName = "CAMIdleShutdown"
-                
-                if (!$using:enableAutoShutdown) {
-                    return $true
-                }
 
                 try {
                     $svc = Get-WmiObject -Class Win32_Service -Filter "Name='$ServiceName'" -ErrorAction Stop
@@ -427,7 +426,37 @@ Configuration InstallPCoIPAgent
                     throw $msg
                 }
 
-                $svc = Get-Service -Name $serviceName   
+                $idleTimerRegKeyPath = "HKLM:SOFTWARE\WOW6432Node\Teradici\CAMShutdownIdleMachineAgent"
+                $idleTimerRegKeyName = "MinutesIdleBeforeShutdown"
+                $idleTimerRegKeyValue = $using:autoShutdownIdleTime
+
+                if (!(Test-Path $idleTimerRegKeyPath)) {
+                    New-Item -Path $idleTimerRegKeyPath -Force
+                }
+                New-ItemProperty -Path $idleTimerRegKeyPath -Name $idleTimerRegKeyName -Value $idleTimerRegKeyValue -PropertyType DWORD -Force
+
+                $svc = Get-Service -Name $serviceName
+
+                if (!$using:enableAutoShutdown) {
+                    $msg = "attempting to disable {0} service" -f $serviceName
+                    Write-Verbose $msg
+
+                    try {
+                        if ($svc.Status -ne "Stopped") {
+                            Start-Sleep -s 15
+                            $svc.Stop()
+                            $svc.WaitForStatus("Stopped", 180)
+                        }
+                        Set-Service -InputObject $svc -StartupType "Disabled"
+                        $status = if ($?) { "succeeded" } else { "failed" }
+                        $msg = "disable {0} service {1}" -f $svc.ServiceName, $status
+                        Write-Verbose $msg
+                    }
+                    catch {
+                        throw "failed to disable CAMIdleShutdown service."
+                    }
+                    return $true
+                }
 
                 if ($svc.StartType -ne "Automatic") {
                     $msg = "try setting {0} Service start type to automatic." -f $serviceName
@@ -439,7 +468,7 @@ Configuration InstallPCoIPAgent
                     $msg = "{0} to change start type of {1} service to Automatic." -f $status, $serviceName
                     Write-Verbose $msg
                 }
-                    
+
                 if ($svc.status -eq "Paused") {
                     Write-Verbose "try resuming CAMIdleShutdown Service ."
                     try{

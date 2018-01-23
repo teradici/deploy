@@ -114,6 +114,13 @@
                 "description": "Flag for enabling auto-shutdown on idle for Agents"
             }
         },
+        "autoShutdownIdleTime": {
+            "type": "int",
+            "defaultValue": 240,
+            "metadata": {
+                "description": "Time in minutes that a remote workstation should be idle for before the automatic shutdown feature is engaged (if enabled)"
+            }
+        },
         "CAMDeploymentInfo": {
             "type": "securestring",
             "metadata": {
@@ -309,7 +316,8 @@
                 "videoDriverUrl": "[variables('videoDriverUrl')]",
                 "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId,'-',parameters('dnsLabelPrefix'))]",
                 "domainGroupToJoin": "[parameters('domainGroupToJoin')]",
-                "enableAutoShutdown": "[parameters('enableAutoShutdown')]"
+                "enableAutoShutdown": "[parameters('enableAutoShutdown')]",
+                "autoShutdownIdleTime": "[parameters('autoShutdownIdleTime')]"
               },
               "privacy": {
                 "DataCollection": "Disable"

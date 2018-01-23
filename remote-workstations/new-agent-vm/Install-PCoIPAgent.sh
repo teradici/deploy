@@ -28,9 +28,14 @@ else
     SAS_TOKEN="${11}"
     # the twelfth argument is the Computer OU string
     OU="${12}"
+    # the thirteenth argument is whether or not to enable auto-shutdown
+    # (Remove whitespace and force to lowercase)
+    ENABLE_AUTO_SHUTDOWN="$(echo -e "${13}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+    # the fourteenth argument is the idle timer in minutes for auto-shutdown
+    AUTO_SHUTDOWN_IDLE_TIMER="${14}"
 fi
 
-update_kernel_dkms() 
+update_kernel_dkms()
 {
   sudo yum -y update
   sudo yum -y install kernel-devel
@@ -41,15 +46,15 @@ update_kernel_dkms()
 # need to reboot after install
 disable_nouveau()
 {
-    echo 'blacklist nouveau' | sudo tee -a /etc/modprobe.d/nouveau.conf    
+    echo 'blacklist nouveau' | sudo tee -a /etc/modprobe.d/nouveau.conf
     echo 'blacklist lbm-nouveau' | sudo tee -a /etc/modprobe.d/nouveau.conf
 }
 
 # need to reboot after install Linux Integration Services for Hyper-V
 install_lis()
-{    
+{
     local LIS_FILE="lis-rpms-4.2.3-4.tar.gz"
-    
+
     wget --retry-connrefused --tries=3 --waitretry=5  "https://download.microsoft.com/download/6/8/F/68FE11B8-FAA4-4F8D-8C7D-74DA7F2CFC8C/$LIS_FILE"
     local exitCode=$?
 
@@ -57,20 +62,20 @@ install_lis()
     then
         tar xvzf "$LIS_FILE"
 
-        cd LISISO 
-        sudo ./install.sh        
+        cd LISISO
+        sudo ./install.sh
         exitCode=$?
         cd ..
     fi
-    
+
     return $exitCode
 }
 
 install_nvidia_driver()
 {
     local FILE_NAME="NVIDIA-Linux-x86_64-384.73-grid.run"
-       
-    wget --retry-connrefused --tries=3 --waitretry=5  "https://teradeploy.blob.core.windows.net/binaries/$FILE_NAME" 
+
+    wget --retry-connrefused --tries=3 --waitretry=5  "https://teradeploy.blob.core.windows.net/binaries/$FILE_NAME"
     local exitCode=$?
 
     if [[ $exitCode -eq 0 ]]
@@ -83,11 +88,11 @@ install_nvidia_driver()
         if [[ $exitCode -eq 0 ]]
         then
             sudo cp /etc/nvidia/gridd.conf.template /etc/nvidia/gridd.conf
-        
+
             echo 'IgnoreSP=TRUE' | sudo tee -a /etc/nvidia/gridd.conf
         fi
     fi
-    
+
     return $exitCode
 }
 
@@ -245,50 +250,48 @@ EOF
     sudo python $file_path -d "$DOMAIN_NAME" -a "$DC_ADDRESS" -u "$USERNAME" -p "$PASSWORD" -c "$VM_NAME" -g "$GROUP"
 }
 
-install_gui() 
+install_gui()
 {
     sudo yum -y update  # --exclude=WALinuxAgent
 
     # Install Desktop
-    echo "-->Install desktop"	
+    echo "-->Install desktop"
     sudo yum -y groupinstall "Server with GUI"
-    
+
     # install firefox
     echo "-->Install firefox"
     sudo yum -y install firefox
-    
-    #echo "-->set default graphical target"
-    # The below command will change runlevel from runlevel 3 to runelevel 5 
+
+    # The below command will change runlevel from runlevel 3 to runelevel 5
     sudo systemctl set-default graphical.target
-    
-    #echo "-->start graphical target"
-    sudo systemctl start graphical.target	
-}	
+
+    sudo systemctl start graphical.target
+}
 
 install_pcoip_agent()
 {
     # Install the Teradici package key
     echo "-->Install the Teradici package key"
     sudo rpm --import https://downloads.teradici.com/rhel/teradici.pub.gpg
-    
+
     # Add the Teradici repository
     echo "-->Add the Teradici repository"
-    
+
     agent_repo_url="https://downloads.teradici.com/rhel/pcoip.repo"
-    case "$AGENT_CHANNEL" in 
+    case "$AGENT_CHANNEL" in
         "beta")
             agent_repo_url="https://downloads.teradici.com/rhel/pcoip-beta.repo"
             ;;
         "dev")
             agent_repo_url="https://downloads.teradici.com/rhel/pcoip-dev.repo"
-            ;;   
+            ;;
         *)
             agent_repo_url="https://downloads.teradici.com/rhel/pcoip.repo"
-            ;;       
+            ;;
     esac
-    
+
     sudo wget --retry-connrefused --tries=3 --waitretry=5 -O /etc/yum.repos.d/pcoip.repo "$agent_repo_url"
-    
+
     local exitCode=$?
     if [[ $exitCode -ne 0 ]]
     then
@@ -296,8 +299,8 @@ install_pcoip_agent()
         # let's define exit code 100 for this case
         return 100
     fi
-    
-    # Install the EPEL repository	
+
+    # Install the EPEL repository
     #echo "-->Install the EPEL repository"
     sudo rpm -Uvh --quiet https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
@@ -307,7 +310,7 @@ install_pcoip_agent()
     do
         sudo yum -y install "pcoip-agent-$AGENT_TYPE"
         exitCode=$?
-        
+
         if [[ $exitCode -eq 0 ]]
         then
             break
@@ -321,24 +324,24 @@ install_pcoip_agent()
                 # let's define exit code 101 for this case
                 return 101
             fi
-            #delay 5 seconds        
+            #delay 5 seconds
             sleep 5
         fi
     done
-        
+
     return 0
 }
 
-register_pcoip_license() 
+register_pcoip_license()
 {
     # register license code
     echo "-->Register license code"
     for idx in {1..5}
     do
         pcoip-register-host --registration-code="$REGISTRATION_CODE"
-        pcoip-validate-license    
+        pcoip-validate-license
         local exitCode=$?
-        
+
         if [[ $exitCode -eq 0 ]]
         then
             break
@@ -351,12 +354,12 @@ register_pcoip_license()
             fi
             sleep 10
         fi
-    done		
-    
+    done
+
     return 0
 }
 
-install_SumoLogic() 
+install_SumoLogic()
 {
     # Install and setup the Sumo Collector
     echo "-->Install SumoLogic collector"
@@ -382,9 +385,13 @@ install_idle()
     # Install idle shutdown script
     echo "-->Install idle shutdown"
     mkdir /tmp/idleShutdown
-    wget "$STORAGEURI/Install-Idle-Shutdown.sh$SAS_TOKEN" -O /tmp/idleShutdown/Install-Idle-Shutdown-raw.sh 
+    wget "$STORAGEURI/Install-Idle-Shutdown.sh$SAS_TOKEN" -O /tmp/idleShutdown/Install-Idle-Shutdown-raw.sh
     awk '{ sub("\r$", ""); print }' /tmp/idleShutdown/Install-Idle-Shutdown-raw.sh > /tmp/idleShutdown/Install-Idle-Shutdown.sh && sudo chmod +x /tmp/idleShutdown/Install-Idle-Shutdown.sh
-    sudo /tmp/idleShutdown/Install-Idle-Shutdown.sh -install
+    INSTALL_OPTS="--idle-timer ${AUTO_SHUTDOWN_IDLE_TIMER}"
+    if [[ "${ENABLE_AUTO_SHUTDOWN}" = "false" ]]; then
+        INSTALL_OPTS="${INSTALL_OPTS} --disabled"
+    fi
+    sudo /tmp/idleShutdown/Install-Idle-Shutdown.sh "${INSTALL_OPTS}"
 }
 
 exit_restart()
@@ -433,7 +440,7 @@ then
     EXIT_CODE=$?
 
     if [[ $EXIT_CODE -eq 0 ]]
-    then    
+    then
         install_gui
 
         INST_LAST_STEP="step1 done"
@@ -442,39 +449,39 @@ then
     fi
 
     echo "$INST_LAST_STEP" | tee -a "$INST_LOG_FILE"
-fi	
+fi
 
 if [[ "$INST_LAST_STEP" == "step1 done" ]]
 then 
     echo "step2 starting" | tee -a "$INST_LOG_FILE"
 
     install_pcoip_agent
-    
+
     EXIT_CODE=$?
-    
+
     if [[ $EXIT_CODE -eq 0 ]]
     then
         INST_LAST_STEP="step2 done"
     else
         INST_LAST_STEP="step2 failure: $EXIT_CODE"
     fi
-    
+
     echo "$INST_LAST_STEP" | tee -a "$INST_LOG_FILE"
 fi
 
 if [[ "$INST_LAST_STEP" == "step2 done" ]]
-then 
+then
     echo "step3 starting" | tee -a "$INST_LOG_FILE"
 
     register_pcoip_license
-    
+
     EXIT_CODE=$?
-    
+
     if [[ $EXIT_CODE -eq 0 ]]
-    then 
+    then
         install_idle
 
-        INST_LAST_STEP="step3 done"			
+        INST_LAST_STEP="step3 done"
     else
         INST_LAST_STEP="step3 failure: $EXIT_CODE"
     fi
@@ -490,14 +497,14 @@ then
 
         echo "step4 starting" | tee -a "$INST_LOG_FILE"
         update_kernel_dkms
-    
+
         disable_nouveau
-    
+
         INST_LAST_STEP="step4 done"
-    
+
         echo "$INST_LAST_STEP" | tee -a "$INST_LOG_FILE"
 
-        #schedule job to continue installation	
+        #schedule job to continue installation
         script_file=$(realpath "$0")
         chmod +x "$script_file"
 
@@ -506,27 +513,27 @@ then
 
         #exit and restart VM
         exit_restart
-    fi	
-    
+    fi
+
     if [[ "$INST_LAST_STEP" == "step4 done" ]]
     then
         echo "step5 starting" | tee -a "$INST_LOG_FILE"
 
         install_lis
-    
+
         EXIT_CODE=$?
-    
+
         if [[ $EXIT_CODE -eq 0 ]]
-        then 
+        then
             INST_LAST_STEP="step5 done"
         else
             INST_LAST_STEP="step5 failure: $EXIT_CODE"
         fi
 
         echo "$INST_LAST_STEP" | tee -a "$INST_LOG_FILE"
-    
+
         if [[ $EXIT_CODE -eq 0 ]]
-        then	
+        then
             exit_restart
         fi
     fi
@@ -537,9 +544,9 @@ then
 
         install_nvidia_driver
         EXIT_CODE=$?
-    
+
         if [[ $EXIT_CODE -eq 0 ]]
-        then 
+        then
             INST_LAST_STEP="step6 done"
         else
             INST_LAST_STEP="step6 failure: $EXIT_CODE"
@@ -553,7 +560,7 @@ then
 fi
 
 if [[ $EXIT_CODE -eq 0 ]]
-then	
+then
     (sleep 1; sudo reboot) &
 fi
 
