@@ -1,0 +1,4 @@
+# For reference: https://help.github.com/articles/about-codeowners/
+
+# Default rule: add all CAM developers to open PRs
+*         @teradici/cam-dev
