@@ -602,6 +602,7 @@ Configuration InstallPCoIPAgent
                 Remove-PSSession $psSession
 
                 # get the CAM cred's and info we need.
+                Add-Type -AssemblyName System.Web
                 $CAMDeploymentInfoCred = $using:CAMDeploymentInfo;
                 $CAMDeploymentInfo = $CAMDeploymentInfoCred.GetNetworkCredential().Password
                 $CAMDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($CAMDeploymentInfo)
