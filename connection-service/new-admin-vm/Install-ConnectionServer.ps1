@@ -128,6 +128,7 @@ Configuration InstallConnectionServer
     $AUIServiceName = "CAMAUI"
 
     # CAM Deployment Info
+    Add-Type -AssemblyName System.Web
     $CAMDeploymentInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode( `
         $CAMDeploymentInfo.GetNetworkCredential().Password)
     $CAMDeploymentInfoDecoded = ConvertFrom-Json $CAMDeploymentInfoJSONDecoded
@@ -629,7 +630,7 @@ ldapDomain=$Using:domainName
                 Write-Host "Writing auth file."
 
                 # Auth file format as documented here: https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md
-
+                Add-Type -AssemblyName System.Web
                 $authFileContent = [System.Web.HttpUtility]::UrlDecode($using:CAMDeploymentInfoDecoded.AzureAuthFile)
                 $targetDir = "$env:CATALINA_HOME\adminproperty"
                 $authFilePath = "$targetDir\authfile.txt"

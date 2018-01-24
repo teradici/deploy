@@ -1206,7 +1206,7 @@ baseURL=https\://management.azure.com/
 authURL=https\://login.windows.net/
 graphURL=https\://graph.windows.net/
 "@
-
+    Add-Type -AssemblyName System.Web
     $authFileContentURL = [System.Web.HttpUtility]::UrlEncode($authFileContent) 
 
     $camDeploymenInfo = @{};
