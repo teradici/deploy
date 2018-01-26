@@ -55,6 +55,10 @@ BusyTime_last = BusyTime_now = IdleTime_now = IdleTime_last = 0
 startTimeFile = "/tmp/CAMIdleState"
 cpuUsageFile = "/tmp/CAMIdleStateCPU"
 
+# Default settings
+defaultIdleTime = 5             # time in minutes
+defaultCpuThreshold = 20
+
 def getStartTime():
     """
     Check what the start time is
@@ -171,13 +175,26 @@ def getCPULoad():
     
     return round(cpu_usage, 2)
 
+def parseEnvSetting(env_var, min_value):
+    """
+    Attempts to read env_var and parse its value as an integer. If the value is not a
+    number or is less than min_value, min_value will be used.
+    """
+    value = min_value
+    try:
+        value = int(os.environ.get(env_var, min_value))
+        if value < min_value:
+           value = min_value
+    except ValueError:
+        syslog.syslog(syslog.LOG_WARNING, 'Idle shutdown configuration has an invalid idle timer; using default value of {} min'.format(min_value))
+    return value
+
 def getSettings():
     """
-    Get Settings from environment
+    Load settings for the service.
     """
-    # Load Values, use Defaults if needed, convert to seconds as needed
-    waitTime = float(os.environ.get('MinutesIdleBeforeShutdown', 60))*60
-    cpuThreshold = float(os.environ.get('CPUUtilizationLimit', 20))
+    waitTime = parseEnvSetting('MinutesIdleBeforeShutdown', defaultIdleTime) * 60  # Convert idle time value to seconds
+    cpuThreshold = parseEnvSetting('CPUUtilizationLimit', defaultCpuThreshold)
     
     return (cpuThreshold, waitTime)
 
