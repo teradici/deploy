@@ -279,7 +279,7 @@
             }
           },
           {
-            "Name": "externalRule",
+            "Name": "externalHttpsRule",
             "properties": {
               "RuleType": "PathBasedRouting",
               "httpListener": {
