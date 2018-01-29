@@ -79,6 +79,11 @@ param(
     [SecureString]
     $radiusSharedSecret,
 
+    [parameter(Mandatory=$false)]
+    [ValidateSet("Windows Server 2016","Windows Server 2012")] 
+    [String]
+    $domainControllerOsType = "Windows Server 2016",
+
     $camSaasUri = "https://cam.teradici.com",
     $CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/master/azuredeploy.json",
     $binaryLocation = "https://teradeploy.blob.core.windows.net/binaries",
@@ -1868,7 +1873,12 @@ function Deploy-CAM() {
         $ownerTenantId,
 
         [parameter(Mandatory = $true)]
-        $ownerUpn        
+        $ownerUpn,
+        
+        [parameter(Mandatory=$false)]
+        [ValidateSet("Windows Server 2016","Windows Server 2012")] 
+        [String]
+        $domainControllerOsType = "Windows Server 2016"
     )
 
     # Artifacts location 'folder' is where the template is stored
@@ -2249,6 +2259,9 @@ function Deploy-CAM() {
     "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+        "dcOsType": {
+            "value": "$domainControllerOsType"
+        },
         "domainAdminUsername": {
             "reference": {
                 "keyVault": {
@@ -3017,5 +3030,6 @@ else {
         -vnetConfig $vnetConfig `
         -ownerTenantId $claims.tid `
         -ownerUpn $upn `
-        -enableSecurityGateway $enableSecurityGateway
+        -enableSecurityGateway $enableSecurityGateway `
+        -domainControllerOsType $domainControllerOsType
 }

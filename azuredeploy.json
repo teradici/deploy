@@ -2,6 +2,17 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "dcOsType": {
+      "type": "string",
+      "defaultValue": "Windows Server 2016",
+      "allowedValues": [
+        "Windows Server 2016",
+        "Windows Server 2012"
+      ],
+      "metadata": {
+        "description": "Type of OS for domain controller VM."
+      }
+    },
     "domainAdminUsername": {
       "type": "string",
       "defaultValue": "adminUser",
@@ -216,6 +227,9 @@
           "contentVersion": "1.0.0.0"
         },
         "parameters": {
+          "osType": {
+            "value": "[parameters('dcOsType')]"
+          },
           "domainName": {
             "value": "[parameters('domainName')]"
           },
