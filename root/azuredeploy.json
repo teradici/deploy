@@ -2,6 +2,17 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
+    "osType": {
+      "type": "string",
+      "defaultValue": "Windows Server 2016",
+      "allowedValues": [
+        "Windows Server 2016",
+        "Windows Server 2012R2"
+      ],
+      "metadata": {
+        "description": "Type of OS for DC VM."
+      }
+    },
     "domainAdminUsername": {
       "type": "string",
       "defaultValue": "adminUser",
@@ -102,6 +113,20 @@
       },
       "networkSecurityGroups" : {
         "dcnsgName" : "dcNSG"
+      }
+    },
+    "osSettings": {
+      "Windows Server 2016": {
+        "publisher": "MicrosoftWindowsServer",
+        "offer": "WindowsServer",
+        "sku": "2016-Datacenter",
+        "version": "latest"
+      },
+      "Windows Server 2012R2": {
+        "publisher": "MicrosoftWindowsServer",
+        "offer": "WindowsServer",
+        "sku": "2012-R2-Datacenter",
+        "version": "latest"
       }
     }
   },
@@ -239,10 +264,10 @@
         },
         "storageProfile": {
           "imageReference": {
-            "publisher": "MicrosoftWindowsServer",
-            "offer": "WindowsServer",
-            "sku": "2016-Datacenter",
-            "version": "latest"
+            "publisher": "[variables('osSettings')[parameters('osType')].publisher]",
+            "offer": "[variables('osSettings')[parameters('osType')].offer]",
+            "sku": "[variables('osSettings')[parameters('osType')].sku]",
+            "version": "[variables('osSettings')[parameters('osType')].version]"
           },
           "osDisk": {
             "name": "osdisk",
