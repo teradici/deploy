@@ -76,9 +76,8 @@
     "publicIPAddressName": "[concat('appGatewayPublicIP',parameters('CSUniqueSuffix'))]",
     "publicIPRef": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]",
     "applicationGatewayID": "[resourceId('Microsoft.Network/applicationGateways',parameters('applicationGatewayName'))]",
-    "apiVersion": "2017-11-01",
-    "appGwFrontendHttpsPort": 443,
-    "appGwFrontendHttpPort": 80,
+    "apiVersion": "2015-06-15",
+    "appGwFrontendPort": 443,
     "appGwFrontendPrivatePort": 8443,
     "appGwBackendPort": 8080
   },
@@ -137,23 +136,17 @@
           {
             "name": "appGatewayFrontendPrivateIP",
             "properties": {
-              "subnet": {
-                "id": "[parameters('subnetRef')]"
-              }
+                "subnet": {
+                  "id": "[parameters('subnetRef')]"
+                }
             }
           }
         ],
         "frontendPorts": [
           {
-            "name": "appGatewayFrontendHttpPort",
+            "name": "appGatewayFrontendPort",
             "properties": {
-              "Port": "[variables('appGwFrontendHttpPort')]"
-            }
-          },
-          {
-            "name": "appGatewayFrontendHttpsPort",
-            "properties": {
-              "Port": "[variables('appGwFrontendHttpsPort')]"
+              "Port": "[variables('appGwFrontendPort')]"
             }
           },
           {
@@ -189,19 +182,7 @@
                 "Id": "[concat(variables('applicationGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
               },
               "FrontendPort": {
-                "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendHttpPort')]"
-              },
-              "Protocol": "Http"
-            }
-          },
-          {
-            "name": "appGatewayHttpsListener",
-            "properties": {
-              "FrontendIPConfiguration": {
-                "Id": "[concat(variables('applicationGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
-              },
-              "FrontendPort": {
-                "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendHttpsPort')]"
+                "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendPort')]"
               },
               "Protocol": "Https",
               "SslCertificate": {
@@ -221,17 +202,6 @@
               "Protocol": "Https",
               "SslCertificate": {
                 "Id": "[concat(variables('applicationGatewayID'), '/sslCertificates/appGatewaySslCert')]"
-              }
-            }
-          }
-        ],
-        "redirectConfigurations": [
-          {
-            "Name": "redirectHttpConfig",
-            "properties": {
-              "redirectType": "Permanent",
-              "targetListener": {
-                "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayHttpsListener')]"
               }
             }
           }
@@ -267,23 +237,11 @@
         ],
         "requestRoutingRules": [
           {
-            "Name": "externalHttpRule",
-            "properties": {
-              "RuleType": "Basic",
-              "httpListener": {
-                "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayHttpListener')]"
-              },
-              "redirectConfiguration": {
-                "id": "[concat(variables('applicationGatewayID'), '/redirectConfigurations/redirectHttpConfig')]"
-              }
-            }
-          },
-          {
             "Name": "externalRule",
             "properties": {
               "RuleType": "PathBasedRouting",
               "httpListener": {
-                "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayHttpsListener')]"
+                "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayHttpListener')]"
               },
               "urlPathMap": {
                 "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/urlPathMap1')]"
