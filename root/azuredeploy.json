@@ -73,7 +73,6 @@
     }
   },
   "variables": {
-    "storageAccountName": "[concat('vmdc', uniquestring(resourceGroup().id))]",
     "adVMName": "vm-dc",
     "serverRootName": "vm",
     "networkSettings" : {
@@ -107,17 +106,6 @@
   },
 
   "resources": [
-    {
-      "type": "Microsoft.Storage/storageAccounts",
-      "name": "[variables('storageAccountName')]",
-      "apiVersion": "2016-01-01",
-      "location": "[resourceGroup().location]",
-      "sku": {
-        "name": "Standard_LRS"
-      },
-      "kind": "Storage",
-      "properties": {}
-    },
     {
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[variables('networkSettings').subnets.rootSubnet.adPubIPName]",
@@ -221,10 +209,9 @@
     {
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[variables('adVMName')]",
-      "apiVersion": "2015-06-15",
+      "apiVersion": "2017-03-30",
       "location": "[resourceGroup().location]",
       "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
         "VNet",
         "[resourceId('Microsoft.Network/networkInterfaces', variables('networkSettings').subnets.rootSubnet.adNicName)]"
       ],
@@ -245,18 +232,12 @@
             "version": "latest"
           },
           "osDisk": {
-            "name": "osdisk",
-            "vhd": {
-              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))).primaryEndpoints.blob, 'vhds/', variables('adVMName'), '-os-disk.vhd')]"
-            },
+            "name": "[concat(variables('adVMName'), '-os')]",
             "caching": "ReadWrite",
             "createOption": "FromImage"
           },
           "dataDisks": [
             {
-              "vhd": {
-                "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))).primaryEndpoints.blob, 'vhds/', variables('adVMName'), '-data-disk.vhd')]"
-              },
               "name": "[concat(variables('adVMName'), '-data-disk')]",
               "caching": "None",
               "createOption": "Empty",

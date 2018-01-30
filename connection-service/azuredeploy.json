@@ -132,7 +132,6 @@
   },
   "variables": {
     "_artifactsLocation":  "[concat(parameters('_baseArtifactsLocation'), '/connection-service')]",
-    "storageAccountName": "[concat(uniquestring(resourceGroup().id),'cs',parameters('CSUniqueSuffix'))]",
     "brokerPort":  "8444",
     "appGwName": "[concat('CAM-ApplicationGateway',parameters('CSUniqueSuffix'))]",
     "appGwSGPoolName": "SGBackendPool",
@@ -143,17 +142,6 @@
     "connectionServerName": "[concat('conn-srvr',parameters('CSUniqueSuffix'))]"
 },
   "resources": [
-    {
-      "type": "Microsoft.Storage/storageAccounts",
-      "name": "[variables('storageAccountName')]",
-      "apiVersion": "2016-01-01",
-      "location": "[resourceGroup().location]",
-      "sku": {
-        "name": "Standard_LRS"
-      },
-      "kind": "Storage",
-      "properties": {}
-    },
     {
       "type": "Microsoft.Resources/deployments",
       "name": "CreateNetworkSGs",
@@ -176,7 +164,6 @@
       "name": "CreateConnectionServer",
       "apiVersion": "2016-02-01",
       "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
 	      "Microsoft.Resources/deployments/CreateAppGateway"
       ],
       "properties": {
@@ -215,9 +202,6 @@
           },
           "applicationGatewayPoolReference": {
             "value": "[variables('appGwCSPoolID')]"
-          },
-          "storageAccountName": {
-            "value": "[variables('storageAccountName')]"
           },
           "_artifactsLocation": {
             "value": "[concat(variables('_artifactsLocation'), '/new-vm-join-domain')]"
@@ -286,7 +270,6 @@
       "name": "CreateAppGateway",
       "apiVersion": "2016-02-01",
       "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
         "Microsoft.Resources/deployments/CreateNetworkSGs"
       ],
       "properties": {
@@ -335,7 +318,6 @@
       "apiVersion": "2016-02-01",
       "dependsOn": [
         "Microsoft.Resources/deployments/CreateNetworkSGs",
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
         "Microsoft.Resources/deployments/CreateAppGateway"
       ],
       "properties": {

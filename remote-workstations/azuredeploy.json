@@ -181,9 +181,6 @@
           "registrationCode": {
             "value": "[parameters('registrationCode')]"
           },
-          "storageAccountName": {
-            "value": "[parameters('userStorageAccountName')]"
-          },
           "AgentChannel": {
             "value": "[parameters('AgentChannel')]"
           },

@@ -481,9 +481,6 @@ function New-RemoteWorkstationTemplates {
     $domainServiceAccountUsername = $CAMConfig.parameters.domainServiceAccountUsername.clearValue
     $domainFQDN = $CAMConfig.parameters.domainName.clearValue
 
-    #Put the VHD's in the user storage account until we move to managed storage...
-    $VHDStorageAccountName = $storageAccountContext.StorageAccountName
-
     $agentChannel = $CAMConfig.internal.agentChannel
 
     $armParamContent = @"
@@ -572,8 +569,7 @@ function New-RemoteWorkstationTemplates {
                 "secretName": "remoteWorkstationDomainGroup"
             }
         },
-        "domainToJoin": { "value": "$domainFQDN" },
-        "storageAccountName": { "value": "$VHDStorageAccountName" }
+        "domainToJoin": { "value": "$domainFQDN" }
     }
 }
 "@
