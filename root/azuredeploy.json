@@ -7,7 +7,7 @@
       "defaultValue": "Windows Server 2016",
       "allowedValues": [
         "Windows Server 2016",
-        "Windows Server 2012"
+        "Windows Server 2012R2"
       ],
       "metadata": {
         "description": "Type of OS for DC VM."
@@ -122,7 +122,7 @@
         "sku": "2016-Datacenter",
         "version": "latest"
       },
-      "Windows Server 2012": {
+      "Windows Server 2012R2": {
         "publisher": "MicrosoftWindowsServer",
         "offer": "WindowsServer",
         "sku": "2012-R2-Datacenter",

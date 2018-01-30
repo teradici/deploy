@@ -80,7 +80,7 @@ param(
     $radiusSharedSecret,
 
     [parameter(Mandatory=$false)]
-    [ValidateSet("Windows Server 2016","Windows Server 2012")] 
+    [ValidateSet("Windows Server 2016","Windows Server 2012R2")] 
     [String]
     $domainControllerOsType = "Windows Server 2016",
 
@@ -1876,7 +1876,7 @@ function Deploy-CAM() {
         $ownerUpn,
         
         [parameter(Mandatory=$false)]
-        [ValidateSet("Windows Server 2016","Windows Server 2012")] 
+        [ValidateSet("Windows Server 2016","Windows Server 2012R2")] 
         [String]
         $domainControllerOsType = "Windows Server 2016"
     )
