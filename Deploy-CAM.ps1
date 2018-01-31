@@ -1419,12 +1419,14 @@ function New-ConnectionServiceDeployment() {
         # filter on an exact resource group ID match as Get-AzureRmRoleAssignment seems to do a more loose pattern match
         $spRoles = $spRoles | Where-Object `
             {($_.Scope -eq $csRG.ResourceId) -or ($_.Scope -eq "/subscriptions/$subscriptionId")}
+
+        $camCustomRoleDefinition = Get-CAMRoleDefinition -subscriptionID $subscriptionID
                     
         # spRoles could be no object, a single object or an array. foreach works with all.
         $hasAccess = $false
         foreach($role in $spRoles) {
             $roleName = $role.RoleDefinitionName
-            if (($roleName -eq "Contributor") -or ($roleName -eq "Owner")) {
+            if (($roleName -eq "Contributor") -or ($roleName -eq "Owner") -or ($roleName -eq $camCustomRoleDefinition.Name)) {
                 Write-Host "$client already has $roleName for $csRGName."
                 $hasAccess = $true
                 break
@@ -1432,10 +1434,10 @@ function New-ConnectionServiceDeployment() {
         }
 
         if(-not $hasAccess) {
-            Write-Host "Giving $client Contributor access to $csRGName."
+            Write-Host "Giving $client '$($camCustomRoleDefinition.Name)' access to $csRGName."
             Set-AzureRMContext -Context $adminAzureContext | Out-Null
             New-AzureRmRoleAssignment `
-                -RoleDefinitionName Contributor `
+                -RoleDefinitionName $camCustomRoleDefinition.Name `
                 -ResourceGroupName $csRGName `
                 -ServicePrincipalName $client `
                 -ErrorAction Stop | Out-Null
@@ -1737,6 +1739,10 @@ function New-CAMDeploymentRoot()
         -certificateFile $certificateFile `
         -certificateFilePassword $certificateFilePassword | Out-Null
 
+    # Switch to Admin Context to create and populate storage account
+    $spContext = Get-AzureRMContext
+    Set-AzureRMContext -Context $azureContext | Out-Null
+    
     $userDataStorageAccount = New-UserStorageAccount `
         -RGName $RGName `
         -Location $rg.Location
@@ -1749,6 +1755,9 @@ function New-CAMDeploymentRoot()
         -RGName $RGName `
         -kvInfo $kvInfo `
         -tempDir $tempDir | Out-Null
+
+    Set-AzureRMContext -Context $spContext | Out-Null
+    # Switch back to SP context when done
 
     Write-Host "Registering Cloud Access Manager Deployment to Cloud Access Manager Service"
     $deploymentId = Register-CAM `
@@ -2077,11 +2086,13 @@ function Deploy-CAM() {
                     $spRoles = $spRoles | Where-Object `
                         {($_.Scope -eq $rg.ResourceId) -or ($_.Scope -eq "/subscriptions/$subscriptionID")}
                     
+                    $camCustomRoleDefinition = Get-CAMRoleDefinition -subscriptionID $subscriptionID
+                    
                     # spRoles could be no object, a single object or an array. foreach works with all.
                     $hasAccess = $false
                     foreach($role in $spRoles) {
                         $roleName = $role.RoleDefinitionName
-                        if (($roleName -eq "Contributor") -or ($roleName -eq "Owner")) {
+                        if (($roleName -eq "Contributor") -or ($roleName -eq "Owner") -or ($roleName -eq $camCustomRoleDefinition.Name)) {
                             Write-Host "$client already has $roleName for $rgn."
                             $hasAccess = $true
                             break
@@ -2089,9 +2100,9 @@ function Deploy-CAM() {
                     }
 
                     if(-not $hasAccess) {
-                        Write-Host "Giving $client Contributor access to $rgn."
+                        Write-Host "Giving $client '$($camCustomRoleDefinition.Name)' access to $rgn."
                         New-AzureRmRoleAssignment `
-                            -RoleDefinitionName Contributor `
+                            -RoleDefinitionName $camCustomRoleDefinition.Name `
                             -ResourceGroupName $rgn `
                             -ServicePrincipalName $client `
                             -ErrorAction Stop | Out-Null
@@ -2114,7 +2125,7 @@ function Deploy-CAM() {
                     $hasAccess = $false
                     foreach($role in $spRoles) {
                         $roleName = $role.RoleDefinitionName
-                        if (($roleName -eq "Contributor") -or ($roleName -eq "Owner")) {
+                        if (($roleName -eq "Contributor") -or ($roleName -eq "Owner") -or ($roleName -eq $camCustomRoleDefinition.Name)) {
                             Write-Host "$client already has $roleName for $($CAMConfig.internal.vnetName)."
                             $hasAccess = $true
                             break
@@ -2123,15 +2134,15 @@ function Deploy-CAM() {
 
                     if(-not $hasAccess) {
                         if( -not $ignorePrompts ) {
-                            $prompt = Read-Host "The Service Principal credentials need to be given Contributor access to the vNet $($CAMConfig.internal.vnetName). Press enter to accept and continue or 'no' to cancel deployment"
+                            $prompt = Read-Host "The Service Principal credentials need to be given access to the vNet $($CAMConfig.internal.vnetName). Press enter to accept and continue or 'no' to cancel deployment"
                         } else {
                             $prompt = $false
                         }
                         if ( -not $prompt )
                         {
-                            Write-Host "Giving $client Contributor access to $($CAMConfig.internal.vnetName)"
+                            Write-Host "Giving $client '$($camCustomRoleDefinition.Name)' access to $($CAMConfig.internal.vnetName)"
                             New-AzureRmRoleAssignment `
-                                -RoleDefinitionName Contributor `
+                                -RoleDefinitionName $camCustomRoleDefinition.Name `
                                 -Scope $CAMConfig.internal.vnetID `
                                 -ServicePrincipalName $client `
                                 -ErrorAction Stop | Out-Null
@@ -2515,6 +2526,59 @@ function Confirm-ModuleVersion()
     return $true
 }
 
+# Create a custom role for CAM with necessary permissions
+# Currently it is the based off of the Contributor Role excpept we remove Storage Access and VM Disk Blob Read Access
+# Use 'Get-AzureRmProviderOperation *' to get a list of Azure Operations and their details
+# See https://docs.microsoft.com/en-us/azure/active-directory/role-based-access-built-in-roles for details on Azure Built in Roles
+function Get-CAMRoleDefinition() {
+    param(
+        [parameter(Mandatory = $true)]
+        [String]$subscriptionId
+    )
+
+    $camCustomRoleDefinition = Get-AzureRmRoleDefinition "Cloud Access Manager"
+    # Create Role Defintion Based off of Contributor if it doesn't already exist
+    if ( -not $camCustomRoleDefinition ) {
+        $camCustomRoleDefinition = Get-AzureRmRoleDefinition "Contributor"
+        $camCustomRoleDefinition.Id = $null
+        $camCustomRoleDefinition.IsCustom = $true
+        $camCustomRoleDefinition.Name = "Cloud Access Manager"
+        $camCustomRoleDefinition.Description = "Required Permissions for Cloud Access Manager"
+        $camCustomRoleDefinition.AssignableScopes.Clear()
+        $camCustomRoleDefinition.AssignableScopes.Add("/subscriptions/$subscriptionId")
+
+        New-AzureRmRoleDefinition -Role $camCustomRoleDefinition | Out-Null
+        $camCustomRoleDefinition = Get-AzureRmRoleDefinition "Cloud Access Manager"
+    }
+
+    # Actions to remove
+    $requiredNotActions = @(
+        # Remove ability to perform any storage accoutn actions
+        "Microsoft.Storage/storageAccounts/*",
+        # Remove ability to get SAS URI of VM Image for Blob access
+        "Microsoft.Compute/disks/beginGetAccess/action",
+        # Remove ability to revoke SAS URI of VM Image for Blob access
+        "Microsoft.Compute/disks/endGetAccess/action"
+    )
+    # Add Not Actions required to be disabled
+    foreach ( $notAction in $requiredNotActions) {
+        if ( -not $camCustomRoleDefinition.NotActions.Contains($notAction)) {
+            $camCustomRoleDefinition.NotActions.Add($notAction)
+        }
+    }
+
+    # Add Subscription to Assignable Scopes if not already there
+    if ( -not $camCustomRoleDefinition.AssignableScopes.Contains("/subscriptions/$subscriptionId")) {
+        $camCustomRoleDefinition.AssignableScopes.Add("/subscriptions/$subscriptionId")
+    }
+
+    # Update CAM Role Definition
+    Set-AzureRmRoleDefinition -Role $camCustomRoleDefinition | Out-Null
+
+    $camCustomRoleDefinition = Get-AzureRmRoleDefinition "Cloud Access Manager"
+
+    return $camCustomRoleDefinition
+}
 
 ##############################################
 ############# Script starts here #############
