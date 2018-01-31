@@ -247,7 +247,13 @@ active_d.add_computer_to_group(args.computer, args.group)
 
 EOF
 
-    sudo python $file_path -d "$DOMAIN_NAME" -a "$DC_ADDRESS" -u "$USERNAME" -p "$PASSWORD" -c "$VM_NAME" -g "$GROUP"
+    local msg=$( sudo python $file_path -d "$DOMAIN_NAME" -a "$DC_ADDRESS" -u "$USERNAME" -p "$PASSWORD" -c "$VM_NAME" -g "$GROUP" ) 
+    exitCode=$?
+
+    if [[ $exitCode -ne 0 ]]
+    then 
+        echo "$msg" | sudo tee -a "/var/log/domainGroupJoinFile.txt"
+    fi
 }
 
 install_gui()
