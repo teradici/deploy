@@ -546,6 +546,8 @@ Configuration InstallPCoIPAgent
 
                                 # Add-ADGroupMember uses the SAM account name for the computer which has a trailing '$'
                                 Add-ADGroupMember -Identity $domainGroupToJoin -Members ($machineToJoin + "$") -ErrorAction Stop
+
+                                return $null
                             }
                             catch
                             {
@@ -553,7 +555,7 @@ Configuration InstallPCoIPAgent
                             }
                         }
 
-                        if (($invokeResult -ne $null) -and ($invokeResult.GetType().Name -eq "ErrorRecord")) {
+                        if ($invokeResult -ne $null) {
                             throw $invokeResult
                         }
                     }catch{
