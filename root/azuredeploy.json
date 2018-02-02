@@ -236,7 +236,15 @@
             "caching": "ReadWrite",
             "createOption": "FromImage"
           },
-          "dataDisks": [ ]
+          "dataDisks": [
+            {
+              "name": "[concat(variables('adVMName'), '-data-disk')]",
+              "caching": "None",
+              "createOption": "Empty",
+              "diskSizeGB": "100",
+              "lun": 0
+            }
+          ]
         },
         "networkProfile": {
           "networkInterfaces": [
