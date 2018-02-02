@@ -130,15 +130,7 @@
                         "caching": "ReadWrite",
                         "createOption": "FromImage"
                     },
-                    "dataDisks": [
-                        {
-                            "name": "[concat(parameters('dnsLabelPrefix'), '-data0')]",
-                            "caching": "None",
-                            "createOption": "Empty",
-                            "diskSizeGB": "100",
-                            "lun": 0
-                        }
-                    ]
+                    "dataDisks": [ ]
                 },
                 "networkProfile": {
                     "networkInterfaces": [

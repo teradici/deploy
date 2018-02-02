@@ -1738,11 +1738,7 @@ function New-CAMDeploymentRoot()
         -tempDir $tempDir `
         -certificateFile $certificateFile `
         -certificateFilePassword $certificateFilePassword | Out-Null
-
-    # Switch to Admin Context to create and populate storage account
-    $spContext = Get-AzureRMContext
-    Set-AzureRMContext -Context $azureContext | Out-Null
-    
+   
     $userDataStorageAccount = New-UserStorageAccount `
         -RGName $RGName `
         -Location $rg.Location
@@ -1755,9 +1751,6 @@ function New-CAMDeploymentRoot()
         -RGName $RGName `
         -kvInfo $kvInfo `
         -tempDir $tempDir | Out-Null
-
-    Set-AzureRMContext -Context $spContext | Out-Null
-    # Switch back to SP context when done
 
     Write-Host "Registering Cloud Access Manager Deployment to Cloud Access Manager Service"
     $deploymentId = Register-CAM `
@@ -2553,11 +2546,9 @@ function Get-CAMRoleDefinition() {
 
     # Actions to remove
     $requiredNotActions = @(
-        # Remove ability to perform any storage accoutn actions
-        "Microsoft.Storage/storageAccounts/*",
-        # Remove ability to get SAS URI of VM Image for Blob access
+        # Remove ability to get SAS URI of VM Disk for Blob access
         "Microsoft.Compute/disks/beginGetAccess/action",
-        # Remove ability to revoke SAS URI of VM Image for Blob access
+        # Remove ability to revoke SAS URI of VM Disk for Blob access
         "Microsoft.Compute/disks/endGetAccess/action"
     )
     # Add Not Actions required to be disabled
