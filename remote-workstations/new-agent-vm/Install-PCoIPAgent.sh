@@ -223,6 +223,9 @@ class ldap_lib(object):
         """
         try:
             group_dn = self.get_group_info(group_name)[0]
+            if not group_dn:
+                print >> sys.stderr, "The domain group '{}' does not exist.".format(group_name)
+                return False
             computer_dn = self.get_computer_info(computer_to_add)[0]
             member = [((ldap.MOD_ADD, 'member', [computer_dn]))]
             self.admin_ldap.modify_s(group_dn, member)
@@ -257,7 +260,7 @@ EOF
 
     if [[ ! -z "$msg" ]]
     then 
-        echo "Failed to add machine $VM_NAME to domain group $GROUP" | sudo tee -a /var/log/domainGroupJoinFile.log
+        echo "Failed to add machine '$VM_NAME' to domain group '$GROUP'." | sudo tee -a /var/log/domainGroupJoinFile.log
         echo "$msg" | sudo tee -a /var/log/domainGroupJoinFile.log
     fi
 }
