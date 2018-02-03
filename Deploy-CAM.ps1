@@ -2660,6 +2660,11 @@ else {
             "or type in a new resource group name for a new Cloud Access Mananger deployment.")
         $rgIdentifier = Read-Host "Resource group"
 
+        if (!$rgIdentifier) {
+            Write-Host ("`nValue not provided.")
+            continue       
+        }
+
         $rgIsInt = [int]::TryParse($rgIdentifier, [ref]$rgIndex) # rgIndex will be 0 on parse failure
 
         if ($rgIsInt) {
