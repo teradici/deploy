@@ -2059,6 +2059,8 @@ function Deploy-CAM() {
         # Service principal info exists but needs to get rights to the required resource groups
         Write-Host "Adding role assignments for the service principal account."
         
+        $camCustomRoleDefinition = Get-CAMRoleDefinition -subscriptionID $subscriptionID
+        
         # Retry required since it can take a few seconds for app registration to percolate through Azure.
         # (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
         $rollAssignmentRetry = 120
@@ -2078,8 +2080,6 @@ function Deploy-CAM() {
                     # filter on an exact resource group ID match as Get-AzureRmRoleAssignment seems to do a more loose pattern match
                     $spRoles = $spRoles | Where-Object `
                         {($_.Scope -eq $rg.ResourceId) -or ($_.Scope -eq "/subscriptions/$subscriptionID")}
-                    
-                    $camCustomRoleDefinition = Get-CAMRoleDefinition -subscriptionID $subscriptionID
                     
                     # spRoles could be no object, a single object or an array. foreach works with all.
                     $hasAccess = $false
@@ -2559,7 +2559,7 @@ function Get-CAMRoleDefinition() {
             }
         }
 
-        New-AzureRmRoleDefinition -Role $camCustomRoleDefinition | Out-Null
+        New-AzureRmRoleDefinition -Role $camCustomRoleDefinition -ErrorAction Stop | Out-Null
         $camCustomRoleDefinition = Get-AzureRmRoleDefinition "Cloud Access Manager"
     } else {
         Write-Host "Found existing 'Cloud Access Manager' Role Definition"
