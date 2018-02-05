@@ -2525,48 +2525,45 @@ function Confirm-ModuleVersion()
 # See https://docs.microsoft.com/en-us/azure/active-directory/role-based-access-built-in-roles for details on Azure Built in Roles
 function Get-CAMRoleDefinition() {
     param(
-        [parameter(Mandatory = $true)]
+        [parameter(Mandatory = $false)]
         [String]$subscriptionId
     )
 
     $camCustomRoleDefinition = Get-AzureRmRoleDefinition "Cloud Access Manager"
     # Create Role Defintion Based off of Contributor if it doesn't already exist
     if ( -not $camCustomRoleDefinition ) {
+        Write-Host "Creating 'Cloud Access Manager' Role Definition"
         $camCustomRoleDefinition = Get-AzureRmRoleDefinition "Contributor"
         $camCustomRoleDefinition.Id = $null
         $camCustomRoleDefinition.IsCustom = $true
         $camCustomRoleDefinition.Name = "Cloud Access Manager"
         $camCustomRoleDefinition.Description = "Required Permissions for Cloud Access Manager"
-        $camCustomRoleDefinition.AssignableScopes.Clear()
-        $camCustomRoleDefinition.AssignableScopes.Add("/subscriptions/$subscriptionId")
+
+        # Limit Assignable scopes to specified subscription
+        if ($subscriptionId) {
+            $camCustomRoleDefinition.AssignableScopes.Clear()
+            $camCustomRoleDefinition.AssignableScopes.Add("/subscriptions/$subscriptionId")
+        }
+
+        # Actions to remove
+        $requiredNotActions = @(
+            # Remove ability to get SAS URI of VM Disk for Blob access
+            "Microsoft.Compute/disks/beginGetAccess/action",
+            # Remove ability to revoke SAS URI of VM Disk for Blob access
+            "Microsoft.Compute/disks/endGetAccess/action"
+        )
+        # Add Not Actions required to be disabled
+        foreach ( $notAction in $requiredNotActions) {
+            if ( -not $camCustomRoleDefinition.NotActions.Contains($notAction)) {
+                $camCustomRoleDefinition.NotActions.Add($notAction)
+            }
+        }
 
         New-AzureRmRoleDefinition -Role $camCustomRoleDefinition | Out-Null
         $camCustomRoleDefinition = Get-AzureRmRoleDefinition "Cloud Access Manager"
+    } else {
+        Write-Host "Found existing 'Cloud Access Manager' Role Definition"
     }
-
-    # Actions to remove
-    $requiredNotActions = @(
-        # Remove ability to get SAS URI of VM Disk for Blob access
-        "Microsoft.Compute/disks/beginGetAccess/action",
-        # Remove ability to revoke SAS URI of VM Disk for Blob access
-        "Microsoft.Compute/disks/endGetAccess/action"
-    )
-    # Add Not Actions required to be disabled
-    foreach ( $notAction in $requiredNotActions) {
-        if ( -not $camCustomRoleDefinition.NotActions.Contains($notAction)) {
-            $camCustomRoleDefinition.NotActions.Add($notAction)
-        }
-    }
-
-    # Add Subscription to Assignable Scopes if not already there
-    if ( -not $camCustomRoleDefinition.AssignableScopes.Contains("/subscriptions/$subscriptionId")) {
-        $camCustomRoleDefinition.AssignableScopes.Add("/subscriptions/$subscriptionId")
-    }
-
-    # Update CAM Role Definition
-    Set-AzureRmRoleDefinition -Role $camCustomRoleDefinition | Out-Null
-
-    $camCustomRoleDefinition = Get-AzureRmRoleDefinition "Cloud Access Manager"
 
     return $camCustomRoleDefinition
 }
