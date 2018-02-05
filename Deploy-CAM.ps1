@@ -2559,7 +2559,7 @@ function Get-CAMRoleDefinition() {
             }
         }
 
-        New-AzureRmRoleDefinition -Role $camCustomRoleDefinition | Out-Null
+        New-AzureRmRoleDefinition -Role $camCustomRoleDefinition -ErrorAction Stop | Out-Null
         $camCustomRoleDefinition = Get-AzureRmRoleDefinition "Cloud Access Manager"
     } else {
         Write-Host "Found existing 'Cloud Access Manager' Role Definition"
