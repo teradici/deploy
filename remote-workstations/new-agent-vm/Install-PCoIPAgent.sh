@@ -158,6 +158,7 @@ cat <<EOF >$file_path
 *
 */
 '''
+import sys
 import platform
 import ldap
 import ldap.filter
@@ -220,17 +221,23 @@ class ldap_lib(object):
         """
         Add computer to a specific group
         """
-        group_dn = self.get_group_info(group_name)[0]
-        computer_dn = self.get_computer_info(computer_to_add)[0]
-        member = [((ldap.MOD_ADD, 'member', [computer_dn]))]
         try:
+            group_dn = self.get_group_info(group_name)[0]
+            if not group_dn:
+                print >> sys.stderr, "The domain group '{}' does not exist.".format(group_name)
+                return False
+            computer_dn = self.get_computer_info(computer_to_add)[0]
+            member = [((ldap.MOD_ADD, 'member', [computer_dn]))]
             self.admin_ldap.modify_s(group_dn, member)
         except ldap.CONSTRAINT_VIOLATION, err:
-            print err
+            print >> sys.stderr, err
             return False
         except ldap.LDAPError, err:
-            print err
+            print >> sys.stderr, err
             return False
+        finally:
+            self.admin_ldap.unbind_s()
+
         return True
 
 parser = argparse.ArgumentParser(description='Join a computer to a group')
@@ -242,12 +249,20 @@ parser.add_argument("-c", "--computer", dest="computer", required=True, help="co
 parser.add_argument("-g", "--group", dest="group", help="group name")
 args = parser.parse_args()
 
-active_d = ldap_lib(args.address, args.user_name, args.password, args.domain)
-active_d.add_computer_to_group(args.computer, args.group)
-
+try:
+    active_d = ldap_lib(args.address, args.user_name, args.password, args.domain)    
+    active_d.add_computer_to_group(args.computer, args.group)
+except Exception, err:
+    print >> sys.stderr, err
 EOF
 
-    sudo python $file_path -d "$DOMAIN_NAME" -a "$DC_ADDRESS" -u "$USERNAME" -p "$PASSWORD" -c "$VM_NAME" -g "$GROUP"
+    local msg=$( sudo python $file_path -d "$DOMAIN_NAME" -a "$DC_ADDRESS" -u "$USERNAME" -p "$PASSWORD" -c "$VM_NAME" -g "$GROUP"  2>&1 >/dev/null ) 
+
+    if [[ ! -z "$msg" ]]
+    then 
+        echo "Failed to add machine '$VM_NAME' to domain group '$GROUP'." | sudo tee -a /var/log/domainGroupJoinFile.log
+        echo "$msg" | sudo tee -a /var/log/domainGroupJoinFile.log
+    fi
 }
 
 install_gui()

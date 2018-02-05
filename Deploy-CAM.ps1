@@ -2187,13 +2187,13 @@ function Deploy-CAM() {
             break
         }
         catch {
+            $caughtError = $_
             if ($azureContext) {
                 Write-Host "Reverting to initial Azure context for $($azureContext.Account.Id)"
                 Set-AzureRMContext -Context $azureContext | Out-Null
             }
             # if it's the unknown user (so potentially a timing issue where the account hasn't percolated
             # through the system yet) retry. Otherwise abort and re-throw
-            $caughtError = $_
             if (     ($caughtError.Exception -is [Microsoft.IdentityModel.Clients.ActiveDirectory.AdalException]) `
                 -and ($caughtError.Exception.ServiceErrorCodes[0] -eq 70001) `
                 -and ($idx -gt 0))

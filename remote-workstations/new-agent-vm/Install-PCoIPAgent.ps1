@@ -519,40 +519,62 @@ Configuration InstallPCoIPAgent
                 }
                 else
                 {
-                    $domain = (Get-WmiObject win32_computersystem).domain
-                    $domainInfo = (Get-WMIObject Win32_NTDomain) | Where-Object {$_.DnsForestName -eq $domain} | Select-Object -First 1
-                    $dcname = ($domainInfo.DomainControllerName -replace "\\", "")
+                    try{
+                        $domain = (Get-WmiObject win32_computersystem).domain
+                        $domainInfo = (Get-WMIObject Win32_NTDomain) | Where-Object {$_.DnsForestName -eq $domain} | Select-Object -First 1
+                        $dcname = ($domainInfo.DomainControllerName -replace "\\", "")
 
-                    Write-Host "Connecting to DC to add $machineToJoin to $domainGroupToJoin."
+                        Write-Host "Connecting to DC to add $machineToJoin to $domainGroupToJoin."
                     
-                    # Create a PSSession with the domain controller that we used to login
-                    $psSession = New-PSSession -ComputerName $dcname -Credential $using:domainJoinCredential
+                        # Create a PSSession with the domain controller that we used to login
+                        $psSession = New-PSSession -ComputerName $dcname -Credential $using:domainJoinCredential
 
-                    Invoke-Command -Session $psSession -ArgumentList $domainGroupToJoin, $machineToJoin `
-                    -ScriptBlock {
-                        $domainGroupToJoin = $args[0]
-                        $machineToJoin = $args[1]
+                        $invokeResult = Invoke-Command -Session $psSession -ArgumentList $domainGroupToJoin, $machineToJoin  -ErrorAction Stop  `
+                        -ScriptBlock {
+                            $domainGroupToJoin = $args[0]
+                            $machineToJoin = $args[1]
 
-                        # Make the AD group for machines if needed
-                        try
-                        {
-                            Get-ADGroup $domainGroupToJoin -ErrorAction Stop
+                            # Make the AD group for machines if needed
+                            try
+                            {
+                                $group = Get-ADGroup -Filter {SamAccountName -eq $domainGroupToJoin} -ErrorAction Stop
+                                if ($group -eq $null) {
+                                    Write-Host "Domain Group `"$domainGroupToJoin`" not found. Creating."
+
+                                    New-ADGroup -name $domainGroupToJoin -GroupScope Global -ErrorAction Stop
+                                }
+
+                                # Add-ADGroupMember uses the SAM account name for the computer which has a trailing '$'
+                                Add-ADGroupMember -Identity $domainGroupToJoin -Members ($machineToJoin + "$") -ErrorAction Stop
+
+                                return $null
+                            }
+                            catch
+                            {
+                                return $_
+                            }
                         }
-                        catch
-                        {
-                            Write-Host "Domain Group `"$domainGroupToJoin`" not found. Creating."
 
-                            New-ADGroup -name $domainGroupToJoin -GroupScope Global
+                        if ($invokeResult -ne $null) {
+                            throw $invokeResult
                         }
+                    }catch{
+                        $exception = $_
 
-                        # Add-ADGroupMember uses the SAM account name for the computer which has a trailing '$'
-                        Add-ADGroupMember -Identity $domainGroupToJoin -Members ($machineToJoin + "$")
+                        Write-Host "Failed to add $machineToJoin to $domainGroupToJoin because of $exception."
+                    }finally{
+                        if ($psSession -ne $null) {
+                            Remove-PSSession $psSession
+                        }
                     }
-                    Remove-PSSession $psSession
                 }
                     
                 #make placeholder file so this is only run once
                 New-Item "$using:agentInstallerDLDirectory\domainGroupJoinFile.txt" -type file
+
+                if ($exception -ne $null) {
+                    $exception > "$using:agentInstallerDLDirectory\domainGroupJoinFile.txt"
+                }
             }
         }
 
