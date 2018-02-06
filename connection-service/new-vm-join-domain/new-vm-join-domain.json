@@ -64,12 +64,6 @@
                 "description": "The password for the administrator account of the new VM and the domain"
             }
         },
-        "storageAccountName": {
-            "type": "string",
-            "metadata": {
-                "description": "Storage account to use for VM data and VHD's"
-            }
-        },
         "_artifactsLocation": {
             "type": "string",
             "metadata": {
@@ -88,7 +82,6 @@
         "imagePublisher": "MicrosoftWindowsServer",
         "imageOffer": "WindowsServer",
         "windowsOSVersion": "2016-Datacenter",
-        "apiVersion": "2015-06-15",
         "nicName": "[concat(parameters('dnsLabelPrefix'),'Nic')]",
         "updateipTemplateUri": "[concat(parameters('_artifactsLocation'), '/update-nic.json', parameters('_artifactsLocationSasToken'))]"
     },
@@ -96,7 +89,7 @@
         {
             "type": "Microsoft.Network/networkInterfaces",
             "name": "[variables('nicName')]",
-            "apiVersion": "[variables('apiVersion')]",
+            "apiVersion": "2017-06-01",
             "location": "[resourceGroup().location]",
             "properties": {
                 "ipConfigurations": [
@@ -114,7 +107,7 @@
         {
             "type": "Microsoft.Compute/virtualMachines",
             "name": "[parameters('dnsLabelPrefix')]",
-            "apiVersion": "[variables('apiVersion')]",
+            "apiVersion": "2017-03-30",
             "location": "[resourceGroup().location]",
             "properties": {
                 "hardwareProfile": {
@@ -133,25 +126,11 @@
                         "version": "latest"
                     },
                     "osDisk": {
-                        "name": "osdisk",
-                        "vhd": {
-                            "uri": "[concat('http://',parameters('storageAccountName'),'.blob.core.windows.net/vhds/',parameters('dnsLabelPrefix'), 'disk0.vhd')]"
-                        },
+                        "name": "[concat(parameters('dnsLabelPrefix'), '-os')]",
                         "caching": "ReadWrite",
                         "createOption": "FromImage"
                     },
-                    "dataDisks": [
-                        {
-                            "name": "myvm-data-disk1",
-                            "vhd": {
-                                "uri": "[concat('http://',parameters('storageAccountName'),'.blob.core.windows.net/vhds/',parameters('dnsLabelPrefix'), 'disk1.vhd')]"
-                            },
-                            "caching": "None",
-                            "createOption": "Empty",
-                            "diskSizeGB": "100",
-                            "lun": 0
-                        }
-                    ]
+                    "dataDisks": [ ]
                 },
                 "networkProfile": {
                     "networkInterfaces": [
@@ -159,12 +138,6 @@
                             "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
                         }
                     ]
-                },
-                "diagnosticsProfile": {
-                    "bootDiagnostics": {
-                        "enabled": "true",
-                        "storageUri": "[concat('http://',parameters('storageAccountName'),'.blob.core.windows.net')]"
-                    }
                 }
             },
             "dependsOn": [

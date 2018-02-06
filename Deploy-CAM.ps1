@@ -486,9 +486,6 @@ function New-RemoteWorkstationTemplates {
     $domainServiceAccountUsername = $CAMConfig.parameters.domainServiceAccountUsername.clearValue
     $domainFQDN = $CAMConfig.parameters.domainName.clearValue
 
-    #Put the VHD's in the user storage account until we move to managed storage...
-    $VHDStorageAccountName = $storageAccountContext.StorageAccountName
-
     $agentChannel = $CAMConfig.internal.agentChannel
 
     $armParamContent = @"
@@ -577,8 +574,7 @@ function New-RemoteWorkstationTemplates {
                 "secretName": "remoteWorkstationDomainGroup"
             }
         },
-        "domainToJoin": { "value": "$domainFQDN" },
-        "storageAccountName": { "value": "$VHDStorageAccountName" }
+        "domainToJoin": { "value": "$domainFQDN" }
     }
 }
 "@
@@ -1428,12 +1424,14 @@ function New-ConnectionServiceDeployment() {
         # filter on an exact resource group ID match as Get-AzureRmRoleAssignment seems to do a more loose pattern match
         $spRoles = $spRoles | Where-Object `
             {($_.Scope -eq $csRG.ResourceId) -or ($_.Scope -eq "/subscriptions/$subscriptionId")}
+
+        $camCustomRoleDefinition = Get-CAMRoleDefinition -subscriptionID $subscriptionID
                     
         # spRoles could be no object, a single object or an array. foreach works with all.
         $hasAccess = $false
         foreach($role in $spRoles) {
             $roleName = $role.RoleDefinitionName
-            if (($roleName -eq "Contributor") -or ($roleName -eq "Owner")) {
+            if (($roleName -eq "Contributor") -or ($roleName -eq "Owner") -or ($roleName -eq $camCustomRoleDefinition.Name)) {
                 Write-Host "$client already has $roleName for $csRGName."
                 $hasAccess = $true
                 break
@@ -1441,10 +1439,10 @@ function New-ConnectionServiceDeployment() {
         }
 
         if(-not $hasAccess) {
-            Write-Host "Giving $client Contributor access to $csRGName."
+            Write-Host "Giving $client '$($camCustomRoleDefinition.Name)' access to $csRGName."
             Set-AzureRMContext -Context $adminAzureContext | Out-Null
             New-AzureRmRoleAssignment `
-                -RoleDefinitionName Contributor `
+                -RoleDefinitionName $camCustomRoleDefinition.Name `
                 -ResourceGroupName $csRGName `
                 -ServicePrincipalName $client `
                 -ErrorAction Stop | Out-Null
@@ -1745,7 +1743,7 @@ function New-CAMDeploymentRoot()
         -tempDir $tempDir `
         -certificateFile $certificateFile `
         -certificateFilePassword $certificateFilePassword | Out-Null
-
+   
     $userDataStorageAccount = New-UserStorageAccount `
         -RGName $RGName `
         -Location $rg.Location
@@ -2070,6 +2068,8 @@ function Deploy-CAM() {
     if($tenantIDsMatch) {
         # Service principal info exists but needs to get rights to the required resource groups
         Write-Host "Adding role assignments for the service principal account."
+
+        $camCustomRoleDefinition = Get-CAMRoleDefinition -subscriptionID $subscriptionID
         
         # Retry required since it can take a few seconds for app registration to percolate through Azure.
         # (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
@@ -2095,7 +2095,7 @@ function Deploy-CAM() {
                     $hasAccess = $false
                     foreach($role in $spRoles) {
                         $roleName = $role.RoleDefinitionName
-                        if (($roleName -eq "Contributor") -or ($roleName -eq "Owner")) {
+                        if (($roleName -eq "Contributor") -or ($roleName -eq "Owner") -or ($roleName -eq $camCustomRoleDefinition.Name)) {
                             Write-Host "$client already has $roleName for $rgn."
                             $hasAccess = $true
                             break
@@ -2103,9 +2103,9 @@ function Deploy-CAM() {
                     }
 
                     if(-not $hasAccess) {
-                        Write-Host "Giving $client Contributor access to $rgn."
+                        Write-Host "Giving $client '$($camCustomRoleDefinition.Name)' access to $rgn."
                         New-AzureRmRoleAssignment `
-                            -RoleDefinitionName Contributor `
+                            -RoleDefinitionName $camCustomRoleDefinition.Name `
                             -ResourceGroupName $rgn `
                             -ServicePrincipalName $client `
                             -ErrorAction Stop | Out-Null
@@ -2128,7 +2128,7 @@ function Deploy-CAM() {
                     $hasAccess = $false
                     foreach($role in $spRoles) {
                         $roleName = $role.RoleDefinitionName
-                        if (($roleName -eq "Contributor") -or ($roleName -eq "Owner")) {
+                        if (($roleName -eq "Contributor") -or ($roleName -eq "Owner") -or ($roleName -eq $camCustomRoleDefinition.Name)) {
                             Write-Host "$client already has $roleName for $($CAMConfig.internal.vnetName)."
                             $hasAccess = $true
                             break
@@ -2137,15 +2137,15 @@ function Deploy-CAM() {
 
                     if(-not $hasAccess) {
                         if( -not $ignorePrompts ) {
-                            $prompt = Read-Host "The Service Principal credentials need to be given Contributor access to the vNet $($CAMConfig.internal.vnetName). Press enter to accept and continue or 'no' to cancel deployment"
+                            $prompt = Read-Host "The Service Principal credentials need to be given access to the vNet $($CAMConfig.internal.vnetName). Press enter to accept and continue or 'no' to cancel deployment"
                         } else {
                             $prompt = $false
                         }
                         if ( -not $prompt )
                         {
-                            Write-Host "Giving $client Contributor access to $($CAMConfig.internal.vnetName)"
+                            Write-Host "Giving $client '$($camCustomRoleDefinition.Name)' access to $($CAMConfig.internal.vnetName)"
                             New-AzureRmRoleAssignment `
-                                -RoleDefinitionName Contributor `
+                                -RoleDefinitionName $camCustomRoleDefinition.Name `
                                 -Scope $CAMConfig.internal.vnetID `
                                 -ServicePrincipalName $client `
                                 -ErrorAction Stop | Out-Null
@@ -2532,6 +2532,56 @@ function Confirm-ModuleVersion()
     return $true
 }
 
+# Create a custom role for CAM with necessary permissions
+# Currently it is the based off of the Contributor Role excpept we remove Storage Access and VM Disk Blob Read Access
+# Use 'Get-AzureRmProviderOperation *' to get a list of Azure Operations and their details
+# See https://docs.microsoft.com/en-us/azure/active-directory/role-based-access-built-in-roles for details on Azure Built in Roles
+function Get-CAMRoleDefinition() {
+    param(
+        [parameter(Mandatory = $false)]
+        [String]$subscriptionId
+    )
+
+    $roleName = "Cloud Access Manager"
+
+    $camCustomRoleDefinition = Get-AzureRmRoleDefinition $roleName
+    # Create Role Defintion Based off of Contributor if it doesn't already exist
+    if ( -not $camCustomRoleDefinition ) {
+        Write-Host "Creating '$roleName' Role Definition"
+        $camCustomRoleDefinition = Get-AzureRmRoleDefinition "Contributor"
+        $camCustomRoleDefinition.Id = $null
+        $camCustomRoleDefinition.IsCustom = $true
+        $camCustomRoleDefinition.Name = $roleName
+        $camCustomRoleDefinition.Description = "Required Permissions for $roleName"
+
+        # Limit Assignable scopes to specified subscription
+        if ($subscriptionId) {
+            $camCustomRoleDefinition.AssignableScopes.Clear()
+            $camCustomRoleDefinition.AssignableScopes.Add("/subscriptions/$subscriptionId")
+        }
+
+        # Actions to remove
+        $requiredNotActions = @(
+            # Remove ability to get SAS URI of VM Disk for Blob access
+            "Microsoft.Compute/disks/beginGetAccess/action",
+            # Remove ability to revoke SAS URI of VM Disk for Blob access
+            "Microsoft.Compute/disks/endGetAccess/action"
+        )
+        # Add Not Actions required to be disabled
+        foreach ( $notAction in $requiredNotActions) {
+            if ( -not $camCustomRoleDefinition.NotActions.Contains($notAction)) {
+                $camCustomRoleDefinition.NotActions.Add($notAction)
+            }
+        }
+
+        New-AzureRmRoleDefinition -Role $camCustomRoleDefinition -ErrorAction Stop | Out-Null
+        $camCustomRoleDefinition = Get-AzureRmRoleDefinition $roleName
+    } else {
+        Write-Host "Found existing '$roleName' Role Definition"
+    }
+
+    return $camCustomRoleDefinition
+}
 
 ##############################################
 ############# Script starts here #############
