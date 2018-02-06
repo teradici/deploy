@@ -2058,7 +2058,7 @@ function Deploy-CAM() {
     if($tenantIDsMatch) {
         # Service principal info exists but needs to get rights to the required resource groups
         Write-Host "Adding role assignments for the service principal account."
-        
+
         $camCustomRoleDefinition = Get-CAMRoleDefinition -subscriptionID $subscriptionID
         
         # Retry required since it can take a few seconds for app registration to percolate through Azure.
@@ -2529,15 +2529,17 @@ function Get-CAMRoleDefinition() {
         [String]$subscriptionId
     )
 
-    $camCustomRoleDefinition = Get-AzureRmRoleDefinition "Cloud Access Manager"
+    $roleName = "Cloud Access Manager"
+
+    $camCustomRoleDefinition = Get-AzureRmRoleDefinition $roleName
     # Create Role Defintion Based off of Contributor if it doesn't already exist
     if ( -not $camCustomRoleDefinition ) {
-        Write-Host "Creating 'Cloud Access Manager' Role Definition"
+        Write-Host "Creating '$roleName' Role Definition"
         $camCustomRoleDefinition = Get-AzureRmRoleDefinition "Contributor"
         $camCustomRoleDefinition.Id = $null
         $camCustomRoleDefinition.IsCustom = $true
-        $camCustomRoleDefinition.Name = "Cloud Access Manager"
-        $camCustomRoleDefinition.Description = "Required Permissions for Cloud Access Manager"
+        $camCustomRoleDefinition.Name = $roleName
+        $camCustomRoleDefinition.Description = "Required Permissions for $roleName"
 
         # Limit Assignable scopes to specified subscription
         if ($subscriptionId) {
@@ -2560,9 +2562,9 @@ function Get-CAMRoleDefinition() {
         }
 
         New-AzureRmRoleDefinition -Role $camCustomRoleDefinition -ErrorAction Stop | Out-Null
-        $camCustomRoleDefinition = Get-AzureRmRoleDefinition "Cloud Access Manager"
+        $camCustomRoleDefinition = Get-AzureRmRoleDefinition $roleName
     } else {
-        Write-Host "Found existing 'Cloud Access Manager' Role Definition"
+        Write-Host "Found existing '$roleName' Role Definition"
     }
 
     return $camCustomRoleDefinition
