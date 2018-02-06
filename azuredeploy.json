@@ -212,8 +212,7 @@
     }
   },
   "variables": {
-    "adminDesktopVMName": "admin-rw",
-    "demoIdleShutdownTime": 20
+    "adminDesktopVMName": "admin-rw"
   },
   "resources": [
     {
@@ -409,9 +408,6 @@
           },
           "binaryLocation": {
             "value": "[parameters('binaryLocation')]"
-          },
-          "autoShutdownIdleTime" : {
-            "value": "[variables('demoIdleShutdownTime')]"
           }
         }
       }
