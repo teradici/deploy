@@ -84,6 +84,11 @@ param(
     [String]
     $domainControllerOsType = "Windows Server 2016",
 
+    [parameter(Mandatory=$false)]
+    [ValidateRange(10,10000)]
+    [int]
+    $defaultIdleShutdownTime = 240,
+
     $camSaasUri = "https://cam.teradici.com",
     $CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/master/azuredeploy.json",
     $binaryLocation = "https://teradeploy.blob.core.windows.net/binaries",
@@ -496,7 +501,7 @@ function New-RemoteWorkstationTemplates {
         "domainOrganizationUnitToJoin": { "value": "" },
         "agentType": { "value": "%agentType%" },
         "vmSize": { "value": "%vmSize%" },
-        "autoShutdownIdleTime" : { "value": 240 },
+        "autoShutdownIdleTime" : { "value": $defaultIdleShutdownTime },
         "AgentChannel": { "value": "$agentChannel"},
         "binaryLocation": { "value": "$binaryLocation" },
         "subnetID": { "value": "$($CAMConfig.parameters.remoteWorkstationSubnet.clearValue)" },
@@ -1876,7 +1881,12 @@ function Deploy-CAM() {
         [parameter(Mandatory=$false)]
         [ValidateSet("Windows Server 2016","Windows Server 2012R2")] 
         [String]
-        $domainControllerOsType = "Windows Server 2016"
+        $domainControllerOsType = "Windows Server 2016",
+
+        [parameter(Mandatory=$false)]
+        [ValidateRange(10,10000)]
+        [int]
+        $defaultIdleShutdownTime = 240
     )
 
     # Artifacts location 'folder' is where the template is stored
@@ -3052,6 +3062,7 @@ else {
             $registrationCode = $null
         }
     } while (-not $registrationCode )
+
     
     $claims = Get-Claims
 
@@ -3086,5 +3097,6 @@ else {
         -ownerTenantId $claims.tid `
         -ownerUpn $upn `
         -enableSecurityGateway $enableSecurityGateway `
-        -domainControllerOsType $domainControllerOsType
+        -domainControllerOsType $domainControllerOsType `
+        -defaultIdleShutdownTime $defaultIdleShutdownTime
 }
