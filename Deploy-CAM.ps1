@@ -2583,6 +2583,13 @@ function Get-CAMRoleDefinition() {
     return $camCustomRoleDefinition
 }
 
+function Write-Host-Warning() {
+    param(
+        $message
+    )
+    Write-Host ("`n$message") -ForegroundColor Red -BackgroundColor Yellow
+}
+
 ##############################################
 ############# Script starts here #############
 ##############################################
@@ -2602,7 +2609,7 @@ $subscriptionsToDisplay = $subscriptions | Where-Object { $_.State -eq 'Enabled'
 
 $chosenSubscriptionIndex = $null
 if ($subscriptionsToDisplay.Length -lt 1) {
-    Write-Host ("Account " + $rmContext.Account.Id + " has access to no enabled subscriptions. Exiting.") -ForegroundColor Red -BackgroundColor Yellow
+    Write-Host-Warning -message "Account " + $rmContext.Account.Id + " has access to no enabled subscriptions. Exiting."
     exit
 }
 
@@ -2711,7 +2718,7 @@ else {
         $rgIdentifier = Read-Host "Resource group"
 
         if (!$rgIdentifier) {
-            Write-Host ("`nValue not provided.") -ForegroundColor Red -BackgroundColor Yellow
+            Write-Host-Warning -message "Value not provided."
             continue       
         }
 
@@ -2722,7 +2729,7 @@ else {
             $rgArrayLength = $resouceGroups.Length
             if ( -not (( $rgIndex -ge 1) -and ( $rgIndex -le $rgArrayLength))) {
                 #invalid range 
-                Write-Host "`nPlease enter a range between 1 and $rgArrayLength or the name of a new resource group." -ForegroundColor Red -BackgroundColor Yellow
+                Write-Host-Warning -message "Please enter a range between 1 and $rgArrayLength or the name of a new resource group."
             }
             else {
                 $rgMatch = $resouceGroups[$rgIndex - 1]
@@ -2863,7 +2870,7 @@ else {
                 -ResourceType "Microsoft.Network/virtualNetworks" `
                 -ResourceNameEquals $vnetName)) ) {
                     # Does not exist
-                    Write-Host ("`n{0} not found" -f ($vnetConfig.vnetID)) -ForegroundColor Red -BackgroundColor Yellow
+                    Write-Host-Warning -message "$($vnetConfig.vnetID) not found"
                     $vnetConfig.vnetID = $null
             }
         } while (-not $vnetConfig.vnetID)
@@ -2877,7 +2884,7 @@ else {
             }
             if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.CSsubnetName}) ) {
                 # Does not exist
-                Write-Host ("`n{0} not found in root resource group VNet {1}" -f ($vnetConfig.CSsubnetName,$vnet.Name)) -ForegroundColor Red -BackgroundColor Yellow
+                Write-Host-Warning -message "$($vnetConfig.CSsubnetName) not found in root resource group VNet $($vnet.Name)"
                 $vnetConfig.CSsubnetName = $null
             }
         } while (-not $vnetConfig.CSsubnetName)
@@ -2889,7 +2896,7 @@ else {
             }
             if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.GWsubnetName}) ) {
                 # Does not exist
-                Write-Host ("`n{0} not found in root resource group VNet {1}" -f ($vnetConfig.GWsubnetName,$vnet.Name)) -ForegroundColor Red -BackgroundColor Yellow
+                Write-Host-Warning -message "$($vnetConfig.GWsubnetName) not found in root resource group VNet $($vnet.Name)"
                 $vnetConfig.GWsubnetName = $null
             }
         } while (-not $vnetConfig.GWsubnetName)
@@ -2901,7 +2908,7 @@ else {
             }
             if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.RWsubnetName}) ) {
                 # Does not exist
-                Write-Host ("`n{0} not found in root resource group VNet {1}" -f ($vnetConfig.RWsubnetName,$vnet.Name)) -ForegroundColor Red -BackgroundColor Yellow
+                Write-Host-Warning -message "$($vnetConfig.RWsubnetName) not found in root resource group VNet $($vnet.Name)"
                 $vnetConfig.RWsubnetName = $null
             }
         } while (-not $vnetConfig.RWsubnetName)
@@ -2933,8 +2940,16 @@ else {
             $domainName = Read-Host "Domain name"
         }
 
-        if (-not $($domainName -match '^[a-zA-Z0-9]{1,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$')) {
-            Write-Host "`nInvalid Domain name. Please see https://support.microsoft.com/en-ca/help/909264/naming-conventions-in-active-directory-for-computers-domains-sites-and for valid domain names." -ForegroundColor Red -BackgroundColor Yellow
+        # https://social.technet.microsoft.com/Forums/scriptcenter/en-US/db2d8388-f2c2-4f67-9f84-c17b060504e1/regex-for-computer-fqdn?forum=winserverpowershell
+        if (-not $($domainName -imatch '(?=^.{1,254}$)(^(?:(?!\d+\.|-)[a-zA-Z0-9_\-]{1,63}(?<!-)\.?)+(?:[a-zA-Z]{2,})$)')) {
+            Write-Host-Warning -message "Invalid Domain name. Please see https://support.microsoft.com/en-ca/help/909264/naming-conventions-in-active-directory-for-computers-domains-sites-and for valid domain names."
+            $domainName = $null
+            continue
+        }
+
+        # Must have a dot
+        if (-not $($domainName -imatch '\.')) {
+            Write-Host-Warning -message "The name must include a '.' such as example.com"
             $domainName = $null
         }
 
@@ -2942,11 +2957,11 @@ else {
 
     # Username
     $username = $null
-    $firstRun = 1
+    $firstRun = $true
     do {
         if ($domainAdminCredential -and $firstRun) {
             $username = $domainAdminCredential.UserName
-            $firstRun = $null
+            $firstRun = $false
         }
 
         if ( -not $username) {
@@ -2961,8 +2976,8 @@ else {
 
         # only check if it is not deployOverDC
         if (-not $deployOverDC) {
-            if ((-not ($username -match '^[A-Za-z0-9]+(?:[_-][A-Za-z0-9]+)*$')) -or ($username.Length -gt 20)) {
-                Write-Host "`nPlease enter a valid username. It can only contain letters and numbers and cannot be longer than 20 characters." -ForegroundColor Red -BackgroundColor Yellow
+            if ((-not ($username -imatch '^[A-Za-z\d]+(?:[_-][A-Za-z\d]+)*$')) -or ($username.Length -gt 20)) {
+                Write-Host-Warning -message "Please enter a valid username. It can only contain letters and numbers and cannot be longer than 20 characters."
                 $username = $null
                 continue
             }
@@ -2973,7 +2988,7 @@ else {
                                   'sql', 'support', 'support_388945a0', 'sys', 'test2', 'test3', 'user4', 'user5' )
             
             if ($username -in $reservedUsername) {
-                Write-Host "`n$username is a reserved username. Please try again" -ForegroundColor Red -BackgroundColor Yellow
+                Write-Host-Warning -message "$username is a reserved username. Please try again"
                 $username = $null
                 continue                
             }
@@ -2983,24 +2998,24 @@ else {
 
     # Password
     $password = $null
-    $firstRun = 1
-    $prompted = $null
+    $firstRun = $true
+    $prompted = $false
     do {
         if ($domainAdminCredential -and $firstRun) {
             $password = $domainAdminCredential.GetNetworkCredential().Password
-            $firstRun = $null
+            $firstRun = $false
         }
 
         if ( -not $password ) {
             $psw = Read-Host -AsSecureString "Please enter the password"
             $password = ConvertTo-Plaintext $psw
-            $prompted = 1
+            $prompted = $true
         }
 
         # Don't check password if deploying over DC since in that case it's the DC's password complexity rules.
         if (-not $deployOverDC ) {
-            if (-not ($password -match '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[$@$!%*?&])[A-Za-z\d$@$!%*?&]{12,}')) {
-                Write-Host "`nInvalid password. Minimum 12 characters, at least one uppercase letter, one lowercase letter, one number and one special character" -ForegroundColor Red -BackgroundColor Yellow
+            if ($password -lt 12) {
+                Write-Host-Warning -message "Invalid password. Minimum 12 characters"
                 $password = $null
                 continue
             }         
@@ -3010,7 +3025,7 @@ else {
             $confirmedPassword = Read-Host -AsSecureString "Please re-enter the password"
             $clearConfirmedPassword = ConvertTo-Plaintext $confirmedPassword
             if (-not ($password -ceq $clearConfirmedPassword)) {
-                Write-Host "`nEntered passwords do not match. Please try again" -ForegroundColor Red -BackgroundColor Yellow
+                Write-Host-Warning -message "Entered passwords do not match. Please try again"
                 $password = $null
                 continue
             }
@@ -3049,11 +3064,11 @@ else {
                         $radiusConfig.radiusServerPort = [int](Read-Host  "Please enter your RADIUS Server's Listening port")
                     } catch {
                         $radiusConfig.radiusServerPort = $null
-                        Write-Host "`nSelected port is not an Integer" -ForegroundColor Red -BackgroundColor Yellow
+                        Write-Host-Warning "Selected port is not an Integer"
                     }
                 }
                 if ( ($radiusConfig.radiusServerPort -le 0) -or ($radiusConfig.radiusServerPort -gt 65535) ) {
-                    Write-Host "`nSelected port is invalid. Should be between 1 and 65535." -ForegroundColor Red -BackgroundColor Yellow
+                    Write-Host-Warning -message "Selected port is invalid. Should be between 1 and 65535."
                     $radiusConfig.radiusServerPort = $null
                 }            
             } while (-not $radiusConfig.radiusServerPort )
@@ -3091,7 +3106,7 @@ else {
         $clearRegCode = ConvertTo-Plaintext $registrationCode
         if ($clearRegCode.Length -lt 21) {
             #too short- try again.
-            Write-Host "`nThe registration code is at least 21 characters long" -ForegroundColor Red -BackgroundColor Yellow
+            Write-Host-Warning -message "The registration code is at least 21 characters long"
             $registrationCode = $null
         }
     } while (-not $registrationCode )
