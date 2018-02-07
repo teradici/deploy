@@ -2583,6 +2583,7 @@ function Get-CAMRoleDefinition() {
     return $camCustomRoleDefinition
 }
 
+# Make message more visible
 function Write-Host-Warning() {
     param(
         $message
@@ -2957,13 +2958,11 @@ else {
 
     # Username
     $username = $null
-    $firstRun = $true
+    if ($domainAdminCredential) {
+        $username = $domainAdminCredential.UserName
+    }
     do {
-        if ($domainAdminCredential -and $firstRun) {
-            $username = $domainAdminCredential.UserName
-            $firstRun = $false
-        }
-
+        # prompted if username is not provided
         if ( -not $username) {
             if( -not $deployOverDC ) {
                 $domainAdminMessage = "Please enter the new domain administrator username for the new domain being created"
@@ -2993,35 +2992,30 @@ else {
                 continue                
             }
         }
-
-    } while ( -not $username )
+        break
+    } while ( $true )
 
     # Password
     $password = $null
-    $firstRun = $true
-    $prompted = $false
+    if ($domainAdminCredential) {
+        $password = $domainAdminCredential.GetNetworkCredential().Password
+    }
     do {
-        if ($domainAdminCredential -and $firstRun) {
-            $password = $domainAdminCredential.GetNetworkCredential().Password
-            $firstRun = $false
-        }
-
         if ( -not $password ) {
             $psw = Read-Host -AsSecureString "Please enter the password"
             $password = ConvertTo-Plaintext $psw
-            $prompted = $true
         }
 
         # Don't check password if deploying over DC since in that case it's the DC's password complexity rules.
         if (-not $deployOverDC ) {
-            if ($password -lt 12) {
+            if ($password.Length -lt 12) {
                 Write-Host-Warning -message "Invalid password. Minimum 12 characters"
                 $password = $null
                 continue
             }         
         }
 
-        if ($prompted) {
+        if ($psw) {
             $confirmedPassword = Read-Host -AsSecureString "Please re-enter the password"
             $clearConfirmedPassword = ConvertTo-Plaintext $confirmedPassword
             if (-not ($password -ceq $clearConfirmedPassword)) {
@@ -3030,7 +3024,8 @@ else {
                 continue
             }
         }
-    } while ( -not $password )
+        break
+    } while ( $true )
 
     $secpasswd = ConvertTo-SecureString $password -AsPlainText -Force
     $domainAdminCredential = New-Object System.Management.Automation.PSCredential ($username, $secpasswd)
