@@ -2602,7 +2602,7 @@ $subscriptionsToDisplay = $subscriptions | Where-Object { $_.State -eq 'Enabled'
 
 $chosenSubscriptionIndex = $null
 if ($subscriptionsToDisplay.Length -lt 1) {
-    Write-Host ("Account " + $rmContext.Account.Id + " has access to no enabled subscriptions. Exiting.")
+    Write-Host ("Account " + $rmContext.Account.Id + " has access to no enabled subscriptions. Exiting.") -ForegroundColor Red -BackgroundColor Yellow
     exit
 }
 
@@ -2711,7 +2711,7 @@ else {
         $rgIdentifier = Read-Host "Resource group"
 
         if (!$rgIdentifier) {
-            Write-Host ("`nValue not provided.")
+            Write-Host ("`nValue not provided.") -ForegroundColor Red -BackgroundColor Yellow
             continue       
         }
 
@@ -2722,7 +2722,7 @@ else {
             $rgArrayLength = $resouceGroups.Length
             if ( -not (( $rgIndex -ge 1) -and ( $rgIndex -le $rgArrayLength))) {
                 #invalid range 
-                Write-Host "Please enter a range between 1 and $rgArrayLength or the name of a new resource group."
+                Write-Host "`nPlease enter a range between 1 and $rgArrayLength or the name of a new resource group." -ForegroundColor Red -BackgroundColor Yellow
             }
             else {
                 $rgMatch = $resouceGroups[$rgIndex - 1]
@@ -2863,7 +2863,7 @@ else {
                 -ResourceType "Microsoft.Network/virtualNetworks" `
                 -ResourceNameEquals $vnetName)) ) {
                     # Does not exist
-                    Write-Host ("{0} not found" -f ($vnetConfig.vnetID))
+                    Write-Host ("`n{0} not found" -f ($vnetConfig.vnetID)) -ForegroundColor Red -BackgroundColor Yellow
                     $vnetConfig.vnetID = $null
             }
         } while (-not $vnetConfig.vnetID)
@@ -2877,7 +2877,7 @@ else {
             }
             if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.CSsubnetName}) ) {
                 # Does not exist
-                Write-Host ("{0} not found in root resource group VNet {1}" -f ($vnetConfig.CSsubnetName,$vnet.Name))
+                Write-Host ("`n{0} not found in root resource group VNet {1}" -f ($vnetConfig.CSsubnetName,$vnet.Name)) -ForegroundColor Red -BackgroundColor Yellow
                 $vnetConfig.CSsubnetName = $null
             }
         } while (-not $vnetConfig.CSsubnetName)
@@ -2889,7 +2889,7 @@ else {
             }
             if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.GWsubnetName}) ) {
                 # Does not exist
-                Write-Host ("{0} not found in root resource group VNet {1}" -f ($vnetConfig.GWsubnetName,$vnet.Name))
+                Write-Host ("`n{0} not found in root resource group VNet {1}" -f ($vnetConfig.GWsubnetName,$vnet.Name)) -ForegroundColor Red -BackgroundColor Yellow
                 $vnetConfig.GWsubnetName = $null
             }
         } while (-not $vnetConfig.GWsubnetName)
@@ -2901,7 +2901,7 @@ else {
             }
             if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.RWsubnetName}) ) {
                 # Does not exist
-                Write-Host ("{0} not found in root resource group VNet {1}" -f ($vnetConfig.RWsubnetName,$vnet.Name))
+                Write-Host ("`n{0} not found in root resource group VNet {1}" -f ($vnetConfig.RWsubnetName,$vnet.Name)) -ForegroundColor Red -BackgroundColor Yellow
                 $vnetConfig.RWsubnetName = $null
             }
         } while (-not $vnetConfig.RWsubnetName)
@@ -2924,58 +2924,101 @@ else {
     do {
         if ( -not $domainName ) {
             if( -not $deployOverDC ) {
-                $domainNameMessage = "Please enter new fully qualified domain name of the domain which will be created, including a '.' such as example.com"
+                $domainNameMessage = "`nPlease enter new fully qualified domain name of the domain which will be created, including a '.' such as example.com"
             }
             else {
-                $domainNameMessage = "Please enter the fully qualified domain name of the domain to connect to. The name must include a '.' such as example.com"
+                $domainNameMessage = "`nPlease enter the fully qualified domain name of the domain to connect to. The name must include a '.' such as example.com"
             }
             Write-Host $domainNameMessage
             $domainName = Read-Host "Domain name"
         }
 
-        # https://social.technet.microsoft.com/Forums/scriptcenter/en-US/db2d8388-f2c2-4f67-9f84-c17b060504e1/regex-for-computer-fqdn?forum=winserverpowershell
-        if (-not $($domainName -imatch '(?=^.{1,254}$)(^(?:(?!\d+\.|-)[a-zA-Z0-9_\-]{1,63}(?<!-)\.?)+(?:[a-zA-Z]{2,})$)')) {
-            Write-Host "The domain name must include two or more components separated by a '.'"
+        if (-not $($domainName -match '^[a-zA-Z0-9]{1,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$')) {
+            Write-Host "`nInvalid Domain name. Please see https://support.microsoft.com/en-ca/help/909264/naming-conventions-in-active-directory-for-computers-domains-sites-and for valid domain names." -ForegroundColor Red -BackgroundColor Yellow
             $domainName = $null
         }
+
     } while (-not $domainName)
 
+    # Username
+    $username = $null
+    $firstRun = 1
     do {
-        if ( -not $domainAdminCredential ) {
+        if ($domainAdminCredential -and $firstRun) {
+            $username = $domainAdminCredential.UserName
+            $firstRun = $null
+        }
+
+        if ( -not $username) {
             if( -not $deployOverDC ) {
                 $domainAdminMessage = "Please enter the new domain administrator username for the new domain being created"
             }
             else {
                 $domainAdminMessage = "Please enter the username of the service account for Cloud Access Manager to use with the connected domain"
             }
+            $username = Read-Host $domainAdminMessage
+        }
 
-            $domainAdminCredential = Get-Credential -Message $domainAdminMessage
-            $confirmedPassword = Read-Host -AsSecureString "Please re-enter the password"
-
-            # Need plaintext password to check if same
-            $clearPassword = ConvertTo-Plaintext $confirmedPassword
-            if (-not ($domainAdminCredential.GetNetworkCredential().Password -ceq $clearPassword)) {
-                # don't match- try again.
-                Write-Host "The entered passwords do not match."
-                $domainAdminCredential = $null
+        # only check if it is not deployOverDC
+        if (-not $deployOverDC) {
+            if ((-not ($username -match '^[A-Za-z0-9]+(?:[_-][A-Za-z0-9]+)*$')) -or ($username.Length -gt 20)) {
+                Write-Host "`nPlease enter a valid username. It can only contain letters and numbers and cannot be longer than 20 characters." -ForegroundColor Red -BackgroundColor Yellow
+                $username = $null
                 continue
+            }
+            # reserved usernames
+            # https://docs.microsoft.com/en-us/azure/virtual-machines/windows/faq
+            $reservedUsername = @('administrator', 'admin', 'user', 'user1', 'test', 'user2', 'test1', 'user3', 'admin1', '1', '123', 'a',
+                                  'actuser', 'adm', 'admin2', 'aspnet', 'backup', 'console', 'david', 'guest', 'john', 'owner', 'root', 'server',
+                                  'sql', 'support', 'support_388945a0', 'sys', 'test2', 'test3', 'user4', 'user5' )
+            
+            if ($username -in $reservedUsername) {
+                Write-Host "`n$username is a reserved username. Please try again" -ForegroundColor Red -BackgroundColor Yellow
+                $username = $null
+                continue                
             }
         }
 
-        if ((-not ($domainAdminCredential.UserName -imatch '\w+')) -or ($domainAdminCredential.Username.Length -gt 20)) {
-            Write-Host "Please enter a valid username. It can only contain letters and numbers and cannot be longer than 20 characters."
-            $domainAdminCredential = $null
-            continue
+    } while ( -not $username )
+
+    # Password
+    $password = $null
+    $firstRun = 1
+    $prompted = $null
+    do {
+        if ($domainAdminCredential -and $firstRun) {
+            $password = $domainAdminCredential.GetNetworkCredential().Password
+            $firstRun = $null
         }
 
-        if ((-not $deployOverDC) `
-            -and ( $domainAdminCredential.GetNetworkCredential().Password.Length -lt 12 ) ) {
-            # too short- try again.
-            # Don't check length if deploying over DC since in that case it's the DC's password complexity rules.
-            Write-Host "The domain admin password must be at least 12 characters long"
-            $domainAdminCredential = $null
+        if ( -not $password ) {
+            $psw = Read-Host -AsSecureString "Please enter the password"
+            $password = ConvertTo-Plaintext $psw
+            $prompted = 1
         }
-    } while ( -not $domainAdminCredential )
+
+        # Don't check password if deploying over DC since in that case it's the DC's password complexity rules.
+        if (-not $deployOverDC ) {
+            if (-not ($password -match '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[$@$!%*?&])[A-Za-z\d$@$!%*?&]{12,}')) {
+                Write-Host "`nInvalid password. Minimum 12 characters, at least one uppercase letter, one lowercase letter, one number and one special character" -ForegroundColor Red -BackgroundColor Yellow
+                $password = $null
+                continue
+            }         
+        }
+
+        if ($prompted) {
+            $confirmedPassword = Read-Host -AsSecureString "Please re-enter the password"
+            $clearConfirmedPassword = ConvertTo-Plaintext $confirmedPassword
+            if (-not ($password -ceq $clearConfirmedPassword)) {
+                Write-Host "`nEntered passwords do not match. Please try again" -ForegroundColor Red -BackgroundColor Yellow
+                $password = $null
+                continue
+            }
+        }
+    } while ( -not $password )
+
+    $secpasswd = ConvertTo-SecureString $password -AsPlainText -Force
+    $domainAdminCredential = New-Object System.Management.Automation.PSCredential ($username, $secpasswd)
 
     # Load provided Radius Configuration Parameters (Some of these may be $null at this point)
     $radiusConfig = @{
@@ -3006,11 +3049,11 @@ else {
                         $radiusConfig.radiusServerPort = [int](Read-Host  "Please enter your RADIUS Server's Listening port")
                     } catch {
                         $radiusConfig.radiusServerPort = $null
-                        Write-Host "Selected port is not an Integer"
+                        Write-Host "`nSelected port is not an Integer" -ForegroundColor Red -BackgroundColor Yellow
                     }
                 }
                 if ( ($radiusConfig.radiusServerPort -le 0) -or ($radiusConfig.radiusServerPort -gt 65535) ) {
-                    Write-Host "Selected port is invalid. Should be between 1 and 65535."
+                    Write-Host "`nSelected port is invalid. Should be between 1 and 65535." -ForegroundColor Red -BackgroundColor Yellow
                     $radiusConfig.radiusServerPort = $null
                 }            
             } while (-not $radiusConfig.radiusServerPort )
@@ -3048,7 +3091,7 @@ else {
         $clearRegCode = ConvertTo-Plaintext $registrationCode
         if ($clearRegCode.Length -lt 21) {
             #too short- try again.
-            Write-Host "The registration code is at least 21 characters long"
+            Write-Host "`nThe registration code is at least 21 characters long" -ForegroundColor Red -BackgroundColor Yellow
             $registrationCode = $null
         }
     } while (-not $registrationCode )
