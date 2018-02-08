@@ -209,6 +209,13 @@
         "description": "Shared secret between RADIUS server and client"
       },
       "defaultValue": ""
+    },
+    "autoShutdownIdleTime" : {
+      "type": "int",
+      "metadata": {
+        "description": "Default time the Remote Workstation will idle for before automatically shutting down"
+      },
+      "defaultValue": 240
     }
   },
   "variables": {
@@ -408,6 +415,9 @@
           },
           "binaryLocation": {
             "value": "[parameters('binaryLocation')]"
+          },
+          "autoShutdownIdleTime" : {
+            "value": "[parameters('autoShutdownIdleTime')]"
           }
         }
       }
