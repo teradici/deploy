@@ -2610,7 +2610,7 @@ $subscriptionsToDisplay = $subscriptions | Where-Object { $_.State -eq 'Enabled'
 
 $chosenSubscriptionIndex = $null
 if ($subscriptionsToDisplay.Length -lt 1) {
-    Write-Host-Warning -message "Account " + $rmContext.Account.Id + " has access to no enabled subscriptions. Exiting."
+    Write-Host-Warning "Account $($rmContext.Account.Id) has access to no enabled subscriptions. Exiting."
     exit
 }
 
@@ -2719,7 +2719,7 @@ else {
         $rgIdentifier = Read-Host "Resource group"
 
         if (!$rgIdentifier) {
-            Write-Host-Warning -message "Value not provided."
+            Write-Host-Warning "Value not provided."
             continue       
         }
 
@@ -2730,7 +2730,7 @@ else {
             $rgArrayLength = $resouceGroups.Length
             if ( -not (( $rgIndex -ge 1) -and ( $rgIndex -le $rgArrayLength))) {
                 #invalid range 
-                Write-Host-Warning -message "Please enter a range between 1 and $rgArrayLength or the name of a new resource group."
+                Write-Host-Warning "Please enter a range between 1 and $rgArrayLength or the name of a new resource group."
             }
             else {
                 $rgMatch = $resouceGroups[$rgIndex - 1]
@@ -2871,7 +2871,7 @@ else {
                 -ResourceType "Microsoft.Network/virtualNetworks" `
                 -ResourceNameEquals $vnetName)) ) {
                     # Does not exist
-                    Write-Host-Warning -message "$($vnetConfig.vnetID) not found"
+                    Write-Host-Warning "$($vnetConfig.vnetID) not found"
                     $vnetConfig.vnetID = $null
             }
         } while (-not $vnetConfig.vnetID)
@@ -2885,7 +2885,7 @@ else {
             }
             if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.CSsubnetName}) ) {
                 # Does not exist
-                Write-Host-Warning -message "$($vnetConfig.CSsubnetName) not found in root resource group VNet $($vnet.Name)"
+                Write-Host-Warning "$($vnetConfig.CSsubnetName) not found in root resource group VNet $($vnet.Name)"
                 $vnetConfig.CSsubnetName = $null
             }
         } while (-not $vnetConfig.CSsubnetName)
@@ -2897,7 +2897,7 @@ else {
             }
             if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.GWsubnetName}) ) {
                 # Does not exist
-                Write-Host-Warning -message "$($vnetConfig.GWsubnetName) not found in root resource group VNet $($vnet.Name)"
+                Write-Host-Warning "$($vnetConfig.GWsubnetName) not found in root resource group VNet $($vnet.Name)"
                 $vnetConfig.GWsubnetName = $null
             }
         } while (-not $vnetConfig.GWsubnetName)
@@ -2909,7 +2909,7 @@ else {
             }
             if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.RWsubnetName}) ) {
                 # Does not exist
-                Write-Host-Warning -message "$($vnetConfig.RWsubnetName) not found in root resource group VNet $($vnet.Name)"
+                Write-Host-Warning "$($vnetConfig.RWsubnetName) not found in root resource group VNet $($vnet.Name)"
                 $vnetConfig.RWsubnetName = $null
             }
         } while (-not $vnetConfig.RWsubnetName)
@@ -2943,14 +2943,14 @@ else {
 
         # https://social.technet.microsoft.com/Forums/scriptcenter/en-US/db2d8388-f2c2-4f67-9f84-c17b060504e1/regex-for-computer-fqdn?forum=winserverpowershell
         if (-not $($domainName -imatch '(?=^.{1,254}$)(^(?:(?!\d+\.|-)[a-zA-Z0-9_\-]{1,63}(?<!-)\.?)+(?:[a-zA-Z]{2,})$)')) {
-            Write-Host-Warning -message "Invalid Domain name. Please see https://support.microsoft.com/en-ca/help/909264/naming-conventions-in-active-directory-for-computers-domains-sites-and for valid domain names."
+            Write-Host-Warning "Invalid Domain name. Please see https://support.microsoft.com/en-ca/help/909264/naming-conventions-in-active-directory-for-computers-domains-sites-and for valid domain names."
             $domainName = $null
             continue
         }
 
         # Must have a dot
         if (-not $($domainName -imatch '\.')) {
-            Write-Host-Warning -message "The name must include a '.' such as example.com"
+            Write-Host-Warning "The name must include a '.' such as example.com"
             $domainName = $null
         }
 
@@ -2976,7 +2976,7 @@ else {
         # only check if it is not deployOverDC
         if (-not $deployOverDC) {
             if ((-not ($username -imatch '^[A-Za-z\d]+(?:[_-][A-Za-z\d]+)*$')) -or ($username.Length -gt 20)) {
-                Write-Host-Warning -message "Please enter a valid username. It can only contain letters and numbers and cannot be longer than 20 characters."
+                Write-Host-Warning "Please enter a valid username. It can only contain letters and numbers and cannot be longer than 20 characters."
                 $username = $null
                 continue
             }
@@ -2987,7 +2987,7 @@ else {
                                   'sql', 'support', 'support_388945a0', 'sys', 'test2', 'test3', 'user4', 'user5' )
             
             if ($username -in $reservedUsername) {
-                Write-Host-Warning -message "$username is a reserved username. Please try again"
+                Write-Host-Warning "$username is a reserved username. Please try again"
                 $username = $null
                 continue                
             }
@@ -3009,7 +3009,7 @@ else {
         # Don't check password if deploying over DC since in that case it's the DC's password complexity rules.
         if (-not $deployOverDC ) {
             if ($password.Length -lt 12) {
-                Write-Host-Warning -message "Invalid password. Minimum 12 characters"
+                Write-Host-Warning "Invalid password. Minimum 12 characters"
                 $password = $null
                 continue
             }         
@@ -3019,7 +3019,7 @@ else {
             $confirmedPassword = Read-Host -AsSecureString "Please re-enter the password"
             $clearConfirmedPassword = ConvertTo-Plaintext $confirmedPassword
             if (-not ($password -ceq $clearConfirmedPassword)) {
-                Write-Host-Warning -message "Entered passwords do not match. Please try again"
+                Write-Host-Warning "Entered passwords do not match. Please try again"
                 $password = $null
                 continue
             }
@@ -3063,7 +3063,7 @@ else {
                     }
                 }
                 if ( ($radiusConfig.radiusServerPort -le 0) -or ($radiusConfig.radiusServerPort -gt 65535) ) {
-                    Write-Host-Warning -message "Selected port is invalid. Should be between 1 and 65535."
+                    Write-Host-Warning "Selected port is invalid. Should be between 1 and 65535."
                     $radiusConfig.radiusServerPort = $null
                 }            
             } while (-not $radiusConfig.radiusServerPort )
@@ -3101,7 +3101,7 @@ else {
         $clearRegCode = ConvertTo-Plaintext $registrationCode
         if ($clearRegCode.Length -lt 21) {
             #too short- try again.
-            Write-Host-Warning -message "The registration code is at least 21 characters long"
+            Write-Host-Warning "The registration code is at least 21 characters long"
             $registrationCode = $null
         }
     } while (-not $registrationCode )
