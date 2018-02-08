@@ -527,7 +527,7 @@ Configuration InstallPCoIPAgent
                         Write-Host "Connecting to DC to add $machineToJoin to $domainGroupToJoin."
                     
                         # Create a PSSession with the domain controller that we used to login
-                        $psSession = New-PSSession -ComputerName $dcname -Credential $using:domainJoinCredential
+                        $psSession = New-PSSession -ComputerName $dcname -Credential $using:domainJoinCredential -ErrorAction Stop
 
                         $invokeResult = Invoke-Command -Session $psSession -ArgumentList $domainGroupToJoin, $machineToJoin  -ErrorAction Stop  `
                         -ScriptBlock {
