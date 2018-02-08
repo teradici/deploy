@@ -2468,6 +2468,9 @@ function Deploy-CAM() {
                 },
                 "secretName": "radiusSharedSecret"
             }
+        },
+        "autoShutdownIdleTime" : {
+            "value": $defaultIdleShutdownTime
         }
     }
 }
