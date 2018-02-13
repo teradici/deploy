@@ -1,35 +1,24 @@
-# What is Cloud Access Manager?
-Teradici Cloud Access Manager (CAM) is a one click deployment solution that provides a level of brokering on top of new Cloud Access Software (CAS) deployments. CAM will enable you to assign and revoke virtual machines to users, turn virtual machines on or off, as well as create and destroy virtual machines. 
- 
-The CAM solution is deployed in your Microsoft Azure subscription with an ARM template provided by Teradici. Once you have completed the template form on the Microsoft Azure Portal, you can start deployment. Information on deploying CAM, as well as additional information on the solutions architecture and deployment parameters are in the following sections.
- 
-The following image gives an outline of the CAM Technical Preview Architecture:
+# What is Cloud Access Manager? #
 
-**CAM Architecture**
+[Teradici Cloud Access Manager](https://www.teradici.com/products/cloud-access/cloud-access-manager)
+is a cloud service that simplifies and automates
+deployments of Cloud Access Software.
+
+The following image gives an outline of the Cloud Access Manager
+Technical Preview Architecture:
+
+## Cloud Access Manager Architecture ##
 
 ![Img](http://www.teradici.com/web-help/CAM/CAMPOCDiagram.png)
 
-## Deploying Cloud Access Manager with Azure Cloud Shell
-The CAM solution consists of the following components:
- * Deployment Cloud Server (This provides the administration GUI)
- * Domain Controller (This will contain an active directory)
- * Connection Broker
- * Security Gateway
- * One or more user applications
- * ARM Templates
- * External data stores (CAM creates a data storage account for all virtual hardrives.)
- * Private data stores (CAM creates a data storage account for all Remote Workstation templates, configurations and scripts.)
- * Keyvault (This securely contains the required authentication credentials.)
+## Deploying Cloud Access Manager ##
 
-Click the **Deploy Azure** button for instructions on how to begin.
+The Cloud Access Manager solution is deployed in your Microsoft Azure
+subscription by running a few instructions in an Azure PowerShell
+Cloud Shell session. Click on the following link for Cloud Access
+Manager documentation:
 
-**NOTE:** In general it takes over an hour for the deployment to complete.
-
-**NOTE:** By clicking one of the following Deploy on Azure buttons, you accept the terms of the Teradici Cloud Access Software End User License Agreement and you have read and agree to be bound by the software license for use of the third-party drivers.
-
-<a target="_blank" href="http://www.teradici.com/web-help/CAM/site/index.html">
-    <img src="http://azuredeploy.net/deploybutton.png"/>
-</a>
+[Instructions for deploying Cloud Access Manager](http://www.teradici.com/web-help/CAM/site/index.html)
 
 
 Copyright 2018 Teradici Corporation. All Rights Reserved.
