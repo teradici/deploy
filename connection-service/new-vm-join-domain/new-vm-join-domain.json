@@ -98,7 +98,12 @@
                         "properties": {
                             "subnet": {
                                 "id": "[parameters('subnetId')]"
-                            }
+                            },
+                            "ApplicationGatewayBackendAddressPools": [
+                                {
+                                    "id": "[parameters('applicationGatewayPoolReference')]"
+                                }
+                            ]
                         }
                     }
                 ]
