@@ -2555,7 +2555,7 @@ function Get-CAMRoleDefinition() {
         [String]$subscriptionId
     )
 
-    $roleName = "Cloud Access Manager"
+    $roleName = "TEST Cloud Access Manager"
 
     $camCustomRoleDefinition = Get-AzureRmRoleDefinition $roleName
     # Create Role Defintion Based off of Contributor if it doesn't already exist
@@ -2573,8 +2573,13 @@ function Get-CAMRoleDefinition() {
             $camCustomRoleDefinition.AssignableScopes.Add("/subscriptions/$subscriptionId")
         }
 
+        $camCustomRoleDefinition.NotActions.clear()
         # Actions to remove
         $requiredNotActions = @(
+            # Default NotActions to disable to preven elevation of privelege
+            'Microsoft.Authorization/*/Delete'
+            'Microsoft.Authorization/*/Write'
+            'Microsoft.Authorization/elevateAccess/Action'
             # Remove ability to get SAS URI of VM Disk for Blob access
             "Microsoft.Compute/disks/beginGetAccess/action",
             # Remove ability to revoke SAS URI of VM Disk for Blob access
@@ -2584,6 +2589,103 @@ function Get-CAMRoleDefinition() {
         foreach ( $notAction in $requiredNotActions) {
             if ( -not $camCustomRoleDefinition.NotActions.Contains($notAction)) {
                 $camCustomRoleDefinition.NotActions.Add($notAction)
+            }
+        }
+
+        # Actions to add
+        $requiredActions = @(
+            "Microsoft.Compute/*"
+            #"Microsoft.DomainRegistration/*",
+            #"Microsoft.Migrate/*",
+            #"Microsoft.Security/*",
+            #"Microsoft.ClassicCompute/*",
+            #"Microsoft.Sql/*",
+            #"Microsoft.ContentModerator/*",
+            #"Microsoft.CustomerInsights/*",
+            #"Microsoft.DBforPostgreSQL/*",
+            #"Microsoft.Devices/*",
+            #"Microsoft.OperationsManagement/*",
+            #"Microsoft.AzureStack/*",
+            #"Microsoft.DataLakeAnalytics/*",
+            #"Microsoft.PowerBIDedicated/*",
+            #"Microsoft.ApiManagement/*",
+            #"Microsoft.Solutions/*",
+            #"Microsoft.ResourceHealth/*",
+            #"Microsoft.Resourcehealth/*",
+            #"Microsoft.ServiceBus/*",
+            #"Microsoft.StorSimple/*",
+            #"Microsoft.DocumentDB/*",
+            #"Microsoft.AAD/*",
+            #"Microsoft.Automation/*",
+            #"Microsoft.Authorization/*",
+            #"Microsoft.Storage/*",
+            #"Microsoft.Network/*",
+            #"microsoft.network/*",
+            #"Microsoft.Commerce/*",
+            #"Microsoft.Relay/*",
+            #"Microsoft.Cache/*",
+            #"Microsoft.BingMaps/*",
+            #"Microsoft.Search/*",
+            #"Microsoft.ClassicStorage/*",
+            #"Microsoft.Insights/*",
+            #"Microsoft.OperationalInsights/*",
+            #"Microsoft.AlertsManagement/*",
+            #"Microsoft.RecoveryServices/*",
+            #"Microsoft.NotificationHubs/*",
+            #"Microsoft.ServiceFabric/*",
+            #"Microsoft.MachineLearning/*",
+            #"Microsoft.Media/*",
+            #"Microsoft.WorkloadMonitor/*",
+            #"Microsoft.Scheduler/*",
+            #"microsoft.aadiam/*",
+            #"microsoft.web/*",
+            #"Microsoft.Web/*",
+            #"Microsoft.BatchAI/*",
+            #"Microsoft.Consumption/*",
+            #"Microsoft.DataCatalog/*",
+            #"Microsoft.HDInsight/*",
+            #"Microsoft.KeyVault/*",
+            #"Microsoft.Compute/*",
+            #"Microsoft.DevTestLab/*",
+            #"Microsoft.Features/*",
+            #"Microsoft.DBforMySQL/*",
+            #"Microsoft.MachineLearningModelManagement/*",
+            #"Microsoft.Management/*",
+            #"Microsoft.EventHub/*",
+            #"Microsoft.ManagedIdentity/*",
+            #"Microsoft.Batch/*",
+            #"Microsoft.LocationBasedServices/*",
+            #"Microsoft.Cdn/*",
+            #"Microsoft.ContainerRegistry/*",
+            #"Microsoft.CognitiveServices/*",
+            #"Microsoft.AzureActiveDirectory/*",
+            #"Microsoft.ImportExport/*",
+            #"Microsoft.DynamicsLcs/*",
+            #"Microsoft.MachineLearningCompute/*",
+            #"Microsoft.Resources/*",
+            #"Microsoft.AnalysisServices/*",
+            #"Microsoft.StreamAnalytics/*",
+            #"Microsoft.Advisor/*",
+            #"Microsoft.ContainerService/*",
+            #"Microsoft.Support/*",
+            #"Microsoft.Subscription/*",
+            #"Microsoft.CertificateRegistration/*",
+            #"Microsoft.Logic/*",
+            #"Microsoft.ClassicNetwork/*",
+            #"Microsoft.MarketplaceApps/*",
+            #"Microsoft.DataLakeStore/*",
+            #"Microsoft.Billing/*",
+            #"Microsoft.ManagedLab/*",
+            #"Microsoft.MarketplaceOrdering/*",
+            #"Microsoft.TimeSeriesInsights/*",
+            #"Microsoft.ADHybridHealthService/*"
+        )
+        # Clear out existing Actions
+        $camCustomRoleDefinition.Actions.Clear()
+        # Add Actions required to be enabled
+        foreach ( $Action in $requiredActions) {
+            if ( -not $camCustomRoleDefinition.Actions.Contains($Action)) {
+                $camCustomRoleDefinition.Actions.Add($Action)
             }
         }
 
