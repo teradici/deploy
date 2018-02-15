@@ -2043,6 +2043,7 @@ function Deploy-CAM() {
                 Write-Host "The Cloud Access Manager deployment script was not passed service principal credentials. It will attempt to create a service principal."
                 $requestSPGeneration = Read-Host `
                     "Please hit enter to continue or 'no' to manually enter service principal credentials from a pre-made service principal"
+                $requestSPGeneration = $requestSPGeneration.Trim()
             } else {
                 $requestSPGeneration=""
             }
@@ -2146,23 +2147,12 @@ function Deploy-CAM() {
                     }
 
                     if(-not $hasAccess) {
-                        if( -not $ignorePrompts ) {
-                            $prompt = Read-Host "The Service Principal credentials need to be given access to the vNet $($CAMConfig.internal.vnetName). Press enter to accept and continue or 'no' to cancel deployment"
-                        } else {
-                            $prompt = $false
-                        }
-                        if ( -not $prompt )
-                        {
-                            Write-Host "Giving $client '$($camCustomRoleDefinition.Name)' access to $($CAMConfig.internal.vnetName)"
-                            New-AzureRmRoleAssignment `
-                                -RoleDefinitionName $camCustomRoleDefinition.Name `
-                                -Scope $CAMConfig.internal.vnetID `
-                                -ServicePrincipalName $client `
-                                -ErrorAction Stop | Out-Null
-                        } else {
-                            Write-Host "Cancelling Deployment"
-                            exit
-                        }
+                        Write-Host "Giving $client '$($camCustomRoleDefinition.Name)' access to $($CAMConfig.internal.vnetName)"
+                        New-AzureRmRoleAssignment `
+                            -RoleDefinitionName $camCustomRoleDefinition.Name `
+                            -Scope $CAMConfig.internal.vnetID `
+                            -ServicePrincipalName $client `
+                            -ErrorAction Stop | Out-Null
                     }
                 }
                 break # while loop
@@ -2665,7 +2655,7 @@ else {
         if( -not $ignorePrompts ) {
             $chosenSubscriptionNumber = `
             if (($chosenSubscriptionNumber = Read-Host "Please enter the Number of the subscription you would like to use or press enter to accept the current one [$currentSubscriptionNumber]") -eq '') `
-            {$currentSubscriptionNumber} else {$chosenSubscriptionNumber}
+            {$currentSubscriptionNumber} else {$chosenSubscriptionNumber.Trim()}
         }
         else {
             $chosenSubscriptionNumber = $currentSubscriptionNumber
@@ -2729,7 +2719,7 @@ else {
     while (-not $selectedRGName) {
         Write-Host ("`nPlease select the resource group of the Cloud Access Mananger deployment root by number`n" +
             "or type in a new resource group name for a new Cloud Access Mananger deployment.")
-        $rgIdentifier = Read-Host "Resource group"
+        $rgIdentifier = (Read-Host "Resource group").Trim()
 
         if (!$rgIdentifier) {
             Write-Host-Warning "Value not provided."
@@ -2766,7 +2756,7 @@ else {
                 Write-Host("Available Azure Locations")
                 Write-Host (Get-AzureRMLocation | Select-Object -Property Location, DisplayName | Format-Table | Out-String )
 
-                $newRGLocation = Read-Host "`nPlease enter resource group location"
+                $newRGLocation = (Read-Host "`nPlease enter resource group location").Trim()
 
                 Write-Host "Creating Cloud Access Manager root resource group $inputRgName"
                 $newRgResult = New-AzureRmResourceGroup -Name $inputRgName -Location $newRGLocation
@@ -2871,9 +2861,32 @@ else {
         # prompt for vnet name, gateway subnet name, remote workstation subnet name, connection service subnet name
         do {
             if ( -not $vnetConfig.vnetID ) {
-                Write-Host "Please provide the VNet resource ID for the VNet Cloud Access Manager connection service, gateways, and remote workstations will be using"
-                Write-Host "In the form /subscriptions/{subscriptionID}/resourceGroups/{vnetResourceGroupName}/providers/Microsoft.Network/virtualNetworks/{vnetName}"
-                $vnetConfig.vnetID = Read-Host "VNet resource ID"
+                $vnets = Get-AzureRmVirtualNetwork
+
+                $vnetIndex = 0
+                ForEach ($v in $vnets) {
+                    if (-not (Get-Member -inputobject $v -name "Number")) {
+                        Add-Member -InputObject $v -Name "Number" -Value "" -MemberType NoteProperty
+                    }
+                    $v.Number = ++$vnetIndex
+                }
+
+                Write-Host "`nPlease provide the VNet information for the VNet Cloud Access Manager connection service, gateways, and remote workstations"
+                Write-Host "will be using. Please enter the number of the vnet in the following list or the complete VNet ID in"
+                Write-Host "the form /subscriptions/{subscriptionID}/resourceGroups/{vnetResourceGroupName}/providers/Microsoft.Network/virtualNetworks/{vnetName}`n"
+                Write-Host-Warning "The service principal account created later in the deployment process will be provided access rights to the selected virtual network."
+                $vnets | Select-Object -Property Number, Name, ResourceGroupName, Location | Format-Table
+
+                $chosenVnetIndex = (Read-Host "VNet").Trim()
+
+                if (( $chosenVnetIndex -ge 1) -and ( $chosenVnetIndex -le $vnets.Length)) {
+                    # have selected a valid index - use that and substitute
+                    $vnetConfig.vnetID = $vnets[$chosenVnetIndex - 1].Id
+                }
+                else {
+                    # otherwise interpret as a resource ID
+                    $vnetConfig.vnetID = $chosenVnetIndex
+                }
             }
             # vnetID is a reference ID that is like: 
             # "/subscriptions/{subscription}/resourceGroups/{vnetRG}/providers/Microsoft.Network/virtualNetworks/{vnetName}"
@@ -2889,12 +2902,34 @@ else {
             }
         } while (-not $vnetConfig.vnetID)
 
+        # Now select subnets
         $vnet = Get-AzureRmVirtualNetwork -Name $vnetName -ResourceGroupName $vnetRgName
+        Write-Host "Using VNet: $($vnet.Id)`n"
+
+        $subnets = $vnet.Subnets
+        $subnetIndex = 0
+        ForEach ($s in $subnets) {
+            if (-not (Get-Member -inputobject $s -name "Number")) {
+                Add-Member -InputObject $s -Name "Number" -Value "" -MemberType NoteProperty
+            }
+            $s.Number = ++$subnetIndex
+        }
 
         # Connection Service Subnet
         do {
             if ( -not $vnetConfig.CSsubnetName ) {
-                $vnetConfig.CSsubnetName = Read-Host "Provide Connection Service Subnet Name"
+                Write-Host "Please provide Connection Service Subnet number from the list below, or name"
+                $subnets | Select-Object -Property Number, Name | Format-Table
+                $subnetIndex = (Read-Host "Subnet").Trim()
+            
+                if (( $subnetIndex -ge 1) -and ( $subnetIndex -le $subnets.Count)) {
+                    # selected a valid index - use that and substitute
+                    $vnetConfig.CSsubnetName = $subnets[$subnetIndex - 1].Name
+                }
+                else {
+                    # otherwise interpret as a resource ID
+                    $vnetConfig.CSsubnetName = $subnetIndex
+                }
             }
             if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.CSsubnetName}) ) {
                 # Does not exist
@@ -2902,11 +2937,23 @@ else {
                 $vnetConfig.CSsubnetName = $null
             }
         } while (-not $vnetConfig.CSsubnetName)
+        Write-Host "Connection Service Subnet: $($vnetConfig.CSsubnetName)`n"
 
         # Application Gateway Subnet
         do {
             if ( -not $vnetConfig.GWsubnetName ) {
-                $vnetConfig.GWsubnetName = Read-Host "Provide Application Gateway Subnet Name"
+                Write-Host "Please provide Application Gateway Subnet number from the list below, or name"
+                $subnets | Select-Object -Property Number, Name | Format-Table
+                $subnetIndex = (Read-Host "Subnet").Trim()
+            
+                if (( $subnetIndex -ge 1) -and ( $subnetIndex -le $subnets.Count)) {
+                    # selected a valid index - use that and substitute
+                    $vnetConfig.GWsubnetName = $subnets[$subnetIndex - 1].Name
+                }
+                else {
+                    # otherwise interpret as a resource ID
+                    $vnetConfig.GWsubnetName = $subnetIndex
+                }
             }
             if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.GWsubnetName}) ) {
                 # Does not exist
@@ -2914,11 +2961,23 @@ else {
                 $vnetConfig.GWsubnetName = $null
             }
         } while (-not $vnetConfig.GWsubnetName)
+        Write-Host "Application Gateway Subnet: $($vnetConfig.GWsubnetName)`n"
         
         # Remote Workstation Subnet
         do {
             if ( -not $vnetConfig.RWsubnetName ) {
-                $vnetConfig.RWsubnetName = Read-Host "Provide Remote Workstation Subnet Name"
+                Write-Host "Please provide Remote Workstation Subnet number from the list below, or name"
+                $subnets | Select-Object -Property Number, Name | Format-Table
+                $subnetIndex = (Read-Host "Subnet").Trim()
+            
+                if (( $subnetIndex -ge 1) -and ( $subnetIndex -le $subnets.Count)) {
+                    # selected a valid index - use that and substitute
+                    $vnetConfig.RWsubnetName = $subnets[$subnetIndex - 1].Name
+                }
+                else {
+                    # otherwise interpret as a resource ID
+                    $vnetConfig.RWsubnetName = $subnetIndex
+                }
             }
             if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.RWsubnetName}) ) {
                 # Does not exist
@@ -2926,6 +2985,8 @@ else {
                 $vnetConfig.RWsubnetName = $null
             }
         } while (-not $vnetConfig.RWsubnetName)
+        Write-Host "Remote Workstation Subnet: $($vnetConfig.RWsubnetName)`n"
+
     } else {
         # create new DC and vnets. Default values populated here.
         if( -not $vnetConfig.vnetID ) {
@@ -2951,7 +3012,7 @@ else {
                 $domainNameMessage = "`nPlease enter the fully qualified domain name of the domain to connect to. The name must include a '.' such as example.com"
             }
             Write-Host $domainNameMessage
-            $domainName = Read-Host "Domain name"
+            $domainName = (Read-Host "Domain name").Trim()
         }
 
         # https://social.technet.microsoft.com/Forums/scriptcenter/en-US/db2d8388-f2c2-4f67-9f84-c17b060504e1/regex-for-computer-fqdn?forum=winserverpowershell
@@ -2983,7 +3044,7 @@ else {
             else {
                 $domainAdminMessage = "Please enter the username of the service account for Cloud Access Manager to use with the connected domain"
             }
-            $username = Read-Host $domainAdminMessage
+            $username = (Read-Host $domainAdminMessage).Trim()
         }
 
         # only check if it is not deployOverDC
@@ -3015,7 +3076,7 @@ else {
     }
     do {
         if ( -not $password ) {
-            $psw = Read-Host -AsSecureString "Please enter the password"
+            $psw = (Read-Host -AsSecureString "Please enter the password").Trim()
             $password = ConvertTo-Plaintext $psw
         }
 
@@ -3029,7 +3090,7 @@ else {
         }
 
         if ($psw) {
-            $confirmedPassword = Read-Host -AsSecureString "Please re-enter the password"
+            $confirmedPassword = (Read-Host -AsSecureString "Please re-enter the password").Trim()
             $clearConfirmedPassword = ConvertTo-Plaintext $confirmedPassword
             if (-not ($password -ceq $clearConfirmedPassword)) {
                 Write-Host-Warning "Entered passwords do not match. Please try again"
@@ -3062,7 +3123,7 @@ else {
         if ($enableRadiusMfa) {
             do {
                 if (-not $radiusConfig.radiusServerHost ) {
-                    $radiusConfig.radiusServerHost = Read-Host "Please enter your RADIUS Server's Hostname or IP"
+                    $radiusConfig.radiusServerHost = (Read-Host "Please enter your RADIUS Server's Hostname or IP").Trim()
                 }
             } while (-not $radiusConfig.radiusServerHost)
 
@@ -3083,7 +3144,7 @@ else {
 
             do {
                 if (-not $radiusConfig.radiusSharedSecret ) {
-                    $radiusConfig.radiusSharedSecret = Read-Host -AsSecureString "Please enter your RADIUS Server's Shared Secret"
+                    $radiusConfig.radiusSharedSecret = (Read-Host -AsSecureString "Please enter your RADIUS Server's Shared Secret").Trim()
                 }
             } while (-not $radiusConfig.radiusSharedSecret )
         }
@@ -3107,7 +3168,7 @@ else {
 
     do {
         if (-not $registrationCode ) {
-            $registrationCode = Read-Host -AsSecureString "Please enter your Cloud Access registration code"
+            $registrationCode = (Read-Host -AsSecureString "Please enter your Cloud Access registration code").Trim()
         }
 
         # Need plaintext registration code to check length
