@@ -2546,7 +2546,6 @@ function Confirm-ModuleVersion()
 }
 
 # Create a custom role for CAM with necessary permissions
-# Currently it is the based off of the Contributor Role excpept we remove Storage Access and VM Disk Blob Read Access
 # Use 'Get-AzureRmProviderOperation *' to get a list of Azure Operations and their details
 # See https://docs.microsoft.com/en-us/azure/active-directory/role-based-access-built-in-roles for details on Azure Built in Roles
 function Get-CAMRoleDefinition() {
@@ -2580,10 +2579,60 @@ function Get-CAMRoleDefinition() {
             'Microsoft.Authorization/*/Delete'
             'Microsoft.Authorization/*/Write'
             'Microsoft.Authorization/elevateAccess/Action'
+            
+            # Remove ability to access snapshots
+            'Microsoft.Compute/snapshots/*'
+            # Remove ability to access restore points
+            'Microsoft.Compute/restorePointCollections/*'
             # Remove ability to get SAS URI of VM Disk for Blob access
-            "Microsoft.Compute/disks/beginGetAccess/action",
+            'Microsoft.Compute/disks/beginGetAccess/action'
             # Remove ability to revoke SAS URI of VM Disk for Blob access
-            "Microsoft.Compute/disks/endGetAccess/action"
+            'Microsoft.Compute/disks/endGetAccess/action'
+
+            # Remove ability to access application gatewat WAF rulesets
+            'Microsoft.Network/applicationGatewayAvailableWafRuleSets/*'
+            # Remove ability to access vpn connection info
+            'Microsoft.Network/connections/*'
+            # Remove ability to access dns zones and operation satuses
+            'Microsoft.Network/dnszones/*'
+            'Microsoft.Network/dnsoperationstatuses/*'
+            # Remove ability to access express routes
+            'Microsoft.Network/expressRouteCrossConnections/*'
+            'Microsoft.Network/expressRouteCircuits/*'
+            'Microsoft.Network/expressRouteServiceProviders/*'
+            # Remove ability to access load balancers
+            'Microsoft.Network/loadBalancers/*'
+            # Remove ability to access network watchers
+            'Microsoft.Network/networkWatchers/*'
+            # Remove ability to access route filters and tables
+            'Microsoft.Network/routeFilters/*'
+            'Microsoft.Network/routeTables/*'
+            # Remove ability to access secure gateways
+            'Microsoft.Network/securegateways/*'
+            # Remove ability to access service endpoint policies
+            'Microsoft.Network/serviceEndpointPolicies/*'
+            # Remove ability to access traffic management
+            'Microsoft.Network/trafficManagerProfiles/*'
+            'Microsoft.Network/trafficManagerUserMetricsKeys/*'
+            'Microsoft.Network/trafficManagerGeographicHierarchies/*'
+            # Remove ability to delete Vnets
+            'Microsoft.Network/virtualNetworks/delete'
+            # Remove ability to peer Vnet to other Vnets
+            'Microsoft.Network/virtualNetworks/peer/action'
+            # Remove ability to access Vnet peering info
+            'Microsoft.Network/virtualNetworks/virtualNetworkPeerings/*'
+            # Remove ability to access virtual network gateways and taps
+            'Microsoft.Network/virtualNetworkGateways/*'
+            'Microsoft.Network/virtualNetworkTaps/*'
+            # Remove ability to access virtual wans and hubs
+            'Microsoft.Network/virtualwans/*'
+            'Microsoft.Network/virtualHubs/*'
+            # Remove ability to access vpn gateways and sites
+            'Microsoft.Network/vpnGateways/*'
+            'Microsoft.Network/vpnsites/*'
+
+            # Remove ability to access queue service in storage account
+            'Microsoft.Storage/StorageAccounts/queueServices/*'
         )
         # Add Not Actions required to be disabled
         foreach ( $notAction in $requiredNotActions) {
@@ -2594,92 +2643,13 @@ function Get-CAMRoleDefinition() {
 
         # Actions to add
         $requiredActions = @(
+            "Microsoft.Resources/*"
+            "Microsoft.KeyVault/*"
+            "Microsoft.Storage/*"
+            "Microsoft.Network/*"
             "Microsoft.Compute/*"
-            #"Microsoft.DomainRegistration/*",
-            #"Microsoft.Migrate/*",
-            #"Microsoft.Security/*",
-            #"Microsoft.ClassicCompute/*",
-            #"Microsoft.Sql/*",
-            #"Microsoft.ContentModerator/*",
-            #"Microsoft.CustomerInsights/*",
-            #"Microsoft.DBforPostgreSQL/*",
-            #"Microsoft.Devices/*",
-            #"Microsoft.OperationsManagement/*",
-            #"Microsoft.AzureStack/*",
-            #"Microsoft.DataLakeAnalytics/*",
-            #"Microsoft.PowerBIDedicated/*",
-            #"Microsoft.ApiManagement/*",
-            #"Microsoft.Solutions/*",
-            #"Microsoft.ResourceHealth/*",
-            #"Microsoft.Resourcehealth/*",
-            #"Microsoft.ServiceBus/*",
-            #"Microsoft.StorSimple/*",
-            #"Microsoft.DocumentDB/*",
-            #"Microsoft.AAD/*",
-            #"Microsoft.Automation/*",
-            #"Microsoft.Authorization/*",
-            #"Microsoft.Storage/*",
-            #"Microsoft.Network/*",
-            #"microsoft.network/*",
-            #"Microsoft.Commerce/*",
-            #"Microsoft.Relay/*",
-            #"Microsoft.Cache/*",
-            #"Microsoft.BingMaps/*",
-            #"Microsoft.Search/*",
-            #"Microsoft.ClassicStorage/*",
-            #"Microsoft.Insights/*",
-            #"Microsoft.OperationalInsights/*",
-            #"Microsoft.AlertsManagement/*",
-            #"Microsoft.RecoveryServices/*",
-            #"Microsoft.NotificationHubs/*",
-            #"Microsoft.ServiceFabric/*",
-            #"Microsoft.MachineLearning/*",
-            #"Microsoft.Media/*",
-            #"Microsoft.WorkloadMonitor/*",
-            #"Microsoft.Scheduler/*",
-            #"microsoft.aadiam/*",
-            #"microsoft.web/*",
-            #"Microsoft.Web/*",
-            #"Microsoft.BatchAI/*",
-            #"Microsoft.Consumption/*",
-            #"Microsoft.DataCatalog/*",
-            #"Microsoft.HDInsight/*",
-            #"Microsoft.KeyVault/*",
-            #"Microsoft.Compute/*",
-            #"Microsoft.DevTestLab/*",
-            #"Microsoft.Features/*",
-            #"Microsoft.DBforMySQL/*",
-            #"Microsoft.MachineLearningModelManagement/*",
-            #"Microsoft.Management/*",
-            #"Microsoft.EventHub/*",
-            #"Microsoft.ManagedIdentity/*",
-            #"Microsoft.Batch/*",
-            #"Microsoft.LocationBasedServices/*",
-            #"Microsoft.Cdn/*",
-            #"Microsoft.ContainerRegistry/*",
-            #"Microsoft.CognitiveServices/*",
-            #"Microsoft.AzureActiveDirectory/*",
-            #"Microsoft.ImportExport/*",
-            #"Microsoft.DynamicsLcs/*",
-            #"Microsoft.MachineLearningCompute/*",
-            #"Microsoft.Resources/*",
-            #"Microsoft.AnalysisServices/*",
-            #"Microsoft.StreamAnalytics/*",
-            #"Microsoft.Advisor/*",
-            #"Microsoft.ContainerService/*",
-            #"Microsoft.Support/*",
-            #"Microsoft.Subscription/*",
-            #"Microsoft.CertificateRegistration/*",
-            #"Microsoft.Logic/*",
-            #"Microsoft.ClassicNetwork/*",
-            #"Microsoft.MarketplaceApps/*",
-            #"Microsoft.DataLakeStore/*",
-            #"Microsoft.Billing/*",
-            #"Microsoft.ManagedLab/*",
-            #"Microsoft.MarketplaceOrdering/*",
-            #"Microsoft.TimeSeriesInsights/*",
-            #"Microsoft.ADHybridHealthService/*"
         )
+
         # Clear out existing Actions
         $camCustomRoleDefinition.Actions.Clear()
         # Add Actions required to be enabled
