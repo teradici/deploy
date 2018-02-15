@@ -3076,7 +3076,7 @@ else {
     }
     do {
         if ( -not $password ) {
-            $psw = (Read-Host -AsSecureString "Please enter the password").Trim()
+            $psw = Read-Host -AsSecureString "Please enter the password"
             $password = ConvertTo-Plaintext $psw
         }
 
@@ -3090,7 +3090,7 @@ else {
         }
 
         if ($psw) {
-            $confirmedPassword = (Read-Host -AsSecureString "Please re-enter the password").Trim()
+            $confirmedPassword = Read-Host -AsSecureString "Please re-enter the password"
             $clearConfirmedPassword = ConvertTo-Plaintext $confirmedPassword
             if (-not ($password -ceq $clearConfirmedPassword)) {
                 Write-Host-Warning "Entered passwords do not match. Please try again"
@@ -3144,7 +3144,7 @@ else {
 
             do {
                 if (-not $radiusConfig.radiusSharedSecret ) {
-                    $radiusConfig.radiusSharedSecret = (Read-Host -AsSecureString "Please enter your RADIUS Server's Shared Secret").Trim()
+                    $radiusConfig.radiusSharedSecret = Read-Host -AsSecureString "Please enter your RADIUS Server's Shared Secret"
                 }
             } while (-not $radiusConfig.radiusSharedSecret )
         }
