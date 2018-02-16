@@ -3168,7 +3168,7 @@ else {
 
     do {
         if (-not $registrationCode ) {
-            $registrationCode = (Read-Host -AsSecureString "Please enter your Cloud Access registration code").Trim()
+            $registrationCode = (Read-Host -AsSecureString "Please enter your Cloud Access registration code")
         }
 
         # Need plaintext registration code to check length
