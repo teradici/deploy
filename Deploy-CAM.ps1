@@ -2554,7 +2554,7 @@ function Get-CAMRoleDefinition() {
         [String]$subscriptionId
     )
 
-    $roleName = "TEST Cloud Access Manager"
+    $roleName = "Cloud Access Manager"
 
     $camCustomRoleDefinition = Get-AzureRmRoleDefinition $roleName
     # Create Role Defintion Based off of Contributor if it doesn't already exist
