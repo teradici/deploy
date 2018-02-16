@@ -2655,7 +2655,7 @@ else {
         if( -not $ignorePrompts ) {
             $chosenSubscriptionNumber = `
             if (($chosenSubscriptionNumber = Read-Host "Please enter the Number of the subscription you would like to use or press enter to accept the current one [$currentSubscriptionNumber]") -eq '') `
-            {$currentSubscriptionNumber} else {$chosenSubscriptionNumber.Trim()}
+            {$currentSubscriptionNumber} else {[int]$chosenSubscriptionNumber}
         }
         else {
             $chosenSubscriptionNumber = $currentSubscriptionNumber
@@ -2865,7 +2865,7 @@ else {
 
                 $vnetIndex = 0
                 ForEach ($v in $vnets) {
-                    if (-not (Get-Member -inputobject $v -name "Number")) {
+                    if (-not (Get-Member -InputObject $v -name "Number")) {
                         Add-Member -InputObject $v -Name "Number" -Value "" -MemberType NoteProperty
                     }
                     $v.Number = ++$vnetIndex
@@ -2877,7 +2877,8 @@ else {
                 Write-Host-Warning "The service principal account created later in the deployment process will be provided access rights to the selected virtual network."
                 $vnets | Select-Object -Property Number, Name, ResourceGroupName, Location | Format-Table
 
-                $chosenVnetIndex = (Read-Host "VNet").Trim()
+                $chosenVnet = Read-Host "VNet"
+                [int]::TryParse($chosenVnet, [ref]$chosenVnetIndex) # chosenVnetIndex will be 0 on parse failure
 
                 if (( $chosenVnetIndex -ge 1) -and ( $chosenVnetIndex -le $vnets.Length)) {
                     # have selected a valid index - use that and substitute
@@ -2885,7 +2886,7 @@ else {
                 }
                 else {
                     # otherwise interpret as a resource ID
-                    $vnetConfig.vnetID = $chosenVnetIndex
+                    $vnetConfig.vnetID = $chosenVnetIndex.Trim()
                 }
             }
             # vnetID is a reference ID that is like: 
@@ -2920,15 +2921,16 @@ else {
             if ( -not $vnetConfig.CSsubnetName ) {
                 Write-Host "Please provide Connection Service Subnet number from the list below, or name"
                 $subnets | Select-Object -Property Number, Name | Format-Table
-                $subnetIndex = (Read-Host "Subnet").Trim()
+                $chosenSubnet = Read-Host "Subnet"
+                [int]::TryParse($chosenSubnet, [ref]$subnetIndex) # subnetIndex will be 0 on parse failure
             
                 if (( $subnetIndex -ge 1) -and ( $subnetIndex -le $subnets.Count)) {
                     # selected a valid index - use that and substitute
                     $vnetConfig.CSsubnetName = $subnets[$subnetIndex - 1].Name
                 }
                 else {
-                    # otherwise interpret as a resource ID
-                    $vnetConfig.CSsubnetName = $subnetIndex
+                    # otherwise interpret as a subnet name
+                    $vnetConfig.CSsubnetName = $chosenSubnet.Trim()
                 }
             }
             if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.CSsubnetName}) ) {
@@ -2944,15 +2946,16 @@ else {
             if ( -not $vnetConfig.GWsubnetName ) {
                 Write-Host "Please provide Application Gateway Subnet number from the list below, or name"
                 $subnets | Select-Object -Property Number, Name | Format-Table
-                $subnetIndex = (Read-Host "Subnet").Trim()
+                $chosenSubnet = Read-Host "Subnet"
+                [int]::TryParse($chosenSubnet, [ref]$subnetIndex) # subnetIndex will be 0 on parse failure
             
                 if (( $subnetIndex -ge 1) -and ( $subnetIndex -le $subnets.Count)) {
                     # selected a valid index - use that and substitute
                     $vnetConfig.GWsubnetName = $subnets[$subnetIndex - 1].Name
                 }
                 else {
-                    # otherwise interpret as a resource ID
-                    $vnetConfig.GWsubnetName = $subnetIndex
+                    # otherwise interpret as a subnet name
+                    $vnetConfig.GWsubnetName = $chosenSubnet.Trim()
                 }
             }
             if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.GWsubnetName}) ) {
@@ -2968,15 +2971,16 @@ else {
             if ( -not $vnetConfig.RWsubnetName ) {
                 Write-Host "Please provide Remote Workstation Subnet number from the list below, or name"
                 $subnets | Select-Object -Property Number, Name | Format-Table
-                $subnetIndex = (Read-Host "Subnet").Trim()
+                $chosenSubnet = Read-Host "Subnet"
+                [int]::TryParse($chosenSubnet, [ref]$subnetIndex) # subnetIndex will be 0 on parse failure
             
                 if (( $subnetIndex -ge 1) -and ( $subnetIndex -le $subnets.Count)) {
                     # selected a valid index - use that and substitute
                     $vnetConfig.RWsubnetName = $subnets[$subnetIndex - 1].Name
                 }
                 else {
-                    # otherwise interpret as a resource ID
-                    $vnetConfig.RWsubnetName = $subnetIndex
+                    # otherwise interpret as a subnet name
+                    $vnetConfig.RWsubnetName = $chosenSubnet.Trim()
                 }
             }
             if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.RWsubnetName}) ) {
