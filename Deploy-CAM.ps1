@@ -2572,10 +2572,12 @@ function Get-CAMRoleDefinition() {
             $camCustomRoleDefinition.AssignableScopes.Add("/subscriptions/$subscriptionId")
         }
 
+        # Clear out existing NotActions
         $camCustomRoleDefinition.NotActions.clear()
+
         # Actions to remove
         $requiredNotActions = @(
-            # Default NotActions to disable to preven elevation of privelege
+            # Default NotActions to disable to prevent elevation of privlege
             'Microsoft.Authorization/*/Delete'
             'Microsoft.Authorization/*/Write'
             'Microsoft.Authorization/elevateAccess/Action'
@@ -2589,7 +2591,7 @@ function Get-CAMRoleDefinition() {
             # Remove ability to revoke SAS URI of VM Disk for Blob access
             'Microsoft.Compute/disks/endGetAccess/action'
 
-            # Remove ability to access application gatewat WAF rulesets
+            # Remove ability to access application gateway WAF rulesets
             'Microsoft.Network/applicationGatewayAvailableWafRuleSets/*'
             # Remove ability to access vpn connection info
             'Microsoft.Network/connections/*'
@@ -2634,12 +2636,16 @@ function Get-CAMRoleDefinition() {
             # Remove ability to access queue service in storage account
             'Microsoft.Storage/StorageAccounts/queueServices/*'
         )
+
         # Add Not Actions required to be disabled
         foreach ( $notAction in $requiredNotActions) {
             if ( -not $camCustomRoleDefinition.NotActions.Contains($notAction)) {
                 $camCustomRoleDefinition.NotActions.Add($notAction)
             }
         }
+
+        # Clear out existing Actions
+        $camCustomRoleDefinition.Actions.Clear()
 
         # Actions to add
         $requiredActions = @(
@@ -2650,8 +2656,6 @@ function Get-CAMRoleDefinition() {
             "Microsoft.Compute/*"
         )
 
-        # Clear out existing Actions
-        $camCustomRoleDefinition.Actions.Clear()
         # Add Actions required to be enabled
         foreach ( $Action in $requiredActions) {
             if ( -not $camCustomRoleDefinition.Actions.Contains($Action)) {
