@@ -4,13 +4,6 @@
 is a cloud service that simplifies and automates
 deployments of Cloud Access Software.
 
-The following image gives an outline of the Cloud Access Manager
-Technical Preview Architecture:
-
-## Cloud Access Manager Architecture ##
-
-![Img](http://www.teradici.com/web-help/CAM/CAMPOCDiagram.png)
-
 ## Deploying Cloud Access Manager ##
 
 The Cloud Access Manager solution is deployed in your Microsoft Azure
