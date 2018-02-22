@@ -2802,6 +2802,7 @@ else {
             continue       
         }
 
+        $rgIndex = 0
         $rgIsInt = [int]::TryParse($rgIdentifier, [ref]$rgIndex) # rgIndex will be 0 on parse failure
 
         if ($rgIsInt) {
@@ -2845,6 +2846,8 @@ else {
         }
     }
 }
+
+Write-Host "Using root resource group: $($rgMatch.ResourceGroupName)"
 
 # At this point we have a subscription and a root resource group - check if there is already a deployment in it
 $CAMRootKeyvault = Get-AzureRmResource `
@@ -2954,7 +2957,8 @@ else {
                 $vnets | Select-Object -Property Number, Name, ResourceGroupName, Location | Format-Table
 
                 $chosenVnet = Read-Host "VNet"
-                [int]::TryParse($chosenVnet, [ref]$chosenVnetIndex) # chosenVnetIndex will be 0 on parse failure
+                $chosenVnetIndex = 0
+                [int]::TryParse($chosenVnet, [ref]$chosenVnetIndex) | Out-Null # chosenVnetIndex will be 0 on parse failure
 
                 if (( $chosenVnetIndex -ge 1) -and ( $chosenVnetIndex -le $vnets.Length)) {
                     # have selected a valid index - use that and substitute
@@ -2962,7 +2966,7 @@ else {
                 }
                 else {
                     # otherwise interpret as a resource ID
-                    $vnetConfig.vnetID = $chosenVnetIndex.Trim()
+                    $vnetConfig.vnetID = $chosenVnet.Trim()
                 }
             }
             # vnetID is a reference ID that is like: 
@@ -2998,7 +3002,8 @@ else {
                 Write-Host "Please provide Connection Service Subnet number from the list below, or name"
                 $subnets | Select-Object -Property Number, Name | Format-Table
                 $chosenSubnet = Read-Host "Subnet"
-                [int]::TryParse($chosenSubnet, [ref]$subnetIndex) # subnetIndex will be 0 on parse failure
+                $subnetIndex = 0
+                [int]::TryParse($chosenSubnet, [ref]$subnetIndex) | Out-Null  # subnetIndex will be 0 on parse failure
             
                 if (( $subnetIndex -ge 1) -and ( $subnetIndex -le $subnets.Count)) {
                     # selected a valid index - use that and substitute
@@ -3023,7 +3028,8 @@ else {
                 Write-Host "Please provide Application Gateway Subnet number from the list below, or name"
                 $subnets | Select-Object -Property Number, Name | Format-Table
                 $chosenSubnet = Read-Host "Subnet"
-                [int]::TryParse($chosenSubnet, [ref]$subnetIndex) # subnetIndex will be 0 on parse failure
+                $subnetIndex = 0
+                [int]::TryParse($chosenSubnet, [ref]$subnetIndex) | Out-Null  # subnetIndex will be 0 on parse failure
             
                 if (( $subnetIndex -ge 1) -and ( $subnetIndex -le $subnets.Count)) {
                     # selected a valid index - use that and substitute
@@ -3048,7 +3054,8 @@ else {
                 Write-Host "Please provide Remote Workstation Subnet number from the list below, or name"
                 $subnets | Select-Object -Property Number, Name | Format-Table
                 $chosenSubnet = Read-Host "Subnet"
-                [int]::TryParse($chosenSubnet, [ref]$subnetIndex) # subnetIndex will be 0 on parse failure
+                $subnetIndex = 0
+                [int]::TryParse($chosenSubnet, [ref]$subnetIndex) | Out-Null  # subnetIndex will be 0 on parse failure
             
                 if (( $subnetIndex -ge 1) -and ( $subnetIndex -le $subnets.Count)) {
                     # selected a valid index - use that and substitute
