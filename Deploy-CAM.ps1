@@ -2830,10 +2830,17 @@ else {
                 $inputRgName = $rgIdentifier
                 $newRgResult = $null
 
-                Write-Host("Available Azure Locations")
-                Write-Host (Get-AzureRMLocation | Select-Object -Property Location, DisplayName | Format-Table | Out-String )
-
-                $newRGLocation = (Read-Host "`nPlease enter resource group location").Trim()
+                $azureLocation = Get-AzureRMLocation
+                $locations = @(($azureLocation | Select-Object Location).location)
+                while ($true) {
+                    Write-Host("Available Azure Locations")
+                    Write-Host ($azureLocation | Select-Object -Property Location, DisplayName | Format-Table | Out-String )
+                    $newRGLocation = (Read-Host "`nPlease enter resource group location").Trim()
+                    if ($locations -Contains $newRGLocation){
+                        break
+                    }
+                    Write-Host-Warning "$newRGLocation is not a valid location. "
+                }
 
                 Write-Host "Creating Cloud Access Manager root resource group $inputRgName"
                 $newRgResult = New-AzureRmResourceGroup -Name $inputRgName -Location $newRGLocation
