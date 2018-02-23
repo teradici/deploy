@@ -13,7 +13,10 @@ Manager documentation:
 
 [Instructions for deploying Cloud Access Manager](http://www.teradici.com/web-help/CAM/site/index.html)
 
+## License ##
 
-Copyright 2018 Teradici Corporation. All Rights Reserved.
+Copyright (c) 2018 Teradici Corporation. All rights reserved.
 
-Some content is based off of the Azure Quickstart Templates, Copyright (c) Microsoft Azure. With the following license: https://github.com/Azure/azure-quickstart-templates/blob/master/LICENSE
+With the exception of content based off of the Azure Quickstart Templates, the contents of this repository are otherwise licensed under the [MIT license](./LICENSE.md).
+
+Azure Quickstart Templates are copyright (c) Microsoft Azure and licensed under the [MIT license](https://github.com/Azure/azure-quickstart-templates/blob/master/LICENSE).
