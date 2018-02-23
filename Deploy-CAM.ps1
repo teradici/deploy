@@ -2831,7 +2831,7 @@ else {
                 $newRgResult = $null
 
                 $azureLocation = Get-AzureRMLocation
-                $locations = @(($azureLocation | Select-Object Location).location)
+                $locations = @(($azureLocation | Select-Object Location).location) + @(($azureLocation | Select-Object DisplayName).Displayname)
                 while ($true) {
                     Write-Host("Available Azure Locations")
                     Write-Host ($azureLocation | Select-Object -Property Location, DisplayName | Format-Table | Out-String )
