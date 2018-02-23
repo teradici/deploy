@@ -2254,6 +2254,11 @@ function Deploy-CAM() {
             # keyvault ID of the form: /subscriptions/$subscriptionID/resourceGroups/$azureRGName/providers/Microsoft.KeyVault/vaults/$kvName
             $kvId = $kvInfo.ResourceId
 
+            $enableSecurityGatewayString = "false"
+            if ($enableSecurityGateway) {
+                $enableSecurityGatewayString = "true"
+            }
+
             $generatedDeploymentParameters = @"
 {
     "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
@@ -2458,6 +2463,9 @@ function Deploy-CAM() {
                 },
                 "secretName": "radiusSharedSecret"
             }
+        },
+        "enableSecurityGateway" : {
+            "value": "$enableSecurityGatewayString"
         },
         "autoShutdownIdleTime" : {
             "value": $defaultIdleShutdownTime

@@ -210,6 +210,13 @@
       },
       "defaultValue": ""
     },
+    "enableSecurityGateway": {
+      "type": "string",
+      "defaultValue": "true",
+      "metadata": {
+          "description": "'true' if the security gateway should be enabled and a Public IP address created, otherwise 'false'."
+      }
+    },
     "autoShutdownIdleTime" : {
       "type": "int",
       "metadata": {
@@ -324,7 +331,7 @@
             "value": "[parameters('binaryLocation')]"
           },
           "enableSecurityGateway": {
-            "value": "true"
+            "value": "[parameters('enableSecurityGateway')]"
           },
           "_baseArtifactsLocation": {
             "value": "[parameters('_artifactsLocation')]"
