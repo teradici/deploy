@@ -65,6 +65,13 @@
         "description": "Application Gateway Name including the unique CS suffix"
       }
     },
+    "externalAccess": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Application Gateway Name including the unique CS suffix"
+      }
+    },
     "CSUniqueSuffix": {
       "type": "string",
       "metadata": {
@@ -77,16 +84,31 @@
     "publicIPRef": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]",
     "applicationGatewayID": "[resourceId('Microsoft.Network/applicationGateways',parameters('applicationGatewayName'))]",
     "apiVersion": "2017-11-01",
-    "appGwFrontendHttpsPort": 443,
-    "appGwFrontendHttpPort": 80,
-    "appGwFrontendPrivatePort": 8443,
-    "appGwBackendPort": 8080
+    "externalAccess": {
+      "false" : {
+        "appGwFrontendHttpsPort": 0,
+        "appGwFrontendHttpPort": 80,
+        "appGwFrontendPrivatePort": 443,
+        "appGwBackendPort": 8080
+      },
+      "true" : {
+        "appGwFrontendHttpsPort": 443,
+        "appGwFrontendHttpPort": 80,
+        "appGwFrontendPrivatePort": 8443,
+        "appGwBackendPort": 8080
+      }
+    },
+    "appGwFrontendHttpsPort":   "[variables('externalAccess')[string(parameters('externalAccess'))]['appGwFrontendHttpsPort']]",
+    "appGwFrontendHttpPort":    "[variables('externalAccess')[string(parameters('externalAccess'))]['appGwFrontendHttpPort']]",
+    "appGwFrontendPrivatePort": "[variables('externalAccess')[string(parameters('externalAccess'))]['appGwFrontendPrivatePort']]",
+    "appGwBackendPort":         "[variables('externalAccess')[string(parameters('externalAccess'))]['appGwBackendPort']]"
   },
   "resources": [
     {
       "apiVersion": "[variables('apiVersion')]",
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[variables('publicIPAddressName')]",
+      "condition": "[parameters('externalAccess')]",
       "location": "[resourceGroup().location]",
       "properties": {
         "publicIPAllocationMethod": "Dynamic"
@@ -98,7 +120,7 @@
       "type": "Microsoft.Network/applicationGateways",
       "location": "[resourceGroup().location]",
       "dependsOn": [
-        "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]"
+        "[if(parameters('externalAccess'), concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName')), json('null'))]"
       ],
       "properties": {
         "sku": {
@@ -128,6 +150,7 @@
         "frontendIPConfigurations": [
           {
             "name": "appGatewayFrontendIP",
+            "condition": "[parameters('externalAccess')]",
             "properties": {
               "PublicIPAddress": {
                 "id": "[variables('publicIPRef')]"
@@ -158,6 +181,7 @@
           },
           {
             "name": "appGatewayFrontendPrivatePort",
+            "condition": "[greater(variables('appGwFrontendPrivatePort'), 0)]",
             "properties": {
               "Port": "[variables('appGwFrontendPrivatePort')]"
             }
@@ -210,7 +234,8 @@
             }
           },
           {
-            "name": "appGatewayPrivateHttpListener",
+            "name": "appGatewayPrivateHttpsListener",
+            "condition": "[greater(variables('appGwFrontendPrivatePort'), 0)]",
             "properties": {
               "FrontendIPConfiguration": {
                 "Id": "[concat(variables('applicationGatewayID'), '/frontendIPConfigurations/appGatewayFrontendPrivateIP')]"
@@ -292,10 +317,11 @@
           },
           {
             "Name": "internalRule",
+            "condition": "[greater(variables('appGwFrontendPrivatePort'), 0)]",
             "properties": {
               "RuleType": "PathBasedRouting",
               "httpListener": {
-                "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayPrivateHttpListener')]"
+                "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayPrivateHttpsListener')]"
               },
               "urlPathMap": {
                 "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/urlPathMap1')]"
