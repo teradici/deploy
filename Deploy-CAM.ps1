@@ -96,6 +96,32 @@ param(
     $location
 )
 
+function confirmDialog {
+    param(
+        [parameter(Mandatory=$true)]
+        $prompt,
+
+        [parameter(Mandatory=$false)]
+        [validateSet("Y","N")] 
+        $defaultSelected='N'
+    )
+
+    if ($defaultSelected -eq 'Y') {
+        $promptMsg =  "$prompt [Y/n]" 
+    } else {
+        $promptMsg =  "$prompt [y/N]" 
+    }
+
+    do{
+        $selected = Read-Host $promptMsg
+        $selected = $selected.trim()
+        if ($selected -eq '') {
+            $selected = $defaultSelected
+        }
+    }while($selected -notmatch "^y(es)?$|^n(o)?$")
+
+    return $selected.SubString(0,1).ToLower()
+}
 
 # Converts a secure string parameter to a plain string
 function ConvertTo-Plaintext {
@@ -2040,18 +2066,15 @@ function Deploy-CAM() {
 
         if ($tenantIDsMatch) {
             if( -not $ignorePrompts ) {
-                Write-Host "The Cloud Access Manager deployment script was not passed service principal credentials. It will attempt to create a service principal."
-                $requestSPGeneration = Read-Host `
-                    "Please hit enter to continue or 'no' to manually enter service principal credentials from a pre-made service principal"
-                $requestSPGeneration = $requestSPGeneration.Trim()
+                $usingExistingSP = confirmDialog "Do you have an existing service principal you wish to use?"
             } else {
-                $requestSPGeneration=""
+                $usingExistingSP="n"
             }
         }
 
-        if ((-not $tenantIDsMatch) -or ($requestSPGeneration -like "*n*")) {
+        if ((-not $tenantIDsMatch) -or ($usingExistingSP -eq "y")) {
             # manually get credential
-            $spCredential = Get-Credential -Message "Please enter service principal credential"
+            $spCredential = Get-Credential -Message "Enter service principal credential"
 
             $spInfo = @{}
             $spinfo.spCreds = $spCredential
@@ -2667,7 +2690,7 @@ function Write-Host-Warning() {
     param(
         $message
     )
-    Write-Host ("`n$message") -ForegroundColor Red -BackgroundColor Yellow
+    Write-Host ("`n$message") -ForegroundColor Red
 }
 
 ##############################################
@@ -2730,7 +2753,7 @@ else {
     while ( -not (( $chosenSubscriptionNumber -ge 1) -and ( $chosenSubscriptionNumber -le $subscriptionsToDisplay.Length))) {
         if( -not $ignorePrompts ) {
             $chosenSubscriptionNumber = `
-            if (($chosenSubscriptionNumber = Read-Host "Please enter the Number of the subscription you would like to use or press enter to accept the current one [$currentSubscriptionNumber]") -eq '') `
+            if (($chosenSubscriptionNumber = Read-Host "Enter the Number of the subscription you would like to use or press enter to accept the current one [$currentSubscriptionNumber]") -eq '') `
             {$currentSubscriptionNumber} else {[int]$chosenSubscriptionNumber}
         }
         else {
@@ -2756,7 +2779,7 @@ if(-not $keyVaultProviderExists) {
     Write-Host "Microsoft.Keyvault is not registered as a resource provider for this subscription."
     Write-Host "Cloud Access Manager requires a key vault to operate."
     if(-not $ignorePrompts) {
-        $cancelDeployment = (Read-Host "Please hit enter to register Microsoft.Keyvault with subscription $($rmContext.Subscription.Id) or 'no' to cancel deployment") -like "*n*"
+        $cancelDeployment = (confirmDialog "Do you want to register Microsoft.Keyvault with subscription $($rmContext.Subscription.Id) or 'no' to cancel deployment?" -defaultSelected 'Y') -eq "n"
         if ($cancelDeployment) { exit }
     }
     Register-AzureRmResourceProvider -ProviderNamespace "Microsoft.KeyVault" -ErrorAction stop | Out-Null
@@ -2793,7 +2816,7 @@ else {
     $rgIsInt = $false
     $rgMatch = $null
     while (-not $selectedRGName) {
-        Write-Host ("`nPlease select the resource group of the Cloud Access Mananger deployment root by number`n" +
+        Write-Host ("`nSelect the resource group of the Cloud Access Mananger deployment root by number`n" +
             "or type in a new resource group name for a new Cloud Access Mananger deployment.")
         $rgIdentifier = (Read-Host "Resource group").Trim()
 
@@ -2833,7 +2856,7 @@ else {
                 Write-Host("Available Azure Locations")
                 Write-Host (Get-AzureRMLocation | Select-Object -Property Location, DisplayName | Format-Table | Out-String )
 
-                $newRGLocation = (Read-Host "`nPlease enter resource group location").Trim()
+                $newRGLocation = (Read-Host "`nEnter resource group location").Trim()
 
                 Write-Host "Creating Cloud Access Manager root resource group $inputRgName"
                 $newRgResult = New-AzureRmResourceGroup -Name $inputRgName -Location $newRGLocation
@@ -2865,10 +2888,9 @@ if ($CAMRootKeyvault) {
     Write-Host "Using key vault $($CAMRootKeyvault.Name)"
 
     if( -not $ignorePrompts ) {
-        $requestNewCS = Read-Host `
-        "Please hit enter to create a new connection service for this Cloud Access Manager deployment or 'no' to cancel"
+        $requestNewCS = confirmDialog  "Do you want to create a new connection service for this Cloud Access Manager deployment or 'no' to cancel?" -defaultSelected 'Y'
 
-        if ($requestNewCS -like "*n*") {
+        if ($requestNewCS -eq "n") {
             Write-Host "Not deploying a new connection service. Exiting."
             exit
         }
@@ -2893,8 +2915,7 @@ else {
     # Check if deploying Root only (ie, DC and vnet already exist)
     if( -not $ignorePrompts) {
         if( -not $deployOverDC ) {
-            Write-Host "Do you want to create a new domain controller and VNet?"
-            $deployOverDC = (Read-Host "Please hit enter to continue with deploying a new domain and VNet or 'no' to connect to an existing domain") -like "*n*"
+            $deployOverDC = (confirmDialog "Do you want to connect to an existing domain?") -eq 'y'
         }
     }
 
@@ -2953,7 +2974,7 @@ else {
                 Write-Host "`nPlease provide the VNet information for the VNet Cloud Access Manager connection service, gateways, and remote workstations"
                 Write-Host "will be using. Please enter the number of the vnet in the following list or the complete VNet ID in"
                 Write-Host "the form /subscriptions/{subscriptionID}/resourceGroups/{vnetResourceGroupName}/providers/Microsoft.Network/virtualNetworks/{vnetName}`n"
-                Write-Host-Warning "The service principal account created later in the deployment process will be provided access rights to the selected virtual network."
+                Write-Host "The service principal account created later in the deployment process will be provided access rights to the selected virtual network." -ForegroundColor Yellow
                 $vnets | Select-Object -Property Number, Name, ResourceGroupName, Location | Format-Table
 
                 $chosenVnet = Read-Host "VNet"
@@ -3093,10 +3114,10 @@ else {
     do {
         if ( -not $domainName ) {
             if( -not $deployOverDC ) {
-                $domainNameMessage = "`nPlease enter new fully qualified domain name of the domain which will be created, including a '.' such as example.com"
+                $domainNameMessage = "`nEnter a new FQDN of the domain which will be created, including a '.' such as example.com"
             }
             else {
-                $domainNameMessage = "`nPlease enter the fully qualified domain name of the domain to connect to. The name must include a '.' such as example.com"
+                $domainNameMessage = "`nEnter the FQDN of the domain which will be connected to by the Cloud Access Manager"
             }
             Write-Host $domainNameMessage
             $domainName = (Read-Host "Domain name").Trim()
@@ -3126,10 +3147,10 @@ else {
         # prompted if username is not provided
         if ( -not $username) {
             if( -not $deployOverDC ) {
-                $domainAdminMessage = "Please enter the new domain administrator username for the new domain being created"
+                $domainAdminMessage = "Enter the new domain administrator username for the new domain being created"
             }
             else {
-                $domainAdminMessage = "Please enter the username of the service account for Cloud Access Manager to use with the connected domain"
+                $domainAdminMessage = "Enter the service account username for `"$domainName`" to be used by Cloud Access Manager"
             }
             $username = (Read-Host $domainAdminMessage).Trim()
         }
@@ -3163,7 +3184,15 @@ else {
     }
     do {
         if ( -not $password ) {
-            $psw = Read-Host -AsSecureString "Please enter the password"
+            if( -not $deployOverDC ) {
+                $pawdMessage = "Enter the domain administrator password"
+            }
+            else {
+                $pawdMessage = "Enter the service account username password"
+            }
+
+
+            $psw = Read-Host -AsSecureString $pawdMessage
             $password = ConvertTo-Plaintext $psw
         }
 
@@ -3177,10 +3206,16 @@ else {
         }
 
         if ($psw) {
-            $confirmedPassword = Read-Host -AsSecureString "Please re-enter the password"
+            if( -not $deployOverDC ) {
+                $pawdMessage = "Re-enter the domain administrator password"
+            }
+            else {
+                $pawdMessage = "Re-enter the service account username password"
+            }
+            $confirmedPassword = Read-Host -AsSecureString $pawdMessage
             $clearConfirmedPassword = ConvertTo-Plaintext $confirmedPassword
             if (-not ($password -ceq $clearConfirmedPassword)) {
-                Write-Host-Warning "Entered passwords do not match. Please try again"
+                Write-Host-Warning "Entered passwords do not match, try again"
                 $password = $null
                 continue
             }
@@ -3202,7 +3237,7 @@ else {
     if ( -not ($enableRadiusMfa -eq $false) ) {
         # Prompt for whether to enable RADIUS integration
         if ( $enableRadiusMfa -eq $null -and (-not $ignorePrompts) ) {
-            $enableRadiusMfa = (Read-Host "Do you want to enable Multi-Factor Authentication using your RADIUS Server? (yes/no)") -like "*y*"
+            $enableRadiusMfa = (confirmDialog "Do you want to enable Multi-Factor Authentication using your RADIUS Server?") -eq 'y'
         } elseif ( $enableRadiusMfa -eq $null -and $ignorePrompts ) {
             $enableRadiusMfa = $false
         }
@@ -3210,28 +3245,28 @@ else {
         if ($enableRadiusMfa) {
             do {
                 if (-not $radiusConfig.radiusServerHost ) {
-                    $radiusConfig.radiusServerHost = (Read-Host "Please enter your RADIUS Server's Hostname or IP").Trim()
+                    $radiusConfig.radiusServerHost = (Read-Host "Enter your RADIUS Server's Hostname or IP").Trim()
                 }
             } while (-not $radiusConfig.radiusServerHost)
 
             do {
                 if (-not $radiusConfig.radiusServerPort ) {
                     try {
-                        $radiusConfig.radiusServerPort = [int](Read-Host  "Please enter your RADIUS Server's Listening port")
+                        $radiusConfig.radiusServerPort = [int](Read-Host  "Enter your RADIUS Server's Listening port")
                     } catch {
                         $radiusConfig.radiusServerPort = $null
-                        Write-Host-Warning "Selected port is not an Integer"
+                        Write-Host-Warning "Entered port is not an Integer"
                     }
                 }
                 if ( ($radiusConfig.radiusServerPort -le 0) -or ($radiusConfig.radiusServerPort -gt 65535) ) {
-                    Write-Host-Warning "Selected port is invalid. Should be between 1 and 65535."
+                    Write-Host-Warning "Entered port is invalid. It should be between 1 and 65535."
                     $radiusConfig.radiusServerPort = $null
                 }            
             } while (-not $radiusConfig.radiusServerPort )
 
             do {
                 if (-not $radiusConfig.radiusSharedSecret ) {
-                    $radiusConfig.radiusSharedSecret = Read-Host -AsSecureString "Please enter your RADIUS Server's Shared Secret"
+                    $radiusConfig.radiusSharedSecret = Read-Host -AsSecureString "Enter your RADIUS Server's Shared Secret"
                 }
             } while (-not $radiusConfig.radiusSharedSecret )
         }
@@ -3255,7 +3290,7 @@ else {
 
     do {
         if (-not $registrationCode ) {
-            $registrationCode = (Read-Host -AsSecureString "Please enter your Cloud Access registration code")
+            $registrationCode = (Read-Host -AsSecureString "Enter your Cloud Access registration code")
         }
 
         # Need plaintext registration code to check length
