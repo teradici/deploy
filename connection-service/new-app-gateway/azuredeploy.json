@@ -248,7 +248,9 @@
       "name": "[parameters('applicationGatewayName')]",
       "type": "Microsoft.Network/applicationGateways",
       "location": "[resourceGroup().location]",
-      "dependsOn": [],
+      "dependsOn": [
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]"
+      ],
       "properties": {
         "sku": {
           "name": "[parameters('skuName')]",
@@ -256,8 +258,9 @@
           "capacity": "[parameters('capacity')]"
         },
         "frontendIPConfigurations": "[variables('frontendIPConfigurations')]",
-        "frontendPorts": "[variables('frontendPorts')]",
-        "httpListeners": "[variables('httpListeners')]",
+        "frontendPorts":            "[variables('frontendPorts')]",
+        "httpListeners":            "[variables('httpListeners')]",
+        "requestRoutingRules":      "[variables('requestRoutingRules')]",
         "sslCertificates": [
           {
             "name": "appGatewaySslCert",
@@ -334,8 +337,7 @@
               ]
             }
           }
-        ],
-        "requestRoutingRules": "[variables('requestRoutingRules')]"
+        ]
       }
     }
   ]
