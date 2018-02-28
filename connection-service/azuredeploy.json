@@ -311,6 +311,9 @@
           },
           "enableExternalAccess": {
             "value": "[bool(parameters('enableExternalAccess'))]"
+          },
+          "enableRadiusMfa": {
+            "value": "[bool(parameters('enableRadiusMfa'))]"
           }
         }
       }

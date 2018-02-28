@@ -67,9 +67,15 @@
     },
     "enableExternalAccess": {
       "type": "bool",
+      "metadata": {
+          "description": "'true' if a Public IP address should be created, otherwise 'false'."
+      }
+    },
+    "enableRadiusMfa": {
+      "type": "bool",
       "defaultValue": false,
       "metadata": {
-        "description": "Application Gateway Name including the unique CS suffix"
+        "description": "Indicates weather or not MFA is enabled"
       }
     },
     "CSUniqueSuffix": {
@@ -84,6 +90,23 @@
     "publicIPRef": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]",
     "applicationGatewayID": "[resourceId('Microsoft.Network/applicationGateways',parameters('applicationGatewayName'))]",
     "apiVersion": "2017-11-01",
+    "enableExternalGUIAccess": "[bool(and(equals(parameters('enableRadiusMfa'), 'False'), parameters('enableExternalAccess')))]",
+    "pcoipPathRules": [
+      {
+        "name": "pcoipBrokerProtocolRule",
+        "properties": {
+          "paths": [
+            "[parameters('pathMatch1')]"
+          ],
+          "backendAddressPool": {
+            "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/', parameters('SGBackendPoolName') )]"
+          },
+          "backendHttpSettings": {
+            "id": "[concat(variables('applicationGatewayID'), '/backendHttpSettingsCollection/appGatewayBackendHttpSettings')]"
+          }
+        }
+      }
+    ],
     "baseAppGatewayConfig": {
       "frontendPorts" : [
         {
@@ -149,7 +172,7 @@
               "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayHttpsListener')]"
             },
             "urlPathMap": {
-              "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/urlPathMap1')]"
+              "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/', if(not(and(parameters('enableExternalAccess'), parameters('enableRadiusMfa'))), 'pcoipBrokerProtocolUserInterfacePath', 'pcoipBrokerProtocolPath') )]"
             }
           }
         }
@@ -190,7 +213,7 @@
               "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayPrivateHttpsListener')]"
             },
             "urlPathMap": {
-              "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/urlPathMap1')]"
+              "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/pcoipBrokerProtocolUserInterfacePath')]"
             }
           }
         }
@@ -311,30 +334,27 @@
         ],
         "urlPathMaps": [
           {
-            "name": "urlPathMap1",
+            "name": "pcoipBrokerProtocolUserInterfacePath",
             "properties": {
               "defaultBackendAddressPool": {
-                "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/', parameters('CSBackendPoolName') )]"
+                "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/',  parameters('CSBackendPoolName'))]"
               },
               "defaultBackendHttpSettings": {
                 "id": "[concat(variables('applicationGatewayID'), '/backendHttpSettingsCollection/appGatewayBackendHttpSettings')]"
               },
-              "pathRules": [
-                {
-                  "name": "pathRule1",
-                  "properties": {
-                    "paths": [
-                      "[parameters('pathMatch1')]"
-                    ],
-                    "backendAddressPool": {
-                      "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/', parameters('SGBackendPoolName') )]"
-                    },
-                    "backendHttpSettings": {
-                      "id": "[concat(variables('applicationGatewayID'), '/backendHttpSettingsCollection/appGatewayBackendHttpSettings')]"
-                    }
-                  }
-                }
-              ]
+              "pathRules": "[variables('pcoipPathRules')]"
+            }
+          }, 
+          {
+            "name": "pcoipBrokerProtocolPath",
+            "properties": {
+              "defaultBackendAddressPool": {
+                "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/', parameters('SGBackendPoolName') )]"
+              },
+              "defaultBackendHttpSettings": {
+                "id": "[concat(variables('applicationGatewayID'), '/backendHttpSettingsCollection/appGatewayBackendHttpSettings')]"
+              },
+              "pathRules": "[variables('pcoipPathRules')]"
             }
           }
         ]
