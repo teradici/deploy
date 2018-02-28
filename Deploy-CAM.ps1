@@ -3211,7 +3211,7 @@ else {
                 $pawdMessage = "Enter the domain administrator password"
             }
             else {
-                $pawdMessage = "Enter the service account username password"
+                $pawdMessage = "Enter the service account password"
             }
 
 
@@ -3233,7 +3233,7 @@ else {
                 $pawdMessage = "Re-enter the domain administrator password"
             }
             else {
-                $pawdMessage = "Re-enter the service account username password"
+                $pawdMessage = "Re-enter the service account password"
             }
             $confirmedPassword = Read-Host -AsSecureString $pawdMessage
             $clearConfirmedPassword = ConvertTo-Plaintext $confirmedPassword
