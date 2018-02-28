@@ -82,7 +82,7 @@
         "description": "The location of CAM binaries"
       }
     },
-    "enableSecurityGateway": {
+    "enableExternalAccess": {
       "type": "string",
       "metadata": {
           "description": "'true' if the security gateway should be enabled and a Public IP address created, otherwise 'false'."
@@ -308,6 +308,9 @@
           },
           "CSUniqueSuffix": {
             "value": "[parameters('CSUniqueSuffix')]"
+          },
+          "enableExternalAccess": {
+            "value": "[bool(parameters('enableExternalAccess'))]"
           }
         }
       }
@@ -355,7 +358,7 @@
             "value": "[concat(reference('CreateConnectionServer').outputs.privateIp.value,':',variables('brokerPort'))]"
           },
           "enableSecurityGateway": {
-            "value": "[parameters('enableSecurityGateway')]"
+            "value": "[parameters('enableExternalAccess')]"
           },
           "_artifactsLocation": {
             "value": "[concat(variables('_artifactsLocation'), '/new-cm-sg-ls-vm')]"

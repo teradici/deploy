@@ -210,7 +210,7 @@
       },
       "defaultValue": ""
     },
-    "enableSecurityGateway": {
+    "enableExternalAccess": {
       "type": "string",
       "defaultValue": "true",
       "metadata": {
@@ -330,8 +330,8 @@
           "binaryLocation": {
             "value": "[parameters('binaryLocation')]"
           },
-          "enableSecurityGateway": {
-            "value": "[parameters('enableSecurityGateway')]"
+          "enableExternalAccess": {
+            "value": "[parameters('enableExternalAccess')]"
           },
           "_baseArtifactsLocation": {
             "value": "[parameters('_artifactsLocation')]"

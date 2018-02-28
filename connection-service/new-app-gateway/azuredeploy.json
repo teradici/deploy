@@ -65,7 +65,7 @@
         "description": "Application Gateway Name including the unique CS suffix"
       }
     },
-    "externalAccess": {
+    "enableExternalAccess": {
       "type": "bool",
       "defaultValue": false,
       "metadata": {
@@ -227,17 +227,17 @@
       ]
     },
     "appGwBackendPort":         8080,
-    "frontendIPConfigurations": "[if(parameters('externalAccess'), variables('ipConfiguration')['external'], variables('ipConfiguration')['internal'])]",
-    "frontendPorts":            "[if(parameters('externalAccess'), concat(variables('baseAppGatewayConfig')['frontendPorts'],       variables('internalAppGatewayConfig')['frontendPorts']),        variables('baseAppGatewayConfig')['frontendPorts'])]",
-    "httpListeners":            "[if(parameters('externalAccess'), concat(variables('baseAppGatewayConfig')['httpListeners'],       variables('internalAppGatewayConfig')['httpListeners']),        variables('baseAppGatewayConfig')['httpListeners'])]",
-    "requestRoutingRules":      "[if(parameters('externalAccess'), concat(variables('baseAppGatewayConfig')['requestRoutingRules'], variables('internalAppGatewayConfig')['requestRoutingRules']),  variables('baseAppGatewayConfig')['requestRoutingRules'])]"
+    "frontendIPConfigurations": "[if(parameters('enableExternalAccess'), variables('ipConfiguration')['external'], variables('ipConfiguration')['internal'])]",
+    "frontendPorts":            "[if(parameters('enableExternalAccess'), concat(variables('baseAppGatewayConfig')['frontendPorts'],       variables('internalAppGatewayConfig')['frontendPorts']),        variables('baseAppGatewayConfig')['frontendPorts'])]",
+    "httpListeners":            "[if(parameters('enableExternalAccess'), concat(variables('baseAppGatewayConfig')['httpListeners'],       variables('internalAppGatewayConfig')['httpListeners']),        variables('baseAppGatewayConfig')['httpListeners'])]",
+    "requestRoutingRules":      "[if(parameters('enableExternalAccess'), concat(variables('baseAppGatewayConfig')['requestRoutingRules'], variables('internalAppGatewayConfig')['requestRoutingRules']),  variables('baseAppGatewayConfig')['requestRoutingRules'])]"
   },
   "resources": [
     {
       "apiVersion": "[variables('apiVersion')]",
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[variables('publicIPAddressName')]",
-      "condition": "[parameters('externalAccess')]",
+      "condition": "[parameters('enableExternalAccess')]",
       "location": "[resourceGroup().location]",
       "properties": {
         "publicIPAllocationMethod": "Dynamic"

@@ -23,7 +23,7 @@ param(
 
     [parameter(Mandatory = $false)]
     [bool]
-    $enableSecurityGateway = $true, # Only matters if not doing CAM-in-a-box isolated install
+    $enableExternalAccess = $true, # Only matters if not doing CAM-in-a-box isolated install
     
     [parameter(Mandatory = $false)]
     [bool]
@@ -1280,7 +1280,7 @@ function New-ConnectionServiceDeployment() {
         $spCredential,
         $keyVault,
         $testDeployment,
-        [bool]$enableSecurityGateway
+        [bool]$enableExternalAccess
     )
 
     $kvID = $keyVault.ResourceId
@@ -1473,11 +1473,6 @@ function New-ConnectionServiceDeployment() {
         New-CAMDeploymentInfo `
             -kvName $CAMRootKeyvault.Name
 
-        $enableSecurityGatewayString = "false"
-        if ($enableSecurityGateway) {
-            $enableSecurityGatewayString = "true"
-        }
-
         # Get the template URI
         $secret = Get-AzureKeyVaultSecret `
             -VaultName $kvName `
@@ -1491,8 +1486,8 @@ function New-ConnectionServiceDeployment() {
             "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
             "contentVersion": "1.0.0.0",
             "parameters": {
-                "enableSecurityGateway": {
-                    "value": "$enableSecurityGatewayString"
+                "enableExternalAccess": {
+                    "value": "$($enableExternalAccess.ToString())"
                   },
                   "CSUniqueSuffix": {
                     "reference": {
@@ -1800,7 +1795,7 @@ function Deploy-CAM() {
 
         [parameter(Mandatory = $true)]
         [bool]
-        $enableSecurityGateway,
+        $enableExternalAccess,
 
         [parameter(Mandatory = $true)] 
         $CAMDeploymentTemplateURI,
@@ -2247,17 +2242,12 @@ function Deploy-CAM() {
                 -tenantId $tenantId `
                 -testDeployment $testDeployment `
                 -tempDir $tempDir `
-                -enableSecurityGateway $enableSecurityGateway
+                -enableExternalAccess $enableExternalAccess
         }
         else
         {
             # keyvault ID of the form: /subscriptions/$subscriptionID/resourceGroups/$azureRGName/providers/Microsoft.KeyVault/vaults/$kvName
             $kvId = $kvInfo.ResourceId
-
-            $enableSecurityGatewayString = "false"
-            if ($enableSecurityGateway) {
-                $enableSecurityGatewayString = "true"
-            }
 
             $generatedDeploymentParameters = @"
 {
@@ -2464,8 +2454,8 @@ function Deploy-CAM() {
                 "secretName": "radiusSharedSecret"
             }
         },
-        "enableSecurityGateway" : {
-            "value": "$enableSecurityGatewayString"
+        "enableExternalAccess" : {
+            "value": "$($enableExternalAccess.ToString())"
         },
         "autoShutdownIdleTime" : {
             "value": $defaultIdleShutdownTime
@@ -2892,7 +2882,7 @@ if ($CAMRootKeyvault) {
         -keyVault $CAMRootKeyvault `
         -testDeployment $testDeployment `
         -tempDir $tempDir `
-        -enableSecurityGateway $enableSecurityGateway
+        -enableExternalAccess $enableExternalAccess
 
 }
 else {
@@ -3308,7 +3298,7 @@ else {
         -vnetConfig $vnetConfig `
         -ownerTenantId $claims.tid `
         -ownerUpn $upn `
-        -enableSecurityGateway $enableSecurityGateway `
+        -enableExternalAccess $enableExternalAccess `
         -domainControllerOsType $domainControllerOsType `
         -defaultIdleShutdownTime $defaultIdleShutdownTime
 }
