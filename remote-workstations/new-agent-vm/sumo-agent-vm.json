@@ -2,8 +2,8 @@
 "api.version": "v1",
 "sources": [
     {
-        "name":  "CAMPOC_Teradici_Agent_Logs",
-        "category":  "CAMPOC/Teradici/Agent/Logs",
+        "name":  "CAM_Deploy_RemoteWorkstation_Win_Teradici_Agent_Logs",
+        "category":  "CAM/Deploy/RemoteWorkstation/Win/Teradici/Agent/Logs",
         "automaticDateParsing":  true,
         "multilineProcessingEnabled":  false,
         "useAutolineMatching":  false,
@@ -20,8 +20,8 @@
         "alive":  false
     },
     {
-        "name":  "CAMPOC_Teradici_Agent_Azure_Logs",
-        "category":  "CAMPOC/Teradici/Azure/Logs",
+        "name":  "CAM_Deploy_RemoteWorkstation_Win_Azure_Logs",
+        "category":  "CAM/Deploy/RemoteWorkstation/Win/Azure/Logs",
         "automaticDateParsing":  true,
         "multilineProcessingEnabled":  true,
         "useAutolineMatching":  false,
@@ -38,8 +38,8 @@
         "alive":  false
     },
     {
-        "name":"CAMPOC_Windows_Events",
-        "category":"CAMPOC/Teradici/Windows/Events",
+        "name":"CAM_Deploy_RemoteWorkstation_Win_Events",
+        "category":"CAM/Deploy/RemoteWorkstation/Win/Events",
         "automaticDateParsing":true,
         "multilineProcessingEnabled":true,
         "useAutolineMatching":false,
@@ -56,8 +56,8 @@
         "sourceType":"LocalWindowsEventLog"
     },
     {
-        "name":"CAMPOC_Windows_Performance_Logs",
-        "category":"CAMPOC/Teradici/Performance/Windows",
+        "name":"CAM_Deploy_RemoteWorkstation_Win_Performance",
+        "category":"CAM/Deploy/RemoteWorkstation/Win/Performance",
         "automaticDateParsing":false,
         "multilineProcessingEnabled":false,
         "useAutolineMatching":false,

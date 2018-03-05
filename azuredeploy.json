@@ -219,7 +219,8 @@
     }
   },
   "variables": {
-    "adminDesktopVMName": "admin-rw"
+    "adminDesktopVMName": "admin-rw",
+    "licenseInstanceId": "[split(parameters['registrationCode'], '@')[0]]"
   },
   "resources": [
     {
@@ -343,6 +344,9 @@
           },
           "radiusSharedSecret": {
             "value": "[parameters('radiusSharedSecret')]"
+          },
+          "licenseInstanceId": {
+            "value": "[variables('licenseInstanceId')]"
           }
         }
       }
