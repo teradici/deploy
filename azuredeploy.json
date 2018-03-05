@@ -220,7 +220,7 @@
   },
   "variables": {
     "adminDesktopVMName": "admin-rw",
-    "licenseInstanceId": "[split(parameters['registrationCode'], '@')[0]]"
+    "licenseInstanceId": "[split(parameters('registrationCode'), '@')[0]]"
   },
   "resources": [
     {
