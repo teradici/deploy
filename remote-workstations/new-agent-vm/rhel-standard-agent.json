@@ -177,7 +177,7 @@
 
         "scriptFileName": "Install-PCoIPAgent.sh",
         "idleShutdownScriptFileName": "Install-Idle-Shutdown.sh",        
-        "sumoCollectorID": "[concat('CAM-', split(parameters['registrationCode'], '@')[0], '-', subscription().subscriptionId, '-', resourceGroup().name, '-', parameters('dnsLabelPrefix'))]"
+        "sumoCollectorID": "[concat('CAM-', split(parameters('registrationCode'), '@')[0], '-', subscription().subscriptionId, '-', resourceGroup().name, '-', parameters('dnsLabelPrefix'))]"
     },
     "resources": [
         {
