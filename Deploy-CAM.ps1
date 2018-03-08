@@ -1386,11 +1386,11 @@ function New-ConnectionServiceDeployment() {
         }
 
         if (-not $client) {
-            Write-Host "Unable to read service principal information from key vault and none was provided on command-line."
+            Write-Host "Unable to read service principal information from key vault and none was provided on the command-line."
             Write-Host "Please enter the credentials for the service principal for this Cloud Access Manager deployment."
             Write-Host "The username is the AzureSPClientID secret in $kvName key vault."
             Write-Host "The password is the AzureSPKey secret in $kvName key vault."
-            $spCredential = Get-Credential -Message "Please enter service principal credential."
+            $spCredential = Get-Credential -Message "Enter service principal credential."
 
             $client = $spCredential.UserName
             $key = $spCredential.GetNetworkCredential().Password
@@ -2574,6 +2574,11 @@ function Confirm-ModuleVersion()
     return $true
 }
 
+function Get-CAMRoleDefinitionName() {
+    return = "Cloud Access Manager"
+}
+
+
 # Create a custom role for CAM with necessary permissions
 # Use 'Get-AzureRmProviderOperation *' to get a list of Azure Operations and their details
 # See https://docs.microsoft.com/en-us/azure/active-directory/role-based-access-built-in-roles for details on Azure Built in Roles
@@ -2583,7 +2588,7 @@ function Get-CAMRoleDefinition() {
         [String]$subscriptionId
     )
 
-    $roleName = "Cloud Access Manager"
+    $roleName = Get-CAMRoleDefinitionName
 
     $camCustomRoleDefinition = Get-AzureRmRoleDefinition $roleName
     # Create Role Defintion Based off of Contributor if it doesn't already exist
@@ -2692,7 +2697,14 @@ function Get-CAMRoleDefinition() {
             }
         }
 
-        New-AzureRmRoleDefinition -Role $camCustomRoleDefinition -ErrorAction Stop | Out-Null
+        try{
+            New-AzureRmRoleDefinition -Role $camCustomRoleDefinition -ErrorAction Stop | Out-Null
+        }
+        catch {
+            $err = $_
+            Write-Host-Warning "Cannot create '$roleName' Role Definition"
+            throw $err
+        }
         $camCustomRoleDefinition = Get-AzureRmRoleDefinition $roleName
     } else {
         Write-Host "Found existing '$roleName' Role Definition"
