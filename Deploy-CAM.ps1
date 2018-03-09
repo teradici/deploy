@@ -1496,7 +1496,7 @@ function New-ConnectionServiceDeployment() {
         }
     
         # SP has proper rights - do deployment with SP
-        Write-Host "Using service principal $client in tenant $tenant and subscription $subscriptionId"
+        Write-Host "Using service principal $client in tenant $tenantId and subscription $subscriptionId"
         Add-AzureRmAccount `
             -Credential $spCreds `
             -ServicePrincipal `
@@ -2575,7 +2575,7 @@ function Confirm-ModuleVersion()
 }
 
 function Get-CAMRoleDefinitionName() {
-    return = "Cloud Access Manager"
+    return "Cloud Access Manager"
 }
 
 
