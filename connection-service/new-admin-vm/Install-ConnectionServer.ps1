@@ -93,21 +93,7 @@ Configuration InstallConnectionServer
         [String]$brokerPort = "8444",
 
         [Parameter(Mandatory = $false)]
-        [String]$enableRadiusMfa,
-
-        
-        [Parameter(Mandatory = $false)]
-        [String]$radiusServerHost,
-
-        
-        [Parameter(Mandatory = $false)]
-        [String]$radiusServerPort,
-
-        
-        [Parameter(Mandatory = $false)]
-        [System.Management.Automation.PSCredential]$radiusSharedSecretContainer
-
-
+        [String]$enableRadiusMfa
     )
 
     # Get DC information
@@ -576,10 +562,6 @@ Configuration InstallConnectionServer
                 $regInfo = $using:camDeploymentInfoDecoded.RegistrationInfo
                 $remoteWorkstationResourceGroup = $regInfo.CAM_RESOURCEGROUP
 
-                $localAdminCreds = $using:DomainAdminCreds
-                $adminUsername = $localAdminCreds.GetNetworkCredential().Username
-                $adminPassword = $localAdminCreds.GetNetworkCredential().Password
-
                 $auProperties = @"
 #$date
 cn=Users
@@ -591,9 +573,6 @@ resourceGroupName=$remoteWorkstationResourceGroup
 CAMSessionTimeoutMinutes=480
 domainGroupAppServersJoin="$using:remoteWorkstationDomainGroup"
 ldapHost=ldaps://$domainControllerFQDN
-ldapAdminUsername=$adminUsername
-ldapAdminPassword=$adminPassword
-ldapDomain=$Using:domainName
 "@
 
                 $targetDir = "$CatalinaHomeLocation\adminproperty"
@@ -895,34 +874,11 @@ ldapDomain=$Using:domainName
                     New-Item $cbPropertiesFile -type file
                 }
 
-                #making another copy in catalinaHome until the paths are figured out...
-                Write-Host "Generating broker configuration file in CatalinaHome."
-                $targetDir = $catalinaHome + "\brokerproperty"
-                $cbHomePropertiesFile = "$targetDir\connectionbroker.properties"
-
-                if(-not (Test-Path $targetDir))
-                {
-                    New-Item $targetDir -type directory
-                }
-
-                if(-not (Test-Path $cbHomePropertiesFile))
-                {
-                    New-Item $cbHomePropertiesFile -type file
-                }
-
-
                 $firstIPv4IP = Get-NetIPAddress | Where-Object {$_.AddressFamily -eq "IPv4"} | select -First 1
                 $ipaddressString = $firstIPv4IP.IPAddress
 
-                $localAdminCreds = $using:DomainAdminCreds
-                $adminUsername = $localAdminCreds.GetNetworkCredential().Username
-                $adminPassword = $localAdminCreds.GetNetworkCredential().Password
-
                 $cbProperties = @"
 ldapHost=ldaps://$Using:dcvmfqdn
-ldapAdminUsername=$adminUsername
-ldapAdminPassword=$adminPassword
-ldapDomain=$Using:domainName
 brokerHostName=$Using:pbvmfqdn
 brokerProductName=CAM Connection Broker
 brokerPlatform=$Using:family
@@ -935,19 +891,13 @@ brokerLocale=en_US
 #                Write-Host "MFA setting is $isMfa"
 #stick in RADIUS MFA related attributes if RADIUS MFA is turned on
                 if($isMfa -eq "True") {
-                    $localRadiusSecretContainer = $using:radiusSharedSecretContainer
-                    $radiusSecretPlainText = $localRadiusSecretContainer.GetNetworkCredential().Password
                     $radiusProperties =@"
 isMultiFactorAuthenticate=$isMfa
-radiusServerIPAddress=$using:radiusServerHost
-authPort=$using:radiusServerPort
-radiusSecretKey=$radiusSecretPlainText
 "@
                     $cbProperties = $cbProperties + "`n" + $radiusProperties
-}
+                }
 
                 Set-Content $cbPropertiesFile $cbProperties
-                Set-Content $cbHomePropertiesFile $cbProperties
                 Write-Host "Broker configuration file generated."
 
                 #----- setup security trust for LDAP certificate from DC -----

@@ -107,27 +107,6 @@
         "description": "Enable RADIUS based MFA?"
       },
       "defaultValue": "False"
-    },
-    "radiusServerHost" : {
-      "type": "string",
-      "metadata": {
-        "description": "RADIUS server host name/IP address for MFA"
-      },
-      "defaultValue": ""
-    },
-    "radiusServerPort" : {
-      "type": "string",
-      "metadata": {
-        "description": "RADIUS server listen port for MFA"
-      },
-      "defaultValue": "1812"
-    },
-    "radiusSharedSecret" : {
-      "type": "securestring",
-      "metadata": {
-        "description": "Shared secret between RADIUS server and client"
-      },
-      "defaultValue": ""
     }
   },
   "variables": {
@@ -252,15 +231,6 @@
           },
           "enableRadiusMfa" : {
             "value" : "[parameters('enableRadiusMfa')]"
-          },
-          "radiusServerHost" : {
-            "value" : "[parameters('radiusServerHost')]"
-          },
-          "radiusServerPort" : {
-            "value" : "[parameters('radiusServerPort')]"
-          },
-          "radiusSharedSecret" : {
-            "value" : "[parameters('radiusSharedSecret')]"
           }
         }
       }
