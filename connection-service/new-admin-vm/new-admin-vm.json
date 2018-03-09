@@ -84,6 +84,12 @@
               "description": "Shared secret between RADIUS server and client"
             },
             "defaultValue": ""
+          },
+          "licenseInstanceId": {
+            "type": "string",
+            "metadata": {
+              "description": "License Instance Id for the CAM deployment"
+            }
           }
     },
     "variables": {
@@ -124,7 +130,7 @@
                             "Password": "PrivateSettingsRef:DomainAdminPassword"
                         },
                         "gitLocation": "[parameters('_artifactsLocation')]",
-                        "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-AdminUI-',subscription().subscriptionId)]",
+                        "sumoCollectorID": "[concat('CAM-', parameters('licenseInstanceId'), '-', subscription().subscriptionId, '-', resourceGroup().name, '-', parameters('dnsLabelPrefix'))]",
                         "enableRadiusMfa": "[parameters('enableRadiusMfa')]",
                         "radiusServerHost": "[parameters('radiusServerHost')]",
                         "radiusServerPort" : "[parameters('radiusServerPort')]",

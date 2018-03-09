@@ -128,6 +128,12 @@
         "description": "Shared secret between RADIUS server and client"
       },
       "defaultValue": ""
+    },
+    "licenseInstanceId": {
+      "type": "string",
+      "metadata": {
+        "description": "License Instance Id for the CAM deployment"
+      }
     }
   },
   "variables": {
@@ -261,6 +267,9 @@
           },
           "radiusSharedSecret" : {
             "value" : "[parameters('radiusSharedSecret')]"
+          },
+          "licenseInstanceId": {
+            "value": "[parameters('licenseInstanceId')]"
           }
         }
       }
@@ -362,6 +371,9 @@
           },
           "_artifactsLocationSasToken": {
             "value": "[parameters('_artifactsLocationSasToken')]"
+          },
+          "licenseInstanceId": {
+            "value": "[parameters('licenseInstanceId')]"
           }
         }
       }

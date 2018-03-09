@@ -67,6 +67,12 @@
             "description": "'true' if the security gateway should be enabled and a Public IP address created, otherwise 'false'."
         }
       },
+      "licenseInstanceId": {
+        "type": "string",
+        "metadata": {
+          "description": "License Instance Id for the CAM deployment"
+        }
+      },
       "_artifactsLocation": {
           "type": "string",
           "metadata": {
@@ -95,7 +101,7 @@
       "networkApiVersion": "2017-04-01",
       "scriptFileName":  "cm_setup_0.1.sh",
       "scriptFileURI":  "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'), parameters('_artifactsLocationSasToken'))]",
-      "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-CM-',subscription().subscriptionId)]",
+      "sumoCollectorID": "[concat('CAM-', parameters('licenseInstanceId'), '-', subscription().subscriptionId, '-', resourceGroup().name, '-', parameters('vmssName'))]",
       "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',variables('sumoCollectorID'),' ',parameters('_artifactsLocation'),' SecurityGatewayEnabled=',parameters('enableSecurityGateway'))]"
     },
     "resources": [
