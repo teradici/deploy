@@ -2575,7 +2575,7 @@ function Confirm-ModuleVersion()
 }
 
 function Get-CAMRoleDefinitionName() {
-    return = "Cloud Access Manager"
+    return "Cloud Access Manager"
 }
 
 
