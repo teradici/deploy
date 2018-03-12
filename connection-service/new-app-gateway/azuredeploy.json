@@ -90,7 +90,6 @@
     "publicIPRef": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]",
     "applicationGatewayID": "[resourceId('Microsoft.Network/applicationGateways',parameters('applicationGatewayName'))]",
     "apiVersion": "2017-11-01",
-    "enableExternalGUIAccess": "[bool(and(equals(parameters('enableRadiusMfa'), 'False'), parameters('enableExternalAccess')))]",
     "pcoipPathRules": [
       {
         "name": "pcoipBrokerProtocolRule",
@@ -107,7 +106,7 @@
         }
       }
     ],
-    "baseAppGatewayConfig": {
+    "primaryAppGatewayConfig": {
       "frontendPorts" : [
         {
           "name": "appGatewayFrontendHttpPort",
@@ -127,7 +126,7 @@
           "name": "appGatewayHttpListener",
           "properties": {
             "FrontendIPConfiguration": {
-              "Id": "[concat(variables('applicationGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
+              "Id": "[concat(variables('applicationGatewayID'), '/frontendIPConfigurations/appGatewayFrontendPrimaryIP')]"
             },
             "FrontendPort": {
               "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendHttpPort')]"
@@ -139,7 +138,7 @@
           "name": "appGatewayHttpsListener",
           "properties": {
             "FrontendIPConfiguration": {
-              "Id": "[concat(variables('applicationGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
+              "Id": "[concat(variables('applicationGatewayID'), '/frontendIPConfigurations/appGatewayFrontendPrimaryIP')]"
             },
             "FrontendPort": {
               "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendHttpsPort')]"
@@ -172,30 +171,30 @@
               "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayHttpsListener')]"
             },
             "urlPathMap": {
-              "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/', if(not(and(parameters('enableExternalAccess'), parameters('enableRadiusMfa'))), 'pcoipBrokerProtocolUserInterfacePath', 'pcoipBrokerProtocolPath') )]"
+              "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/pcoipBrokerProtocolUserInterfacePath')]"
             }
           }
         }
       ]
     },
-    "internalAppGatewayConfig": {
+    "secondaryAppGatewayConfig": {
       "frontendPorts": [
         {
-          "name": "appGatewayFrontendPrivatePort",
+          "name": "appGatewayFrontendSecondaryPort",
           "properties": {
-            "Port": 8443
+            "Port": 60443
           }
         }
       ],
       "httpListeners": [
         {
-          "name": "appGatewayPrivateHttpsListener",
+          "name": "appGatewaySecondaryHttpsListener",
           "properties": {
             "FrontendIPConfiguration": {
-              "Id": "[concat(variables('applicationGatewayID'), '/frontendIPConfigurations/appGatewayFrontendPrivateIP')]"
+              "Id": "[concat(variables('applicationGatewayID'), '/frontendIPConfigurations/appGatewayFrontendSecondaryIP')]"
             },
             "FrontendPort": {
-              "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendPrivatePort')]"
+              "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendSecondaryPort')]"
             },
             "Protocol": "Https",
             "SslCertificate": {
@@ -206,14 +205,14 @@
       ],
       "requestRoutingRules": [
         {
-          "Name": "internalRule",
+          "Name": "secondaryRule",
           "properties": {
             "RuleType": "PathBasedRouting",
             "httpListener": {
-              "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayPrivateHttpsListener')]"
+              "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewaySecondaryHttpsListener')]"
             },
             "urlPathMap": {
-              "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/pcoipBrokerProtocolUserInterfacePath')]"
+              "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/', if(and(parameters('enableExternalAccess'), parameters('enableRadiusMfa')), 'pcoipBrokerProtocolPath', 'pcoipBrokerProtocolUserInterfacePath'))]"
             }
           }
         }
@@ -222,7 +221,7 @@
     "ipConfiguration": {
       "internal": [
           {
-            "name": "appGatewayFrontendIP",
+            "name": "appGatewayFrontendPrimaryIP",
             "properties": {
               "subnet": {
                 "id": "[parameters('subnetRef')]"
@@ -232,7 +231,7 @@
       ],
       "external": [
         {
-          "name": "appGatewayFrontendIP",
+          "name": "appGatewayFrontendPrimaryIP",
           "properties": {
             "PublicIPAddress": {
               "id": "[variables('publicIPRef')]"
@@ -240,20 +239,38 @@
           }
         },
         {
-          "name": "appGatewayFrontendPrivateIP",
+          "name": "appGatewayFrontendSecondaryIP",
           "properties": {
             "subnet": {
               "id": "[parameters('subnetRef')]"
             }
           }
         }
+      ],
+      "externalMfa": [
+        {
+          "name": "appGatewayFrontendPrimaryIP",
+          "properties": {
+            "subnet": {
+              "id": "[parameters('subnetRef')]"
+            }
+          }
+        },
+        {
+          "name": "appGatewayFrontendSecondaryIP",
+          "properties": {
+            "PublicIPAddress": {
+              "id": "[variables('publicIPRef')]"
+            }
+          }
+        }
       ]
     },
     "appGwBackendPort":         8080,
-    "frontendIPConfigurations": "[if(parameters('enableExternalAccess'), variables('ipConfiguration')['external'], variables('ipConfiguration')['internal'])]",
-    "frontendPorts":            "[if(parameters('enableExternalAccess'), concat(variables('baseAppGatewayConfig')['frontendPorts'],       variables('internalAppGatewayConfig')['frontendPorts']),        variables('baseAppGatewayConfig')['frontendPorts'])]",
-    "httpListeners":            "[if(parameters('enableExternalAccess'), concat(variables('baseAppGatewayConfig')['httpListeners'],       variables('internalAppGatewayConfig')['httpListeners']),        variables('baseAppGatewayConfig')['httpListeners'])]",
-    "requestRoutingRules":      "[if(parameters('enableExternalAccess'), concat(variables('baseAppGatewayConfig')['requestRoutingRules'], variables('internalAppGatewayConfig')['requestRoutingRules']),  variables('baseAppGatewayConfig')['requestRoutingRules'])]"
+    "frontendIPConfigurations": "[if(parameters('enableExternalAccess'), if(parameters('enableRadiusMfa'), variables('ipConfiguration')['externalMfa'], variables('ipConfiguration')['external']), variables('ipConfiguration')['internal'])]",
+    "frontendPorts":            "[if(parameters('enableExternalAccess'), concat(variables('primaryAppGatewayConfig')['frontendPorts'],       variables('secondaryAppGatewayConfig')['frontendPorts']),        variables('primaryAppGatewayConfig')['frontendPorts'])]",
+    "httpListeners":            "[if(parameters('enableExternalAccess'), concat(variables('primaryAppGatewayConfig')['httpListeners'],       variables('secondaryAppGatewayConfig')['httpListeners']),        variables('primaryAppGatewayConfig')['httpListeners'])]",
+    "requestRoutingRules":      "[if(parameters('enableExternalAccess'), concat(variables('primaryAppGatewayConfig')['requestRoutingRules'], variables('secondaryAppGatewayConfig')['requestRoutingRules']),  variables('primaryAppGatewayConfig')['requestRoutingRules'])]"
   },
   "resources": [
     {
@@ -337,7 +354,7 @@
             "name": "pcoipBrokerProtocolUserInterfacePath",
             "properties": {
               "defaultBackendAddressPool": {
-                "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/',  parameters('CSBackendPoolName'))]"
+                "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/', parameters('CSBackendPoolName') )]"
               },
               "defaultBackendHttpSettings": {
                 "id": "[concat(variables('applicationGatewayID'), '/backendHttpSettingsCollection/appGatewayBackendHttpSettings')]"
