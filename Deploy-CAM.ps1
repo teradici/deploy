@@ -1729,7 +1729,8 @@ function New-ConnectionServiceDeployment() {
                     {
                         $remaining = $maxRetries - $idx - 1
                         Write-Host "Authorization error. Usually this means we are waiting for the authorization to percolate through Azure."
-                        Write-Host "Retrying deployment. Retries remaining: $remaining. If this countdown stops the deployment is happening."
+                        Write-Host "Reason: $($_.Exception.Message)"
+                        Write-Host-Warning "Retrying deployment. Retries remaining: $remaining. If this countdown stops the deployment is happening."
                         Start-sleep -Seconds 10
                     }
                     else {
