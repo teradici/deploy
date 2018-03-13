@@ -75,7 +75,7 @@
       "type": "bool",
       "defaultValue": false,
       "metadata": {
-        "description": "Indicates weather or not to make UI extnerally accessible"
+        "description": "If true, disables external access to the management interface."
       }
     },
     "CSUniqueSuffix": {
