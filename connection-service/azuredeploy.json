@@ -282,7 +282,7 @@
           "enableExternalAccess": {
             "value": "[bool(parameters('enableExternalAccess'))]"
           },
-          "enableRadiusMfa": {
+          "disableExternalUserInterface": {
             "value": "[bool(parameters('enableRadiusMfa'))]"
           }
         }

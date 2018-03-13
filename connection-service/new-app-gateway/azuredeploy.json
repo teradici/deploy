@@ -71,11 +71,11 @@
           "description": "'true' if a Public IP address should be created, otherwise 'false'."
       }
     },
-    "enableRadiusMfa": {
+    "disableExternalUserInterface": {
       "type": "bool",
       "defaultValue": false,
       "metadata": {
-        "description": "Indicates weather or not MFA is enabled"
+        "description": "Indicates weather or not to make UI extnerally accessible"
       }
     },
     "CSUniqueSuffix": {
@@ -212,7 +212,7 @@
               "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewaySecondaryHttpsListener')]"
             },
             "urlPathMap": {
-              "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/', if(and(parameters('enableExternalAccess'), parameters('enableRadiusMfa')), 'pcoipBrokerProtocolPath', 'pcoipBrokerProtocolUserInterfacePath'))]"
+              "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/', if(and(parameters('enableExternalAccess'), parameters('disableExternalUserInterface')), 'pcoipBrokerProtocolPath', 'pcoipBrokerProtocolUserInterfacePath'))]"
             }
           }
         }
@@ -247,7 +247,7 @@
           }
         }
       ],
-      "externalMfa": [
+      "uiInternalOnly": [
         {
           "name": "appGatewayFrontendPrimaryIP",
           "properties": {
@@ -267,7 +267,7 @@
       ]
     },
     "appGwBackendPort":         8080,
-    "frontendIPConfigurations": "[if(parameters('enableExternalAccess'), if(parameters('enableRadiusMfa'), variables('ipConfiguration')['externalMfa'], variables('ipConfiguration')['external']), variables('ipConfiguration')['internal'])]",
+    "frontendIPConfigurations": "[if(parameters('enableExternalAccess'), if(parameters('disableExternalUserInterface'), variables('ipConfiguration')['uiInternalOnly'], variables('ipConfiguration')['external']), variables('ipConfiguration')['internal'])]",
     "frontendPorts":            "[if(parameters('enableExternalAccess'), concat(variables('primaryAppGatewayConfig')['frontendPorts'],       variables('secondaryAppGatewayConfig')['frontendPorts']),        variables('primaryAppGatewayConfig')['frontendPorts'])]",
     "httpListeners":            "[if(parameters('enableExternalAccess'), concat(variables('primaryAppGatewayConfig')['httpListeners'],       variables('secondaryAppGatewayConfig')['httpListeners']),        variables('primaryAppGatewayConfig')['httpListeners'])]",
     "requestRoutingRules":      "[if(parameters('enableExternalAccess'), concat(variables('primaryAppGatewayConfig')['requestRoutingRules'], variables('secondaryAppGatewayConfig')['requestRoutingRules']),  variables('primaryAppGatewayConfig')['requestRoutingRules'])]"
