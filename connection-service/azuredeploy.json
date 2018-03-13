@@ -107,6 +107,12 @@
         "description": "Enable RADIUS based MFA?"
       },
       "defaultValue": "False"
+    },
+    "licenseInstanceId": {
+      "type": "string",
+      "metadata": {
+        "description": "License Instance Id for the CAM deployment"
+      }
     }
   },
   "variables": {
@@ -231,6 +237,9 @@
           },
           "enableRadiusMfa" : {
             "value" : "[parameters('enableRadiusMfa')]"
+          },
+          "licenseInstanceId": {
+            "value": "[parameters('licenseInstanceId')]"
           }
         }
       }
@@ -338,6 +347,9 @@
           },
           "_artifactsLocationSasToken": {
             "value": "[parameters('_artifactsLocationSasToken')]"
+          },
+          "licenseInstanceId": {
+            "value": "[parameters('licenseInstanceId')]"
           }
         }
       }

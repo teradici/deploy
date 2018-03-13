@@ -38,6 +38,9 @@
         "remoteWorkstationDomainGroup": {
             "value": "Remote Workstations"
         },
+        "licenseInstanceId": {
+          "value": ""
+        },
         "CAMDeploymentInfo": {
             "value": "This+would+be+a+URI+encoded+string"
         },

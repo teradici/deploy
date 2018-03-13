@@ -294,7 +294,7 @@
               "configurationArguments": {
                 "pcoipAgentInstallerUrl": "[variables('pcoipAgentInstallerUrl')]",
                 "videoDriverUrl": "[variables('videoDriverUrl')]",
-                "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-Agent-',subscription().subscriptionId,'-',parameters('dnsLabelPrefix'))]",
+                "sumoCollectorID": "[concat('CAM-', split(parameters('registrationCode'), '@')[0], '-', subscription().subscriptionId, '-', resourceGroup().name, '-', parameters('dnsLabelPrefix'))]",
                 "domainGroupToJoin": "[parameters('domainGroupToJoin')]",
                 "enableAutoShutdown": "[parameters('enableAutoShutdown')]",
                 "autoShutdownIdleTime": "[parameters('autoShutdownIdleTime')]"

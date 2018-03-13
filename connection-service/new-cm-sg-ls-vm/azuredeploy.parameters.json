@@ -8,6 +8,9 @@
         "vmAdminPassword": {
             "value": ""
         },
+        "licenseInstanceId": {
+            "value": ""
+        },
         "vmSku": {
             "value": "Standard_D1_v2"
         },

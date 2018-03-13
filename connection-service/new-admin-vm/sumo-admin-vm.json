@@ -2,8 +2,8 @@
 "api.version": "v1",
 "sources": [
     {
-        "name":  "CAMPOC_Teradici_AdminUI_Azure_Logs",
-        "category":  "CAMPOC/Teradici/Azure/Logs",
+        "name":  "CAM_Deploy_ConnectionServer_Win_Azure_Logs",
+        "category":  "CAM/Deploy/ConnectionServer/Win/Azure/Logs",
         "automaticDateParsing":  true,
         "multilineProcessingEnabled":  true,
         "useAutolineMatching":  false,
@@ -20,8 +20,8 @@
         "alive":  false
     },
     {
-        "name":  "CAMPOC_Teradici_AdminUI_Tomcat_Logs",
-        "category":  "CAMPOC/Teradici/AdminUI/TomcatLogs",
+        "name":  "CAM_Deploy_ConnectionServer_Win_Tomcat_Logs",
+        "category":  "CAM/Deploy/ConnectionServer/Win/Tomcat/Logs",
         "automaticDateParsing":  true,
         "multilineProcessingEnabled":  false,
         "useAutolineMatching":  false,
@@ -38,8 +38,8 @@
         "alive":  false
     },
     {
-        "name":  "CAMPOC_Teradici_AdminUI_Webapp_Logs",
-        "category":  "CAMPOC/Teradici/AdminUI/Logs",
+        "name":  "CAM_Deploy_ConnectionServer_Win_Teradici_ManagementInterface_Logs",
+        "category":  "CAM/Deploy/ConnectionServer/Win/Teradici/ManagementInterface/Logs",
         "automaticDateParsing":  true,
         "multilineProcessingEnabled":  false,
         "useAutolineMatching":  false,
@@ -56,8 +56,8 @@
         "alive":  false
     },
     {
-        "name":  "CAMPOC_Teradici_CAMBroker_Tomcat_Logs",
-        "category":  "CAMPOC/Teradici/CAMBroker/Logs",
+        "name":  "CAM_Deploy_ConnectionServer_Win_Teradici_Broker_Logs",
+        "category":  "CAM/Deploy/ConnectionServer/Win/Teradici/Broker/Logs",
         "automaticDateParsing":  true,
         "multilineProcessingEnabled":  false,
         "useAutolineMatching":  false,
@@ -74,8 +74,8 @@
         "alive":  false
     },
     {
-        "name":"CAMPOC_Windows_Events",
-        "category":"CAMPOC/Teradici/Windows/Events",
+        "name":"CAM_Deploy_ConnectionServer_Win_Events",
+        "category":"CAM/Deploy/ConnectionServer/Win/Events",
         "automaticDateParsing":true,
         "multilineProcessingEnabled":true,
         "useAutolineMatching":false,
@@ -92,8 +92,8 @@
         "sourceType":"LocalWindowsEventLog"
     },
     {
-        "name":"CAMPOC_Windows_Performance_Logs",
-        "category":"CAMPOC/Teradici/Performance/Windows",
+        "name":"CAM_Deploy_ConnectionServer_Win_Performance",
+        "category":"CAM/Deploy/ConnectionServer/Win/Performance",
         "automaticDateParsing":false,
         "multilineProcessingEnabled":false,
         "useAutolineMatching":false,

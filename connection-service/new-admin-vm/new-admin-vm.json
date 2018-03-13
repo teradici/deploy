@@ -103,7 +103,7 @@
                             "Password": "PrivateSettingsRef:DomainAdminPassword"
                         },
                         "gitLocation": "[parameters('_artifactsLocation')]",
-                        "sumoCollectorID": "[concat('CAMPOC-',resourceGroup().name,'-AdminUI-',subscription().subscriptionId)]",
+                        "sumoCollectorID": "[concat('CAM-', parameters('licenseInstanceId'), '-', subscription().subscriptionId, '-', resourceGroup().name, '-', parameters('dnsLabelPrefix'))]",
                         "enableRadiusMfa": "[parameters('enableRadiusMfa')]"
                     }
                 },

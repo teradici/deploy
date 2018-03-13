@@ -334,7 +334,8 @@
             "properties": {
               "Port": "[variables('appGwBackendPort')]",
               "Protocol": "Http",
-              "CookieBasedAffinity": "Enabled"
+              "CookieBasedAffinity": "Enabled",
+              "RequestTimeout": "90"
             }
           }
         ],

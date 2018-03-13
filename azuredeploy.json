@@ -205,7 +205,8 @@
     }
   },
   "variables": {
-    "adminDesktopVMName": "admin-rw"
+    "adminDesktopVMName": "admin-rw",
+    "licenseInstanceId": "[split(parameters('registrationCode'), '@')[0]]"
   },
   "resources": [
     {
@@ -320,6 +321,9 @@
           },
           "enableRadiusMfa": {
             "value": "[parameters('enableRadiusMfa')]"
+          },
+          "licenseInstanceId": {
+            "value": "[variables('licenseInstanceId')]"
           }
         }
       }
