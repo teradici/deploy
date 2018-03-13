@@ -1528,6 +1528,14 @@ function New-ConnectionServiceDeployment() {
         $artifactsLocation = $secret.SecretValueText
         $CSDeploymentTemplateURI = $artifactsLocation + "/connection-service/azuredeploy.json"
 
+        # Get the RegistrationCode
+        $secret = Get-AzureKeyVaultSecret `
+            -VaultName $kvName `
+            -Name "cloudAccessRegistrationCode" `
+            -ErrorAction stop
+        # Get license instance Id from registration code
+        $licenseInstanceId = $secret.SecretValueText.Split('@')[0]
+
         $generatedDeploymentParameters = @"
         {
             "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
@@ -1671,6 +1679,9 @@ function New-ConnectionServiceDeployment() {
                         },
                         "secretName": "radiusSharedSecret"
                     }
+                },
+                "licenseInstanceId": {
+                    "value": "$licenseInstanceId"
                 },
                 "_baseArtifactsLocation": {
                     "reference": {

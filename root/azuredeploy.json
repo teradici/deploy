@@ -94,8 +94,7 @@
           "name" : "[parameters('rootSubnetName')]",
            "prefix" : "10.0.0.0/26",
            "adNicIPAddress": "10.0.0.4",
-           "adNicName": "vm-ad-nic",
-           "adPubIPName": "adPublicIP"
+           "adNicName": "vm-ad-nic"
         },
         "csSubnet" : {
           "name" : "[parameters('connectionServiceSubnetName')]",
@@ -131,15 +130,6 @@
   },
 
   "resources": [
-    {
-      "type": "Microsoft.Network/publicIPAddresses",
-      "name": "[variables('networkSettings').subnets.rootSubnet.adPubIPName]",
-      "apiVersion": "2016-03-30",
-      "location": "[resourceGroup().location]",
-      "properties": {
-        "publicIPAllocationMethod": "Static"
-      }
-    },
     {
       "type": "Microsoft.Resources/deployments",
       "name": "VNet",
@@ -222,9 +212,6 @@
               "privateIPAddress": "[variables('networkSettings').subnets.rootSubnet.adNicIPAddress]",
               "subnet": {
                 "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('networkSettings').vnetName, variables('networkSettings').subnets.rootSubnet.name)]"
-              },
-              "publicIPAddress": {
-                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('networkSettings').subnets.rootSubnet.adPubIPName)]"
               }
             }
           }

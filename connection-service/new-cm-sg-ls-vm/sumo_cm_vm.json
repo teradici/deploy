@@ -2,8 +2,8 @@
 "api.version": "v1",
 "sources": [
     {
-        "name":  "CAMPOC_Teradici_CM_Logs",
-        "category":  "CAMPOC/Teradici/CM/Logs",
+        "name":  "CAM_Deploy_SecurityGateway_Linux_Teradici_CM_Logs",
+        "category":  "CAM/Deploy/SecurityGateway/Linux/Teradici/CM/Logs",
         "automaticDateParsing":  true,
         "multilineProcessingEnabled":  false,
         "useAutolineMatching":  false,
@@ -20,8 +20,8 @@
         "alive":  false
     },
     {
-        "name":  "CAMPOC_Teradici_SG_Logs",
-        "category":  "CAMPOC/Teradici/SG/Logs",
+        "name":  "CAM_Deploy_SecurityGateway_Linux_Teradici_SG_Logs",
+        "category":  "CAM/Deploy/SecurityGateway/Linux/Teradici/SG/Logs",
         "automaticDateParsing":  true,
         "multilineProcessingEnabled":  false,
         "useAutolineMatching":  false,
@@ -38,8 +38,8 @@
         "alive":  false
     },
     {
-        "name":  "CAMPOC_Teradici_CM_Deployment_Logs",
-        "category":  "CAMPOC/Teradici/Azure/Logs",
+        "name":  "CAM_Deploy_SecurityGateway_Linux_Teradici_Deployment_Logs",
+        "category":  "CAM/Deploy/SecurityGateway/Linux/Teradici/Deployment/Logs",
         "automaticDateParsing":  true,
         "multilineProcessingEnabled":  false,
         "useAutolineMatching":  false,
@@ -56,8 +56,8 @@
         "alive":  false
     },
     {
-        "name":  "CAMPOC_Teradici_CM_Azure_Logs",
-        "category":  "CAMPOC/Teradici/Azure/Logs",
+        "name":  "CAM_Deploy_SecurityGateway_Linux_Azure_Logs",
+        "category":  "CAM/Deploy/SecurityGateway/Linux/Azure/Logs",
         "automaticDateParsing":  true,
         "multilineProcessingEnabled":  true,
         "useAutolineMatching":  false,

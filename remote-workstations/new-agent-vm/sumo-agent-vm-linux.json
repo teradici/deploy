@@ -2,8 +2,8 @@
 "api.version": "v1",
 "sources": [
     {
-        "name":  "CAMPOC_Teradici_Agent_Logs",
-        "category":  "CAMPOC/Teradici/Agent/Logs",
+        "name":  "CAM_Deploy_RemoteWorkstations_Linux_Teradici_Agent_Logs",
+        "category":  "CAM/Deploy/RemoteWorkstations/Linux/Teradici/Agent/Logs",
         "automaticDateParsing":  true,
         "multilineProcessingEnabled":  false,
         "useAutolineMatching":  false,
