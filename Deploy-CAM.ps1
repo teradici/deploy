@@ -2789,16 +2789,14 @@ function Set-RadiusSettings() {
             if ((-not $radiusServerPort) -and (-not $ignorePrompts)) {
                 if((confirmDialog "RADIUS Server Port is currently $currentRadiusPort. Do you want to change your RADIUS Server Port?") -eq 'y') {
                     do {
-                        try {
-                            $radiusConfig.radiusServerPort = [int](Read-Host  "Enter your RADIUS Server's Listening port")
-                        } catch {
-                            $radiusConfig.radiusServerPort = $null
-                            Write-Host-Warning "Entered port is not an Integer"
-                        }                            
+                        $radiusPort = 0
+                        $portString = (Read-Host  "Enter your RADIUS Server's Listening port")
+                        [int]::TryParse($portString, [ref]$radiusPort) # radiusPort will be 0 on parse failure
+                        $radiusConfig.radiusServerPort = $radiusPort
                         if ( ($radiusConfig.radiusServerPort -le 0) -or ($radiusConfig.radiusServerPort -gt 65535) ) {
                             Write-Host-Warning "Entered port is invalid. It should be between 1 and 65535."
                             $radiusConfig.radiusServerPort = $null
-                        }            
+                        }      
                     } while (-not $radiusConfig.radiusServerPort )
                 }
             } elseif ( $radiusServerPort ) {
@@ -2812,12 +2810,14 @@ function Set-RadiusSettings() {
                         $portValid=$true
                     }
                     if (-not $portValid ) {
-                        try {
-                            $radiusConfig.radiusServerPort = [int](Read-Host  "Enter your RADIUS Server's Listening port")
-                        } catch {
+                        $radiusPort = 0
+                        $portString = (Read-Host  "Enter your RADIUS Server's Listening port")
+                        [int]::TryParse($portString, [ref]$radiusPort) # radiusPort will be 0 on parse failure
+                        $radiusConfig.radiusServerPort = $radiusPort
+                        if (-not $radiusConfig.radiusServerPort) {
                             $portValid = $false
                             Write-Host-Warning "Entered port is not an Integer"
-                        }
+                        }  
                     }
                 } while (-not $portValid )
             }
@@ -3432,17 +3432,15 @@ if ($CAMRootKeyvault) {
 
             do {
                 if (-not $radiusConfig.radiusServerPort ) {
-                    try {
-                        $radiusConfig.radiusServerPort = [int](Read-Host  "Enter your RADIUS Server's Listening port")
-                    } catch {
-                        $radiusConfig.radiusServerPort = $null
-                        Write-Host-Warning "Entered port is not an Integer"
-                    }
+                    $radiusPort = 0
+                    $portString = (Read-Host  "Enter your RADIUS Server's Listening port")
+                    [int]::TryParse($portString, [ref]$radiusPort) # radiusPort will be 0 on parse failure
+                    $radiusConfig.radiusServerPort = $radiusPort
                 }
                 if ( ($radiusConfig.radiusServerPort -le 0) -or ($radiusConfig.radiusServerPort -gt 65535) ) {
                     Write-Host-Warning "Entered port is invalid. It should be between 1 and 65535."
                     $radiusConfig.radiusServerPort = $null
-                }            
+                }
             } while (-not $radiusConfig.radiusServerPort )
 
             do {
