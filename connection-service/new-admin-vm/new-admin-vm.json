@@ -63,34 +63,13 @@
               "description": "Enable RADIUS based MFA?"
             },
             "defaultValue": "False"
-          },
-        "radiusServerHost" : {
+        },
+        "licenseInstanceId": {
             "type": "string",
             "metadata": {
-              "description": "RADIUS server host name/IP address for MFA"
-            },
-            "defaultValue": ""
-          },
-          "radiusServerPort" : {
-            "type": "string",
-            "metadata": {
-              "description": "RADIUS server listen port for MFA"
-            },
-            "defaultValue": "1812"
-          },
-          "radiusSharedSecret" : {
-            "type": "securestring",
-            "metadata": {
-              "description": "Shared secret between RADIUS server and client"
-            },
-            "defaultValue": ""
-          },
-          "licenseInstanceId": {
-            "type": "string",
-            "metadata": {
-              "description": "License Instance Id for the CAM deployment"
+            "description": "License Instance Id for the CAM deployment"
             }
-          }
+        }
     },
     "variables": {
         "imagePublisher": "MicrosoftWindowsServer",
@@ -131,20 +110,13 @@
                         },
                         "gitLocation": "[parameters('_artifactsLocation')]",
                         "sumoCollectorID": "[concat('CAM-', parameters('licenseInstanceId'), '-', subscription().subscriptionId, '-', resourceGroup().name, '-', parameters('dnsLabelPrefix'))]",
-                        "enableRadiusMfa": "[parameters('enableRadiusMfa')]",
-                        "radiusServerHost": "[parameters('radiusServerHost')]",
-                        "radiusServerPort" : "[parameters('radiusServerPort')]",
-                        "radiusSharedSecretContainer" : {
-                            "UserName": "dummy",
-                            "Password": "PrivateSettingsRef:radiusSharedSecretInfo"
-                        }
+                        "enableRadiusMfa": "[parameters('enableRadiusMfa')]"
                     }
                 },
                 "protectedSettings": {
                     "Items": {
                         "DomainAdminPassword": "[parameters('domainPassword')]",
-                        "CAMDeploymentInfo": "[parameters('CAMDeploymentInfo')]",
-                        "radiusSharedSecretInfo": "[parameters('radiusSharedSecret')]"
+                        "CAMDeploymentInfo": "[parameters('CAMDeploymentInfo')]"
                     }
                 }
             }

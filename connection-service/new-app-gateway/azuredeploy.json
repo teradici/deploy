@@ -65,6 +65,19 @@
         "description": "Application Gateway Name including the unique CS suffix"
       }
     },
+    "enableExternalAccess": {
+      "type": "bool",
+      "metadata": {
+          "description": "'true' if a Public IP address should be created, otherwise 'false'."
+      }
+    },
+    "disableExternalUserInterface": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "If true, disables external access to the management interface."
+      }
+    },
     "CSUniqueSuffix": {
       "type": "string",
       "metadata": {
@@ -77,16 +90,194 @@
     "publicIPRef": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressName'))]",
     "applicationGatewayID": "[resourceId('Microsoft.Network/applicationGateways',parameters('applicationGatewayName'))]",
     "apiVersion": "2017-11-01",
-    "appGwFrontendHttpsPort": 443,
-    "appGwFrontendHttpPort": 80,
-    "appGwFrontendPrivatePort": 8443,
-    "appGwBackendPort": 8080
+    "pcoipPathRules": [
+      {
+        "name": "pcoipBrokerProtocolRule",
+        "properties": {
+          "paths": [
+            "[parameters('pathMatch1')]"
+          ],
+          "backendAddressPool": {
+            "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/', parameters('SGBackendPoolName') )]"
+          },
+          "backendHttpSettings": {
+            "id": "[concat(variables('applicationGatewayID'), '/backendHttpSettingsCollection/appGatewayBackendHttpSettings')]"
+          }
+        }
+      }
+    ],
+    "primaryAppGatewayConfig": {
+      "frontendPorts" : [
+        {
+          "name": "appGatewayFrontendHttpPort",
+          "properties": {
+            "Port": 80
+          }
+        },
+        {
+          "name": "appGatewayFrontendHttpsPort",
+          "properties": {
+            "Port": 443
+          }
+        }
+      ],
+      "httpListeners" : [
+        {
+          "name": "appGatewayHttpListener",
+          "properties": {
+            "FrontendIPConfiguration": {
+              "Id": "[concat(variables('applicationGatewayID'), '/frontendIPConfigurations/appGatewayFrontendPrimaryIP')]"
+            },
+            "FrontendPort": {
+              "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendHttpPort')]"
+            },
+            "Protocol": "Http"
+          }
+        },
+        {
+          "name": "appGatewayHttpsListener",
+          "properties": {
+            "FrontendIPConfiguration": {
+              "Id": "[concat(variables('applicationGatewayID'), '/frontendIPConfigurations/appGatewayFrontendPrimaryIP')]"
+            },
+            "FrontendPort": {
+              "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendHttpsPort')]"
+            },
+            "Protocol": "Https",
+            "SslCertificate": {
+              "Id": "[concat(variables('applicationGatewayID'), '/sslCertificates/appGatewaySslCert')]"
+            }
+          }
+        }
+      ],
+      "requestRoutingRules": [
+        {
+          "Name": "httpRule",
+          "properties": {
+            "RuleType": "Basic",
+            "httpListener": {
+              "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayHttpListener')]"
+            },
+            "redirectConfiguration": {
+              "id": "[concat(variables('applicationGatewayID'), '/redirectConfigurations/redirectHttpConfig')]"
+            }
+          }
+        },
+        {
+          "Name": "httpsRule",
+          "properties": {
+            "RuleType": "PathBasedRouting",
+            "httpListener": {
+              "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayHttpsListener')]"
+            },
+            "urlPathMap": {
+              "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/pcoipBrokerProtocolUserInterfacePath')]"
+            }
+          }
+        }
+      ]
+    },
+    "secondaryAppGatewayConfig": {
+      "frontendPorts": [
+        {
+          "name": "appGatewayFrontendSecondaryPort",
+          "properties": {
+            "Port": 60443
+          }
+        }
+      ],
+      "httpListeners": [
+        {
+          "name": "appGatewaySecondaryHttpsListener",
+          "properties": {
+            "FrontendIPConfiguration": {
+              "Id": "[concat(variables('applicationGatewayID'), '/frontendIPConfigurations/appGatewayFrontendSecondaryIP')]"
+            },
+            "FrontendPort": {
+              "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendSecondaryPort')]"
+            },
+            "Protocol": "Https",
+            "SslCertificate": {
+              "Id": "[concat(variables('applicationGatewayID'), '/sslCertificates/appGatewaySslCert')]"
+            }
+          }
+        }
+      ],
+      "requestRoutingRules": [
+        {
+          "Name": "secondaryRule",
+          "properties": {
+            "RuleType": "PathBasedRouting",
+            "httpListener": {
+              "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewaySecondaryHttpsListener')]"
+            },
+            "urlPathMap": {
+              "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/', if(and(parameters('enableExternalAccess'), parameters('disableExternalUserInterface')), 'pcoipBrokerProtocolPath', 'pcoipBrokerProtocolUserInterfacePath'))]"
+            }
+          }
+        }
+      ]
+    },
+    "ipConfiguration": {
+      "internal": [
+          {
+            "name": "appGatewayFrontendPrimaryIP",
+            "properties": {
+              "subnet": {
+                "id": "[parameters('subnetRef')]"
+              }
+            }
+          }
+      ],
+      "external": [
+        {
+          "name": "appGatewayFrontendPrimaryIP",
+          "properties": {
+            "PublicIPAddress": {
+              "id": "[variables('publicIPRef')]"
+            }
+          }
+        },
+        {
+          "name": "appGatewayFrontendSecondaryIP",
+          "properties": {
+            "subnet": {
+              "id": "[parameters('subnetRef')]"
+            }
+          }
+        }
+      ],
+      "uiInternalOnly": [
+        {
+          "name": "appGatewayFrontendPrimaryIP",
+          "properties": {
+            "subnet": {
+              "id": "[parameters('subnetRef')]"
+            }
+          }
+        },
+        {
+          "name": "appGatewayFrontendSecondaryIP",
+          "properties": {
+            "PublicIPAddress": {
+              "id": "[variables('publicIPRef')]"
+            }
+          }
+        }
+      ]
+    },
+    "appGwBackendPort":         8080,
+    "frontendIPConfigurations": "[if(parameters('enableExternalAccess'), if(parameters('disableExternalUserInterface'), variables('ipConfiguration')['uiInternalOnly'], variables('ipConfiguration')['external']), variables('ipConfiguration')['internal'])]",
+    "frontendPorts":            "[if(parameters('enableExternalAccess'), concat(variables('primaryAppGatewayConfig')['frontendPorts'],       variables('secondaryAppGatewayConfig')['frontendPorts']),        variables('primaryAppGatewayConfig')['frontendPorts'])]",
+    "httpListeners":            "[if(parameters('enableExternalAccess'), concat(variables('primaryAppGatewayConfig')['httpListeners'],       variables('secondaryAppGatewayConfig')['httpListeners']),        variables('primaryAppGatewayConfig')['httpListeners'])]",
+    "requestRoutingRules":      "[if(parameters('enableExternalAccess'), concat(variables('primaryAppGatewayConfig')['requestRoutingRules'], variables('secondaryAppGatewayConfig')['requestRoutingRules']),  variables('primaryAppGatewayConfig')['requestRoutingRules'])]"
   },
   "resources": [
     {
       "apiVersion": "[variables('apiVersion')]",
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[variables('publicIPAddressName')]",
+      "condition": "[parameters('enableExternalAccess')]",
       "location": "[resourceGroup().location]",
       "properties": {
         "publicIPAllocationMethod": "Dynamic"
@@ -106,6 +297,10 @@
           "tier": "Standard",
           "capacity": "[parameters('capacity')]"
         },
+        "frontendIPConfigurations": "[variables('frontendIPConfigurations')]",
+        "frontendPorts":            "[variables('frontendPorts')]",
+        "httpListeners":            "[variables('httpListeners')]",
+        "requestRoutingRules":      "[variables('requestRoutingRules')]",
         "sslCertificates": [
           {
             "name": "appGatewaySslCert",
@@ -122,44 +317,6 @@
               "subnet": {
                 "id": "[parameters('subnetRef')]"
               }
-            }
-          }
-        ],
-        "frontendIPConfigurations": [
-          {
-            "name": "appGatewayFrontendIP",
-            "properties": {
-              "PublicIPAddress": {
-                "id": "[variables('publicIPRef')]"
-              }
-            }
-          },
-          {
-            "name": "appGatewayFrontendPrivateIP",
-            "properties": {
-              "subnet": {
-                "id": "[parameters('subnetRef')]"
-              }
-            }
-          }
-        ],
-        "frontendPorts": [
-          {
-            "name": "appGatewayFrontendHttpPort",
-            "properties": {
-              "Port": "[variables('appGwFrontendHttpPort')]"
-            }
-          },
-          {
-            "name": "appGatewayFrontendHttpsPort",
-            "properties": {
-              "Port": "[variables('appGwFrontendHttpsPort')]"
-            }
-          },
-          {
-            "name": "appGatewayFrontendPrivatePort",
-            "properties": {
-              "Port": "[variables('appGwFrontendPrivatePort')]"
             }
           }
         ],
@@ -182,50 +339,6 @@
             }
           }
         ],
-        "httpListeners": [
-          {
-            "name": "appGatewayHttpListener",
-            "properties": {
-              "FrontendIPConfiguration": {
-                "Id": "[concat(variables('applicationGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
-              },
-              "FrontendPort": {
-                "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendHttpPort')]"
-              },
-              "Protocol": "Http"
-            }
-          },
-          {
-            "name": "appGatewayHttpsListener",
-            "properties": {
-              "FrontendIPConfiguration": {
-                "Id": "[concat(variables('applicationGatewayID'), '/frontendIPConfigurations/appGatewayFrontendIP')]"
-              },
-              "FrontendPort": {
-                "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendHttpsPort')]"
-              },
-              "Protocol": "Https",
-              "SslCertificate": {
-                "Id": "[concat(variables('applicationGatewayID'), '/sslCertificates/appGatewaySslCert')]"
-              }
-            }
-          },
-          {
-            "name": "appGatewayPrivateHttpListener",
-            "properties": {
-              "FrontendIPConfiguration": {
-                "Id": "[concat(variables('applicationGatewayID'), '/frontendIPConfigurations/appGatewayFrontendPrivateIP')]"
-              },
-              "FrontendPort": {
-                "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendPrivatePort')]"
-              },
-              "Protocol": "Https",
-              "SslCertificate": {
-                "Id": "[concat(variables('applicationGatewayID'), '/sslCertificates/appGatewaySslCert')]"
-              }
-            }
-          }
-        ],
         "redirectConfigurations": [
           {
             "Name": "redirectHttpConfig",
@@ -239,7 +352,7 @@
         ],
         "urlPathMaps": [
           {
-            "name": "urlPathMap1",
+            "name": "pcoipBrokerProtocolUserInterfacePath",
             "properties": {
               "defaultBackendAddressPool": {
                 "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/', parameters('CSBackendPoolName') )]"
@@ -247,60 +360,19 @@
               "defaultBackendHttpSettings": {
                 "id": "[concat(variables('applicationGatewayID'), '/backendHttpSettingsCollection/appGatewayBackendHttpSettings')]"
               },
-              "pathRules": [
-                {
-                  "name": "pathRule1",
-                  "properties": {
-                    "paths": [
-                      "[parameters('pathMatch1')]"
-                    ],
-                    "backendAddressPool": {
-                      "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/', parameters('SGBackendPoolName') )]"
-                    },
-                    "backendHttpSettings": {
-                      "id": "[concat(variables('applicationGatewayID'), '/backendHttpSettingsCollection/appGatewayBackendHttpSettings')]"
-                    }
-                  }
-                }
-              ]
+              "pathRules": "[variables('pcoipPathRules')]"
             }
-          }
-        ],
-        "requestRoutingRules": [
+          }, 
           {
-            "Name": "externalHttpRule",
+            "name": "pcoipBrokerProtocolPath",
             "properties": {
-              "RuleType": "Basic",
-              "httpListener": {
-                "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayHttpListener')]"
+              "defaultBackendAddressPool": {
+                "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/', parameters('SGBackendPoolName') )]"
               },
-              "redirectConfiguration": {
-                "id": "[concat(variables('applicationGatewayID'), '/redirectConfigurations/redirectHttpConfig')]"
-              }
-            }
-          },
-          {
-            "Name": "externalHttpsRule",
-            "properties": {
-              "RuleType": "PathBasedRouting",
-              "httpListener": {
-                "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayHttpsListener')]"
+              "defaultBackendHttpSettings": {
+                "id": "[concat(variables('applicationGatewayID'), '/backendHttpSettingsCollection/appGatewayBackendHttpSettings')]"
               },
-              "urlPathMap": {
-                "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/urlPathMap1')]"
-              }
-            }
-          },
-          {
-            "Name": "internalRule",
-            "properties": {
-              "RuleType": "PathBasedRouting",
-              "httpListener": {
-                "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayPrivateHttpListener')]"
-              },
-              "urlPathMap": {
-                "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/urlPathMap1')]"
-              }
+              "pathRules": "[variables('pcoipPathRules')]"
             }
           }
         ]

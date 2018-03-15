@@ -189,26 +189,12 @@
       },
       "defaultValue": "False"
     },
-    "radiusServerHost" : {
+    "enableExternalAccess": {
       "type": "string",
+      "defaultValue": "true",
       "metadata": {
-        "description": "RADIUS server host name/IP address for MFA"
-      },
-      "defaultValue": ""
-    },
-    "radiusServerPort" : {
-      "type": "string",
-      "metadata": {
-        "description": "RADIUS server listen port for MFA"
-      },
-      "defaultValue": "1812"
-    },
-    "radiusSharedSecret" : {
-      "type": "securestring",
-      "metadata": {
-        "description": "Shared secret between RADIUS server and client"
-      },
-      "defaultValue": ""
+          "description": "'true' if the security gateway should be enabled and a Public IP address created, otherwise 'false'."
+      }
     },
     "autoShutdownIdleTime" : {
       "type": "int",
@@ -324,8 +310,8 @@
           "binaryLocation": {
             "value": "[parameters('binaryLocation')]"
           },
-          "enableSecurityGateway": {
-            "value": "true"
+          "enableExternalAccess": {
+            "value": "[parameters('enableExternalAccess')]"
           },
           "_baseArtifactsLocation": {
             "value": "[parameters('_artifactsLocation')]"
@@ -335,15 +321,6 @@
           },
           "enableRadiusMfa": {
             "value": "[parameters('enableRadiusMfa')]"
-          },
-          "radiusServerHost": {
-            "value": "[parameters('radiusServerHost')]"
-          },
-          "radiusServerPort": {
-            "value": "[parameters('radiusServerPort')]"
-          },
-          "radiusSharedSecret": {
-            "value": "[parameters('radiusSharedSecret')]"
           },
           "licenseInstanceId": {
             "value": "[variables('licenseInstanceId')]"

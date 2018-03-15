@@ -82,7 +82,7 @@
         "description": "The location of CAM binaries"
       }
     },
-    "enableSecurityGateway": {
+    "enableExternalAccess": {
       "type": "string",
       "metadata": {
           "description": "'true' if the security gateway should be enabled and a Public IP address created, otherwise 'false'."
@@ -107,27 +107,6 @@
         "description": "Enable RADIUS based MFA?"
       },
       "defaultValue": "False"
-    },
-    "radiusServerHost" : {
-      "type": "string",
-      "metadata": {
-        "description": "RADIUS server host name/IP address for MFA"
-      },
-      "defaultValue": ""
-    },
-    "radiusServerPort" : {
-      "type": "string",
-      "metadata": {
-        "description": "RADIUS server listen port for MFA"
-      },
-      "defaultValue": "1812"
-    },
-    "radiusSharedSecret" : {
-      "type": "securestring",
-      "metadata": {
-        "description": "Shared secret between RADIUS server and client"
-      },
-      "defaultValue": ""
     },
     "licenseInstanceId": {
       "type": "string",
@@ -259,15 +238,6 @@
           "enableRadiusMfa" : {
             "value" : "[parameters('enableRadiusMfa')]"
           },
-          "radiusServerHost" : {
-            "value" : "[parameters('radiusServerHost')]"
-          },
-          "radiusServerPort" : {
-            "value" : "[parameters('radiusServerPort')]"
-          },
-          "radiusSharedSecret" : {
-            "value" : "[parameters('radiusSharedSecret')]"
-          },
           "licenseInstanceId": {
             "value": "[parameters('licenseInstanceId')]"
           }
@@ -317,6 +287,12 @@
           },
           "CSUniqueSuffix": {
             "value": "[parameters('CSUniqueSuffix')]"
+          },
+          "enableExternalAccess": {
+            "value": "[bool(parameters('enableExternalAccess'))]"
+          },
+          "disableExternalUserInterface": {
+            "value": "[bool(parameters('enableRadiusMfa'))]"
           }
         }
       }
@@ -364,7 +340,7 @@
             "value": "[concat(reference('CreateConnectionServer').outputs.privateIp.value,':',variables('brokerPort'))]"
           },
           "enableSecurityGateway": {
-            "value": "[parameters('enableSecurityGateway')]"
+            "value": "[parameters('enableExternalAccess')]"
           },
           "_artifactsLocation": {
             "value": "[concat(variables('_artifactsLocation'), '/new-cm-sg-ls-vm')]"

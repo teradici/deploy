@@ -38,8 +38,7 @@ Param(
     $verifyCAMSaaSCertificate = $true,
 
     [parameter(Mandatory = $false)]
-    [bool]
-    $enableSecurityGateway = $true, # Only matters if not doing CAM-in-a-box isolated install
+    $enableExternalAccess = $null,
     
     [parameter(Mandatory = $false)]
     [bool]
@@ -1322,7 +1321,11 @@ function New-ConnectionServiceDeployment() {
         $spCredential,
         $keyVault,
         $testDeployment,
-        [bool]$enableSecurityGateway
+        [bool]$enableExternalAccess,
+        [bool]$enableRadiusMfa,
+        [String]$radiusServerHost,
+        [int]$radiusServerPort,
+        [SecureString]$radiusSharedSecret
     )
 
     $kvID = $keyVault.ResourceId
@@ -1503,6 +1506,13 @@ function New-ConnectionServiceDeployment() {
             -TenantId $tenantId `
             -ErrorAction Stop | Out-Null
 
+        Set-RadiusSettings `
+            -VaultName $kvName `
+            -enableRadiusMfa $enableRadiusMfa `
+            -radiusServerHost $radiusServerHost `
+            -radiusServerPort $radiusServerPort `
+            -radiusSharedSecret $radiusSharedSecret
+
         # make temporary directory for intermediate files
         $folderName = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
         $tempDir = Join-Path $env:TEMP $folderName
@@ -1514,11 +1524,6 @@ function New-ConnectionServiceDeployment() {
         # Refresh the CAMDeploymentInfo structure
         New-CAMDeploymentInfo `
             -kvName $CAMRootKeyvault.Name
-
-        $enableSecurityGatewayString = "false"
-        if ($enableSecurityGateway) {
-            $enableSecurityGatewayString = "true"
-        }
 
         # Get the template URI
         $secret = Get-AzureKeyVaultSecret `
@@ -1541,8 +1546,8 @@ function New-ConnectionServiceDeployment() {
             "`$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
             "contentVersion": "1.0.0.0",
             "parameters": {
-                "enableSecurityGateway": {
-                    "value": "$enableSecurityGatewayString"
+                "enableExternalAccess": {
+                    "value": "$($enableExternalAccess.ToString())"
                   },
                   "CSUniqueSuffix": {
                     "reference": {
@@ -1654,30 +1659,6 @@ function New-ConnectionServiceDeployment() {
                         "id": "$kvId"
                         },
                         "secretName": "enableRadiusMfa"
-                    }
-                },
-                "radiusServerHost": {
-                    "reference": {
-                        "keyVault": {
-                        "id": "$kvId"
-                        },
-                        "secretName": "radiusServerHost"
-                    }
-                },
-                "radiusServerPort": {
-                    "reference": {
-                        "keyVault": {
-                        "id": "$kvId"
-                        },
-                        "secretName": "radiusServerPort"
-                    }
-                },
-                "radiusSharedSecret": {
-                    "reference": {
-                        "keyVault": {
-                        "id": "$kvId"
-                        },
-                        "secretName": "radiusSharedSecret"
                     }
                 },
                 "licenseInstanceId": {
@@ -1853,7 +1834,7 @@ function Deploy-CAM() {
 
         [parameter(Mandatory = $true)]
         [bool]
-        $enableSecurityGateway,
+        $enableExternalAccess,
 
         [parameter(Mandatory = $true)] 
         $CAMDeploymentTemplateURI,
@@ -2297,7 +2278,11 @@ function Deploy-CAM() {
                 -tenantId $tenantId `
                 -testDeployment $testDeployment `
                 -tempDir $tempDir `
-                -enableSecurityGateway $enableSecurityGateway
+                -enableExternalAccess $enableExternalAccess `
+                -enableRadiusMfa $radiusConfig.enableRadiusMfa `
+                -radiusServerHost $radiusConfig.radiusServerHost `
+                -radiusServerPort $radiusConfig.radiusServerPort `
+                -radiusSharedSecret $radiusConfig.radiusSharedSecret
         }
         else
         {
@@ -2485,29 +2470,8 @@ function Deploy-CAM() {
                 "secretName": "enableRadiusMfa"
             }
         },
-        "radiusServerHost": {
-            "reference": {
-                "keyVault": {
-                "id": "$kvId"
-                },
-                "secretName": "radiusServerHost"
-            }
-        },
-        "radiusServerPort": {
-            "reference": {
-                "keyVault": {
-                "id": "$kvId"
-                },
-                "secretName": "radiusServerPort"
-            }
-        },
-        "radiusSharedSecret": {
-            "reference": {
-                "keyVault": {
-                "id": "$kvId"
-                },
-                "secretName": "radiusSharedSecret"
-            }
+        "enableExternalAccess" : {
+            "value": "$($enableExternalAccess.ToString())"
         },
         "autoShutdownIdleTime" : {
             "value": $defaultIdleShutdownTime
@@ -2588,7 +2552,6 @@ function Confirm-ModuleVersion()
 function Get-CAMRoleDefinitionName() {
     return "Cloud Access Manager"
 }
-
 
 # Create a custom role for CAM with necessary permissions
 # Use 'Get-AzureRmProviderOperation *' to get a list of Azure Operations and their details
@@ -2730,6 +2693,169 @@ function Write-Host-Warning() {
         $message
     )
     Write-Host ("`n$message") -ForegroundColor Red
+}
+
+# Prompt for and update RADIUS Settings in the Keyvault
+function Set-RadiusSettings() {
+    Param(
+        [parameter(Mandatory=$true)]
+        [string]$VaultName,
+
+        [parameter(Mandatory = $false)]
+        $enableRadiusMfa=$null,
+    
+        [parameter(Mandatory=$false)]
+        [String]
+        $radiusServerHost,
+    
+        [parameter(Mandatory=$false)]
+        [int]
+        $radiusServerPort,
+    
+        [parameter(Mandatory=$false)]
+        [SecureString]
+        $radiusSharedSecret  
+    )
+    # Check current MFA settings
+    $isRadiusMfaEnabled = Get-AzureKeyVaultSecret `
+        -VaultName $VaultName `
+        -Name "enableRadiusMfa" `
+        -ErrorAction stop
+    $isRadiusMfaEnabled = ([bool]($isRadiusMfaEnabled.SecretValueText.ToLower() -eq "true"))
+
+    $currentRadiusHost = Get-AzureKeyVaultSecret `
+        -VaultName $VaultName `
+        -Name "radiusServerHost" `
+        -ErrorAction stop
+    $currentRadiusHost = ([string]$currentRadiusHost.SecretValueText)
+
+    $currentRadiusPort = Get-AzureKeyVaultSecret `
+        -VaultName $VaultName `
+        -Name "radiusServerPort" `
+        -ErrorAction stop
+    $currentRadiusPort = ([string]$currentRadiusPort.SecretValueText)
+
+    $currentRadiusSecret = Get-AzureKeyVaultSecret `
+        -VaultName $VaultName `
+        -Name "radiusSharedSecret" `
+        -ErrorAction stop
+    $currentRadiusSecret = ([string]$currentRadiusSecret.SecretValueText)
+
+    # Prompt for RADIUS configuration if RADIUS has not been already explicitly been disabled
+    if ($ignorePrompts -and ($enableRadiusMfa -eq $null)) {
+        $enableRadiusMfa = $isRadiusMfaEnabled
+    }
+
+    # Check if any settings are different
+    $changeRadiusSettings = `
+        (($enableRadiusMfa -ne $null)   -and ($enableRadiusMfa -notmatch $isRadiusMfaEnabled)) -or `
+        ($radiusServerHost              -and ($radiusServerHost -notmatch $currentRadiusHost)) -or `
+        ($radiusServerPort              -and ($radiusServerPort -notmatch $currentRadiusPort)) -or `
+        ($radiusSharedSecret)
+
+    # Update RADIUS Settings appropriately
+    if ( $changeRadiusSettings -or (-not $ignorePrompts) ) {
+        # Load provided RADIUS Configuration Parameters
+        $radiusConfig = @{ 
+            enableRadiusMfa = $isRadiusMfaEnabled
+            radiusServerHost =  $currentRadiusHost
+            radiusServerPort =  $currentRadiusPort
+            radiusSharedSecret =  ConvertTo-SecureString $currentRadiusSecret -AsPlainText -Force
+        }
+
+        # Prompt for whether to enable RADIUS integration
+        if ( ($enableRadiusMfa -eq $null) -and (-not $ignorePrompts) ) {
+            $currentRadiusSetting = "disabled"
+            if ($isRadiusMfaEnabled) {
+                $currentRadiusSetting = "enabled"
+            }
+            $enableRadiusMfa = (confirmDialog "RADIUS Multi-Factor Authentication is currently $currentRadiusSetting. Do you want to enable Multi-Factor Authentication using your RADIUS Server?") -eq 'y'
+        } elseif ( ($enableRadiusMfa -eq $null) -and $ignorePrompts ) {
+            $enableRadiusMfa = $isRadiusMfaEnabled
+        }
+        $radiusConfig.enableRadiusMfa = $enableRadiusMfa
+
+        if ($radiusConfig.enableRadiusMfa) {
+            if ((-not $radiusServerHost) -and (-not $ignorePrompts)) {
+                if((confirmDialog "RADIUS Server Host is currently $currentRadiusHost. Do you want to change your RADIUS Server Host?") -eq 'y') {
+                    do {
+                        $radiusConfig.radiusServerHost = (Read-Host "Enter your RADIUS Server's Hostname or IP").Trim()
+                    } while (-not $radiusConfig.radiusServerHost)
+                }
+            } elseif ($radiusServerHost) {
+                $radiusConfig.radiusServerHost = $radiusServerHost
+            }
+
+            if ((-not $radiusServerPort) -and (-not $ignorePrompts)) {
+                if((confirmDialog "RADIUS Server Port is currently $currentRadiusPort. Do you want to change your RADIUS Server Port?") -eq 'y') {
+                    do {
+                        $radiusPort = 0
+                        $portString = (Read-Host  "Enter your RADIUS Server's Listening port")
+                        [int]::TryParse($portString, [ref]$radiusPort) # radiusPort will be 0 on parse failure
+                        $radiusConfig.radiusServerPort = $radiusPort
+                        if ( ($radiusConfig.radiusServerPort -le 0) -or ($radiusConfig.radiusServerPort -gt 65535) ) {
+                            Write-Host-Warning "Entered port is invalid. It should be between 1 and 65535."
+                            $radiusConfig.radiusServerPort = $null
+                        }      
+                    } while (-not $radiusConfig.radiusServerPort )
+                }
+            } elseif ( $radiusServerPort ) {
+                $radiusConfig.radiusServerPort = $radiusServerPort
+                $portValid = $false
+                do {
+                    if ( ($radiusConfig.radiusServerPort -le 0) -or ($radiusConfig.radiusServerPort -gt 65535) ) {
+                        Write-Host-Warning "Entered port is invalid. It should be between 1 and 65535."
+                        $portValid = $false
+                    } else {
+                        $portValid=$true
+                    }
+                    if (-not $portValid ) {
+                        $radiusPort = 0
+                        $portString = (Read-Host  "Enter your RADIUS Server's Listening port")
+                        [int]::TryParse($portString, [ref]$radiusPort) # radiusPort will be 0 on parse failure
+                        $radiusConfig.radiusServerPort = $radiusPort
+                        if (-not $radiusConfig.radiusServerPort) {
+                            $portValid = $false
+                            Write-Host-Warning "Entered port is not an Integer"
+                        }  
+                    }
+                } while (-not $portValid )
+            }
+
+            if ((-not $radiusSharedSecret) -and (-not $ignorePrompts)) {
+                if((confirmDialog "Do you want to change your RADIUS Server Shared Secret?") -eq 'y') {
+                    do {
+                        $radiusConfig.radiusSharedSecret = Read-Host -AsSecureString "Enter your RADIUS Server's Shared Secret"
+                    } while (-not $radiusConfig.radiusSharedSecret )
+                }
+            } elseif ( $radiusSharedSecret ) {
+                $radiusConfig.radiusSharedSecret = $radiusSharedSecret
+            }
+        }
+
+        # Store required keys as CamConfig Object
+        $camConfig = @{
+            parameters=@{}
+        }
+        foreach ($key in $radiusConfig.keys) {
+            if ($radiusConfig[$key].GetType() -eq [SecureString]) {
+                # RadiusSharedSecret is already a SecureString
+                $camConfig.parameters[$key] = @{
+                    value=$radiusConfig[$key]
+                }
+            } else {
+                $camConfig.parameters[$key] = @{
+                    value=(ConvertTo-SecureString $radiusConfig[$key] -AsPlainText -Force)
+                }
+            }
+        }
+
+        # Update KeyVault
+        Add-SecretsToKeyVault `
+            -kvName $VaultName `
+            -CAMConfig $camConfig
+    }
+
 }
 
 ##############################################
@@ -2918,6 +3044,12 @@ else {
 
 Write-Host "Using root resource group: $($rgMatch.ResourceGroupName)"
 
+if (($enableExternalAccess -eq $null) -and $ignorePrompts) {
+    $enableExternalAccess = $true
+} elseif ($enableExternalAccess -eq $null) {
+    $enableExternalAccess = (confirmDialog "Do you want to enable external network access for your Cloud Access Manager deployment?" -defaultSelected 'Y') -eq 'y'
+}
+
 # At this point we have a subscription and a root resource group - check if there is already a deployment in it
 $CAMRootKeyvault = Get-AzureRmResource `
     -ResourceGroupName $rgMatch.ResourceGroupName `
@@ -2952,10 +3084,13 @@ if ($CAMRootKeyvault) {
         -keyVault $CAMRootKeyvault `
         -testDeployment $testDeployment `
         -tempDir $tempDir `
-        -enableSecurityGateway $enableSecurityGateway
+        -enableExternalAccess $enableExternalAccess `
+        -enableRadiusMfa $enableRadiusMfa `
+        -radiusServerHost $radiusServerHost `
+        -radiusServerPort $radiusServerPort `
+        -radiusSharedSecret $radiusSharedSecret
 
-}
-else {
+} else {
     # New deployment - either complete or a root + Remote Workstation deployment
 
     # Check if deploying Root only (ie, DC and vnet already exist)
@@ -3272,7 +3407,7 @@ else {
     $secpasswd = ConvertTo-SecureString $password -AsPlainText -Force
     $domainAdminCredential = New-Object System.Management.Automation.PSCredential ($username, $secpasswd)
 
-    # Load provided Radius Configuration Parameters (Some of these may be $null at this point)
+    # Load provided RADIUS Configuration Parameters (Some of these may be $null at this point)
     $radiusConfig = @{
         enableRadiusMfa = $enableRadiusMfa
         radiusServerHost = $radiusServerHost
@@ -3297,17 +3432,15 @@ else {
 
             do {
                 if (-not $radiusConfig.radiusServerPort ) {
-                    try {
-                        $radiusConfig.radiusServerPort = [int](Read-Host  "Enter your RADIUS Server's Listening port")
-                    } catch {
-                        $radiusConfig.radiusServerPort = $null
-                        Write-Host-Warning "Entered port is not an Integer"
-                    }
+                    $radiusPort = 0
+                    $portString = (Read-Host  "Enter your RADIUS Server's Listening port")
+                    [int]::TryParse($portString, [ref]$radiusPort) # radiusPort will be 0 on parse failure
+                    $radiusConfig.radiusServerPort = $radiusPort
                 }
                 if ( ($radiusConfig.radiusServerPort -le 0) -or ($radiusConfig.radiusServerPort -gt 65535) ) {
                     Write-Host-Warning "Entered port is invalid. It should be between 1 and 65535."
                     $radiusConfig.radiusServerPort = $null
-                }            
+                }
             } while (-not $radiusConfig.radiusServerPort )
 
             do {
@@ -3381,7 +3514,7 @@ else {
         -vnetConfig $vnetConfig `
         -ownerTenantId $claims.tid `
         -ownerUpn $upn `
-        -enableSecurityGateway $enableSecurityGateway `
+        -enableExternalAccess $enableExternalAccess `
         -domainControllerOsType $domainControllerOsType `
         -defaultIdleShutdownTime $defaultIdleShutdownTime
 }
