@@ -3082,7 +3082,7 @@ else {
     while ( -not (( $chosenSubscriptionNumber -ge 1) -and ( $chosenSubscriptionNumber -le $subscriptionsToDisplay.Length))) {
         if( -not $ignorePrompts ) {
             $chosenSubscriptionNumber = `
-            if (($chosenSubscriptionNumber = Read-Host "Enter the Number of the subscription you would like to use or press enter to accept the current one [$currentSubscriptionNumber]") -eq '') `
+            if (($chosenSubscriptionNumber = Read-Host "Enter the number of the subscription you would like to use or press enter to accept the current one [$currentSubscriptionNumber]") -eq '') `
             {$currentSubscriptionNumber} else {[int]$chosenSubscriptionNumber}
         }
         else {
@@ -3208,18 +3208,13 @@ else {
 
 Write-Host "Using root resource group: $($rgMatch.ResourceGroupName)"
 
-if (($enableExternalAccess -eq $null) -and $ignorePrompts) {
-    $enableExternalAccess = $true
-} elseif ($enableExternalAccess -eq $null) {
-    $enableExternalAccess = (confirmDialog "Do you want to enable external network access for your Cloud Access Manager deployment?" -defaultSelected 'Y') -eq 'y'
-}
-
 # At this point we have a subscription and a root resource group - check if there is already a deployment in it
 $CAMRootKeyvault = Get-AzureRmResource `
     -ResourceGroupName $rgMatch.ResourceGroupName `
     -ResourceType "Microsoft.KeyVault/vaults" `
     | Where-object {$_.Name -like "CAM-*"}
 
+# If there is a root keyvault, verify there is only one.
 if ($CAMRootKeyvault) {
     if ($CAMRootKeyvault -is [Array]) {
         Write-Host "More than one CAM Key Vault found in this resource group."
@@ -3229,16 +3224,23 @@ if ($CAMRootKeyvault) {
     Write-Host "The resource group $($rgMatch.ResourceGroupName) has a CAM deployment already."
     Write-Host "Using key vault $($CAMRootKeyvault.Name)"
 
-    if( -not $ignorePrompts ) {
-        $requestNewCS = confirmDialog  "Do you want to create a new connection service for this Cloud Access Manager deployment or 'no' to cancel?" -defaultSelected 'Y'
+    Write-Host "`nCreating a new connection service for this Cloud Access Manager deployment. Hit CTRL-C to cancel.`n"
 
-        if ($requestNewCS -eq "n") {
-            Write-Host "Not deploying a new connection service. Exiting."
-            exit
-        }
-    }
+    $externalAccessPrompt = "Do you want to enable external network access for this connection service?"
+}
+else {
+    # CAM in a box
+    $externalAccessPrompt = "Do you want to enable external network access for your Cloud Access Manager deployment?"
+}
 
-    Write-Host "Deploying a new CAM Connection Service with updated CAMDeploymentInfo"
+if (($enableExternalAccess -eq $null) -and $ignorePrompts) {
+    $enableExternalAccess = $true
+} elseif ($enableExternalAccess -eq $null) {
+    $enableExternalAccess = (confirmDialog $externalAccessPrompt -defaultSelected 'Y') -eq 'y'
+}
+
+if ($CAMRootKeyvault) {
+    Write-Host "Deploying a new connection service with updated CAMDeploymentInfo"
 
     New-ConnectionServiceDeployment `
         -RGName $rgMatch.ResourceGroupName `
