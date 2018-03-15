@@ -1006,9 +1006,9 @@ function Get-CertificateInfoForAppGateway() {
         # (all lower case letters)
         # (However this is causing issues with the software PCoIP Client so we need some more
         # investigation on what is changable in the certificate.
-        $randomCN = -join ((97..122) | Get-Random -Count 8 | ForEach-Object {[char]$_})
+        #$subjectOU = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
 
-        $subject = "CN=pcoip-$randomCN,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"
+        $subject = "CN=localhost,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"
 
         $cert = New-SelfSignedCertificate `
             -certstorelocation $certLoc `
