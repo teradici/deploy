@@ -1508,6 +1508,7 @@ function New-ConnectionServiceDeployment() {
 
         Set-RadiusSettings `
             -VaultName $kvName `
+            -enableExternalAccess $enableExternalAccess `
             -enableRadiusMfa $enableRadiusMfa `
             -radiusServerHost $radiusServerHost `
             -radiusServerPort $radiusServerPort `
@@ -2701,6 +2702,9 @@ function Set-RadiusSettings() {
         [parameter(Mandatory=$true)]
         [string]$VaultName,
 
+        [parameter(Mandatory=$true)]
+        $enableExternalAccess,
+
         [parameter(Mandatory = $false)]
         $enableRadiusMfa=$null,
     
@@ -2774,6 +2778,11 @@ function Set-RadiusSettings() {
             $enableRadiusMfa = $isRadiusMfaEnabled
         }
         $radiusConfig.enableRadiusMfa = $enableRadiusMfa
+
+        if ( $radiusConfig.enableRadiusMfa -and (-not $enableExternalAccess)) {
+            Write-Error "Multi-Factor Authentication for internal deployments is not supported"
+            exit
+        }
 
         if ($radiusConfig.enableRadiusMfa) {
             if ((-not $radiusServerHost) -and (-not $ignorePrompts)) {
@@ -3421,6 +3430,11 @@ if ($CAMRootKeyvault) {
             $enableRadiusMfa = (confirmDialog "Do you want to enable Multi-Factor Authentication using your RADIUS Server?") -eq 'y'
         } elseif ( $enableRadiusMfa -eq $null -and $ignorePrompts ) {
             $enableRadiusMfa = $false
+        }
+
+        if ( $enableRadiusMfa -and (-not $enableExternalAccess)) {
+            Write-Error "Multi-Factor Authentication for internal deployments is not supported"
+            exit
         }
 
         if ($enableRadiusMfa) {
