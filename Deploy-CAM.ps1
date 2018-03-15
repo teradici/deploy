@@ -3224,7 +3224,7 @@ if ($CAMRootKeyvault) {
     Write-Host "The resource group $($rgMatch.ResourceGroupName) has a CAM deployment already."
     Write-Host "Using key vault $($CAMRootKeyvault.Name)"
 
-    Write-Host "`nCreating a new connection service for this Cloud Access Manager deployment. Hit CTRL-C to cancel.`n"
+    Write-Host "`nCreating a new connection service for this Cloud Access Manager deployment. Hit CTRL-C if you want to cancel.`n"
 
     $externalAccessPrompt = "Do you want to enable external network access for this connection service?"
 }
