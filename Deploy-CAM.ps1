@@ -71,7 +71,7 @@ Param(
 
     [parameter(Mandatory=$false)]
     [String]
-    $CloudServiceSubnetName,
+    $ConnectionServiceSubnetName,
 
     [parameter(Mandatory=$false)]
     [String]
@@ -2695,6 +2695,151 @@ function Write-Host-Warning() {
     Write-Host ("`n$message") -ForegroundColor Red
 }
 
+function New-VnetConfig() {
+    Param(
+        [parameter(Mandatory=$true)]
+        $vnetConfig
+    )
+
+    # prompt for vnet name, gateway subnet name, remote workstation subnet name, connection service subnet name
+    do {
+        if ( -not $vnetConfig.vnetID ) {
+            $vnets = Get-AzureRmVirtualNetwork
+
+            $vnetIndex = 0
+            ForEach ($v in $vnets) {
+                if (-not (Get-Member -InputObject $v -name "Number")) {
+                    Add-Member -InputObject $v -Name "Number" -Value "" -MemberType NoteProperty
+                }
+                $v.Number = ++$vnetIndex
+            }
+
+            Write-Host "`nPlease provide the VNet information for the VNet Cloud Access Manager connection service, gateways, and remote workstations"
+            Write-Host "will be using. Please enter the number of the vnet in the following list or the complete VNet ID in"
+            Write-Host "the form /subscriptions/{subscriptionID}/resourceGroups/{vnetResourceGroupName}/providers/Microsoft.Network/virtualNetworks/{vnetName}`n"
+            Write-Host "The service principal account created later in the deployment process will be provided access rights to the selected virtual network." -ForegroundColor Yellow
+            $vnets | Select-Object -Property Number, Name, ResourceGroupName, Location | Format-Table
+
+            $chosenVnet = Read-Host "VNet"
+            $chosenVnetIndex = 0
+            [int]::TryParse($chosenVnet, [ref]$chosenVnetIndex) | Out-Null # chosenVnetIndex will be 0 on parse failure
+
+            if (( $chosenVnetIndex -ge 1) -and ( $chosenVnetIndex -le $vnets.Length)) {
+                # have selected a valid index - use that and substitute
+                $vnetConfig.vnetID = $vnets[$chosenVnetIndex - 1].Id
+            }
+            else {
+                # otherwise interpret as a resource ID
+                $vnetConfig.vnetID = $chosenVnet.Trim()
+            }
+        }
+        # vnetID is a reference ID that is like: 
+        # "/subscriptions/{subscription}/resourceGroups/{vnetRG}/providers/Microsoft.Network/virtualNetworks/{vnetName}"
+        $vnetName = $vnetConfig.vnetID.split("/")[-1]
+        $vnetRgName = $vnetConfig.vnetID.split("/")[4]
+        if ( (-not $vnetRgName) -or (-not $vnetName) -or `
+            (-not (Find-AzureRmResource -ResourceGroupNameEquals $vnetRgName `
+            -ResourceType "Microsoft.Network/virtualNetworks" `
+            -ResourceNameEquals $vnetName)) ) {
+                # Does not exist
+                Write-Host-Warning "$($vnetConfig.vnetID) not found"
+                $vnetConfig.vnetID = $null
+        }
+    } while (-not $vnetConfig.vnetID)
+
+    # Now select subnets
+    $vnet = Get-AzureRmVirtualNetwork -Name $vnetName -ResourceGroupName $vnetRgName
+    Write-Host "Using VNet: $($vnet.Id)`n"
+
+    $subnets = $vnet.Subnets
+    $subnetIndex = 0
+    ForEach ($s in $subnets) {
+        if (-not (Get-Member -inputobject $s -name "Number")) {
+            Add-Member -InputObject $s -Name "Number" -Value "" -MemberType NoteProperty
+        }
+        $s.Number = ++$subnetIndex
+    }
+
+    # Connection Service Subnet
+    do {
+        if ( -not $vnetConfig.CSsubnetName ) {
+            Write-Host "Please provide Connection Service Subnet number from the list below, or name"
+            $subnets | Select-Object -Property Number, Name | Format-Table
+            $chosenSubnet = Read-Host "Subnet"
+            $subnetIndex = 0
+            [int]::TryParse($chosenSubnet, [ref]$subnetIndex) | Out-Null  # subnetIndex will be 0 on parse failure
+        
+            if (( $subnetIndex -ge 1) -and ( $subnetIndex -le $subnets.Count)) {
+                # selected a valid index - use that and substitute
+                $vnetConfig.CSsubnetName = $subnets[$subnetIndex - 1].Name
+            }
+            else {
+                # otherwise interpret as a subnet name
+                $vnetConfig.CSsubnetName = $chosenSubnet.Trim()
+            }
+        }
+        if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.CSsubnetName}) ) {
+            # Does not exist
+            Write-Host-Warning "$($vnetConfig.CSsubnetName) not found in root resource group VNet $($vnet.Name)"
+            $vnetConfig.CSsubnetName = $null
+        }
+    } while (-not $vnetConfig.CSsubnetName)
+    Write-Host "Connection Service Subnet: $($vnetConfig.CSsubnetName)`n"
+
+    # Application Gateway Subnet
+    do {
+        if ( -not $vnetConfig.GWsubnetName ) {
+            Write-Host "Please provide Application Gateway Subnet number from the list below, or name"
+            $subnets | Select-Object -Property Number, Name | Format-Table
+            $chosenSubnet = Read-Host "Subnet"
+            $subnetIndex = 0
+            [int]::TryParse($chosenSubnet, [ref]$subnetIndex) | Out-Null  # subnetIndex will be 0 on parse failure
+        
+            if (( $subnetIndex -ge 1) -and ( $subnetIndex -le $subnets.Count)) {
+                # selected a valid index - use that and substitute
+                $vnetConfig.GWsubnetName = $subnets[$subnetIndex - 1].Name
+            }
+            else {
+                # otherwise interpret as a subnet name
+                $vnetConfig.GWsubnetName = $chosenSubnet.Trim()
+            }
+        }
+        if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.GWsubnetName}) ) {
+            # Does not exist
+            Write-Host-Warning "$($vnetConfig.GWsubnetName) not found in root resource group VNet $($vnet.Name)"
+            $vnetConfig.GWsubnetName = $null
+        }
+    } while (-not $vnetConfig.GWsubnetName)
+    Write-Host "Application Gateway Subnet: $($vnetConfig.GWsubnetName)`n"
+    
+    # Remote Workstation Subnet
+    do {
+        if ( -not $vnetConfig.RWsubnetName ) {
+            Write-Host "Please provide Remote Workstation Subnet number from the list below, or name"
+            $subnets | Select-Object -Property Number, Name | Format-Table
+            $chosenSubnet = Read-Host "Subnet"
+            $subnetIndex = 0
+            [int]::TryParse($chosenSubnet, [ref]$subnetIndex) | Out-Null  # subnetIndex will be 0 on parse failure
+        
+            if (( $subnetIndex -ge 1) -and ( $subnetIndex -le $subnets.Count)) {
+                # selected a valid index - use that and substitute
+                $vnetConfig.RWsubnetName = $subnets[$subnetIndex - 1].Name
+            }
+            else {
+                # otherwise interpret as a subnet name
+                $vnetConfig.RWsubnetName = $chosenSubnet.Trim()
+            }
+        }
+        if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.RWsubnetName}) ) {
+            # Does not exist
+            Write-Host-Warning "$($vnetConfig.RWsubnetName) not found in root resource group VNet $($vnet.Name)"
+            $vnetConfig.RWsubnetName = $null
+        }
+    } while (-not $vnetConfig.RWsubnetName)
+    Write-Host "Remote Workstation Subnet: $($vnetConfig.RWsubnetName)`n"
+}
+
+
 # Prompt for and update RADIUS Settings in the Keyvault
 function Set-RadiusSettings() {
     Param(
@@ -3132,152 +3277,15 @@ if ($CAMRootKeyvault) {
     # allow interactive input of a bunch of parameters. spCredential is handled in the SP functions elsewhere in this file
 
 
+    #Setup a vnet config and populate with command line parameters
     $vnetConfig = @{}
     $vnetConfig.vnetID = $vnetID
-    $vnetConfig.CSsubnetName = $CloudServiceSubnetName
+    $vnetConfig.CSsubnetName = $ConnectionServiceSubnetName
     $vnetConfig.GWsubnetName = $GatewaySubnetName
     $vnetConfig.RWsubnetName = $RemoteWorkstationSubnetName
-    if( $deployOverDC ) {
-        # Don't create new DC and vnets
-        # prompt for vnet name, gateway subnet name, remote workstation subnet name, connection service subnet name
-        do {
-            if ( -not $vnetConfig.vnetID ) {
-                $vnets = Get-AzureRmVirtualNetwork
+    if( -not $deployOverDC ) {
 
-                $vnetIndex = 0
-                ForEach ($v in $vnets) {
-                    if (-not (Get-Member -InputObject $v -name "Number")) {
-                        Add-Member -InputObject $v -Name "Number" -Value "" -MemberType NoteProperty
-                    }
-                    $v.Number = ++$vnetIndex
-                }
-
-                Write-Host "`nPlease provide the VNet information for the VNet Cloud Access Manager connection service, gateways, and remote workstations"
-                Write-Host "will be using. Please enter the number of the vnet in the following list or the complete VNet ID in"
-                Write-Host "the form /subscriptions/{subscriptionID}/resourceGroups/{vnetResourceGroupName}/providers/Microsoft.Network/virtualNetworks/{vnetName}`n"
-                Write-Host "The service principal account created later in the deployment process will be provided access rights to the selected virtual network." -ForegroundColor Yellow
-                $vnets | Select-Object -Property Number, Name, ResourceGroupName, Location | Format-Table
-
-                $chosenVnet = Read-Host "VNet"
-                $chosenVnetIndex = 0
-                [int]::TryParse($chosenVnet, [ref]$chosenVnetIndex) | Out-Null # chosenVnetIndex will be 0 on parse failure
-
-                if (( $chosenVnetIndex -ge 1) -and ( $chosenVnetIndex -le $vnets.Length)) {
-                    # have selected a valid index - use that and substitute
-                    $vnetConfig.vnetID = $vnets[$chosenVnetIndex - 1].Id
-                }
-                else {
-                    # otherwise interpret as a resource ID
-                    $vnetConfig.vnetID = $chosenVnet.Trim()
-                }
-            }
-            # vnetID is a reference ID that is like: 
-            # "/subscriptions/{subscription}/resourceGroups/{vnetRG}/providers/Microsoft.Network/virtualNetworks/{vnetName}"
-            $vnetName = $vnetConfig.vnetID.split("/")[-1]
-            $vnetRgName = $vnetConfig.vnetID.split("/")[4]
-            if ( (-not $vnetRgName) -or (-not $vnetName) -or `
-                (-not (Find-AzureRmResource -ResourceGroupNameEquals $vnetRgName `
-                -ResourceType "Microsoft.Network/virtualNetworks" `
-                -ResourceNameEquals $vnetName)) ) {
-                    # Does not exist
-                    Write-Host-Warning "$($vnetConfig.vnetID) not found"
-                    $vnetConfig.vnetID = $null
-            }
-        } while (-not $vnetConfig.vnetID)
-
-        # Now select subnets
-        $vnet = Get-AzureRmVirtualNetwork -Name $vnetName -ResourceGroupName $vnetRgName
-        Write-Host "Using VNet: $($vnet.Id)`n"
-
-        $subnets = $vnet.Subnets
-        $subnetIndex = 0
-        ForEach ($s in $subnets) {
-            if (-not (Get-Member -inputobject $s -name "Number")) {
-                Add-Member -InputObject $s -Name "Number" -Value "" -MemberType NoteProperty
-            }
-            $s.Number = ++$subnetIndex
-        }
-
-        # Connection Service Subnet
-        do {
-            if ( -not $vnetConfig.CSsubnetName ) {
-                Write-Host "Please provide Connection Service Subnet number from the list below, or name"
-                $subnets | Select-Object -Property Number, Name | Format-Table
-                $chosenSubnet = Read-Host "Subnet"
-                $subnetIndex = 0
-                [int]::TryParse($chosenSubnet, [ref]$subnetIndex) | Out-Null  # subnetIndex will be 0 on parse failure
-            
-                if (( $subnetIndex -ge 1) -and ( $subnetIndex -le $subnets.Count)) {
-                    # selected a valid index - use that and substitute
-                    $vnetConfig.CSsubnetName = $subnets[$subnetIndex - 1].Name
-                }
-                else {
-                    # otherwise interpret as a subnet name
-                    $vnetConfig.CSsubnetName = $chosenSubnet.Trim()
-                }
-            }
-            if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.CSsubnetName}) ) {
-                # Does not exist
-                Write-Host-Warning "$($vnetConfig.CSsubnetName) not found in root resource group VNet $($vnet.Name)"
-                $vnetConfig.CSsubnetName = $null
-            }
-        } while (-not $vnetConfig.CSsubnetName)
-        Write-Host "Connection Service Subnet: $($vnetConfig.CSsubnetName)`n"
-
-        # Application Gateway Subnet
-        do {
-            if ( -not $vnetConfig.GWsubnetName ) {
-                Write-Host "Please provide Application Gateway Subnet number from the list below, or name"
-                $subnets | Select-Object -Property Number, Name | Format-Table
-                $chosenSubnet = Read-Host "Subnet"
-                $subnetIndex = 0
-                [int]::TryParse($chosenSubnet, [ref]$subnetIndex) | Out-Null  # subnetIndex will be 0 on parse failure
-            
-                if (( $subnetIndex -ge 1) -and ( $subnetIndex -le $subnets.Count)) {
-                    # selected a valid index - use that and substitute
-                    $vnetConfig.GWsubnetName = $subnets[$subnetIndex - 1].Name
-                }
-                else {
-                    # otherwise interpret as a subnet name
-                    $vnetConfig.GWsubnetName = $chosenSubnet.Trim()
-                }
-            }
-            if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.GWsubnetName}) ) {
-                # Does not exist
-                Write-Host-Warning "$($vnetConfig.GWsubnetName) not found in root resource group VNet $($vnet.Name)"
-                $vnetConfig.GWsubnetName = $null
-            }
-        } while (-not $vnetConfig.GWsubnetName)
-        Write-Host "Application Gateway Subnet: $($vnetConfig.GWsubnetName)`n"
-        
-        # Remote Workstation Subnet
-        do {
-            if ( -not $vnetConfig.RWsubnetName ) {
-                Write-Host "Please provide Remote Workstation Subnet number from the list below, or name"
-                $subnets | Select-Object -Property Number, Name | Format-Table
-                $chosenSubnet = Read-Host "Subnet"
-                $subnetIndex = 0
-                [int]::TryParse($chosenSubnet, [ref]$subnetIndex) | Out-Null  # subnetIndex will be 0 on parse failure
-            
-                if (( $subnetIndex -ge 1) -and ( $subnetIndex -le $subnets.Count)) {
-                    # selected a valid index - use that and substitute
-                    $vnetConfig.RWsubnetName = $subnets[$subnetIndex - 1].Name
-                }
-                else {
-                    # otherwise interpret as a subnet name
-                    $vnetConfig.RWsubnetName = $chosenSubnet.Trim()
-                }
-            }
-            if ( -not ($vnet.Subnets | ?{$_.Name -eq $vnetConfig.RWsubnetName}) ) {
-                # Does not exist
-                Write-Host-Warning "$($vnetConfig.RWsubnetName) not found in root resource group VNet $($vnet.Name)"
-                $vnetConfig.RWsubnetName = $null
-            }
-        } while (-not $vnetConfig.RWsubnetName)
-        Write-Host "Remote Workstation Subnet: $($vnetConfig.RWsubnetName)`n"
-
-    } else {
-        # create new DC and vnets. Default values populated here.
+        # CAM in a box - create new DC and vnet. Default values are populated here and command line parameters if any are ignored.
         if( -not $vnetConfig.vnetID ) {
             $vnetConfig.vnetID = "/subscriptions/$selectedSubcriptionId/resourceGroups/$($rgMatch.ResourceGroupName)/providers/Microsoft.Network/virtualNetworks/vnet-CloudAccessManager"
         }
@@ -3290,6 +3298,10 @@ if ($CAMRootKeyvault) {
         if( -not $vnetConfig.RWSubnetName ) {
             $vnetConfig.RWSubnetName = "subnet-RemoteWorkstation"
         }
+    }
+    else {
+        # Don't create new DC and vnet - prompt for which vnet and subnets to use
+        New-VnetConfig -vnetConfig $vnetConfig
     }
 
     do {
