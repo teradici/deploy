@@ -1006,9 +1006,9 @@ function Get-CertificateInfoForAppGateway() {
         # (all lower case letters)
         # (However this is causing issues with the software PCoIP Client so we need some more
         # investigation on what is changable in the certificate.
-        #$subjectOU = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
+        $randomCN = -join ((97..122) | Get-Random -Count 8 | ForEach-Object {[char]$_})
 
-        $subject = "CN=localhost,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"
+        $subject = "CN=pcoip-$randomCN,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"
 
         $cert = New-SelfSignedCertificate `
             -certstorelocation $certLoc `
@@ -1700,8 +1700,9 @@ function New-ConnectionServiceDeployment() {
             for($idx = 0;$idx -lt $maxRetries;$idx++)
             {
                 try {
+                    $deploymentName = "CS$connectionServiceNumber-$idx"
                     New-AzureRmResourceGroupDeployment `
-                        -DeploymentName "CS$connectionServiceNumber-$idx" `
+                        -DeploymentName $deploymentName `
                         -ResourceGroupName $csRGName `
                         -TemplateFile $CSDeploymentTemplateURI `
                         -TemplateParameterFile $outputParametersFilePath `
@@ -1721,7 +1722,16 @@ function New-ConnectionServiceDeployment() {
                     {
                         $remaining = $maxRetries - $idx - 1
                         Write-Host "Authorization error. Usually this means we are waiting for the authorization to percolate through Azure."
-                        Write-Host "Retrying deployment. Retries remaining: $remaining. If this countdown stops the deployment is happening."
+                        Write-Host "Reason: $($_.Exception.Message)"
+                        Write-Host "Stopping deployment"
+
+                        # Try to stop the deployment in case that helps, but don't warn or fail.
+                        Stop-AzureRmResourceGroupDeployment `
+                            -Name $deploymentName `
+                            -ResourceGroupName $csRGName `
+                            -ErrorAction SilentlyContinue | Out-Null
+
+                        Write-Host-Warning "Retrying deployment. Retries remaining: $remaining. If this countdown stops the deployment is happening."
                         Start-sleep -Seconds 10
                     }
                     else {
