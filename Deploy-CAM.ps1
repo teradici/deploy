@@ -1719,8 +1719,9 @@ function New-ConnectionServiceDeployment() {
             for($idx = 0;$idx -lt $maxRetries;$idx++)
             {
                 try {
+                    $deploymentName = "CS$connectionServiceNumber-$idx"
                     New-AzureRmResourceGroupDeployment `
-                        -DeploymentName "CS$connectionServiceNumber-$idx" `
+                        -DeploymentName $deploymentName `
                         -ResourceGroupName $csRGName `
                         -TemplateFile $CSDeploymentTemplateURI `
                         -TemplateParameterFile $outputParametersFilePath `
@@ -1741,6 +1742,14 @@ function New-ConnectionServiceDeployment() {
                         $remaining = $maxRetries - $idx - 1
                         Write-Host "Authorization error. Usually this means we are waiting for the authorization to percolate through Azure."
                         Write-Host "Reason: $($_.Exception.Message)"
+                        Write-Host "Stopping deployment"
+
+                        # Try to stop the deployment in case that helps, but don't warn or fail.
+                        Stop-AzureRmResourceGroupDeployment `
+                            -Name $deploymentName `
+                            -ResourceGroupName $csRGName `
+                            -ErrorAction SilentlyContinue | Out-Null
+
                         Write-Host-Warning "Retrying deployment. Retries remaining: $remaining. If this countdown stops the deployment is happening."
                         Start-sleep -Seconds 10
                     }
