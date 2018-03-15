@@ -1321,11 +1321,11 @@ function New-ConnectionServiceDeployment() {
         $spCredential,
         $keyVault,
         $testDeployment,
-        [bool]$enableExternalAccess,
-        [bool]$enableRadiusMfa,
-        [String]$radiusServerHost,
-        [int]$radiusServerPort,
-        [SecureString]$radiusSharedSecret
+        $enableExternalAccess,
+        $enableRadiusMfa,
+        $radiusServerHost,
+        $radiusServerPort,
+        $radiusSharedSecret
     )
 
     $kvID = $keyVault.ResourceId
@@ -1508,6 +1508,7 @@ function New-ConnectionServiceDeployment() {
 
         Set-RadiusSettings `
             -VaultName $kvName `
+            -enableExternalAccess $enableExternalAccess `
             -enableRadiusMfa $enableRadiusMfa `
             -radiusServerHost $radiusServerHost `
             -radiusServerPort $radiusServerPort `
@@ -2856,6 +2857,9 @@ function Set-RadiusSettings() {
         [parameter(Mandatory=$true)]
         [string]$VaultName,
 
+        [parameter(Mandatory=$true)]
+        $enableExternalAccess,
+
         [parameter(Mandatory = $false)]
         $enableRadiusMfa=$null,
     
@@ -2930,6 +2934,11 @@ function Set-RadiusSettings() {
         }
         $radiusConfig.enableRadiusMfa = $enableRadiusMfa
 
+        if ( $radiusConfig.enableRadiusMfa -and (-not $enableExternalAccess)) {
+            Write-Error "Multi-Factor Authentication for internal deployments is not supported"
+            exit
+        }
+
         if ($radiusConfig.enableRadiusMfa) {
             if ((-not $radiusServerHost) -and (-not $ignorePrompts)) {
                 if((confirmDialog "RADIUS Server Host is currently $currentRadiusHost. Do you want to change your RADIUS Server Host?") -eq 'y') {
@@ -2946,7 +2955,7 @@ function Set-RadiusSettings() {
                     do {
                         $radiusPort = 0
                         $portString = (Read-Host  "Enter your RADIUS Server's Listening port")
-                        [int]::TryParse($portString, [ref]$radiusPort) # radiusPort will be 0 on parse failure
+                        [int]::TryParse($portString, [ref]$radiusPort) | Out-Null # radiusPort will be 0 on parse failure
                         $radiusConfig.radiusServerPort = $radiusPort
                         if ( ($radiusConfig.radiusServerPort -le 0) -or ($radiusConfig.radiusServerPort -gt 65535) ) {
                             Write-Host-Warning "Entered port is invalid. It should be between 1 and 65535."
@@ -2967,7 +2976,7 @@ function Set-RadiusSettings() {
                     if (-not $portValid ) {
                         $radiusPort = 0
                         $portString = (Read-Host  "Enter your RADIUS Server's Listening port")
-                        [int]::TryParse($portString, [ref]$radiusPort) # radiusPort will be 0 on parse failure
+                        [int]::TryParse($portString, [ref]$radiusPort) | Out-Null # radiusPort will be 0 on parse failure
                         $radiusConfig.radiusServerPort = $radiusPort
                         if (-not $radiusConfig.radiusServerPort) {
                             $portValid = $false
@@ -3445,6 +3454,11 @@ if ($CAMRootKeyvault) {
             $enableRadiusMfa = $false
         }
 
+        if ( $enableRadiusMfa -and (-not $enableExternalAccess)) {
+            Write-Error "Multi-Factor Authentication for internal deployments is not supported"
+            exit
+        }
+
         if ($enableRadiusMfa) {
             do {
                 if (-not $radiusConfig.radiusServerHost ) {
@@ -3456,7 +3470,7 @@ if ($CAMRootKeyvault) {
                 if (-not $radiusConfig.radiusServerPort ) {
                     $radiusPort = 0
                     $portString = (Read-Host  "Enter your RADIUS Server's Listening port")
-                    [int]::TryParse($portString, [ref]$radiusPort) # radiusPort will be 0 on parse failure
+                    [int]::TryParse($portString, [ref]$radiusPort) | Out-Null # radiusPort will be 0 on parse failure
                     $radiusConfig.radiusServerPort = $radiusPort
                 }
                 if ( ($radiusConfig.radiusServerPort -le 0) -or ($radiusConfig.radiusServerPort -gt 65535) ) {
