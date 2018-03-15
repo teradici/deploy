@@ -2800,7 +2800,7 @@ function Set-RadiusSettings() {
                     do {
                         $radiusPort = 0
                         $portString = (Read-Host  "Enter your RADIUS Server's Listening port")
-                        [int]::TryParse($portString, [ref]$radiusPort) # radiusPort will be 0 on parse failure
+                        [int]::TryParse($portString, [ref]$radiusPort) | Out-Null # radiusPort will be 0 on parse failure
                         $radiusConfig.radiusServerPort = $radiusPort
                         if ( ($radiusConfig.radiusServerPort -le 0) -or ($radiusConfig.radiusServerPort -gt 65535) ) {
                             Write-Host-Warning "Entered port is invalid. It should be between 1 and 65535."
@@ -2821,7 +2821,7 @@ function Set-RadiusSettings() {
                     if (-not $portValid ) {
                         $radiusPort = 0
                         $portString = (Read-Host  "Enter your RADIUS Server's Listening port")
-                        [int]::TryParse($portString, [ref]$radiusPort) # radiusPort will be 0 on parse failure
+                        [int]::TryParse($portString, [ref]$radiusPort) | Out-Null # radiusPort will be 0 on parse failure
                         $radiusConfig.radiusServerPort = $radiusPort
                         if (-not $radiusConfig.radiusServerPort) {
                             $portValid = $false
@@ -3448,7 +3448,7 @@ if ($CAMRootKeyvault) {
                 if (-not $radiusConfig.radiusServerPort ) {
                     $radiusPort = 0
                     $portString = (Read-Host  "Enter your RADIUS Server's Listening port")
-                    [int]::TryParse($portString, [ref]$radiusPort) # radiusPort will be 0 on parse failure
+                    [int]::TryParse($portString, [ref]$radiusPort) | Out-Null # radiusPort will be 0 on parse failure
                     $radiusConfig.radiusServerPort = $radiusPort
                 }
                 if ( ($radiusConfig.radiusServerPort -le 0) -or ($radiusConfig.radiusServerPort -gt 65535) ) {
