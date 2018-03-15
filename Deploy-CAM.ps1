@@ -1321,11 +1321,11 @@ function New-ConnectionServiceDeployment() {
         $spCredential,
         $keyVault,
         $testDeployment,
-        [bool]$enableExternalAccess,
-        [bool]$enableRadiusMfa,
-        [String]$radiusServerHost,
-        [int]$radiusServerPort,
-        [SecureString]$radiusSharedSecret
+        $enableExternalAccess,
+        $enableRadiusMfa,
+        $radiusServerHost,
+        $radiusServerPort,
+        $radiusSharedSecret
     )
 
     $kvID = $keyVault.ResourceId
