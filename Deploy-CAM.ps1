@@ -1835,6 +1835,63 @@ function New-CAMDeploymentRoot()
     return $kvInfo
 }
 
+# Provide the SP $client with camCustomRoleDefinition rights to the vnet, if needed
+function Add-SPScopeToVnet()
+{
+    param(
+        [parameter(Mandatory = $true)] 
+        $vnetName,
+        [parameter(Mandatory = $true)] 
+        $vnetID,
+        [parameter(Mandatory = $true)] 
+        $client,
+        [parameter(Mandatory = $true)] 
+        $subscriptionId,
+        [parameter(Mandatory = $true)] 
+        $camCustomRoleDefinition
+    )
+
+    $vnetRGName = $vnetID.Split("/")[4]
+
+
+    if( Find-AzureRmResource `
+        -ResourceNameEquals $vnetName `
+        -ResourceType "Microsoft.Network/virtualNetworks" `
+        -ResourceGroupNameEquals $vnetRGName )
+    {
+        # Get-AzureRmRoleAssignment responds much more rationally if given a scope with an ID
+        # than a resource group name.
+        $spRoles = Get-AzureRmRoleAssignment -ServicePrincipalName $client -Scope $vnetID
+    
+        $vmRG = Get-AzureRmResourceGroup -Name $vnetRGName
+
+        # filter on an exact resource group ID match as Get-AzureRmRoleAssignment seems to do a more loose pattern match
+        $spRoles = $spRoles | Where-Object `
+            {($_.Scope -eq $vmRG.ResourceId) -or ($_.Scope -eq "/subscriptions/$subscriptionId")}
+        
+        # spRoles could be no object, a single object or an array. foreach works with all.
+        $hasAccess = $false
+        foreach($role in $spRoles) {
+            $roleName = $role.RoleDefinitionName
+            if (($roleName -eq "Contributor") -or ($roleName -eq "Owner") -or ($roleName -eq $camCustomRoleDefinition.Name)) {
+                Write-Host "$client already has $roleName for $vnetName."
+                $hasAccess = $true
+                break
+            }
+        }
+    
+        if(-not $hasAccess) {
+            Write-Host "Giving $client '$($camCustomRoleDefinition.Name)' access to $vnetName"
+            New-AzureRmRoleAssignment `
+                -RoleDefinitionName $camCustomRoleDefinition.Name `
+                -Scope $vnetID `
+                -ServicePrincipalName $client `
+                -ErrorAction Stop | Out-Null
+        }
+    }
+}
+
+
 # Deploy a full CAM deployment with root networking and DC, a connection service
 # and a convenience 'first' Windows standard agent machine 
 function Deploy-CAM() {
@@ -2131,7 +2188,7 @@ function Deploy-CAM() {
             $rollAssignmentRetry--
 
             try {
-                # Only assign contributor access if needed
+                # Only assign camCustomRoleDefinition access if needed
                 $rgNames = @($RGName, $csRGName, $rwRGName)
                 ForEach ($rgn in $rgNames) {
                     $rg = Get-AzureRmResourceGroup -Name $rgn
@@ -2166,37 +2223,13 @@ function Deploy-CAM() {
                 }
             
                 # Add Scope to vNet if vNet already exists and scope does not already exist
-                $vnetRG = $CAMConfig.internal.vnetID.Split("/")[4]
-                if( Find-AzureRmResource -ResourceNameEquals $CAMConfig.internal.vnetName -ResourceType "Microsoft.Network/virtualNetworks" -ResourceGroupNameEquals $vnetRG )
-                {
-                    # Get-AzureRmRoleAssignment responds much more rationally if given a scope with an ID
-                    # than a resource group name.
-                    $spRoles = Get-AzureRmRoleAssignment -ServicePrincipalName $client -Scope $CAMConfig.internal.vnetID
+                Add-SPScopeToVnet `
+                    -vnetName $CAMConfig.internal.vnetName `
+                    -vnetID $CAMConfig.internal.vnetID `
+                    -client $client `
+                    -subscriptionId $subscriptionId `
+                    -camCustomRoleDefinition $camCustomRoleDefinition
 
-                    # filter on an exact resource group ID match as Get-AzureRmRoleAssignment seems to do a more loose pattern match
-                    $spRoles = $spRoles | Where-Object `
-                        {($_.Scope -eq $csRG.ResourceId) -or ($_.Scope -eq "/subscriptions/$subscriptionId")}
-                    
-                    # spRoles could be no object, a single object or an array. foreach works with all.
-                    $hasAccess = $false
-                    foreach($role in $spRoles) {
-                        $roleName = $role.RoleDefinitionName
-                        if (($roleName -eq "Contributor") -or ($roleName -eq "Owner") -or ($roleName -eq $camCustomRoleDefinition.Name)) {
-                            Write-Host "$client already has $roleName for $($CAMConfig.internal.vnetName)."
-                            $hasAccess = $true
-                            break
-                        }
-                    }
-
-                    if(-not $hasAccess) {
-                        Write-Host "Giving $client '$($camCustomRoleDefinition.Name)' access to $($CAMConfig.internal.vnetName)"
-                        New-AzureRmRoleAssignment `
-                            -RoleDefinitionName $camCustomRoleDefinition.Name `
-                            -Scope $CAMConfig.internal.vnetID `
-                            -ServicePrincipalName $client `
-                            -ErrorAction Stop | Out-Null
-                    }
-                }
                 break # while loop
             } catch {
                 #TODO: we should only be catching the 'Service principal or app not found' error
@@ -2706,7 +2739,7 @@ function Write-Host-Warning() {
     Write-Host ("`n$message") -ForegroundColor Red
 }
 
-function New-VnetConfig() {
+function Set-VnetConfig() {
     Param(
         [parameter(Mandatory=$true)]
         $vnetConfig
@@ -3240,7 +3273,7 @@ if (($enableExternalAccess -eq $null) -and $ignorePrompts) {
 }
 
 if ($CAMRootKeyvault) {
-    Write-Host "Deploying a new connection service with updated CAMDeploymentInfo"
+    Write-Host "Deploying a new connection service"
 
     New-ConnectionServiceDeployment `
         -RGName $rgMatch.ResourceGroupName `
@@ -3322,7 +3355,7 @@ if ($CAMRootKeyvault) {
     }
     else {
         # Don't create new DC and vnet - prompt for which vnet and subnets to use
-        New-VnetConfig -vnetConfig $vnetConfig
+        Set-VnetConfig -vnetConfig $vnetConfig
     }
 
     do {
