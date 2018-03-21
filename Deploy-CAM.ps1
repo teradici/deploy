@@ -1903,7 +1903,9 @@ function Add-SPScopeToVnet()
 
         # filter on an exact resource group ID match as Get-AzureRmRoleAssignment seems to do a more loose pattern match
         $spRoles = $spRoles | Where-Object `
-            {($_.Scope -eq $vmRG.ResourceId) -or ($_.Scope -eq "/subscriptions/$subscriptionId")}
+            {   ($_.Scope -eq $vmRG.ResourceId) `
+            -or ($_.Scope -eq $vnetID) `
+            -or ($_.Scope -eq "/subscriptions/$subscriptionId")}
         
         # spRoles could be no object, a single object or an array. foreach works with all.
         $hasAccess = $false
