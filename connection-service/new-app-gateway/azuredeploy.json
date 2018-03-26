@@ -117,7 +117,7 @@
         {
           "name": "appGatewayFrontendHttpsPort",
           "properties": {
-            "Port": "[if(not(and(parameters('enableExternalAccess'), parameters('disableExternalUserInterface'))), 443, 60443)]"
+            "Port": "[if(parameters('disableExternalUserInterface'), 60443, 443)]"
           }
         }
       ],
@@ -182,7 +182,7 @@
         {
           "name": "appGatewayFrontendSecondaryPort",
           "properties": {
-            "Port": "[if(not(and(parameters('enableExternalAccess'), parameters('disableExternalUserInterface'))), 60443, 443)]"
+            "Port": "[if(parameters('disableExternalUserInterface'), 443, 60443)]"
           }
         }
       ],
