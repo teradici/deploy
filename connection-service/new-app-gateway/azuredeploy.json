@@ -463,6 +463,7 @@
         "frontendPorts":            "[variables('frontendPorts')]",
         "httpListeners":            "[variables('httpListeners')]",
         "requestRoutingRules":      "[variables('requestRoutingRules')]",
+        "redirectConfigurations":      "[variables('redirectConfigurations')]",
         "sslCertificates": [
           {
             "name": "appGatewaySslCert",
@@ -498,17 +499,6 @@
               "Protocol": "Http",
               "CookieBasedAffinity": "Enabled",
               "RequestTimeout": "90"
-            }
-          }
-        ],
-        "redirectConfigurations": [
-          {
-            "Name": "redirectHttpConfig",
-            "properties": {
-              "redirectType": "Permanent",
-              "targetListener": {
-                "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayHttpsListener')]"
-              }
             }
           }
         ],
