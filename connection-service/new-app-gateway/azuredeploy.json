@@ -427,12 +427,7 @@
         }
       }
     ],
-    "configuration": "[if(parameters('enableExternalAccess'), if(parameters('disableExternalUserInterface'),'externalNoUI','externalWithUI'),if(parameters('disableExternalUserInterface'),'internalNoUI','internalWithUI'))]",
-    "frontendIPConfigurations": "[variables('configurationParameters')[variables('configuration')].frontendIPConfigurations]",
-    "frontendPorts":            "[variables('configurationParameters')[variables('configuration')].frontendPorts]",
-    "httpListeners":            "[variables('configurationParameters')[variables('configuration')].httpListeners]",
-    "requestRoutingRules":      "[variables('configurationParameters')[variables('configuration')].requestRoutingRules]",
-    "redirectConfigurations":   "[variables('configurationParameters')[variables('configuration')].redirectConfigurations]"
+    "configuration": "[if(parameters('enableExternalAccess'), if(parameters('disableExternalUserInterface'),'externalNoUI','externalWithUI'),if(parameters('disableExternalUserInterface'),'internalNoUI','internalWithUI'))]"
   },
   "resources": [
     {
@@ -459,11 +454,11 @@
           "tier": "Standard",
           "capacity": "[parameters('capacity')]"
         },
-        "frontendIPConfigurations": "[variables('frontendIPConfigurations')]",
-        "frontendPorts":            "[variables('frontendPorts')]",
-        "httpListeners":            "[variables('httpListeners')]",
-        "requestRoutingRules":      "[variables('requestRoutingRules')]",
-        "redirectConfigurations":      "[variables('redirectConfigurations')]",
+        "frontendIPConfigurations": "[variables('configurationParameters')[variables('configuration')].frontendIPConfigurations]",
+        "frontendPorts":            "[variables('configurationParameters')[variables('configuration')].frontendPorts]",
+        "httpListeners":            "[variables('configurationParameters')[variables('configuration')].httpListeners]",
+        "requestRoutingRules":      "[variables('configurationParameters')[variables('configuration')].requestRoutingRules]",
+        "redirectConfigurations":   "[variables('configurationParameters')[variables('configuration')].redirectConfigurations]",
         "sslCertificates": [
           {
             "name": "appGatewaySslCert",
