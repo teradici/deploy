@@ -257,10 +257,8 @@
         ]
       }
     },
-    "configuration": "[if(parameters('enableExternalAccess'), if(parameters('disableExternalUserInterface'),'externalNoUI','externalWithUI'),if(parameters('disableExternalUserInterface'),'internalnoUI','internalWithUI'))]",
     "configurationParameters": {
       "externalNoUI": {
-        "urlPathMap": "[concat(variables('applicationGatewayID'), '/urlPathMaps/', if(and(parameters('enableExternalAccess'), parameters('disableExternalUserInterface')), 'pcoipBrokerProtocolPath', 'pcoipBrokerProtocolUserInterfacePath'))]",
         "frontendIPConfigurations": "[variables('internalExternalConfigurations')['external'].frontendIPConfigurations]",
         "frontendPorts": "[variables('internalExternalConfigurations')['external'].frontendPorts]",
         "httpListeners": "[variables('internalExternalConfigurations')['external'].httpListeners]",
@@ -305,7 +303,6 @@
         ]
       },
       "externalWithUI": {
-        "urlPathMap": "[concat(variables('applicationGatewayID'), '/urlPathMaps/', if(and(parameters('enableExternalAccess'), parameters('disableExternalUserInterface')), 'pcoipBrokerProtocolPath', 'pcoipBrokerProtocolUserInterfacePath'))]",
         "frontendIPConfigurations": "[variables('internalExternalConfigurations')['external'].frontendIPConfigurations]",
         "frontendPorts": "[variables('internalExternalConfigurations')['external'].frontendPorts]",
         "httpListeners": "[variables('internalExternalConfigurations')['external'].httpListeners]",
@@ -350,7 +347,6 @@
         ]
       },
       "internalNoUI": {
-        "urlPathMap": "[concat(variables('applicationGatewayID'), '/urlPathMaps/', if(and(parameters('enableExternalAccess'), parameters('disableExternalUserInterface')), 'pcoipBrokerProtocolPath', 'pcoipBrokerProtocolUserInterfacePath'))]",
         "frontendIPConfigurations": "[variables('internalExternalConfigurations')['internal'].frontendIPConfigurations]",
         "frontendPorts": "[variables('internalExternalConfigurations')['internal'].frontendPorts]",
         "httpListeners": "[variables('internalExternalConfigurations')['internal'].httpListeners]",
@@ -383,7 +379,6 @@
         ]
       },
       "internalWithUI": {
-        "urlPathMap": "[concat(variables('applicationGatewayID'), '/urlPathMaps/', if(and(parameters('enableExternalAccess'), parameters('disableExternalUserInterface')), 'pcoipBrokerProtocolPath', 'pcoipBrokerProtocolUserInterfacePath'))]",
         "frontendIPConfigurations": "[variables('internalExternalConfigurations')['internal'].frontendIPConfigurations]",
         "frontendPorts": "[variables('internalExternalConfigurations')['internal'].frontendPorts]",
         "httpListeners": "[variables('internalExternalConfigurations')['internal'].httpListeners]",
@@ -432,152 +427,12 @@
         }
       }
     ],
-    "primaryAppGatewayConfig": {
-      "frontendPorts" : [
-        {
-          "name": "appGatewayFrontendHttpPort",
-          "properties": {
-            "Port": 80
-          }
-        },
-        {
-          "name": "appGatewayFrontendHttpsPort",
-          "properties": {
-            "Port": 443
-          }
-        }
-      ],
-      "httpListeners" : [
-        {
-          "name": "appGatewayHttpListener",
-          "properties": {
-            "FrontendIPConfiguration": {
-              "Id": "[concat(variables('applicationGatewayID'), '/frontendIPConfigurations/appGatewayFrontendPrimaryIP')]"
-            },
-            "FrontendPort": {
-              "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendHttpPort')]"
-            },
-            "Protocol": "Http"
-          }
-        },
-        {
-          "name": "appGatewayHttpsListener",
-          "properties": {
-            "FrontendIPConfiguration": {
-              "Id": "[concat(variables('applicationGatewayID'), '/frontendIPConfigurations/appGatewayFrontendPrimaryIP')]"
-            },
-            "FrontendPort": {
-              "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendHttpsPort')]"
-            },
-            "Protocol": "Https",
-            "SslCertificate": {
-              "Id": "[concat(variables('applicationGatewayID'), '/sslCertificates/appGatewaySslCert')]"
-            }
-          }
-        }
-      ],
-      "requestRoutingRules": [
-        {
-          "Name": "httpRule",
-          "properties": {
-            "RuleType": "Basic",
-            "httpListener": {
-              "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayHttpListener')]"
-            },
-            "redirectConfiguration": {
-              "id": "[concat(variables('applicationGatewayID'), '/redirectConfigurations/redirectHttpConfig')]"
-            }
-          }
-        },
-        {
-          "Name": "httpsRule",
-          "properties": {
-            "RuleType": "PathBasedRouting",
-            "httpListener": {
-              "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayHttpsListener')]"
-            },
-            "urlPathMap": {
-              "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/pcoipBrokerProtocolUserInterfacePath')]"
-            }
-          }
-        }
-      ]
-    },
-    "secondaryAppGatewayConfig": {
-      "frontendPorts": [
-        {
-          "name": "appGatewayFrontendSecondaryPort",
-          "properties": {
-            "Port": 60443
-          }
-        }
-      ],
-      "httpListeners": [
-        {
-          "name": "appGatewaySecondaryHttpsListener",
-          "properties": {
-            "FrontendIPConfiguration": {
-              "Id": "[concat(variables('applicationGatewayID'), '/frontendIPConfigurations/appGatewayFrontendSecondaryIP')]"
-            },
-            "FrontendPort": {
-              "Id": "[concat(variables('applicationGatewayID'), '/frontendPorts/appGatewayFrontendSecondaryPort')]"
-            },
-            "Protocol": "Https",
-            "SslCertificate": {
-              "Id": "[concat(variables('applicationGatewayID'), '/sslCertificates/appGatewaySslCert')]"
-            }
-          }
-        }
-      ],
-      "requestRoutingRules": [
-        {
-          "Name": "secondaryRule",
-          "properties": {
-            "RuleType": "PathBasedRouting",
-            "httpListener": {
-              "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewaySecondaryHttpsListener')]"
-            },
-            "urlPathMap": {
-              "id": "[(variables('configurationParameters')[variables('configuration')].urlPathMap]"
-            }
-          }
-        }
-      ]
-    },
-    "ipConfiguration": {
-      "internal": [
-          {
-            "name": "appGatewayFrontendPrimaryIP",
-            "properties": {
-              "subnet": {
-                "id": "[parameters('subnetRef')]"
-              }
-            }
-          }
-      ],
-      "external": [
-        {
-          "name": "appGatewayFrontendPrimaryIP",
-          "properties": {
-            "PublicIPAddress": {
-              "id": "[variables('publicIPRef')]"
-            }
-          }
-        },
-        {
-          "name": "appGatewayFrontendSecondaryIP",
-          "properties": {
-            "subnet": {
-              "id": "[parameters('subnetRef')]"
-            }
-          }
-        }
-      ]
-    },
+    "configuration": "[if(parameters('enableExternalAccess'), if(parameters('disableExternalUserInterface'),'externalNoUI','externalWithUI'),if(parameters('disableExternalUserInterface'),'internalNoUI','internalWithUI'))]",
     "frontendIPConfigurations": "[variables('configurationParameters')[variables('configuration')].frontendIPConfigurations]",
     "frontendPorts":            "[variables('configurationParameters')[variables('configuration')].frontendPorts]",
-    "httpListeners":            "[if(parameters('enableExternalAccess'), concat(variables('primaryAppGatewayConfig')['httpListeners'],       variables('secondaryAppGatewayConfig')['httpListeners']),        variables('primaryAppGatewayConfig')['httpListeners'])]",
-    "requestRoutingRules":      "[if(parameters('enableExternalAccess'), concat(variables('primaryAppGatewayConfig')['requestRoutingRules'], variables('secondaryAppGatewayConfig')['requestRoutingRules']),  variables('primaryAppGatewayConfig')['requestRoutingRules'])]"
+    "httpListeners":            "[variables('configurationParameters')[variables('configuration')].httpListeners]",
+    "requestRoutingRules":      "[variables('configurationParameters')[variables('configuration')].requestRoutingRules]",
+    "redirectConfigurations":   "[variables('configurationParameters')[variables('configuration')].redirectConfigurations]"
   },
   "resources": [
     {
