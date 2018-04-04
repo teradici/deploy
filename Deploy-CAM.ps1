@@ -1312,6 +1312,53 @@ function Generate-CamDeploymentInfoParameters {
 }
 
 
+function Append-AzureRMLog {
+    param(
+        $err
+    )
+    $text = $err.exception.Message
+
+    # Ensure the string 'tracking ID' and a GUID show up to try to get AzureRM logs
+    if( ([regex]::matches($text, "tracking id"))[0].value ){
+        $GUIDpattern = "[a-fA-F0-9]{8}-([a-fA-F0-9]{4}-){3}[a-fA-F0-9]{12}"
+        $trackingID = ([regex]::matches($text, $GUIDpattern))[0].value
+
+        if($trackingID) {
+            Write-Host-Warning "Deployment Error Occurred. Azure tracking ID is '$trackingID'"
+            $index = 60 # around 5 minutes
+            $badAzureRMLogCount = 10 # if the structure isn't fully populated, give another few tries
+            while ($index--){
+                $azureRMLog = Get-AzureRMLog -CorrelationId $trackingID -WarningAction silentlyContinue
+                if($azureRMLog) {
+                    if ($azureRMLog.properties -and $azureRMLog.properties[0].Content.statusMessage) {
+                        $jsonError = ConvertFrom-Json $azureRMLog.properties[0].Content.statusMessage
+                        $fullMessage = $err.exception.Message + ($jsonError.error.details | Format-List | Out-String)
+                        Write-Host-Warning $fullMessage
+                        return $jsonError.error.details.message
+                    }
+                    else
+                    {
+                        if($badAzureRMLogCount--)
+                        {
+                            Write-Host "Unexpected error format. Tries remaining: $badAzureRMLogCount"
+                        }
+                        else {
+                            Write-Host ($azureRMLog | Out-String)
+                            return $err
+                        }
+                    }
+    
+                }
+                Write-Host "Getting error details. Tries remaining: $index"
+                Start-sleep -Seconds 5
+            }
+        }
+    }
+    return $err
+}
+
+
+
 # Deploy a connection service over a current deployment
 function New-ConnectionServiceDeployment() {
     param(
@@ -1723,8 +1770,9 @@ function New-ConnectionServiceDeployment() {
                     {
                         $remaining = $maxRetries - $idx - 1
                         Write-Host "Authorization error. Usually this means we are waiting for the authorization to percolate through Azure."
+                        Write-Host "This error can take a long time to clear especially if there is another deployment"
+                        Write-Host "happening concurrently using the same service principal account."
                         Write-Host "Reason: $($_.Exception.Message)"
-                        Write-Host "Stopping deployment"
 
                         # Try to stop the deployment in case that helps, but don't warn or fail.
                         Stop-AzureRmResourceGroupDeployment `
@@ -1743,7 +1791,11 @@ function New-ConnectionServiceDeployment() {
         }
     }
     catch {
-        throw
+        # Check if there's an Azure log message we can show, otherwise just re-throw
+        $err = $_
+        $errorToThrow = Append-AzureRMLog -err $err
+
+        throw $errorToThrow
     }
     finally {
         if ($adminAzureContext) {
@@ -2520,7 +2572,11 @@ function Deploy-CAM() {
         }
     }
     catch {
-        throw
+        # Check if there's an Azure log message we can show, otherwise just re-throw
+        $err = $_
+        $errorToThrow = Append-AzureRMLog -err $err
+
+        throw $errorToThrow
     }
     finally {
         if ($azureContext) {
@@ -3120,15 +3176,7 @@ $resouceGroups = Get-AzureRmResourceGroup
 # if a user has provided ResourceGroupName as parameter:
 # - Check if user group exists. If it does deploy there.
 # - If it doesn't, create it in which case location parameter must be provided 
-if ($ResourceGroupName) {
-    Write-Host "Provided resource group name: $ResourceGroupName"
-    if (-not (Get-AzureRMResourceGroup -name $ResourceGroupName -ErrorAction SilentlyContinue)) {
-        Write-Host "Resource group $ResourceGroupName does not exist. Creating in location: $location"
-        New-AzureRmResourceGroup -Name $ResourceGroupName -Location $location
-    } 
-    $rgMatch = Get-AzureRmResourceGroup -Name $ResourceGroupName
-}
-else {
+
     $rgIndex = 0
     ForEach ($r in $resouceGroups) {
         if (-not (Get-Member -inputobject $r -name "Number")) {
@@ -3147,7 +3195,8 @@ else {
     while (-not $selectedRGName) {
         Write-Host ("`nSelect the resource group of the Cloud Access Mananger deployment root by number`n" +
             "or type in a new resource group name for a new Cloud Access Mananger deployment.")
-        $rgIdentifier = (Read-Host "Resource group").Trim()
+        $rgIdentifier = if($ResourceGroupName) {$ResourceGroupName} else {(Read-Host "Resource group").Trim()}
+        $ResourceGroupName = $null # clear out parameter if passed to avoid infinite retry loop
 
         if (!$rgIdentifier) {
             Write-Host-Warning "Value not provided."
@@ -3187,7 +3236,9 @@ else {
                 while ($true) {
                     Write-Host("Available Azure Locations")
                     Write-Host ($azureLocation | Select-Object -Property Location, DisplayName | Format-Table | Out-String )
-                    $newRGLocation = (Read-Host "`nEnter resource group location").Trim()
+                    $newRGLocation = if($location) {$location} else {(Read-Host "`nEnter resource group location").Trim()}
+                    $location = $null # clear out parameter if passed to avoid infinite retry loop
+
                     if ($locations -Contains $newRGLocation){
                         break
                     }
@@ -3204,7 +3255,7 @@ else {
             }
         }
     }
-}
+
 
 Write-Host "Using root resource group: $($rgMatch.ResourceGroupName)"
 
