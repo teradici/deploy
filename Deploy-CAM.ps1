@@ -851,7 +851,7 @@ function New-CAM-KeyVault() {
                 Set-AzureRmKeyVaultAccessPolicy `
                     -VaultName $kvName `
                     -ServicePrincipalName $spName `
-                    -PermissionsToSecrets Get, Set `
+                    -PermissionsToSecrets Get, Set, List `
                     -ErrorAction stop | Out-Null
 
                 break
@@ -881,7 +881,7 @@ function New-CAM-KeyVault() {
         Set-AzureRmKeyVaultAccessPolicy `
             -VaultName $kvName `
             -UserPrincipalName $adminAzureContext.Account.Id `
-            -PermissionsToSecrets Get, Set `
+            -PermissionsToSecrets Get, Set, List `
             -ErrorAction stop | Out-Null
         Write-Host "Successfully set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
         }
@@ -1403,7 +1403,7 @@ function New-ConnectionServiceDeployment() {
                         Set-AzureRmKeyVaultAccessPolicy `
                             -VaultName $kvName `
                             -UserPrincipalName $adminAzureContext.Account.Id `
-                            -PermissionsToSecrets Get, Set `
+                            -PermissionsToSecrets Get, Set, List `
                             -ErrorAction stop | Out-Null
         
                         $secret = Get-AzureKeyVaultSecret `
