@@ -53,6 +53,8 @@ else
     ENABLE_AUTO_SHUTDOWN="$(echo -e "${13}" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
     # the fourteenth argument is the idle timer in minutes for auto-shutdown
     AUTO_SHUTDOWN_IDLE_TIMER="${14}"
+    # the fifteenth argument is the Binaries location
+    BINARY_LOCATION="${15}"
 fi
 
 update_kernel_dkms()
@@ -73,7 +75,7 @@ disable_nouveau()
 # need to reboot after install Linux Integration Services for Hyper-V
 install_lis()
 {
-    local LIS_FILE="lis-rpms-4.2.3-4.tar.gz"
+    local LIS_FILE="lis-rpms-4.2.4-1.tar.gz"
 
     wget --retry-connrefused --tries=3 --waitretry=5  "https://download.microsoft.com/download/6/8/F/68FE11B8-FAA4-4F8D-8C7D-74DA7F2CFC8C/$LIS_FILE"
     local exitCode=$?
@@ -93,9 +95,9 @@ install_lis()
 
 install_nvidia_driver()
 {
-    local FILE_NAME="NVIDIA-Linux-x86_64-384.73-grid.run"
+    local FILE_NAME="NVIDIA-Linux-x86_64-384.111-grid.run"
 
-    wget --retry-connrefused --tries=3 --waitretry=5  "https://teradeploy.blob.core.windows.net/binaries/$FILE_NAME"
+    wget --retry-connrefused --tries=3 --waitretry=5  "${BINARY_LOCATION}/${FILE_NAME}"
     local exitCode=$?
 
     if [[ $exitCode -eq 0 ]]
