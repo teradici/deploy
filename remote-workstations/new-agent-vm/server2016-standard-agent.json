@@ -47,6 +47,13 @@
                 "description": "The FQDN of the AD domain"
             }
         },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "The region the virtual machine will be deployed to"
+            }
+        },
         "domainGroupToJoin": {
             "type": "string"
         },
@@ -192,7 +199,7 @@
             "type": "Microsoft.Network/networkInterfaces",
             "name": "[variables('nicName')]",
             "apiVersion": "[variables('apiVersion')]",
-            "location": "[resourceGroup().location]",
+            "location": "[parameters('location')]",
             "properties": {
                 "ipConfigurations": [
                     {
@@ -211,7 +218,7 @@
             "type": "Microsoft.Compute/virtualMachines",
             "name": "[variables('vmSettings').vmNamePrefix]",
             "apiVersion": "2017-03-30",
-            "location": "[resourceGroup().location]",
+            "location": "[parameters('location')]",
             "properties": {
                 "hardwareProfile": {
                     "vmSize": "[parameters('vmSize')]"
@@ -251,7 +258,7 @@
             "type": "Microsoft.Compute/virtualMachines/extensions",
             "name": "[concat(parameters('dnsLabelPrefix'),'/joindomain')]",
             "apiVersion": "[variables('apiVersion')]",
-            "location": "[resourceGroup().location]",
+            "location": "[parameters('location')]",
             "properties": {
                 "publisher": "Microsoft.Compute",
                 "type": "JsonADDomainExtension",
@@ -276,7 +283,7 @@
           "type": "Microsoft.Compute/virtualMachines/extensions",
           "name": "[concat(parameters('dnsLabelPrefix'),'/PCoIPAgentDscExtension')]",
           "apiVersion": "2017-03-30",
-          "location": "[resourceGroup().location]",
+          "location": "[parameters('location')]",
           "dependsOn": [
               "[resourceId('Microsoft.Compute/virtualMachines/extensions',parameters('dnsLabelPrefix'),'joindomain')]"
           ],
