@@ -540,6 +540,8 @@ function New-RemoteWorkstationTemplates {
     "contentVersion": "1.0.0.0",
     "parameters": {
         "domainOrganizationUnitToJoin": { "value": "" },
+        "imageReferenceId": { "value": "" },
+        "location": { "value": "$($CAMConfig.internal.location)" },
         "agentType": { "value": "%agentType%" },
         "vmSize": { "value": "%vmSize%" },
         "autoShutdownIdleTime" : { "value": $defaultIdleShutdownTime },
@@ -2149,6 +2151,7 @@ function Deploy-CAM() {
     $CAMConfig.parameters.AzureKeyVaultName = @{}
 
     $CAMConfig.internal = @{}
+    $CAMConfig.internal.location = (Get-AzureRmResourceGroup -ResourceGroupName $rwRGName -ErrorAction stop).location
     $CAMConfig.internal.vnetID = $vnetConfig.vnetID
     $CAMConfig.internal.vnetName = $CAMConfig.internal.vnetID.split("/")[-1]
     $CAMConfig.internal.rootSubnetName = "subnet-CAMRoot"
