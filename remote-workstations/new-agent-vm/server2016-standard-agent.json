@@ -54,6 +54,13 @@
                 "description": "The region the virtual machine will be deployed to"
             }
         },
+        "imageReferenceId": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "ID of the source disk image to use."
+            }
+        },
         "domainGroupToJoin": {
             "type": "string"
         },
@@ -190,7 +197,16 @@
                 "videoDriverUrl": "[concat(parameters('binaryLocation'), '/386.09_grid_win10_server2016_64bit_international.exe')]"
             }
         },
-          
+        "defaultImageReference": {
+            "publisher": "[variables('vmSettings').os.publisher]",
+            "offer": "[variables('vmSettings').os.offer]",
+            "sku": "[variables('vmSettings').os.sku]",
+            "version": "[variables('vmSettings').os.version]"
+        },
+        "customImageReference": {
+            "id": "[parameters('imageReferenceId')]"
+        },
+        "imageReference": "[if(empty(parameters('imageReferenceId')),variables('defaultImageReference'),variables('customImageReference'))]",
         "pcoipAgentInstallerUrl": "[concat('https://downloads.teradici.com/win/', parameters('AgentChannel'))]",
         "videoDriverUrl": "[variables('extensions')[parameters('agentType')].videoDriverUrl]"
     },
@@ -229,12 +245,7 @@
                     "adminPassword": "[variables('vmSettings').adminPassword]"
                 },
                 "storageProfile": {
-                    "imageReference": {
-                        "publisher": "[variables('vmSettings').os.publisher]",
-                        "offer": "[variables('vmSettings').os.offer]",
-                        "sku": "[variables('vmSettings').os.sku]",
-                        "version": "[variables('vmSettings').os.version]"
-                    },
+                    "imageReference": "[variables('imageReference')]",
                     "osDisk": {
                         "name": "[concat(parameters('dnsLabelPrefix'), '-os')]",
                         "caching": "ReadWrite",

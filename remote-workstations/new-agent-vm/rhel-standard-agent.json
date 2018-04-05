@@ -54,6 +54,13 @@
                 "description": "The region the virtual machine will be deployed to"
             }
         },
+        "imageReferenceId": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "ID of the source disk image to use."
+            }
+        },
         "domainGroupToJoin": {
             "type": "string"
         },
@@ -181,9 +188,18 @@
             "nicName": "[variables('nicName')]",
             "os": "[variables('osSettings')[parameters('osType')]]"
         },
-
+        "defaultImageReference": {
+            "publisher": "[variables('vmSettings').os.publisher]",
+            "offer": "[variables('vmSettings').os.offer]",
+            "sku": "[variables('vmSettings').os.sku]",
+            "version": "[variables('vmSettings').os.version]"
+        },
+        "customImageReference": {
+            "id": "[parameters('imageReferenceId')]"
+        },
+        "imageReference": "[if(empty(parameters('imageReferenceId')),variables('defaultImageReference'),variables('customImageReference'))]",
         "scriptFileName": "Install-PCoIPAgent.sh",
-        "idleShutdownScriptFileName": "Install-Idle-Shutdown.sh",        
+        "idleShutdownScriptFileName": "Install-Idle-Shutdown.sh",
         "sumoCollectorID": "[concat('CAM-', split(parameters('registrationCode'), '@')[0], '-', subscription().subscriptionId, '-', resourceGroup().name, '-', parameters('dnsLabelPrefix'))]"
     },
     "resources": [
@@ -221,12 +237,7 @@
                     "adminPassword": "[variables('vmSettings').adminPassword]"
                 },
                 "storageProfile": {
-                    "imageReference": {
-                        "publisher": "[variables('vmSettings').os.publisher]",
-                        "offer": "[variables('vmSettings').os.offer]",
-                        "sku": "[variables('vmSettings').os.sku]",
-                        "version": "[variables('vmSettings').os.version]"
-                    },
+                    "imageReference": "[variables('imageReference')]",
                     "osDisk": {
                         "name": "[concat(parameters('dnsLabelPrefix'), '-os')]",
                         "caching": "ReadWrite",
