@@ -20,10 +20,13 @@
 # THE SOFTWARE.
 #
 
-if [[ $# -eq 1 ]] || [[ $# -eq 2 ]]
+if [[ $# -le 2 ]]
 then
     AGENT_TYPE="$1"
-    BINARY_LOCATION="$2"
+    if [[ $# -eq 2 ]]
+    then
+        BINARY_LOCATION="$2"
+    fi
 else
     # the first argument is the Registration Code of PCoIP agent
     REGISTRATION_CODE="$1"
@@ -62,10 +65,31 @@ update_kernel_dkms()
 {
     echo "-->Updating" | tee -a "$INST_LOG_FILE"
     sudo yum -y update
-    echo "-->Installing kernel-devel and dkms" | tee -a "$INST_LOG_FILE"
-    sudo yum -y install kernel-devel
-    sudo rpm -Uvh --quiet https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-    sudo yum -y install dkms
+    local exitCode=$?
+    if [[ $exitCode -eq 0 ]]
+        then
+        echo "-->Installing kernel-devel" | tee -a "$INST_LOG_FILE"
+        sudo yum -y install kernel-devel
+        exitCode=$?
+        if [[ $exitCode -eq 0 ]]
+        then
+            echo "-->Adding EPEL-7 Repository" | tee -a "$INST_LOG_FILE"
+            sudo rpm -Uvh --quiet https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+            echo "-->Installing DKMS" | tee -a "$INST_LOG_FILE"
+            sudo yum -y install dkms
+            exitCode=$?
+            if [[ $exitCode -ne 0 ]]
+            then
+                echo "Failed installing DKMS" | tee -a "$INST_LOG_FILE"
+            fi
+        else
+            echo "Failed installing kernel-devel" | tee -a "$INST_LOG_FILE"
+        fi
+    else
+        echo "Failed update" | tee -a "$INST_LOG_FILE"
+    fi
+
+    return $exitCode
 }
 
 # need to reboot after install
@@ -103,31 +127,39 @@ install_lis()
 
 install_nvidia_driver()
 {
-    local FILE_NAME="NVIDIA-Linux-x86_64-384.111-grid.run"
-    echo "-->Downloading nVidiai Driver ${FILE_NAME} from ${BINARY_LOCATION}" | tee -a "$INST_LOG_FILE"
+    local exitCode=0
 
-    wget --retry-connrefused --tries=3 --waitretry=5  "${BINARY_LOCATION}/${FILE_NAME}"
-    local exitCode=$?
-
-    if [[ $exitCode -eq 0 ]]
+    if [[ -z $BINARY_LOCATION ]]
     then
-        echo "-->Installing nVidiai Driver" | tee -a "$INST_LOG_FILE"
-        chmod +x "$FILE_NAME"
+        exitCode=1
+        echo "Binary Location not specified" | tee -a "$INST_LOG_FILE"
+    else
+        local FILE_NAME="NVIDIA-Linux-x86_64-384.111-grid.run"
+        echo "-->Downloading nVidia Driver ${FILE_NAME} from ${BINARY_LOCATION}" | tee -a "$INST_LOG_FILE"
 
-        sudo "./$FILE_NAME" -Z -X -s
+        wget --retry-connrefused --tries=3 --waitretry=5  "${BINARY_LOCATION}/${FILE_NAME}"
         exitCode=$?
 
         if [[ $exitCode -eq 0 ]]
         then
-            echo "-->Install Success" | tee -a "$INST_LOG_FILE"
-            sudo cp /etc/nvidia/gridd.conf.template /etc/nvidia/gridd.conf
+            echo "-->Installing nVidia Driver" | tee -a "$INST_LOG_FILE"
+            chmod +x "$FILE_NAME"
 
-            echo 'IgnoreSP=TRUE' | sudo tee -a /etc/nvidia/gridd.conf
+            sudo "./$FILE_NAME" -Z -X -s
+            exitCode=$?
+
+            if [[ $exitCode -eq 0 ]]
+            then
+                echo "-->Install Success" | tee -a "$INST_LOG_FILE"
+                sudo cp /etc/nvidia/gridd.conf.template /etc/nvidia/gridd.conf
+
+                echo 'IgnoreSP=TRUE' | sudo tee -a /etc/nvidia/gridd.conf
+            else
+                echo "Install Failed" | tee -a "$INST_LOG_FILE"
+            fi
         else
-            echo "Install Failed" | tee -a "$INST_LOG_FILE"
+            echo "Download Failed" | tee -a "$INST_LOG_FILE"
         fi
-    else
-        echo "Download Failed" | tee -a "$INST_LOG_FILE"
     fi
 
     return $exitCode
@@ -422,7 +454,7 @@ install_SumoLogic()
     wget "$STORAGEURI/user.properties$SAS_TOKEN" -O /tmp/sumo/user.properties
     wget "$STORAGEURI/sumo-agent-vm-linux.json$SAS_TOKEN" -O /tmp/sumo/sumo-agent-vm-linux.json
     JSON_FILE=/tmp/sumo/sumo-agent-vm-linux.json
-    echo "-->Attempting to set sumo collector ID to: ${COLLECTOR_ID}" | tee -a "$INST_LOG_FILE"
+    echo "-->Attempting to set sumo collector ID" | tee -a "$INST_LOG_FILE"
     sed -i s/collectorID/"$COLLECTOR_ID"/ /tmp/sumo/user.properties
     sed -i 's|syncsourceFile|'$JSON_FILE'|' /tmp/sumo/user.properties
 
@@ -477,7 +509,7 @@ fi
 
 if [[ -f "$INST_LOG_FILE" ]]
 then
-    INST_LAST_STEP=$(cat "$INST_LOG_FILE" | grep "^step*" | tail -1) 
+    INST_LAST_STEP=$(grep "^step*" "${INST_LOG_FILE}" | tail -1) 
 fi
 
 if [[ "$INST_LAST_STEP" == "initial" ]]
@@ -551,23 +583,37 @@ then
         echo "start installing nvidia driver" | tee -a "$INST_LOG_FILE"
 
         echo "step4 starting" | tee -a "$INST_LOG_FILE"
-        update_kernel_dkms
+        if [[ -z $BINARY_LOCATION ]]
+        then
+            EXIT_CODE=1
+            INST_LAST_STEP="step4 failure: Binary Location not specified"
+            echo $INST_LAST_STEP | tee -a "$INST_LOG_FILE"
+        else
+            update_kernel_dkms
+            EXIT_CODE=$?            
+        fi
+        
+        if [[ $EXIT_CODE -eq 0 ]]
+        then
+            disable_nouveau
 
-        disable_nouveau
+            INST_LAST_STEP="step4 done"
 
-        INST_LAST_STEP="step4 done"
+            echo "$INST_LAST_STEP" | tee -a "$INST_LOG_FILE"
 
-        echo "$INST_LAST_STEP" | tee -a "$INST_LOG_FILE"
+            #schedule job to continue installation
+            script_file=$(realpath "$0")
+            chmod +x "$script_file"
 
-        #schedule job to continue installation
-        script_file=$(realpath "$0")
-        chmod +x "$script_file"
+            # only need to pass 1 parameter $AGENT_TYPE to continue
+            (sudo crontab -l 2>/dev/null; echo "@reboot bash $script_file ${AGENT_TYPE} ${BINARY_LOCATION}") | sudo crontab -
 
-        # only need to pass 1 parameter $AGENT_TYPE to continue
-        (sudo crontab -l 2>/dev/null; echo "@reboot bash $script_file ${AGENT_TYPE} ${BINARY_LOCATION}") | sudo crontab -
-
-        #exit and restart VM
-        exit_restart
+            #exit and restart VM
+            exit_restart
+        else
+            INST_LAST_STEP="step4 failure: $EXIT_CODE"
+            echo $INST_LAST_STEP | tee -a "$INST_LOG_FILE"
+        fi        
     fi
 
     if [[ "$INST_LAST_STEP" == "step4 done" ]]

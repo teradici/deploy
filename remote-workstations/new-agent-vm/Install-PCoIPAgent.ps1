@@ -342,7 +342,7 @@ Configuration InstallPCoIPAgent
                         
                         if ($isExeSucc) {
                             #only do validation when command pcoip-register-host.ps1 passed
-                            Write-Verbose ('It is the {0} try registering the registration code.' -f $orderNumArray[$idx -1])
+                            Write-Verbose ('It is the {0} try validating the registration code.' -f $orderNumArray[$idx -1])
                              $ret = & .\pcoip-validate-license.ps1
                             $isExeSucc = $?
                         }
