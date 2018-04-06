@@ -722,6 +722,7 @@ function Populate-UserBlob {
         @("$artifactsLocation/remote-workstations/new-agent-vm/user.properties", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/Install-Idle-Shutdown.sh", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/$($CAMConfig.internal.linuxAgentARM)", "remote-workstation-template"),
+        @("$artifactsLocation/remote-workstations/new-agent-vm/$($CAMConfig.internal.gaLinuxAgentARM)", "remote-workstation-template"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/$($CAMConfig.internal.gaAgentARM)", "remote-workstation-template"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/$($CAMConfig.internal.agentARM)", "remote-workstation-template")
     )
