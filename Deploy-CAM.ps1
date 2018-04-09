@@ -838,6 +838,7 @@ function New-CAM-KeyVault() {
             -Location $rg.Location `
             -EnabledForTemplateDeployment `
             -EnabledForDeployment `
+            -EnableSoftDelete `
             -WarningAction Ignore
 
         Write-Host "Setting Access Policy on Azure KeyVault $kvName"
