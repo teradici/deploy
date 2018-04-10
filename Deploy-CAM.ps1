@@ -3270,7 +3270,7 @@ if((-not $ResourceGroupName) -and ($deploymentIndex -gt 0)) {
     
     
         Write-Host ("To upgrade or modify a Cloud Access Manager Deployment, select the resource group of the`n" +
-           "Cloud Access Mananger deployment root by number, or hit enter to create a new deployment.")
+           "Cloud Access Manager deployment root by number, or hit enter to create a new deployment.")
         $rgIdentifier = (Read-Host "Resource group").Trim()
         
         # If empty string just exit loop
@@ -3294,12 +3294,71 @@ if((-not $ResourceGroupName) -and ($deploymentIndex -gt 0)) {
     }
 }
 
-# Find the CAM root RG.
-$resourceGroups = Get-AzureRmResourceGroup
+# Now we (might) have a $ResourceGroupName that (might) point to a resource group that has a CAM keyvault in it.
+# Let's double check what type.
+# At this point we have a subscription and a root resource group - check if there is already a deployment in it
+try{
+    $CAMRootKeyvault = $null
+    $CAMRootKeyvault = Get-AzureRmResource `
+        -ResourceGroupName $ResourceGroupName `
+        -ResourceType "Microsoft.KeyVault/vaults" `
+        -ErrorAction Stop `
+        | Where-object {$_.Name -like "CAM-*"}
+}
+catch {
+    # silently swallow - if we had an error we couldn't find the key vault, usually because the resource group didn't exist.
+}
 
-# if a user has provided ResourceGroupName as parameter:
-# - Check if user group exists. If it does deploy there.
-# - If it doesn't, create it in which case location parameter must be provided 
+# If there is a root keyvault, verify there is only one and then do the connector deployment.
+if ($CAMRootKeyvault) {
+    if ($CAMRootKeyvault -is [Array]) {
+        Write-Host "More than one CAM Key Vault found in this resource group."
+        Write-Host "Please move or remove all but one."
+        return   # early return!
+    }
+
+    Write-Host "The resource group $ResourceGroupName has a CAM deployment."
+    Write-Host "Using key vault $($CAMRootKeyvault.Name)"
+
+    Write-Host "`nCreating a new connection service for this Cloud Access Manager deployment. Hit CTRL-C if you want to cancel.`n"
+
+    $externalAccessPrompt = "Do you want to enable external network access for this connection service?"
+
+    if ($enableExternalAccess -eq $null) {
+        $enableExternalAccess = (confirmDialog $externalAccessPrompt -defaultSelected 'Y') -eq 'y'
+    }
+
+    # Network and domain prompt
+    # If it's a new deployment - ask about domain join and network
+    # If it's a new connection service - ask about network, which will set the region
+
+    # New connection service for an existing deployment - deal with networking in New-ConnectionServiceDeployment
+    Write-Host "Deploying a new connection service"
+
+    New-ConnectionServiceDeployment `
+        -RGName $ResourceGroupName `
+        -subscriptionId $selectedSubcriptionId `
+        -tenantId $selectedTenantId `
+        -keyVault $CAMRootKeyvault `
+        -testDeployment $testDeployment `
+        -tempDir $tempDir `
+        -enableExternalAccess $enableExternalAccess `
+        -enableRadiusMfa $enableRadiusMfa `
+        -radiusServerHost $radiusServerHost `
+        -radiusServerPort $radiusServerPort `
+        -radiusSharedSecret $radiusSharedSecret `
+        -vnetConfig $vnetConfig `
+        -promptForNetwork $true
+}
+else {
+    # New CAM deployment. 
+
+    # Find the CAM root RG.
+    $resourceGroups = Get-AzureRmResourceGroup
+
+    # if a user has provided ResourceGroupName as parameter:
+    # - Check if user group exists. If it does deploy there.
+    # - If it doesn't, create it in which case location parameter must be provided 
 
     $rgIndex = 0
     ForEach ($r in $resourceGroups) {
@@ -3319,7 +3378,7 @@ $resourceGroups = Get-AzureRmResourceGroup
         } else {
             Write-Host "`nAvailable Resource Groups"
             Write-Host ($resourceGroups | Select-Object -Property Number, ResourceGroupName, Location | Format-Table | Out-String)
-            Write-Host ("`nSelect the root resource group of the new Cloud Access Mananger deployment by number`n" +
+            Write-Host ("`nSelect the root resource group of the new Cloud Access Manager deployment by number`n" +
             "or type in a new resource group name.")
             $rgIdentifier = (Read-Host "Resource group").Trim()
         }
@@ -3384,43 +3443,31 @@ $resourceGroups = Get-AzureRmResourceGroup
     }
 
 
-Write-Host "Using root resource group: $($rgMatch.ResourceGroupName)"
+    Write-Host "Using root resource group: $($rgMatch.ResourceGroupName)"
 
-# At this point we have a subscription and a root resource group - check if there is already a deployment in it
-$CAMRootKeyvault = Get-AzureRmResource `
-    -ResourceGroupName $rgMatch.ResourceGroupName `
-    -ResourceType "Microsoft.KeyVault/vaults" `
-    | Where-object {$_.Name -like "CAM-*"}
 
-# If there is a root keyvault, verify there is only one.
-if ($CAMRootKeyvault) {
-    if ($CAMRootKeyvault -is [Array]) {
-        Write-Host "More than one CAM Key Vault found in this resource group."
-        Write-Host "Please move or remove all but one."
+    # At this point we have a subscription and a root resource group - check if there is already a deployment in it
+    $CAMRootKeyvault = Get-AzureRmResource `
+        -ResourceGroupName $rgMatch.ResourceGroupName `
+        -ResourceType "Microsoft.KeyVault/vaults" `
+        | Where-object {$_.Name -like "CAM-*"}
+
+    if ($CAMRootKeyvault) {
+        # Connector upgrades should have been caught above, abort.
+
+        Write-Host "The selected resource group already has a CAM deployment. Please select a different"
+        Write-Host "resource group for a new Cloud Access Manager deployment."
         return   # early return!
     }
-    Write-Host "The resource group $($rgMatch.ResourceGroupName) has a CAM deployment already."
-    Write-Host "Using key vault $($CAMRootKeyvault.Name)"
 
-    Write-Host "`nCreating a new connection service for this Cloud Access Manager deployment. Hit CTRL-C if you want to cancel.`n"
-
-    $externalAccessPrompt = "Do you want to enable external network access for this connection service?"
-}
-else {
-    # a new CAM deployment
+    # a new CAM deployment - check external access
     $externalAccessPrompt = "Do you want to enable external network access for your Cloud Access Manager deployment?"
-}
 
-if ($enableExternalAccess -eq $null) {
-    $enableExternalAccess = (confirmDialog $externalAccessPrompt -defaultSelected 'Y') -eq 'y'
-}
+    if ($enableExternalAccess -eq $null) {
+        $enableExternalAccess = (confirmDialog $externalAccessPrompt -defaultSelected 'Y') -eq 'y'
+    }
 
-# Network and domain prompt
-# If it's a new deployment - ask about domain join and network
-# If it's a new connection service - ask about network, which will set the region
-
-if (-not $CAMRootKeyvault) {
-    # New deployment
+    # Network and domain prompts
 
     # Check if deploying over an existing DC and vnet
     if( $deployOverDC -eq $null ) {
@@ -3708,23 +3755,4 @@ if (-not $CAMRootKeyvault) {
         -enableExternalAccess $enableExternalAccess `
         -domainControllerOsType $domainControllerOsType `
         -defaultIdleShutdownTime $defaultIdleShutdownTime
-}
-else {
-    # New connection service - deal with networking in New-ConnectionServiceDeployment
-    Write-Host "Deploying a new connection service"
-
-    New-ConnectionServiceDeployment `
-        -RGName $rgMatch.ResourceGroupName `
-        -subscriptionId $selectedSubcriptionId `
-        -tenantId $selectedTenantId `
-        -keyVault $CAMRootKeyvault `
-        -testDeployment $testDeployment `
-        -tempDir $tempDir `
-        -enableExternalAccess $enableExternalAccess `
-        -enableRadiusMfa $enableRadiusMfa `
-        -radiusServerHost $radiusServerHost `
-        -radiusServerPort $radiusServerPort `
-        -radiusSharedSecret $radiusSharedSecret `
-        -vnetConfig $vnetConfig `
-        -promptForNetwork $true
 }
