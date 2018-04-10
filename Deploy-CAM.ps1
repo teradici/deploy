@@ -3250,15 +3250,60 @@ if(-not $keyVaultProviderExists) {
     Register-AzureRmResourceProvider -ProviderNamespace "Microsoft.KeyVault" -ErrorAction stop | Out-Null
 }
 
+# Determine if we're upgrading a current deployment
+# This section returns a resource group name in $ResourceGroupName if one was found.
+$CAMKeyVaults = Find-AzureRmResource -ResourceType "Microsoft.KeyVault/vaults" | Where-object {$_.Name -like "CAM-*"}
+
+$deploymentIndex = 0
+ForEach ($s in $CAMKeyVaults) {
+    if (-not (Get-Member -inputobject $s -name "Number")) {
+        Add-Member -InputObject $s -Name "Number" -Value "" -MemberType NoteProperty
+    }
+
+    $s.Number = ++$deploymentIndex
+}
+
+if((-not $ResourceGroupName) -and ($deploymentIndex -gt 0)) {
+    while ($true) {
+
+        Write-Host "`nCloud Access Manager deployments in this subscription"
+        Write-Host ($CAMKeyVaults | Select-Object -Property Number, ResourceGroupName | Format-Table | Out-String)
+    
+    
+        Write-Host ("To upgrade or modify a Cloud Access Manager Deployment, select the resource group of the`n" +
+           "Cloud Access Mananger deployment root by number, or hit enter to create a new deployment.")
+        $rgIdentifier = (Read-Host "Resource group").Trim()
+        
+        # If empty string just exit loop
+        if(-not $rgIdentifier) {
+            break
+        }
+    
+        $rgIndex = 0
+        $rgIsInt = [int]::TryParse($rgIdentifier, [ref]$rgIndex) # rgIndex will be 0 on parse failure
+    
+        $rgArrayLength = $CAMKeyVaults.Length
+        if ( -not (( $rgIndex -ge 1) -and ( $rgIndex -le $rgArrayLength))) {
+            # Invalid range try again
+            Write-Host-Warning "Please enter a range between 1 and $rgArrayLength, or hit enter to create a new deployment"
+        }
+        else {
+            # Use the selected resource group for selection below
+            $ResourceGroupName = $CAMKeyVaults[$rgIndex - 1].ResourceGroupName
+            break
+        }
+    }
+}
+
 # Find the CAM root RG.
-$resouceGroups = Get-AzureRmResourceGroup
+$resourceGroups = Get-AzureRmResourceGroup
 
 # if a user has provided ResourceGroupName as parameter:
 # - Check if user group exists. If it does deploy there.
 # - If it doesn't, create it in which case location parameter must be provided 
 
     $rgIndex = 0
-    ForEach ($r in $resouceGroups) {
+    ForEach ($r in $resourceGroups) {
         if (-not (Get-Member -inputobject $r -name "Number")) {
             Add-Member -InputObject $r -Name "Number" -Value "" -MemberType NoteProperty
         }
@@ -3266,16 +3311,20 @@ $resouceGroups = Get-AzureRmResourceGroup
         $r.Number = ($rgIndex++) + 1
     }
 
-    Write-Host "`nAvailable Resource Groups"
-    Write-Host ($resouceGroups | Select-Object -Property Number, ResourceGroupName, Location | Format-Table | Out-String)
-
     $selectedRGName = $false
     $rgIsInt = $false
     $rgMatch = $null
     while (-not $selectedRGName) {
-        Write-Host ("`nSelect the resource group of the Cloud Access Mananger deployment root by number`n" +
-            "or type in a new resource group name for a new Cloud Access Mananger deployment.")
-        $rgIdentifier = if($ResourceGroupName) {$ResourceGroupName} else {(Read-Host "Resource group").Trim()}
+        if($ResourceGroupName) {
+            $rgIdentifier = $ResourceGroupName
+        } else {
+            Write-Host "`nAvailable Resource Groups"
+            Write-Host ($resourceGroups | Select-Object -Property Number, ResourceGroupName, Location | Format-Table | Out-String)
+            Write-Host ("`nSelect the root resource group of the new Cloud Access Mananger deployment by number`n" +
+            "or type in a new resource group name.")
+            $rgIdentifier = (Read-Host "Resource group").Trim()
+        }
+
         $ResourceGroupName = $null # clear out parameter if passed to avoid infinite retry loop
 
         if (!$rgIdentifier) {
@@ -3288,22 +3337,21 @@ $resouceGroups = Get-AzureRmResourceGroup
 
         if ($rgIsInt) {
             # entered an integer - we are not supporting integer names here for new resource groups
-            $rgArrayLength = $resouceGroups.Length
+            $rgArrayLength = $resourceGroups.Length
             if ( -not (( $rgIndex -ge 1) -and ( $rgIndex -le $rgArrayLength))) {
                 #invalid range 
                 Write-Host-Warning "Please enter a range between 1 and $rgArrayLength or the name of a new resource group."
             }
             else {
-                $rgMatch = $resouceGroups[$rgIndex - 1]
+                $rgMatch = $resourceGroups[$rgIndex - 1]
                 $selectedRGName = $true
             }
             continue
         }
         else {
             # entered a name. Let's see if it matches any resource groups first
-            $rgMatch = $resouceGroups | Where-Object {$_.ResourceGroupName -eq $rgIdentifier}
+            $rgMatch = $resourceGroups | Where-Object {$_.ResourceGroupName -eq $rgIdentifier}
             if ($rgMatch) {
-                Write-Host ("Resource group `"$($rgMatch.ResourceGroupName)`" already exists. The current one will be used.")
                 $selectedRGName = $true
             }
             else {
