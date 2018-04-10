@@ -2229,18 +2229,10 @@ function Deploy-CAM() {
 
     $spInfo = $null
     if (-not $spCredential) {
-        # if there's no service principal provided then we either need to make one or ask for one
+        # if there's no service principal provided through the command line or elsewhere then we need to make one if we can or ask for one if
+        # we're in the wrong tenant (which shouldn't happen...)
 
-
-        if ($tenantIDsMatch) {
-            if( -not $ignorePrompts ) {
-                $usingExistingSP = confirmDialog "Do you have an existing service principal you wish to use?"
-            } else {
-                $usingExistingSP="n"
-            }
-        }
-
-        if ((-not $tenantIDsMatch) -or ($usingExistingSP -eq "y")) {
+        if (-not $tenantIDsMatch) {
             # manually get credential
             $spCredential = Get-Credential -Message "Enter service principal credential"
 
@@ -2858,7 +2850,7 @@ function Set-VnetConfig() {
                 $v.Number = ++$vnetIndex
             }
 
-            Write-Host "`nPlease provide the VNet information for the VNet Cloud Access Manager connection service, gateways, and remote workstations"
+            Write-Host "`nPlease provide the VNet information that the Cloud Access Manager connection service, gateways, and remote workstations"
             Write-Host "will be using. Please enter the number of the vnet in the following list or the complete VNet ID in"
             Write-Host "the form /subscriptions/{subscriptionID}/resourceGroups/{vnetResourceGroupName}/providers/Microsoft.Network/virtualNetworks/{vnetName}`n"
             Write-Host "The service principal account for this Cloud Access Manager deployment will be provided access rights to the selected virtual network." -ForegroundColor Yellow
@@ -3419,9 +3411,7 @@ else {
     $externalAccessPrompt = "Do you want to enable external network access for your Cloud Access Manager deployment?"
 }
 
-if (($enableExternalAccess -eq $null) -and $ignorePrompts) {
-    $enableExternalAccess = $true
-} elseif ($enableExternalAccess -eq $null) {
+if ($enableExternalAccess -eq $null) {
     $enableExternalAccess = (confirmDialog $externalAccessPrompt -defaultSelected 'Y') -eq 'y'
 }
 
