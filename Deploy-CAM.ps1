@@ -58,8 +58,7 @@ Param(
     $AgentChannel = "stable",
 
     [parameter(Mandatory=$false)]
-    [bool]
-    $deployOverDC = $false,
+    $deployOverDC,
 
     [parameter(Mandatory=$false)]
     [String]
@@ -2058,8 +2057,7 @@ function Deploy-CAM() {
         $testDeployment = $false,
 
         [parameter(Mandatory = $false)]
-        [bool]
-        $deployOverDC = $false,
+        $deployOverDC,
 
         [parameter(Mandatory = $true)]
         $vnetConfig,
@@ -3171,6 +3169,15 @@ if (-not (Confirm-ModuleVersion) ) {
 Add-Type -AssemblyName System.Web
 
 
+# Setup a vnet config and populate with command line parameters
+$vnetConfig = @{}
+$vnetConfig.vnetID = $vnetID
+$vnetConfig.CSsubnetName = $ConnectionServiceSubnetName
+$vnetConfig.GWsubnetName = $GatewaySubnetName
+$vnetConfig.RWsubnetName = $RemoteWorkstationSubnetName
+
+
+# Get the user's subscription
 $rmContext = Get-AzureRmContext
 $subscriptions = Get-AzureRmSubscription -WarningAction Ignore
 $subscriptionsToDisplay = $subscriptions | Where-Object { $_.State -eq 'Enabled' }
@@ -3423,25 +3430,12 @@ if (($enableExternalAccess -eq $null) -and $ignorePrompts) {
 # If it's a new connection service - ask about network, which will set the region
 
 if (-not $CAMRootKeyvault) {
-    # Check if deploying Root only (ie, DC and vnet already exist)
-    if( -not $ignorePrompts) {
-        if( -not $deployOverDC ) {
-            $deployOverDC = (confirmDialog "Do you want to connect to an existing domain?") -eq 'y'
-        }
+    # New deployment
+
+    # Check if deploying over an existing DC and vnet
+    if( $deployOverDC -eq $null ) {
+        $deployOverDC = (confirmDialog "Do you want to connect to an existing domain?" -defaultSelected 'Y') -eq 'y'
     }
-
-}
-
-#Setup a vnet config and populate with command line parameters
-$vnetConfig = @{}
-$vnetConfig.vnetID = $vnetID
-$vnetConfig.CSsubnetName = $ConnectionServiceSubnetName
-$vnetConfig.GWsubnetName = $GatewaySubnetName
-$vnetConfig.RWsubnetName = $RemoteWorkstationSubnetName
-
-if( -not $CAMRootKeyvault )
-{
-    # New deployment - either complete or a root + Remote Workstation deployment
 
     if( -not $deployOverDC ) {
 
@@ -3450,13 +3444,13 @@ if( -not $CAMRootKeyvault )
             $vnetConfig.vnetID = "/subscriptions/$selectedSubcriptionId/resourceGroups/$($rgMatch.ResourceGroupName)/providers/Microsoft.Network/virtualNetworks/vnet-CloudAccessManager"
         }
         if( -not $vnetConfig.CSSubnetName ) {
-            $vnetConfig.CSSubnetName = "subnet-ConnectionService"
+            $vnetConfig.CSSubnetName = "ConnectionService"
         }
         if( -not $vnetConfig.GWSubnetName ) {
-            $vnetConfig.GWSubnetName = "subnet-AppGateway"
+            $vnetConfig.GWSubnetName = "AppGateway"
         }
         if( -not $vnetConfig.RWSubnetName ) {
-            $vnetConfig.RWSubnetName = "subnet-RemoteWorkstation"
+            $vnetConfig.RWSubnetName = "RemoteWorkstation"
         }
     }
     else {
