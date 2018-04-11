@@ -386,7 +386,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
                 throw ("Failed to register with Cloud Access Manager service. Result was: " + (ConvertTo-Json $registerUserResult))
             }
 
-            Write-Host "Cloud Access Manager Connection Service has been registered successfully"
+            Write-Host "Cloud Access Manager deployment has been registered successfully"
 
             # Get a Sign-in token
             $signInResult = ""
@@ -928,7 +928,7 @@ function Generate-Certificate-And-Passwords() {
     $rwLocalAdminPassword = ConvertTo-SecureString $rwLocalAdminPasswordStr -AsPlainText -Force
     $CAMConfig.parameters.remoteWorkstationLocalAdminPassword.value = $rwLocalAdminPassword
 
-    Write-Host "Creating Local Admin Password for Connection Service servers"
+    Write-Host "Creating Local Admin Password for Cloud Access connector servers"
 
     $csLocalAdminPasswordStr = "5!" + ( -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})) # "5!" is to ensure numbers and symbols
 
@@ -1213,7 +1213,7 @@ function New-CAMDeploymentInfo() {
         $kvName # Key Vault name
     )
 
-    Write-Host "Populating CAMDeploymentInfo structure for the Connection Service"
+    Write-Host "Populating CAMDeploymentInfo structure."
 
 
     # Mapping CAM deployment info environment variable parameters
@@ -1362,7 +1362,7 @@ function Append-AzureRMLog {
 
 
 
-# Deploy a connection service over a current deployment
+# Deploy a Cloud Access connector over a current deployment
 function New-ConnectionServiceDeployment() {
     param(
         $RGName,
@@ -1450,11 +1450,11 @@ function New-ConnectionServiceDeployment() {
         # promptForNetwork only works if we have access to the key vault.
 
         # vnetConfig contains the complete (final) config in the case of a deploy-over-DC (promptForNetwork is $null)
-        # in the case of a new connection service it contains just what was passed on the command line
+        # in the case of a new connector it contains just what was passed on the command line.
+        # For automation, to deploy in a different region then CSSubnetName and GWSubnetName need to be passed on the
+        # command line and the prompt will be bypassed.
 
-        #TODO: ignorePrompts properly for automation!!!!
-
-        if ($promptForNetwork)
+        if ($promptForNetwork -and ((-not $vnetConfig.CSSubnetID) -or (-not $vnetConfig.GWSubnetID))
         {
             $reselectNetwork = (confirmDialog "Do you want to deploy into a different region than $rootLocation" -defaultSelected 'N') -eq 'y'
 
@@ -1490,9 +1490,9 @@ function New-ConnectionServiceDeployment() {
         $vnetConfig.CSSubnetID = $vnetConfig.vnetID + "/subnets/$($vnetConfig.CSSubnetName)"
         $vnetConfig.GWSubnetID = $vnetConfig.vnetID + "/subnets/$($vnetConfig.GWSubnetName)"
 
-        # Find a connection service resource group name that can be used.
-        # An incrementing count is used to find a free resource group. This count is
-        # identifier, even if old connection services have been deleted.
+        # Find a connector resource group name that can be used.
+        # An incrementing count is used to find a free resource group. This count is the
+        # identifier, even if old connectors have been deleted.
         $csRGName = $null
         while(-not $csRGName)
         {
@@ -1524,7 +1524,7 @@ function New-ConnectionServiceDeployment() {
             
             Write-Host "Checking available resource group for connection service number $connectionServiceNumber"
 
-            $csRGName = $RGName + "-CS" + $connectionServiceNumber
+            $csRGName = $RGName + "-CN" + $connectionServiceNumber
             Set-AzureRMContext -Context $adminAzureContext | Out-Null
             $rg = Get-AzureRmResourceGroup -ResourceGroupName $csRGName -ErrorAction SilentlyContinue
 
@@ -1543,7 +1543,7 @@ function New-ConnectionServiceDeployment() {
         Set-AzureRMContext -Context $adminAzureContext | Out-Null
 
 
-        # Create Connection Service Resource Group if it doesn't exist, in the location of the target vnet
+        # Create connector Resource Group if it doesn't exist, in the location of the target vnet
         if (-not (Find-AzureRmResourceGroup | Where-Object {$_.name -eq $csRGName}) ) {
             $vnet = Get-AzureRmVirtualNetwork -Name $vnetName -ResourceGroupName $vnetRgName
             $location = $vnet.Location
@@ -1767,7 +1767,7 @@ function New-ConnectionServiceDeployment() {
         $outputParametersFilePath = Join-Path $tempDir $outputParametersFileName
         Set-Content $outputParametersFilePath  $generatedDeploymentParameters
 
-        Write-Host "`nDeploying Cloud Access Manager Connection Service. This process can take up to 60 minutes."
+        Write-Host "`nDeploying Cloud Access connector. This process can take up to 60 minutes."
         Write-Host "Please feel free to watch here for early errors for a few minutes and then go do something else. Or go for coffee!"
         Write-Host "If this script is running in Azure Cloud Shell then you may let the shell timeout and the deployment will continue."
         Write-Host "Please watch the resource group $csRGName in the Azure Portal for current status. The Connection Service deployment is"
@@ -2383,7 +2383,7 @@ function Deploy-CAM() {
             -ownerTenantId $ownerTenantId `
             -ownerUpn $ownerUpn
 
-        # Populate/re-populate CAMDeploymentInfo before deploying any connection service
+        # Populate/re-populate CAMDeploymentInfo before deploying the connector
         New-CAMDeploymentInfo `
             -kvName $kvInfo.VaultName
 
@@ -2838,7 +2838,7 @@ function Set-VnetConfig() {
         $setRWSubnet = $true
     )
 
-    # prompt for vnet name, gateway subnet name, remote workstation subnet name, connection service subnet name
+    # prompt for vnet name, gateway subnet name, remote workstation subnet name, connector subnet name
     do {
         if ( -not $vnetConfig.vnetID ) {
             $vnets = Get-AzureRmVirtualNetwork
@@ -2851,7 +2851,7 @@ function Set-VnetConfig() {
                 $v.Number = ++$vnetIndex
             }
 
-            Write-Host "`nPlease provide the VNet information that the Cloud Access Manager connection service, gateways, and remote workstations"
+            Write-Host "`nPlease provide the VNet information that the Cloud Access connectors, gateways, and remote workstations"
             Write-Host "will be using. Please enter the number of the vnet in the following list or the complete VNet ID in"
             Write-Host "the form /subscriptions/{subscriptionID}/resourceGroups/{vnetResourceGroupName}/providers/Microsoft.Network/virtualNetworks/{vnetName}`n"
             Write-Host "The service principal account for this Cloud Access Manager deployment will be provided access rights to the selected virtual network." -ForegroundColor Yellow
@@ -2897,10 +2897,10 @@ function Set-VnetConfig() {
         $s.Number = ++$subnetIndex
     }
 
-    # Connection Service Subnet
+    # connector Subnet
     do {
         if ( -not $vnetConfig.CSsubnetName ) {
-            Write-Host "Please provide Connection Service Subnet number from the list below, or name"
+            Write-Host "Please provide the Cloud Access connector subnet number from the list below, or name"
             $subnets | Select-Object -Property Number, Name | Format-Table
             $chosenSubnet = Read-Host "Subnet"
             $subnetIndex = 0
@@ -2921,7 +2921,7 @@ function Set-VnetConfig() {
             $vnetConfig.CSsubnetName = $null
         }
     } while (-not $vnetConfig.CSsubnetName)
-    Write-Host "Connection Service Subnet: $($vnetConfig.CSsubnetName)`n"
+    Write-Host "Cloud Access Connector Subnet: $($vnetConfig.CSsubnetName)`n"
 
     # Application Gateway Subnet
     do {
@@ -3373,20 +3373,15 @@ if ($CAMRootKeyvault) {
     $hasKVAccess = Set-KeyVaultAccess($CAMRootKeyvault)
     if(-not $hasKVAccess) {return}
 
-    Write-Host "`nCreating a new connection service for this Cloud Access Manager deployment. Hit CTRL-C if you want to cancel.`n"
+    Write-Host "`nCreating a new Cloud Access connector for this Cloud Access Manager deployment. Hit CTRL-C if you want to cancel.`n"
 
-    $externalAccessPrompt = "Do you want to enable external network access for this connection service?"
+    $externalAccessPrompt = "Do you want to enable external network access for this connector?"
 
     if ($enableExternalAccess -eq $null) {
         $enableExternalAccess = (confirmDialog $externalAccessPrompt -defaultSelected 'Y') -eq 'y'
     }
 
-    # Network and domain prompt
-    # If it's a new deployment - ask about domain join and network
-    # If it's a new connection service - ask about network, which will set the region
-
-    # New connection service for an existing deployment - deal with networking in New-ConnectionServiceDeployment
-    Write-Host "Deploying a new connection service"
+    Write-Host "Deploying a new Cloud Access connector"
 
     New-ConnectionServiceDeployment `
         -RGName $ResourceGroupName `
@@ -3553,29 +3548,29 @@ else {
             $vnetConfig.vnetID = "/subscriptions/$selectedSubcriptionId/resourceGroups/$($rgMatch.ResourceGroupName)/providers/Microsoft.Network/virtualNetworks/vnet-CloudAccessManager"
         }
         if( -not $vnetConfig.CSSubnetName ) {
-            $vnetConfig.CSSubnetName = "ConnectionService"
+            $vnetConfig.CSSubnetName = "CloudAccessConnectors"
         }
         if( -not $vnetConfig.GWSubnetName ) {
-            $vnetConfig.GWSubnetName = "AppGateway"
+            $vnetConfig.GWSubnetName = "ApplicationGateways"
         }
         if( -not $vnetConfig.RWSubnetName ) {
-            $vnetConfig.RWSubnetName = "RemoteWorkstation"
+            $vnetConfig.RWSubnetName = "RemoteWorkstations"
         }
     }
 
     # Now let's create the other required resource groups
 
-    $csRGName = $rgMatch.ResourceGroupName + "-CS1"
+    $csRGName = $rgMatch.ResourceGroupName + "-CN1"
     $rwRGName = $rgMatch.ResourceGroupName + "-RW"
 
     $csrg = Get-AzureRmResourceGroup -ResourceGroupName $csRGName -ErrorAction SilentlyContinue
     if($csrg)
     {
         # assume it's there for a reason? Alternately we could fail but...
-        Write-Host "Connection service resource group $csRGName exists. Using it."
+        Write-Host "Cloud Access connector resource group $csRGName exists. Using it."
     }
     else {
-        Write-Host "Creating connection service resource group $csRGName"
+        Write-Host "Creating Cloud Access connector resource group $csRGName"
         $csrg = New-AzureRmResourceGroup -Name $csRGName -Location $rgMatch.Location -ErrorAction Stop
     }
 
