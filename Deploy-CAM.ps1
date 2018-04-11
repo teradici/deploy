@@ -878,14 +878,15 @@ function New-CAM-KeyVault() {
     # Get previous service principal context and set back to admin
     $spContext = Get-AzureRMContext
     Set-AzureRMContext -Context $adminAzureContext | Out-Null
+    $claims = Get-Claims # Current logged in user info
 
     try {
         Set-AzureRmKeyVaultAccessPolicy `
             -VaultName $kvName `
-            -UserPrincipalName $adminAzureContext.Account.Id `
+            -ObjectId $claims.oid `
             -PermissionsToSecrets Get, Set, List `
             -ErrorAction stop | Out-Null
-        Write-Host "Successfully set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
+        Write-Host "Successfully set access policy for vault $kvName for user $($claims.unique_name)"
         }
     catch {
         # Silently swallow exception
@@ -1397,7 +1398,7 @@ function New-ConnectionServiceDeployment() {
             $key = $spCredential.GetNetworkCredential().Password
         }
         else {
-            try{
+            try {
                 $secret = Get-AzureKeyVaultSecret `
                     -VaultName $kvName `
                     -Name "AzureSPClientID" `
@@ -3145,12 +3146,60 @@ function Set-RadiusSettings() {
             -kvName $VaultName `
             -CAMConfig $camConfig
     }
-
 }
+
+# Gives the currently authenticated user Secret access to the key vault and returns
+# $true on success and $false on failure
+function Set-KeyVaultAccess()
+{
+    param(
+        $CAMRootKeyvault
+        )
+
+    $claims = Get-Claims # Current logged in user info
+
+    $kvName = $CAMRootKeyvault.name
+    try {
+        # We don't need the secret but need to know we can get it.
+        Get-AzureKeyVaultSecret `
+            -VaultName $kvName `
+            -Name "AzureSPClientID" `
+            -ErrorAction stop | Out-Null
+        return $true
+    }
+    catch {
+        $err = $_
+        if ($err.Exception.Message -eq "Access denied") {
+            Write-Host "Cannot access key vault secret. Attempting to set access policy for vault $kvName for user $($claims.unique_name)"
+            try {
+                Set-AzureRmKeyVaultAccessPolicy `
+                    -VaultName $kvName `
+                    -ObjectId $claims.oid `
+                    -PermissionsToSecrets Get, Set, List `
+                    -ErrorAction stop | Out-Null
+                return $true
+            }
+            catch {
+                Write-Host "`nFailed to set access policy for vault $kvName for user $($claims.unique_name)."
+                Write-Host "Please use the Azure Portal to provide the current logged-in account with get, list, and set access"
+                Write-Host "to the secrets in $kvName"
+                return $false
+            }
+        }
+        else {
+            # Something strange - re-throw.
+            throw $err
+        }
+    }
+}
+
+
+
 
 ##############################################
 ############# Script starts here #############
 ##############################################
+
 
 if (-not (Confirm-ModuleVersion) ) {
     exit
@@ -3319,6 +3368,10 @@ if ($CAMRootKeyvault) {
 
     Write-Host "The resource group $ResourceGroupName has a CAM deployment."
     Write-Host "Using key vault $($CAMRootKeyvault.Name)"
+
+    # Ensure this user account can get secrets from the key vault
+    $hasKVAccess = Set-KeyVaultAccess($CAMRootKeyvault)
+    if(-not $hasKVAccess) {return}
 
     Write-Host "`nCreating a new connection service for this Cloud Access Manager deployment. Hit CTRL-C if you want to cancel.`n"
 
