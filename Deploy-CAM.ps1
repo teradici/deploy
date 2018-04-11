@@ -1376,13 +1376,11 @@ function New-ConnectionServiceDeployment() {
         $radiusServerHost,
         $radiusServerPort,
         $radiusSharedSecret,
-        $vnetConfig,
-        $promptForNetwork
+        $vnetConfig
     )
 
     $kvID = $keyVault.ResourceId
     $kvName = $keyVault.Name
-    $rootLocation = (Get-AzureRmResourceGroup -ResourceGroupName $RGName -ErrorAction stop).location
 
     # First, let's find the Service Principal 
     $adminAzureContext = Get-AzureRMContext
@@ -1446,44 +1444,6 @@ function New-ConnectionServiceDeployment() {
 
         Write-Host "Using service principal $client in tenant $tenantId and subscription $subscriptionId"
         
-        # If we got here we either got passed the SP credentials or we have access to the key vault.
-        # promptForNetwork only works if we have access to the key vault.
-
-        # vnetConfig contains the complete (final) config in the case of a deploy-over-DC (promptForNetwork is $null)
-        # in the case of a new connector it contains just what was passed on the command line.
-        # For automation, to deploy in a different region then CSSubnetName and GWSubnetName need to be passed on the
-        # command line and the prompt will be bypassed.
-
-        if ($promptForNetwork -and ((-not $vnetConfig.CSSubnetID) -or (-not $vnetConfig.GWSubnetID))
-        {
-            $reselectNetwork = (confirmDialog "Do you want to deploy into a different region than $rootLocation" -defaultSelected 'N') -eq 'y'
-
-            if($reselectNetwork) {
-                # We don't need the RWSubnetName so don't prompt
-                if(-not $vnetConfig.RWSubnetName) {
-                    $vnetConfig.RWSubnetName = "dummy"
-                }
-
-                Set-VnetConfig  -vnetConfig $vnetConfig -setRWSubnet $false
-            }
-            else {
-                # Populate from key vault
-
-                $secret = Get-AzureKeyVaultSecret `
-                    -VaultName $kvName `
-                    -Name "connectionServiceSubnet" `
-                    -ErrorAction stop
-                $vnetConfig.vnetID = ($secret.SecretValueText.split('/'))[0..8] -join '/'
-                $vnetConfig.CSSubnetName = $secret.SecretValueText.split("/")[-1]
-
-                $secret = Get-AzureKeyVaultSecret `
-                    -VaultName $kvName `
-                    -Name "gatewaySubnet" `
-                    -ErrorAction stop
-                $vnetConfig.GWSubnetName = $secret.SecretValueText.split("/")[-1]
-            }
-        }
-
         # Generate ID's from all the name information
         $vnetName = $vnetConfig.vnetID.split("/")[-1]
         $vnetRgName = $vnetConfig.vnetID.split("/")[4]
@@ -3381,6 +3341,40 @@ if ($CAMRootKeyvault) {
         $enableExternalAccess = (confirmDialog $externalAccessPrompt -defaultSelected 'Y') -eq 'y'
     }
 
+    # For automation, to deploy in a different region then CSSubnetName and GWSubnetName need to be passed on the
+    # command line and the prompt will be bypassed.
+
+    if ((-not $vnetConfig.CSSubnetID) -or (-not $vnetConfig.GWSubnetID))
+    {
+        $rootLocation = (Get-AzureRmResourceGroup -ResourceGroupName $ResourceGroupName -ErrorAction stop).location
+        $reselectNetwork = (confirmDialog "Do you want to deploy into a different region than $rootLocation" -defaultSelected 'N') -eq 'y'
+
+        if($reselectNetwork) {
+            # We don't need the RWSubnetName so don't prompt
+            if(-not $vnetConfig.RWSubnetName) {
+                $vnetConfig.RWSubnetName = "dummy"
+            }
+
+            Set-VnetConfig  -vnetConfig $vnetConfig -setRWSubnet $false
+        }
+        else {
+            # Populate from key vault
+
+            $secret = Get-AzureKeyVaultSecret `
+                -VaultName $CAMRootKeyvault.Name `
+                -Name "connectionServiceSubnet" `
+                -ErrorAction stop
+            $vnetConfig.vnetID = ($secret.SecretValueText.split('/'))[0..8] -join '/'
+            $vnetConfig.CSSubnetName = $secret.SecretValueText.split("/")[-1]
+
+            $secret = Get-AzureKeyVaultSecret `
+                -VaultName $CAMRootKeyvault.Name `
+                -Name "gatewaySubnet" `
+                -ErrorAction stop
+            $vnetConfig.GWSubnetName = $secret.SecretValueText.split("/")[-1]
+        }
+    }
+        
     Write-Host "Deploying a new Cloud Access connector"
 
     New-ConnectionServiceDeployment `
@@ -3395,8 +3389,7 @@ if ($CAMRootKeyvault) {
         -radiusServerHost $radiusServerHost `
         -radiusServerPort $radiusServerPort `
         -radiusSharedSecret $radiusSharedSecret `
-        -vnetConfig $vnetConfig `
-        -promptForNetwork $true
+        -vnetConfig $vnetConfig
 }
 else {
     # New CAM deployment. 
