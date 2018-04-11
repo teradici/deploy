@@ -2154,7 +2154,7 @@ function Deploy-CAM() {
     $CAMConfig.internal.location = (Get-AzureRmResourceGroup -ResourceGroupName $rwRGName -ErrorAction stop).location
     $CAMConfig.internal.vnetID = $vnetConfig.vnetID
     $CAMConfig.internal.vnetName = $CAMConfig.internal.vnetID.split("/")[-1]
-    $CAMConfig.internal.rootSubnetName = "subnet-CAMRoot"
+    $CAMConfig.internal.rootSubnetName = "CAMRoot"
     $CAMConfig.internal.RWSubnetName = $vnetConfig.RWSubnetName
     $CAMConfig.internal.CSSubnetName = $vnetConfig.CSSubnetName
     $CAMConfig.internal.GWSubnetName = $vnetConfig.GWSubnetName
@@ -3358,7 +3358,7 @@ catch {
     # silently swallow - if we had an error we couldn't find the key vault, usually because the resource group didn't exist.
 }
 
-# If there is a root keyvault, verify there is only one and then do the connector deployment.
+# If there is a root keyvault, verify there is only one and then query for connector deployment.
 if ($CAMRootKeyvault) {
     if ($CAMRootKeyvault -is [Array]) {
         Write-Host "More than one CAM Key Vault found in this resource group."
@@ -3405,6 +3405,26 @@ if ($CAMRootKeyvault) {
 }
 else {
     # New CAM deployment. 
+
+    # Figure out if deploying over a current DC and vnet (in which case we know the location so don't need to prompt)
+
+    if($deployOverDC -eq $null) {
+        $deployOverDC = (confirmDialog "Do you want to connect to an existing domain?" -defaultSelected 'Y') -eq 'y'
+    }
+
+    if($deployOverDC) {
+        # Don't create new DC and vnet - prompt for which vnet and subnets to use
+        Set-VnetConfig -vnetConfig $vnetConfig
+        $vnetLocation = (Get-AzureRmResource -ResourceId $vnetConfig.vnetID -ErrorAction Stop).Location
+
+        if($location) {
+            Write-Host-Warning "Overriding provided location of $location to $vnetLocation"
+        }
+        else {
+            Write-Host "Using the virtual network location $vnetLocation"
+        }
+        $location = $vnetlocation
+    }
 
     # Find the CAM root RG.
     $resourceGroups = Get-AzureRmResourceGroup
@@ -3473,9 +3493,14 @@ else {
                 $azureLocation = Get-AzureRMLocation
                 $locations = @(($azureLocation | Select-Object Location).location) + @(($azureLocation | Select-Object DisplayName).Displayname)
                 while ($true) {
-                    Write-Host("Available Azure Locations")
-                    Write-Host ($azureLocation | Select-Object -Property Location, DisplayName | Format-Table | Out-String )
-                    $newRGLocation = if($location) {$location} else {(Read-Host "`nEnter resource group location").Trim()}
+                    if($location){
+                        $newRGLocation = $location
+                    }
+                    else {
+                        Write-Host("Available Azure Locations")
+                        Write-Host ($azureLocation | Select-Object -Property Location, DisplayName | Format-Table | Out-String )
+                        $newRGLocation = (Read-Host "`nEnter resource group location").Trim()
+                    }
                     $location = $null # clear out parameter if passed to avoid infinite retry loop
 
                     if ($locations -Contains $newRGLocation){
@@ -3506,7 +3531,8 @@ else {
         | Where-object {$_.Name -like "CAM-*"}
 
     if ($CAMRootKeyvault) {
-        # Connector upgrades should have been caught above, abort.
+        # Connector upgrades should have been caught above. If we got here they manually typed in a resource
+        # group that already had a deployment. Abort.
 
         Write-Host "The selected resource group already has a CAM deployment. Please select a different"
         Write-Host "resource group for a new Cloud Access Manager deployment."
@@ -3520,16 +3546,9 @@ else {
         $enableExternalAccess = (confirmDialog $externalAccessPrompt -defaultSelected 'Y') -eq 'y'
     }
 
-    # Network and domain prompts
-
-    # Check if deploying over an existing DC and vnet
-    if( $deployOverDC -eq $null ) {
-        $deployOverDC = (confirmDialog "Do you want to connect to an existing domain?" -defaultSelected 'Y') -eq 'y'
-    }
-
     if( -not $deployOverDC ) {
 
-        # CAM in a box - create new DC and vnet. Default values are populated here and command line parameters if any are ignored.
+        # CAM in a box - create new DC and vnet. Default values are populated here if not provided on command line.
         if( -not $vnetConfig.vnetID ) {
             $vnetConfig.vnetID = "/subscriptions/$selectedSubcriptionId/resourceGroups/$($rgMatch.ResourceGroupName)/providers/Microsoft.Network/virtualNetworks/vnet-CloudAccessManager"
         }
@@ -3542,10 +3561,6 @@ else {
         if( -not $vnetConfig.RWSubnetName ) {
             $vnetConfig.RWSubnetName = "RemoteWorkstation"
         }
-    }
-    else {
-        # Don't create new DC and vnet - prompt for which vnet and subnets to use
-        Set-VnetConfig -vnetConfig $vnetConfig
     }
 
     # Now let's create the other required resource groups
