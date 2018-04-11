@@ -319,7 +319,7 @@
             "value": "[variables('sgNsgName')]"
           },
           "vmSku": {
-            "value": "Standard_A1_v2"
+            "value": "Standard_A2_v2"
           },
           "vmssName": {
             "value": "[concat('SG-VMSS',parameters('CSUniqueSuffix'))]"
