@@ -582,9 +582,6 @@ then
 
     sudo yum -y install wget
 
-    # do not know why firewall does not start now, which cause pcoip agent installa failed
-    start_firewall
-
     install_SumoLogic
 
     join_domain
