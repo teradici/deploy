@@ -2,24 +2,6 @@
 "api.version": "v1",
 "sources": [
     {
-        "name":  "CAM_Deploy_ConnectionServer_Win_Azure_Logs",
-        "category":  "CAM/Deploy/ConnectionServer/Win/Azure/Logs",
-        "automaticDateParsing":  true,
-        "multilineProcessingEnabled":  true,
-        "useAutolineMatching":  false,
-        "forceTimeZone":  false,
-        "timeZone":  "Etc/UTC",
-        "filters":  [
-                    ],
-        "cutoffTimestamp":  0,
-        "encoding":  "UTF-8",
-        "pathExpression":  "C:\\WindowsAzure\\Logs\\Plugins\\Microsoft.Powershell.DSC\\**\\*.log",
-        "blacklist":  [
-                      ],
-        "sourceType":  "LocalFile",
-        "alive":  false
-    },
-    {
         "name":  "CAM_Deploy_RemoteWorkstation_Win_Teradici_Agent_Logs",
         "category":  "CAM/Deploy/RemoteWorkstation/Win/Teradici/Agent/Logs",
         "automaticDateParsing":  true,
@@ -32,6 +14,24 @@
         "cutoffTimestamp":  0,
         "encoding":  "UTF-8",
         "pathExpression":  "C:\\ProgramData\\Teradici\\PCoIPAgent\\logs\\*.txt",
+        "blacklist":  [
+                      ],
+        "sourceType":  "LocalFile",
+        "alive":  false
+    },
+    {
+        "name":  "CAM_Deploy_RemoteWorkstation_Win_Azure_Logs",
+        "category":  "CAM/Deploy/RemoteWorkstation/Win/Azure/Logs",
+        "automaticDateParsing":  true,
+        "multilineProcessingEnabled":  true,
+        "useAutolineMatching":  false,
+        "forceTimeZone":  false,
+        "timeZone":  "Etc/UTC",
+        "filters":  [
+                    ],
+        "cutoffTimestamp":  0,
+        "encoding":  "UTF-8",
+        "pathExpression":  "C:\\WindowsAzure\\**\\*.log",
         "blacklist":  [
                       ],
         "sourceType":  "LocalFile",
@@ -54,6 +54,24 @@
         "renderMessages":true,
         "sidStyle":2,
         "sourceType":"LocalWindowsEventLog"
+    },
+    {
+        "name":  "CAM_Deploy_RemoteWorkstation_Win_Azure_Logs",
+        "category":  "CAM/Deploy/RemoteWorkstation/Win/Azure/Logs",
+        "automaticDateParsing":  true,
+        "multilineProcessingEnabled":  true,
+        "useAutolineMatching":  false,
+        "forceTimeZone":  false,
+        "timeZone":  "Etc/UTC",
+        "filters":  [
+                    ],
+        "cutoffTimestamp":  0,
+        "encoding":  "UTF-8",
+        "pathExpression":  "C:\\WindowsAzure\\Logs\\Plugins\\Microsoft.Powershell.DSC\\**\\*.log",
+        "blacklist":  [
+                      ],
+        "sourceType":  "LocalFile",
+        "alive":  false
     }
 ]
 }
