@@ -3201,8 +3201,8 @@ $resouceGroups = Get-AzureRmResourceGroup
     $rgIsInt = $false
     $rgMatch = $null
     while (-not $selectedRGName) {
-        Write-Host ("`nSelect the resource group of the Cloud Access Mananger deployment root by number`n" +
-            "or type in a new resource group name for a new Cloud Access Mananger deployment.")
+        Write-Host ("`nSelect the resource group of the Cloud Access Manager deployment root by number`n" +
+            "or type in a new resource group name for a new Cloud Access Manager deployment.")
         $rgIdentifier = if($ResourceGroupName) {$ResourceGroupName} else {(Read-Host "Resource group").Trim()}
         $ResourceGroupName = $null # clear out parameter if passed to avoid infinite retry loop
 
@@ -3317,6 +3317,20 @@ if ($CAMRootKeyvault) {
 
 } else {
     # New deployment - either complete or a root + Remote Workstation deployment
+
+    # EULA and Privacy Policy
+    if( -not $ignorePrompts) {
+        Write-Host "`nBy deploying Cloud Access Manager, you accept the terms of the Teradici Cloud Access Software End User License Agreement"
+        Write-Host "http://www.teradici.com/eula/1609005 and Privacy Policy https://www.teradici.com/privacy-policy/cloud-access-manager"
+        Write-Host "And have read and agree to be bound by the software license for use of the third-party drivers."
+
+        $acceptEULA = (confirmDialog "Do you accept the policies and agreements?" -defaultSelected "Y") -eq 'y'
+
+        if(-not $acceptEULA) {
+            Write-Host "Exiting."
+            exit 
+        }
+    }
 
     # Check if deploying Root only (ie, DC and vnet already exist)
     if( -not $ignorePrompts) {
