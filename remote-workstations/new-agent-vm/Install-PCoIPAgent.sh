@@ -111,12 +111,18 @@ install_lis()
 
     if [[ $exitCode -eq 0 ]]
     then
-        echo "-->Installing" | tee -a "$INST_LOG_FILE"
+        echo "-->Installing Linux Integration Services for Hyper-V " | tee -a "$INST_LOG_FILE"
         tar xvzf "$LIS_FILE"
 
         cd LISISO
         sudo ./install.sh
         exitCode=$?
+
+        if [[ $exitCode -ne 0 ]]
+        then
+            echo "-->Failed to install Linux Integration Services for Hyper-V " | tee -a "$INST_LOG_FILE"            
+        fi
+
         cd ..
     else
         echo "Download Failed" | tee -a "$INST_LOG_FILE"
@@ -170,7 +176,24 @@ join_domain()
     # Join domain
     echo "-->Install required packages to join domain" | tee -a "$INST_LOG_FILE"
     sudo yum -y install sssd realmd oddjob oddjob-mkhomedir adcli samba-common samba-common-tools krb5-workstation openldap-clients policycoreutils-python
-    sudo systemctl enable sssd
+
+    echo "-->restarting messagebus service" | tee -a "$INST_LOG_FILE"
+    sudo systemctl restart messagebus    
+    local exitCode=$?
+    if [[ $exitCode -ne 0 ]]
+    then
+        echo "Failed to restart messagebus service" | tee -a "$INST_LOG_FILE"
+        return 106
+    fi
+
+    echo "-->enable and start sssd service" | tee -a "$INST_LOG_FILE"
+    sudo systemctl enable sssd --now    
+    exitCode=$?
+    if [[ $exitCode -ne 0 ]]
+    then
+        echo "Failed to start sssd service" | tee -a "$INST_LOG_FILE"
+        return 106
+    fi
 
     echo "-->Joining the domain" | tee -a "$INST_LOG_FILE"
     if [[ -n "${OU}" ]]
@@ -179,9 +202,7 @@ join_domain()
     else
         echo "$PASSWORD" | sudo realm join --user="$USERNAME" "$DOMAIN_NAME" >&2
     fi
-
-    local exitCode=$?
-
+    exitCode=$?
     if [[ $exitCode -eq 0 ]]
     then
         echo "-->Joined Domain '${DOMAIN_NAME}' and OU '${OU}'" | tee -a "$INST_LOG_FILE"
@@ -343,6 +364,12 @@ install_gui()
     # Install Desktop
     echo "-->Install desktop" | tee -a "$INST_LOG_FILE"
     sudo yum -y groupinstall "Server with GUI"
+    local exitCode=$?
+    if [[ $exitCode -ne 0 ]]
+    then
+        echo "Failed to install desktop" | tee -a "$INST_LOG_FILE"
+        return $exitCode
+    fi
 
     # install firefox
     echo "-->Install firefox" | tee -a "$INST_LOG_FILE"
@@ -391,22 +418,47 @@ install_pcoip_agent()
     sudo rpm -Uvh --quiet https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
     # Install the PCoIP Agent
-    echo "-->Install the PCoIP $AGENT_TYPE agent" | tee -a "$INST_LOG_FILE"
+    local dispName=("first" "second" "third")
     for idx in {1..3}
     do
+        echo "-->Install the PCoIP $AGENT_TYPE agent at ${dispName[idx -1]} time" | tee -a "$INST_LOG_FILE"
         sudo yum -y install "pcoip-agent-$AGENT_TYPE"
         exitCode=$?
+
+        if [[ $exitCode -eq 0 ]]
+        then
+            # to check service pcoip-agent is allowed by firewall
+            sudo firewall-cmd --list-services | grep "pcoip-agent"
+            exitCode=$?
+            if [[ $exitCode -ne 0 ]]
+            then
+                start_firewall
+
+                echo "enable service pcoip-agent in firewall." | tee -a "$INST_LOG_FILE"
+                sudo firewall-cmd --reload > /dev/null
+                sudo firewall-cmd --permanent --add-service=pcoip-agent > /dev/null
+                sudo firewall-cmd --reload > /dev/null                
+
+                # to check service pcoip-agent is allowed by firewall after enabling
+                sudo firewall-cmd --list-services | grep "pcoip-agent"
+                exitCode=$?
+                if [[ $exitCode -ne 0 ]]
+                then
+                    echo "could not enable service pcoip-agent in firewall." | tee -a "$INST_LOG_FILE"
+                fi
+            fi
+        fi
 
         if [[ $exitCode -eq 0 ]]
         then
             break
         else
             #delay 5 seconds
+            echo "Failed to install pcoip agent at ${dispName[idx -1]} time." | tee -a "$INST_LOG_FILE"
             sleep 5
             sudo yum -y remove "pcoip-agent-$AGENT_TYPE"
             if [[ $idx -eq 3 ]]
             then
-                echo "Failed to install pcoip agent." | tee -a "$INST_LOG_FILE"
                 # let's define exit code 101 for this case
                 return 101
             fi
@@ -487,6 +539,16 @@ exit_restart()
     exit
 }
 
+start_firewall() 
+{
+    if [[ "$(firewall-cmd --state)" != "running" ]] 
+    then  
+        echo "enable and start firewall." | tee -a "$INST_LOG_FILE"
+        systemctl enable firewalld --now 
+        sleep 2
+    fi
+}
+
 # run start from here
 
 AGENT_TYPE_STANDARD="standard"
@@ -529,8 +591,13 @@ then
     if [[ $EXIT_CODE -eq 0 ]]
     then
         install_gui
-
-        INST_LAST_STEP="step1 done"
+        EXIT_CODE=$?
+        if [[ $EXIT_CODE -eq 0 ]]
+        then
+            INST_LAST_STEP="step1 done"
+        else
+            INST_LAST_STEP="step1 failure: $EXIT_CODE"
+        fi
     else
         INST_LAST_STEP="step1 failure: $EXIT_CODE"
     fi
