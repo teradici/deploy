@@ -2,6 +2,24 @@
 "api.version": "v1",
 "sources": [
     {
+        "name":  "CAM_Deploy_ConnectionServer_Win_Azure_Logs",
+        "category":  "CAM/Deploy/ConnectionServer/Win/Azure/Logs",
+        "automaticDateParsing":  true,
+        "multilineProcessingEnabled":  true,
+        "useAutolineMatching":  false,
+        "forceTimeZone":  false,
+        "timeZone":  "Etc/UTC",
+        "filters":  [
+                    ],
+        "cutoffTimestamp":  0,
+        "encoding":  "UTF-8",
+        "pathExpression":  "C:\\WindowsAzure\\Logs\\Plugins\\Microsoft.Powershell.DSC\\**\\*.log",
+        "blacklist":  [
+                      ],
+        "sourceType":  "LocalFile",
+        "alive":  false
+    },
+    {
         "name":  "CAM_Deploy_ConnectionServer_Win_Tomcat_Logs",
         "category":  "CAM/Deploy/ConnectionServer/Win/Tomcat/Logs",
         "automaticDateParsing":  true,
