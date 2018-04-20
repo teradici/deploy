@@ -2,24 +2,6 @@
 "api.version": "v1",
 "sources": [
     {
-        "name":  "CAM_Deploy_ConnectionServer_Win_Azure_Logs",
-        "category":  "CAM/Deploy/ConnectionServer/Win/Azure/Logs",
-        "automaticDateParsing":  true,
-        "multilineProcessingEnabled":  true,
-        "useAutolineMatching":  false,
-        "forceTimeZone":  false,
-        "timeZone":  "Etc/UTC",
-        "filters":  [
-                    ],
-        "cutoffTimestamp":  0,
-        "encoding":  "UTF-8",
-        "pathExpression":  "C:\\WindowsAzure\\**\\*.log",
-        "blacklist":  [
-                      ],
-        "sourceType":  "LocalFile",
-        "alive":  false
-    },
-    {
         "name":  "CAM_Deploy_ConnectionServer_Win_Tomcat_Logs",
         "category":  "CAM/Deploy/ConnectionServer/Win/Tomcat/Logs",
         "automaticDateParsing":  true,
@@ -90,38 +72,6 @@
         "renderMessages":true,
         "sidStyle":2,
         "sourceType":"LocalWindowsEventLog"
-    },
-    {
-        "name":"CAM_Deploy_ConnectionServer_Win_Performance",
-        "category":"CAM/Deploy/ConnectionServer/Win/Performance",
-        "automaticDateParsing":false,
-        "multilineProcessingEnabled":false,
-        "useAutolineMatching":false,
-        "forceTimeZone":false,
-        "filters":[],
-        "cutoffTimestamp":0,
-        "encoding":"UTF-8",
-        "interval":60000,
-        "wmiQueries":[{
-        "name":"Process",
-        "query":"select * from Win32_PerfFormattedData_PerfProc_Process"
-        },{
-        "name":"CPU",
-        "query":"select * from Win32_PerfFormattedData_PerfOS_Processor"
-        },{
-        "name":"Logical Disk",
-        "query":"select * from Win32_PerfFormattedData_PerfDisk_LogicalDisk"
-        },{
-        "name":"Physical Disk",
-        "query":"select * from Win32_PerfFormattedData_PerfDisk_PhysicalDisk"
-        },{
-        "name":"Memory",
-        "query":"select * from Win32_PerfFormattedData_PerfOS_Memory"
-        },{
-        "name":"Network",
-        "query":"select * from Win32_PerfFormattedData_Tcpip_NetworkInterface"
-        }],
-        "sourceType":"LocalWindowsPerfMon"
-        }
+    }
 ]
 }

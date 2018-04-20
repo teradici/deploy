@@ -54,24 +54,6 @@
                       ],
         "sourceType":  "LocalFile",
         "alive":  false
-    },
-    {
-        "name":  "CAM_Deploy_SecurityGateway_Linux_Azure_Logs",
-        "category":  "CAM/Deploy/SecurityGateway/Linux/Azure/Logs",
-        "automaticDateParsing":  true,
-        "multilineProcessingEnabled":  true,
-        "useAutolineMatching":  false,
-        "forceTimeZone":  false,
-        "timeZone":  "Etc/UTC",
-        "filters":  [
-                    ],
-        "cutoffTimestamp":  0,
-        "encoding":  "UTF-8",
-        "pathExpression": "/var/log/azure/Microsoft.OSTCExtensions.CustomScriptForLinux/*/*.log",
-        "blacklist":  [
-                      ],
-        "sourceType":  "LocalFile",
-        "alive":  false
     }
 ]
 }
