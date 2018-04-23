@@ -1491,7 +1491,8 @@ function New-ConnectionServiceDeployment() {
             if($rg)
             {
                 # Check if Resource Group is empty
-                $Resources = Find-AzureRmResource -ResourceGroupNameEquals $csRGName
+                $Resources = Find-AzureRmResource -ResourceGroupNameEquals $csRGName -WarningAction Ignore
+
                 if( -not $Resources.Length -eq 0)
                 {
                     # found the resource group was not empty - do the loop with an incremented number try to find a free name
@@ -1504,7 +1505,7 @@ function New-ConnectionServiceDeployment() {
 
 
         # Create connector Resource Group if it doesn't exist, in the location of the target vnet
-        if (-not (Find-AzureRmResourceGroup | Where-Object {$_.name -eq $csRGName}) ) {
+        if (-not ((Find-AzureRmResourceGroup -WarningAction Ignore) | Where-Object {$_.name -eq $csRGName}) ) {
             $vnet = Get-AzureRmVirtualNetwork -Name $vnetName -ResourceGroupName $vnetRgName
             $location = $vnet.Location
 
@@ -1753,7 +1754,8 @@ function New-ConnectionServiceDeployment() {
                         -ResourceGroupName $csRGName `
                         -TemplateFile $CSDeploymentTemplateURI `
                         -TemplateParameterFile $outputParametersFilePath `
-                        -ErrorAction stop
+                        -ErrorAction stop `
+                        -WarningAction Ignore
                     # success!
                     break
                 }
@@ -1908,7 +1910,9 @@ function Add-SPScopeToVnet()
     if( Find-AzureRmResource `
         -ResourceNameEquals $vnetName `
         -ResourceType "Microsoft.Network/virtualNetworks" `
-        -ResourceGroupNameEquals $vnetRGName )
+        -ResourceGroupNameEquals $vnetRGName `
+        -WarningAction Ignore
+        )
     {
         # Get-AzureRmRoleAssignment responds much more rationally if given a scope with an ID
         # than a resource group name.
@@ -2594,7 +2598,8 @@ function Deploy-CAM() {
                     -ResourceGroupName $RGName `
                     -TemplateFile $CAMDeploymentTemplateURI `
                     -TemplateParameterFile $outputParametersFilePath `
-                    -ErrorAction stop
+                    -ErrorAction stop `
+                    -WarningAction Ignore
             }
         }
     }
@@ -2837,7 +2842,8 @@ function Set-VnetConfig() {
         if ( (-not $vnetRgName) -or (-not $vnetName) -or `
             (-not (Find-AzureRmResource -ResourceGroupNameEquals $vnetRgName `
             -ResourceType "Microsoft.Network/virtualNetworks" `
-            -ResourceNameEquals $vnetName)) ) {
+            -ResourceNameEquals $vnetName `
+            -WarningAction Ignore)) ) {
                 # Does not exist
                 Write-Host-Warning "$($vnetConfig.vnetID) not found"
                 $vnetConfig.vnetID = $null
@@ -3260,7 +3266,7 @@ if(-not $keyVaultProviderExists) {
 
 # Determine if we're upgrading a current deployment
 # This section returns a resource group name in $ResourceGroupName if one was found.
-$CAMKeyVaults = Find-AzureRmResource -ResourceType "Microsoft.KeyVault/vaults" | Where-object {$_.Name -like "CAM-*"}
+$CAMKeyVaults = (Find-AzureRmResource -ResourceType "Microsoft.KeyVault/vaults" -WarningAction Ignore) | Where-object {$_.Name -like "CAM-*"}
 
 $deploymentIndex = 0
 ForEach ($s in $CAMKeyVaults) {
@@ -3306,8 +3312,8 @@ if((-not $ResourceGroupName) -and ($deploymentIndex -gt 0)) {
 # Now we (might) have a $ResourceGroupName that (might) point to a resource group that has a CAM keyvault in it.
 # Let's double check what type.
 # At this point we have a subscription and a root resource group - check if there is already a deployment in it
+$CAMRootKeyvault = $null
 try{
-    $CAMRootKeyvault = $null
     $CAMRootKeyvault = Get-AzureRmResource `
         -ResourceGroupName $ResourceGroupName `
         -ResourceType "Microsoft.KeyVault/vaults" `
@@ -3330,7 +3336,7 @@ if ($CAMRootKeyvault) {
     Write-Host "Using key vault $($CAMRootKeyvault.Name)"
 
     # Ensure this user account can get secrets from the key vault
-    $hasKVAccess = Set-KeyVaultAccess($CAMRootKeyvault)
+    $hasKVAccess = Set-KeyVaultAccess -CAMRootKeyvault $CAMRootKeyvault
     if(-not $hasKVAccess) {return}
 
     Write-Host "`nCreating a new Cloud Access connector for this Cloud Access Manager deployment. Hit CTRL-C if you want to cancel.`n"
