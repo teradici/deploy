@@ -3394,6 +3394,20 @@ if ($CAMRootKeyvault) {
 else {
     # New CAM deployment. 
 
+    # EULA and Privacy Policy
+    if( -not $ignorePrompts) {
+        Write-Host "`nBy deploying Cloud Access Manager, you accept the terms of the Teradici Cloud Access Software End User License Agreement"
+        Write-Host "http://www.teradici.com/eula/1609005 and Privacy Policy https://www.teradici.com/privacy-policy/cloud-access-manager"
+        Write-Host "And have read and agree to be bound by the software license for use of the third-party drivers."
+
+        $acceptEULA = (confirmDialog "Do you accept the policies and agreements?" -defaultSelected "Y") -eq 'y'
+
+        if(-not $acceptEULA) {
+            Write-Host "Exiting."
+            exit 
+        }
+    }
+
     # Figure out if deploying over a current DC and vnet (in which case we know the location so don't need to prompt)
 
     if($deployOverDC -eq $null) {
