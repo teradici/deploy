@@ -528,7 +528,6 @@ function New-RemoteWorkstationTemplates {
     $agentARM = $CAMConfig.internal.agentARM
     $gaAgentARM = $CAMConfig.internal.gaAgentARM
     $linuxAgentARM = $CAMConfig.internal.linuxAgentARM
-    $gaLinuxAgentARM = $CAMConfig.internal.gaLinuxAgentARM
 
     $domainServiceAccountUsername = $CAMConfig.parameters.domainServiceAccountUsername.clearValue
     $domainFQDN = $CAMConfig.parameters.domainName.clearValue
@@ -629,12 +628,10 @@ function New-RemoteWorkstationTemplates {
     $standardArmParamContent = $armParamContent -replace "%vmSize%", $standardVMSize
     $graphicsArmParamContent = $armParamContent -replace "%vmSize%", $graphicsVMSize
     $linuxArmParamContent = $armParamContent -replace "%vmSize%", $standardVMSize
-    $graphicsLinuxArmParamContent = $armParamContent -replace "%vmSize%", $graphicsVMSize
 
     $standardArmParamContent = $standardArmParamContent -replace "%agentType%", "Standard"
     $graphicsArmParamContent = $graphicsArmParamContent -replace "%agentType%", "Graphics"
     $linuxArmParamContent = $linuxArmParamContent -replace "%agentType%", "Standard"
-    $graphicsLinuxArmParamContent = $graphicsLinuxArmParamContent -replace "%agentType%", "Graphics"
 
     Write-Host "Creating default template parameters files"
 
@@ -642,20 +639,17 @@ function New-RemoteWorkstationTemplates {
     $agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
     $gaAgentARMparam = ($gaAgentARM.split('.')[0]) + ".customparameters.json"
     $linuxAgentARMparam = ($linuxAgentARM.split('.')[0]) + ".customparameters.json"
-    $gaLinuxAgentARMparam = ($gaLinuxAgentARM.split('.')[0]) + ".customparameters.json"
 
     #these will be put in the random temp directory to avoid filename conflicts
     $ParamTargetFilePath = "$tempDir\$agentARMparam"
     $GaParamTargetFilePath = "$tempDir\$gaAgentARMparam"
     $LinuxParamTargetFilePath = "$tempDir\$linuxAgentARMparam"
-    $GaLinuxParamTargetFilePath = "$tempDir\$gaLinuxAgentARMparam"
 
     # upload the param files to the blob
     $paramFiles = @(
         @($ParamTargetFilePath, $standardArmParamContent),
         @($GaParamTargetFilePath, $graphicsArmParamContent),
-        @($LinuxParamTargetFilePath, $linuxArmParamContent),
-        @($GaLinuxParamTargetFilePath, $graphicsLinuxArmParamContent)
+        @($LinuxParamTargetFilePath, $linuxArmParamContent)
     )
     ForEach ($item in $paramFiles) {
         $filepath = $item[0]
@@ -722,7 +716,6 @@ function Populate-UserBlob {
         @("$artifactsLocation/remote-workstations/new-agent-vm/user.properties", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/Install-Idle-Shutdown.sh", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/$($CAMConfig.internal.linuxAgentARM)", "remote-workstation-template"),
-        @("$artifactsLocation/remote-workstations/new-agent-vm/$($CAMConfig.internal.gaLinuxAgentARM)", "remote-workstation-template"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/$($CAMConfig.internal.gaAgentARM)", "remote-workstation-template"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/$($CAMConfig.internal.agentARM)", "remote-workstation-template")
     )
@@ -2094,7 +2087,6 @@ function Deploy-CAM() {
     $CAMConfig.internal.agentARM = "server2016-standard-agent.json"
     $CAMConfig.internal.gaAgentARM = "server2016-graphics-agent.json"
     $CAMConfig.internal.linuxAgentARM = "rhel-standard-agent.json"
-    $CAMConfig.internal.gaLinuxAgentARM = "rhel-graphics-agent.json"
 
     # RADIUS MFA Configuration Parameters
     $CAMConfig.parameters.enableRadiusMfa = @{
