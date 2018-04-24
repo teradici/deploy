@@ -47,6 +47,20 @@
                 "description": "The FQDN of the AD domain"
             }
         },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "The region the virtual machine will be deployed to"
+            }
+        },
+        "imageReferenceId": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "ID of the source disk image to use."
+            }
+        },
         "domainGroupToJoin": {
             "type": "string"
         },
@@ -183,7 +197,16 @@
                 "videoDriverUrl": "[concat(parameters('binaryLocation'), '/386.09_grid_win10_server2016_64bit_international.exe')]"
             }
         },
-          
+        "defaultImageReference": {
+            "publisher": "[variables('vmSettings').os.publisher]",
+            "offer": "[variables('vmSettings').os.offer]",
+            "sku": "[variables('vmSettings').os.sku]",
+            "version": "[variables('vmSettings').os.version]"
+        },
+        "customImageReference": {
+            "id": "[parameters('imageReferenceId')]"
+        },
+        "imageReference": "[if(empty(parameters('imageReferenceId')),variables('defaultImageReference'),variables('customImageReference'))]",
         "pcoipAgentInstallerUrl": "[concat('https://downloads.teradici.com/win/', parameters('AgentChannel'))]",
         "videoDriverUrl": "[variables('extensions')[parameters('agentType')].videoDriverUrl]"
     },
@@ -192,7 +215,7 @@
             "type": "Microsoft.Network/networkInterfaces",
             "name": "[variables('nicName')]",
             "apiVersion": "[variables('apiVersion')]",
-            "location": "[resourceGroup().location]",
+            "location": "[parameters('location')]",
             "properties": {
                 "ipConfigurations": [
                     {
@@ -211,7 +234,7 @@
             "type": "Microsoft.Compute/virtualMachines",
             "name": "[variables('vmSettings').vmNamePrefix]",
             "apiVersion": "2017-03-30",
-            "location": "[resourceGroup().location]",
+            "location": "[parameters('location')]",
             "properties": {
                 "hardwareProfile": {
                     "vmSize": "[parameters('vmSize')]"
@@ -222,12 +245,7 @@
                     "adminPassword": "[variables('vmSettings').adminPassword]"
                 },
                 "storageProfile": {
-                    "imageReference": {
-                        "publisher": "[variables('vmSettings').os.publisher]",
-                        "offer": "[variables('vmSettings').os.offer]",
-                        "sku": "[variables('vmSettings').os.sku]",
-                        "version": "[variables('vmSettings').os.version]"
-                    },
+                    "imageReference": "[variables('imageReference')]",
                     "osDisk": {
                         "name": "[concat(parameters('dnsLabelPrefix'), '-os')]",
                         "caching": "ReadWrite",
@@ -251,7 +269,7 @@
             "type": "Microsoft.Compute/virtualMachines/extensions",
             "name": "[concat(parameters('dnsLabelPrefix'),'/joindomain')]",
             "apiVersion": "[variables('apiVersion')]",
-            "location": "[resourceGroup().location]",
+            "location": "[parameters('location')]",
             "properties": {
                 "publisher": "Microsoft.Compute",
                 "type": "JsonADDomainExtension",
@@ -276,7 +294,7 @@
           "type": "Microsoft.Compute/virtualMachines/extensions",
           "name": "[concat(parameters('dnsLabelPrefix'),'/PCoIPAgentDscExtension')]",
           "apiVersion": "2017-03-30",
-          "location": "[resourceGroup().location]",
+          "location": "[parameters('location')]",
           "dependsOn": [
               "[resourceId('Microsoft.Compute/virtualMachines/extensions',parameters('dnsLabelPrefix'),'joindomain')]"
           ],
