@@ -3350,7 +3350,7 @@ if ($CAMRootKeyvault) {
     # For automation, to deploy in a different region then CSSubnetName and GWSubnetName need to be passed on the
     # command line and the prompt will be bypassed.
 
-    if ((-not $vnetConfig.CSSubnetID) -or (-not $vnetConfig.GWSubnetID))
+    if ((-not $vnetConfig.CSSubnetName) -or (-not $vnetConfig.GWSubnetName))
     {
         $rootLocation = (Get-AzureRmResourceGroup -ResourceGroupName $ResourceGroupName -ErrorAction stop).location
         $reselectNetwork = (confirmDialog "Do you want to deploy into a different region than $rootLocation" -defaultSelected 'N') -eq 'y'
