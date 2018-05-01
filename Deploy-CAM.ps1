@@ -3296,7 +3296,8 @@ if((-not $ResourceGroupName) -and ($deploymentIndex -gt 0)) {
         $rgIndex = 0
         $rgIsInt = [int]::TryParse($rgIdentifier, [ref]$rgIndex) # rgIndex will be 0 on parse failure
     
-        $rgArrayLength = $CAMKeyVaults.Length
+        $rgArrayLength = if ($CAMKeyVaults -is [Array]) {$CAMKeyVaults.Length} else {1}
+         
         if ( -not (( $rgIndex -ge 1) -and ( $rgIndex -le $rgArrayLength))) {
             # Invalid range try again
             Write-Host-Warning "Please enter a range between 1 and $rgArrayLength, or hit enter to create a new deployment"
