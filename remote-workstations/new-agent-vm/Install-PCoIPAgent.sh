@@ -63,30 +63,21 @@ fi
 
 update_kernel_dkms()
 {
-    echo "-->Updating" | tee -a "$INST_LOG_FILE"
-    sudo yum -y update
+    lock_down_kernel
     local exitCode=$?
-    if [[ $exitCode -eq 0 ]]
-        then
-        echo "-->Installing kernel-devel" | tee -a "$INST_LOG_FILE"
-        sudo yum -y install kernel-devel
-        exitCode=$?
-        if [[ $exitCode -eq 0 ]]
-        then
-            echo "-->Adding EPEL-7 Repository" | tee -a "$INST_LOG_FILE"
-            sudo rpm -Uvh --quiet https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-            echo "-->Installing DKMS" | tee -a "$INST_LOG_FILE"
-            sudo yum -y install dkms
-            exitCode=$?
-            if [[ $exitCode -ne 0 ]]
-            then
-                echo "Failed installing DKMS" | tee -a "$INST_LOG_FILE"
-            fi
-        else
-            echo "Failed installing kernel-devel" | tee -a "$INST_LOG_FILE"
-        fi
-    else
-        echo "Failed update" | tee -a "$INST_LOG_FILE"
+    if [[ $exitCode -ne 0 ]]
+    then
+        echo "Failed to lock down kernel: $exitCode" | tee -a "$INST_LOG_FILE"
+        return $exitCode
+    fi
+
+    echo "-->Updating kernel dkms module" | tee -a "$INST_LOG_FILE"
+    sudo rpm -Uvh --quiet https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+    sudo yum -y install dkms
+    exitCode=$?
+    if [[ $exitCode -ne 0 ]]
+    then
+        echo "Failed to update DKMS: $exitCode" | tee -a "$INST_LOG_FILE"
     fi
 
     return $exitCode
@@ -546,6 +537,59 @@ start_firewall()
         echo "enable and start firewall." | tee -a "$INST_LOG_FILE"
         systemctl enable firewalld --now 
         sleep 2
+    fi
+}
+
+lock_down_kernel()
+{
+    echo "-->lock down kernel" | tee -a "$INST_LOG_FILE"
+    
+    KERNEL_VERSION=3.10.0-693.21.1.el7
+ 
+    # ensure the default is set to the saved entry
+    sudo sed -i 's/GRUB_DEFAULT=.*/GRUB_DEFAULT=saved/' /etc/default/grub
+ 
+    # make sure installing a new kernel package does not change the saved entry
+    sudo sed -i 's/UPDATEDEFAULT=.*/UPDATEDEFAULT=no/' /etc/sysconfig/kernel
+ 
+    # install kernel/kernel-devel for the latest known working kernel version
+    sudo yum install -y kernel-${KERNEL_VERSION} kernel-devel-${KERNEL_VERSION}
+    local exitCode=$?
+    if [[ $exitCode -ne 0 ]]
+    then
+        echo "Failed to install kernel or kernel devel" | tee -a "$INST_LOG_FILE"
+        return $exitCode
+    fi
+
+    # set the installonly attribute to keep so that installing new kernels does not remove our known working kernel
+    sudo yumdb set installonly keep kernel-${KERNEL_VERSION}
+    exitCode=$?
+    if [[ $exitCode -ne 0 ]]
+    then
+        echo "Failed to set installonly attribute" | tee -a "$INST_LOG_FILE"
+        return $exitCode
+    fi
+ 
+    # find the name of the kernel we just installed in the grub config
+    GRUB_KERNEL_NAME="$(sudo awk -F\' /^menuentry/{print\$2} /etc/grub2.cfg | grep ${KERNEL_VERSION} | grep -vi rescue)"
+    echo "Found the name of the kernel we just installed in the grub config: $GRUB_KERNEL_NAME" | tee -a "$INST_LOG_FILE"
+ 
+    # set the grub default
+    eval sudo grub2-set-default \"${GRUB_KERNEL_NAME}\"
+    exitCode=$?
+    if [[ $exitCode -ne 0 ]]
+    then
+        echo "Failed to set the grub default" | tee -a "$INST_LOG_FILE"
+        return $exitCode
+    fi
+ 
+    # regenerate the grub config
+    sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+    exitCode=$?
+    if [[ $exitCode -ne 0 ]]
+    then
+        echo "Failed to  regenerate the grub config" | tee -a "$INST_LOG_FILE"
+        return $exitCode
     fi
 }
 
