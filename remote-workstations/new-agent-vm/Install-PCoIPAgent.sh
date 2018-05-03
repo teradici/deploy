@@ -542,10 +542,10 @@ start_firewall()
 
 lock_down_kernel()
 {
-    echo "-->lock down kernel" | tee -a "$INST_LOG_FILE"
-    
     KERNEL_VERSION=3.10.0-693.21.1.el7
  
+    echo "-->lock down kernel to ${KERNEL_VERSION}" | tee -a "$INST_LOG_FILE"
+    
     # ensure the default is set to the saved entry
     sudo sed -i 's/GRUB_DEFAULT=.*/GRUB_DEFAULT=saved/' /etc/default/grub
  
