@@ -1498,7 +1498,7 @@ function New-ConnectionServiceDeployment() {
             if($rg)
             {
                 # Check if Resource Group is empty
-                $Resources = Find-AzureRmResource -ResourceGroupNameEquals $csRGName -WarningAction Ignore
+                $Resources = Get-AzureRmResource -ResourceGroupName $csRGName -ErrorAction SilentlyContinue
 
                 if( -not $Resources.Length -eq 0)
                 {
@@ -1512,7 +1512,7 @@ function New-ConnectionServiceDeployment() {
 
 
         # Create connector Resource Group if it doesn't exist, in the location of the target vnet
-        if (-not ((Find-AzureRmResourceGroup -WarningAction Ignore) | Where-Object {$_.name -eq $csRGName}) ) {
+        if (-not ((Get-AzureRmResourceGroup) | Where-Object ResourceGroupName -eq $csRGName) ) {
             $vnet = Get-AzureRmVirtualNetwork -Name $vnetName -ResourceGroupName $vnetRgName
             $location = $vnet.Location
 
@@ -1914,11 +1914,11 @@ function Add-SPScopeToVnet()
     $vnetRGName = $vnetID.Split("/")[4]
 
 
-    if( Find-AzureRmResource `
-        -ResourceNameEquals $vnetName `
+    if( Get-AzureRmResource `
+        -Name $vnetName `
         -ResourceType "Microsoft.Network/virtualNetworks" `
-        -ResourceGroupNameEquals $vnetRGName `
-        -WarningAction Ignore
+        -ResourceGroupName $vnetRGName `
+        -ErrorAction SilentlyContinue
         )
     {
         # Get-AzureRmRoleAssignment responds much more rationally if given a scope with an ID
@@ -2848,10 +2848,10 @@ function Set-VnetConfig() {
         $vnetName = $vnetConfig.vnetID.split("/")[-1]
         $vnetRgName = $vnetConfig.vnetID.split("/")[4]
         if ( (-not $vnetRgName) -or (-not $vnetName) -or `
-            (-not (Find-AzureRmResource -ResourceGroupNameEquals $vnetRgName `
+            (-not (Get-AzureRmResource -ResourceGroupName $vnetRgName `
             -ResourceType "Microsoft.Network/virtualNetworks" `
-            -ResourceNameEquals $vnetName `
-            -WarningAction Ignore)) ) {
+            -Name $vnetName `
+            -ErrorAction SilentlyContinue)) ) {
                 # Does not exist
                 Write-Host-Warning "$($vnetConfig.vnetID) not found"
                 $vnetConfig.vnetID = $null
@@ -3274,7 +3274,7 @@ if(-not $keyVaultProviderExists) {
 
 # Determine if we're upgrading a current deployment
 # This section returns a resource group name in $ResourceGroupName if one was found.
-$CAMKeyVaults = (Find-AzureRmResource -ResourceType "Microsoft.KeyVault/vaults" -WarningAction Ignore) | Where-object {$_.Name -like "CAM-*"}
+$CAMKeyVaults = (Get-AzureRmResource -ResourceType "Microsoft.KeyVault/vaults" -ErrorAction SilentlyContinue) | Where-object {$_.Name -like "CAM-*"}
 
 $deploymentIndex = 0
 ForEach ($s in $CAMKeyVaults) {
