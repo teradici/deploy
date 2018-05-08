@@ -2629,7 +2629,7 @@ function Deploy-CAM() {
 function Confirm-ModuleVersion()
 {
     # Check Azure RM version
-    $MinAzureRMVersion="6.0.1"
+    $MinAzureRMVersion="6.0.0"
     $AzureRMModule = Get-Module -ListAvailable -Name "AzureRM"
     if ( $AzureRMModule ) {
         # have an AzureRM version - check that.
