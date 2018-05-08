@@ -2629,7 +2629,7 @@ function Deploy-CAM() {
 function Confirm-ModuleVersion()
 {
     # Check Azure RM version
-    $MinAzureRMVersion="5.0.1"
+    $MinAzureRMVersion="6.0.1"
     $AzureRMModule = Get-Module -ListAvailable -Name "AzureRM"
     if ( $AzureRMModule ) {
         # have an AzureRM version - check that.
@@ -2640,7 +2640,7 @@ function Confirm-ModuleVersion()
     }
     else {
         # the Azure SDK doesn't install 'AzureRM' as a base module any more, just Azure
-        $MinAzureVersion="5.0.0"
+        $MinAzureVersion="5.1.1"
         $AzureModule = Get-Module -ListAvailable -Name "Azure"
 
         if ( -not $AzureModule ) {
@@ -3167,7 +3167,62 @@ function Set-KeyVaultAccess()
     }
 }
 
+# Returns if s1 contains s2 with a case-insensitive check
+function Test-StringInString
+{
+    param ( $s1,$s2 )
 
+    return ($s1.ToUpper()).Contains($s2.ToUpper())
+}
+
+# Test-StringInString "Blah" "z"  # $False
+# Test-StringInString "Blah" "b"  # $True
+# Test-StringInString "Blah" "B"  # $True
+# Test-StringInString "Blah" "ah" # $True
+# Test-StringInString "Blah" "aH" # $True
+# Test-StringInString "aH" "Blah" # $False
+
+function Test-PasswordComplexity
+{
+    param ( $userName, $pass )
+    $complexEnough = $true
+
+    # password can't contain username
+    if (Test-StringInString $pass $userName) {
+        Write-Host-Warning "Password cannot contain the user's username."
+        $complexEnough = $false
+    }
+
+    # Must be 12 characters long (or 8? we think 12...)
+    # https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/password-must-meet-complexity-requirements
+    if ($pass.Length -lt 12) {
+        Write-Host-Warning "Password must be a minimum of 12 characters long."
+        $complexEnough = $false
+    }
+
+    # $symbols = "~!@#$%^&*_-+=``|\(){}[]:;`"'<>,.?/"
+    $escapedSymbols = "~!@#$%\^&\*_\-\+=``\|\\\(\)\{\}\[\]:;`"'<>,\.\?/"
+
+    $count =  [int]($pass -cmatch '(?=.*\d)')                # digits
+    $count += [int]($pass -cmatch '(?=.*[A-Z])')             # uppercase characters
+    $count += [int]($pass -cmatch '(?=.*[a-z])')             # lowercase characters
+    $count += [int]($pass -cmatch "(?=.*[$escapedSymbols])") # symbols
+    
+    if ($count -lt 3) { # three of the above are needed
+        Write-Host-Warning ("Password must contain at least three of the following categories:`n" +
+                            "Uppercase letters, lowercase letters, digits, and symbols.")
+
+        $complexEnough = $false
+    }
+    return $complexEnough
+}
+
+# Test-PasswordComplexity "C0mplex!"           # $False
+# Test-PasswordComplexity "abc123456789"       # $False
+# Test-PasswordComplexity "ABC123456789"       # $False
+# Test-PasswordComplexity "ABC12345678!"       # $True
+# Test-PasswordComplexity "aBC123456789"       # $True
+# Test-PasswordComplexity "Abc123456789!@#$%^" # $True
 
 
 ##############################################
@@ -3415,7 +3470,7 @@ else {
         Write-Host "http://www.teradici.com/eula/1609005 and Privacy Policy https://www.teradici.com/privacy-policy/cloud-access-manager"
         Write-Host "And have read and agree to be bound by the software license for use of the third-party drivers."
 
-        $acceptEULA = (confirmDialog "Do you accept the policies and agreements?" -defaultSelected "Y") -eq 'y'
+        $acceptEULA = (confirmDialog "Do you accept the policies and agreements?") -eq 'y'
 
         if(-not $acceptEULA) {
             Write-Host "Exiting."
@@ -3684,6 +3739,11 @@ else {
     do {
         if ( -not $password ) {
             if( -not $deployOverDC ) {
+                Write-Host "`nYou must now create a domain administrator password."
+                Write-Host "It must be a minimum of 12 characters long and must not contain the username."
+                Write-Host "It must contain at least three of the following categories:"
+                Write-Host "Uppercase letters, lowercase letters, digits, and symbols.`n"
+
                 $pawdMessage = "Enter the domain administrator password"
             }
             else {
@@ -3697,11 +3757,10 @@ else {
 
         # Don't check password if deploying over DC since in that case it's the DC's password complexity rules.
         if (-not $deployOverDC ) {
-            if ($password.Length -lt 12) {
-                Write-Host-Warning "Invalid password. Minimum 12 characters"
+            if (-not (Test-PasswordComplexity $username $password)) {
                 $password = $null
                 continue
-            }         
+            }
         }
 
         if ($psw) {
