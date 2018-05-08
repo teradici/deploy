@@ -2629,7 +2629,7 @@ function Deploy-CAM() {
 function Confirm-ModuleVersion()
 {
     # Check Azure RM version
-    $MinAzureRMVersion="5.0.1"
+    $MinAzureRMVersion="6.0.1"
     $AzureRMModule = Get-Module -ListAvailable -Name "AzureRM"
     if ( $AzureRMModule ) {
         # have an AzureRM version - check that.
@@ -2640,7 +2640,7 @@ function Confirm-ModuleVersion()
     }
     else {
         # the Azure SDK doesn't install 'AzureRM' as a base module any more, just Azure
-        $MinAzureVersion="5.0.0"
+        $MinAzureVersion="5.1.1"
         $AzureModule = Get-Module -ListAvailable -Name "Azure"
 
         if ( -not $AzureModule ) {
@@ -3209,8 +3209,8 @@ function Test-PasswordComplexity
     $count += [int]($pass -cmatch "(?=.*[$escapedSymbols])") # symbols
     
     if ($count -lt 3) { # three of the above are needed
-        Write-Host-Warning "Password must contain at least three of the following categories:"
-        Write-Host-Warning "Uppercase letters, lowercase letters, digits, and symbols."
+        Write-Host-Warning ("Password must contain at least three of the following categories:`n" +
+                            "Uppercase letters, lowercase letters, digits, and symbols.")
 
         $complexEnough = $false
     }
