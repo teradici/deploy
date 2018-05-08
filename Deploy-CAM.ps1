@@ -527,6 +527,7 @@ function New-RemoteWorkstationTemplates {
     $agentARM = $CAMConfig.internal.agentARM
     $gaAgentARM = $CAMConfig.internal.gaAgentARM
     $linuxAgentARM = $CAMConfig.internal.linuxAgentARM
+    $gaLinuxAgentARM = $CAMConfig.internal.gaLinuxAgentARM
 
     $domainServiceAccountUsername = $CAMConfig.parameters.domainServiceAccountUsername.clearValue
     $domainFQDN = $CAMConfig.parameters.domainName.clearValue
@@ -629,10 +630,12 @@ function New-RemoteWorkstationTemplates {
     $standardArmParamContent = $armParamContent -replace "%vmSize%", $standardVMSize
     $graphicsArmParamContent = $armParamContent -replace "%vmSize%", $graphicsVMSize
     $linuxArmParamContent = $armParamContent -replace "%vmSize%", $standardVMSize
+    $graphicsLinuxArmParamContent = $armParamContent -replace "%vmSize%", $graphicsVMSize
 
     $standardArmParamContent = $standardArmParamContent -replace "%agentType%", "Standard"
     $graphicsArmParamContent = $graphicsArmParamContent -replace "%agentType%", "Graphics"
     $linuxArmParamContent = $linuxArmParamContent -replace "%agentType%", "Standard"
+    $graphicsLinuxArmParamContent = $graphicsLinuxArmParamContent -replace "%agentType%", "Graphics"
 
     Write-Host "Creating default template parameters files"
 
@@ -640,17 +643,20 @@ function New-RemoteWorkstationTemplates {
     $agentARMparam = ($agentARM.split('.')[0]) + ".customparameters.json"
     $gaAgentARMparam = ($gaAgentARM.split('.')[0]) + ".customparameters.json"
     $linuxAgentARMparam = ($linuxAgentARM.split('.')[0]) + ".customparameters.json"
+    $gaLinuxAgentARMparam = ($gaLinuxAgentARM.split('.')[0]) + ".customparameters.json"
 
     #these will be put in the random temp directory to avoid filename conflicts
     $ParamTargetFilePath = "$tempDir\$agentARMparam"
     $GaParamTargetFilePath = "$tempDir\$gaAgentARMparam"
     $LinuxParamTargetFilePath = "$tempDir\$linuxAgentARMparam"
+    $GaLinuxParamTargetFilePath = "$tempDir\$gaLinuxAgentARMparam"
 
     # upload the param files to the blob
     $paramFiles = @(
         @($ParamTargetFilePath, $standardArmParamContent),
         @($GaParamTargetFilePath, $graphicsArmParamContent),
-        @($LinuxParamTargetFilePath, $linuxArmParamContent)
+        @($LinuxParamTargetFilePath, $linuxArmParamContent),
+        @($GaLinuxParamTargetFilePath, $graphicsLinuxArmParamContent)
     )
     ForEach ($item in $paramFiles) {
         $filepath = $item[0]
@@ -717,6 +723,7 @@ function Populate-UserBlob {
         @("$artifactsLocation/remote-workstations/new-agent-vm/user.properties", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/Install-Idle-Shutdown.sh", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/$($CAMConfig.internal.linuxAgentARM)", "remote-workstation-template"),
+        @("$artifactsLocation/remote-workstations/new-agent-vm/$($CAMConfig.internal.gaLinuxAgentARM)", "remote-workstation-template"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/$($CAMConfig.internal.gaAgentARM)", "remote-workstation-template"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/$($CAMConfig.internal.agentARM)", "remote-workstation-template")
     )
@@ -1491,7 +1498,7 @@ function New-ConnectionServiceDeployment() {
             if($rg)
             {
                 # Check if Resource Group is empty
-                $Resources = Find-AzureRmResource -ResourceGroupNameEquals $csRGName -WarningAction Ignore
+                $Resources = Get-AzureRmResource -ResourceGroupName $csRGName -ErrorAction SilentlyContinue
 
                 if( -not $Resources.Length -eq 0)
                 {
@@ -1505,7 +1512,7 @@ function New-ConnectionServiceDeployment() {
 
 
         # Create connector Resource Group if it doesn't exist, in the location of the target vnet
-        if (-not ((Find-AzureRmResourceGroup -WarningAction Ignore) | Where-Object {$_.name -eq $csRGName}) ) {
+        if (-not ((Get-AzureRmResourceGroup) | Where-Object ResourceGroupName -eq $csRGName) ) {
             $vnet = Get-AzureRmVirtualNetwork -Name $vnetName -ResourceGroupName $vnetRgName
             $location = $vnet.Location
 
@@ -1907,11 +1914,11 @@ function Add-SPScopeToVnet()
     $vnetRGName = $vnetID.Split("/")[4]
 
 
-    if( Find-AzureRmResource `
-        -ResourceNameEquals $vnetName `
+    if( Get-AzureRmResource `
+        -Name $vnetName `
         -ResourceType "Microsoft.Network/virtualNetworks" `
-        -ResourceGroupNameEquals $vnetRGName `
-        -WarningAction Ignore
+        -ResourceGroupName $vnetRGName `
+        -ErrorAction SilentlyContinue
         )
     {
         # Get-AzureRmRoleAssignment responds much more rationally if given a scope with an ID
@@ -2149,6 +2156,7 @@ function Deploy-CAM() {
     $CAMConfig.internal.agentARM = "server2016-standard-agent.json"
     $CAMConfig.internal.gaAgentARM = "server2016-graphics-agent.json"
     $CAMConfig.internal.linuxAgentARM = "rhel-standard-agent.json"
+    $CAMConfig.internal.gaLinuxAgentARM = "rhel-graphics-agent.json"
 
     # RADIUS MFA Configuration Parameters
     $CAMConfig.parameters.enableRadiusMfa = @{
@@ -2840,10 +2848,10 @@ function Set-VnetConfig() {
         $vnetName = $vnetConfig.vnetID.split("/")[-1]
         $vnetRgName = $vnetConfig.vnetID.split("/")[4]
         if ( (-not $vnetRgName) -or (-not $vnetName) -or `
-            (-not (Find-AzureRmResource -ResourceGroupNameEquals $vnetRgName `
+            (-not (Get-AzureRmResource -ResourceGroupName $vnetRgName `
             -ResourceType "Microsoft.Network/virtualNetworks" `
-            -ResourceNameEquals $vnetName `
-            -WarningAction Ignore)) ) {
+            -Name $vnetName `
+            -ErrorAction SilentlyContinue)) ) {
                 # Does not exist
                 Write-Host-Warning "$($vnetConfig.vnetID) not found"
                 $vnetConfig.vnetID = $null
@@ -3321,7 +3329,7 @@ if(-not $keyVaultProviderExists) {
 
 # Determine if we're upgrading a current deployment
 # This section returns a resource group name in $ResourceGroupName if one was found.
-$CAMKeyVaults = (Find-AzureRmResource -ResourceType "Microsoft.KeyVault/vaults" -WarningAction Ignore) | Where-object {$_.Name -like "CAM-*"}
+$CAMKeyVaults = (Get-AzureRmResource -ResourceType "Microsoft.KeyVault/vaults" -ErrorAction SilentlyContinue) | Where-object {$_.Name -like "CAM-*"}
 
 $deploymentIndex = 0
 ForEach ($s in $CAMKeyVaults) {
@@ -3351,7 +3359,8 @@ if((-not $ResourceGroupName) -and ($deploymentIndex -gt 0)) {
         $rgIndex = 0
         $rgIsInt = [int]::TryParse($rgIdentifier, [ref]$rgIndex) # rgIndex will be 0 on parse failure
     
-        $rgArrayLength = $CAMKeyVaults.Length
+        $rgArrayLength = if ($CAMKeyVaults -is [Array]) {$CAMKeyVaults.Length} else {1}
+         
         if ( -not (( $rgIndex -ge 1) -and ( $rgIndex -le $rgArrayLength))) {
             # Invalid range try again
             Write-Host-Warning "Please enter a range between 1 and $rgArrayLength, or hit enter to create a new deployment"
@@ -3405,7 +3414,7 @@ if ($CAMRootKeyvault) {
     # For automation, to deploy in a different region then CSSubnetName and GWSubnetName need to be passed on the
     # command line and the prompt will be bypassed.
 
-    if ((-not $vnetConfig.CSSubnetID) -or (-not $vnetConfig.GWSubnetID))
+    if ((-not $vnetConfig.CSSubnetName) -or (-not $vnetConfig.GWSubnetName))
     {
         $rootLocation = (Get-AzureRmResourceGroup -ResourceGroupName $ResourceGroupName -ErrorAction stop).location
         $reselectNetwork = (confirmDialog "Do you want to deploy into a different region than $rootLocation" -defaultSelected 'N') -eq 'y'
