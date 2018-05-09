@@ -130,6 +130,8 @@ for ($i = 0; $i -le $locationCount; $i++)
 # Sex & name
 $i = 0
 $employeeNumber = 0
+$userObjs = New-Object System.Collections.ArrayList
+
 if ($i -lt $userCount) 
 {
     while( $true ) 
@@ -184,7 +186,8 @@ if ($i -lt $userCount)
         #
         # Create the user account
         #
-        New-ADUser -SamAccountName $sAMAccountName -Name "$displayName" -AccountPassword $securePassword -Enabled $true -GivenName $Fname -Surname $Lname -DisplayName "$displayName" -EmailAddress "$Fname.$Lname@$dnsDomain" -StreetAddress "$street" -City "$city" -PostalCode $postalCode -State $state -Country $country -UserPrincipalName "$sAMAccountName@$dnsDomain" -Company $company -Department $department -EmployeeNumber $employeeNumber -Title $title -OfficePhone $officePhone
+        $userObj = New-ADUser -SamAccountName $sAMAccountName -Name "$displayName" -AccountPassword $securePassword -Enabled $true -GivenName $Fname -Surname $Lname -DisplayName "$displayName" -EmailAddress "$Fname.$Lname@$dnsDomain" -StreetAddress "$street" -City "$city" -PostalCode $postalCode -State $state -Country $country -UserPrincipalName "$sAMAccountName@$dnsDomain" -Company $company -Department $department -EmployeeNumber $employeeNumber -Title $title -OfficePhone $officePhone -PassThru
+        $userObjs.Add($userObj) > $null
 
         "Created user #" + ($i+1) + ", $displayName, $sAMAccountName, $title, $department, $street, $city"
         $i = $i+1
@@ -238,9 +241,7 @@ if ($groupBObj -eq $null) {
 }
 Add-ADGroupMember -Identity $groupObj.ObjectGUID -Members $groupBObj
 
-
-$userObjs = Get-ADUser -Filter 'SamAccountName -ne "Guest" -and SamAccountName -ne "DefaultAccount"'
-$groupMemberNumber = if ($userObjs.length -lt 20) {$userObjs.length} else {20}
+$groupMemberNumber = if ($userObjs.Count -lt 20) {$userObjs.Count} else {20}
 Write-Host "================ adding $groupMemberNumber users to domain group ======================"
 for ($i=0; $i -lt $groupMemberNumber; $i++) {
     $userObj = $userObjs[$i]
