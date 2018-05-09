@@ -103,6 +103,10 @@ Param(
     [int]
     $defaultIdleShutdownTime = 240,
 
+    [parameter(Mandatory=$false, HelpMessage="the distinguished name aka DN of a domain group which cam users belong to")]
+    [String]
+    $camUserGroup,
+
     $camSaasUri = "https://cam.teradici.com",
     $CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/master/azuredeploy.json",
     $binaryLocation = "https://teradeploy.blob.core.windows.net/binaries",
@@ -2051,7 +2055,11 @@ function Deploy-CAM() {
         [parameter(Mandatory=$false)]
         [ValidateRange(10,10000)]
         [int]
-        $defaultIdleShutdownTime = 240
+        $defaultIdleShutdownTime = 240,
+
+        [parameter(Mandatory=$false)]
+        [String]
+        $camUserGroup
     )
 
     # Artifacts location 'folder' is where the template is stored
@@ -2065,6 +2073,13 @@ function Deploy-CAM() {
     # and internal parameters for this script which are not pushed to the key vault
     $CAMConfig = @{} 
     $CAMConfig.parameters = @{}
+    if ($camUserGroup -and $camUserGroup.Trim()) {
+        $camUserGroup = $camUserGroup.Trim()
+        $CAMConfig.parameters.CAMUserGroupName = @{
+            value      = (ConvertTo-SecureString $camUserGroup -AsPlainText -Force)
+            clearValue = $camUserGroup
+        }
+    }
     $CAMConfig.parameters.domainServiceAccountUsername = @{
         value      = (ConvertTo-SecureString $domainServiceAccountUsername -AsPlainText -Force)
         clearValue = $domainServiceAccountUsername
@@ -3898,5 +3913,6 @@ else {
         -ownerUpn $upn `
         -enableExternalAccess $enableExternalAccess `
         -domainControllerOsType $domainControllerOsType `
-        -defaultIdleShutdownTime $defaultIdleShutdownTime
+        -defaultIdleShutdownTime $defaultIdleShutdownTime `
+        -camUserGroup $camUserGroup
 }
