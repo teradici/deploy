@@ -10,8 +10,8 @@ param
 (
     [string] $hostname,
 	[string] $svrAccountName,
-	[Int32]	 $userCount=2500,
-	[string] $artificatsLocation="https://raw.githubusercontent.com/teradici/deploy/TSW-67106-use-external-ad/deployADDC"
+	[string] $artificatsLocation="https://raw.githubusercontent.com/teradici/deploy/TSW-67106-use-external-ad/deployADDC",
+	[Int32]	 $userCount=2500
 )
 
 #################################################################################################################################
@@ -209,10 +209,13 @@ $domain=(Get-ADDomain).Forest
 if (! $artificatsLocation.EndsWith('/')) {
     $artificatsLocation = $artificatsLocation + '/'
 }
-$scriptUrl = $artificatsLocation + "CreatUsers.ps1"
+$scriptUrl = $artificatsLocation + "CreateUsers.ps1"
 
-Invoke-WebRequest -UseBasicParsing -Uri $scriptUrl -OutFile CreatUsers.ps1
-.\CreatUsers.ps1 -userCount $userCount -dnsDomain $domain -baseUrl $artificatsLocation
+Invoke-WebRequest -UseBasicParsing -Uri $scriptUrl -OutFile CreateUsers.ps1
 
+Write-Output "Starting to create users ..." 
+.\CreateUsers.ps1 -userCount $userCount -dnsDomain $domain -baseUrl $artificatsLocation
+Write-Output "Finished to create users" 
+Write-Output "Completed execution" 
 #################################################################################################################################
 #################################################################################################################################
