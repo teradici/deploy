@@ -14,7 +14,9 @@
 
 param(
     [Int32]     $userCount,
-    [string]    $dnsDomain
+    [string]    $dnsDomain,
+    [string]    $baseUrl="https://raw.githubusercontent.com/teradici/deploy/TSW-67106-use-external-ad/deployADDC",
+    [String]    $groupName="My CAM Test Group"
 )
 
 Set-StrictMode -Version 2
@@ -22,7 +24,9 @@ Set-StrictMode -Version 2
 Import-Module ActiveDirectory
 
 # Download list of names and and addresses and phone and area codes
-$baseUrl = "https://raw.githubusercontent.com/teradici/deploy/TSW-67106-use-external-ad/deployADDC/"
+if (! $baseUrl.EndsWith('/')) {
+    $baseUrl = $baseUrl + '/'
+}
 $addressLocation = "${baseUrl}Addresses.txt"
 $firstnameLocation = "${baseUrl}Firstnames.txt"
 $lastnameLocation = "${baseUrl}Lastnames.txt"
@@ -115,7 +119,6 @@ for ($i = 0; $i -le $locationCount; $i++)
     $addressIndexesUsed += $addressIndex
 }
 
-
 #
 # Create the users
 #
@@ -189,8 +192,67 @@ if ($i -lt $userCount)
 
         if ($i -ge $userCount) 
         {
-            "Script Complete. Exiting"
-            exit
+            "Loop Complete. Exiting"
+            break
         }
     }
 }
+
+# create group
+Write-Host "================ preparing domain group ========================="
+$name = "My Test Root User"
+$rootOuObj = Get-ADOrganizationalUnit -Filter " Name -eq `"${name}`" "
+if ($rootOuObj -eq $null) {
+    Write-Host "creating OU ${name}"
+    $rootOuObj = New-ADOrganizationalUnit  -Name $name -ProtectedFromAccidentalDeletion $False -PassThru
+}
+
+$groupObj = Get-ADGroup -Filter " Name -eq `"${groupName}`" "
+if ($groupObj -eq $null) {
+    Write-Host "creating group ${groupName}"
+    $groupObj = New-ADGroup -Name $groupName -GroupCategory Security -GroupScope Global -Path $rootOuObj.DistinguishedName -Description "Members of this group are for CAM" -PassThru
+} else {
+    $members=Get-ADGroupMember -Identity $groupObj.ObjectGUID
+    if ($members) {
+        Remove-ADGroupMember -Identity $groupObj.ObjectGUID -Members $members -Confirm:$false
+    }
+}
+
+$name = "Test Level 1 OU"
+$level1OuObj = Get-ADOrganizationalUnit -Filter " Name -eq `"${name}`" "
+if ($level1OuObj -eq  $null) {
+    Write-Host "creating OU ${name}"
+    $level1OuObj = New-ADOrganizationalUnit  -Name $name -Path $rootOuObj.DistinguishedName -ProtectedFromAccidentalDeletion $False -PassThru
+}
+
+$groupBName = $groupName + 'B'
+$groupBObj = Get-ADGroup -Filter " Name -eq `"${groupBName}`" "
+if ($groupBObj -eq $null) {
+    Write-Host "creating group ${groupName}"
+    $groupBObj = New-ADGroup -Name $groupBName -GroupCategory Security -GroupScope Global -Path $level1OuObj.DistinguishedName -Description "Members of this group are for CAM" -PassThru
+} else {
+    $members=Get-ADGroupMember -Identity $groupBObj.ObjectGUID
+    if ($members) {
+        Remove-ADGroupMember -Identity $groupBObj.ObjectGUID -Members $members -Confirm:$false
+    }
+}
+Add-ADGroupMember -Identity $groupObj.ObjectGUID -Members $groupBObj
+
+
+$userObjs = Get-ADUser -Filter 'SamAccountName -ne "Guest" -and SamAccountName -ne "DefaultAccount"'
+$groupMemberNumber = if ($userObjs.length -lt 20) {$userObjs.length} else {20}
+Write-Host "================ adding $groupMemberNumber users to domain group ======================"
+for ($i=0; $i -lt $groupMemberNumber; $i++) {
+    $userObj = $userObjs[$i]
+
+    if (($i % 5) -eq 0) {
+        Disable-ADAccount $userObj
+    }
+
+    if (($i % 2) -eq 0) {
+        Add-ADGroupMember -Identity $groupObj.ObjectGUID -Members $userObj
+    } else {
+        Add-ADGroupMember -Identity $groupBObj.ObjectGUID -Members $userObj
+    }
+}
+exit

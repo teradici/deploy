@@ -309,7 +309,7 @@
               "fileUris": [
                 "[concat(parameters('_artifactsLocation'), '/', 'ConfigureWinRM.ps1')]"
               ],
-              "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -file ConfigureWinRM.ps1 ', variables('hostDNSName'), '  ',  parameters('serviceAccountName') )]"
+              "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -file ConfigureWinRM.ps1 ', variables('hostDNSName'), '  ',  parameters('serviceAccountName'), '  ',  parameters('_artifactsLocation') )]"
             }
           }
         }
