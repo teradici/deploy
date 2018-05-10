@@ -10,8 +10,8 @@ param
 (
     [string] $hostname,
 	[string] $svrAccountName,
-	[Int32]	 $userCount=100,
-	[string] $artificatsLocation="https://raw.githubusercontent.com/teradici/deploy/TSW-67106-use-external-ad/deployADDC/CreateUsers.ps1"
+	[string] $artifactsLocation="https://raw.githubusercontent.com/teradici/deploy/TSW-67106-use-external-ad/deployADDC",
+	[Int32]	 $userCount=2500
 )
 
 #################################################################################################################################
@@ -205,8 +205,17 @@ createGroupForCAM $svrAccountName
 #################################################################################################################################
 
 $domain=(Get-ADDomain).Forest
-Invoke-WebRequest -UseBasicParsing -Uri $artificatsLocation -OutFile CreatUsers.ps1
-.\CreatUsers.ps1 -userCount $userCount -dnsDomain $domain
 
+if (! $artifactsLocation.EndsWith('/')) {
+    $artifactsLocation = $artifactsLocation + '/'
+}
+$scriptUrl = $artifactsLocation + "CreateUsers.ps1"
+
+Invoke-WebRequest -UseBasicParsing -Uri $scriptUrl -OutFile CreateUsers.ps1
+
+Write-Output "Starting to create users ..." 
+.\CreateUsers.ps1 -userCount $userCount -dnsDomain $domain -baseUrl $artifactsLocation
+Write-Output "Finished to create users" 
+Write-Output "Completed execution" 
 #################################################################################################################################
 #################################################################################################################################
