@@ -11,7 +11,7 @@ param
     [string] $hostname,
 	[string] $svrAccountName,
 	[string] $artifactsLocation="https://raw.githubusercontent.com/teradici/deploy/TSW-67106-use-external-ad/deployADDC",
-	[Int32]	 $userCount=2500
+	[Int32]	 $userCount=25000
 )
 
 #################################################################################################################################
