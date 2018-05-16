@@ -16,7 +16,7 @@ param(
     [Int32]     $userCount,
     [string]    $dnsDomain,
     [string]    $baseUrl="https://raw.githubusercontent.com/teradici/deploy/TSW-67106-use-external-ad/deployADDC",
-    [String]    $groupName="My CAM Test Group"
+    [String]    $groupName="MyCAMTestGroup"
 )
 
 Set-StrictMode -Version 2
@@ -221,7 +221,7 @@ if ($groupObj -eq $null) {
     }
 }
 
-$name = "Test Level 1 OU"
+$name = "TestLevel1OU"
 $level1OuObj = Get-ADOrganizationalUnit -Filter " Name -eq `"${name}`" "
 if ($level1OuObj -eq  $null) {
     Write-Host "creating OU ${name}"
