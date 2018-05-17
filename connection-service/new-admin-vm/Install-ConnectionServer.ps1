@@ -940,9 +940,9 @@ isMultiFactorAuthenticate=$isMfa
                     try {
                         Start-Process C:\OpenSSL-Win64\bin\openssl.exe -ArgumentList "s_client -showcerts -connect ${hostname}:${port}" -RedirectStandardOutput "$env:systemdrive\certInfo.txt"
                         # Wait a bit to ensure that the previous command completes
-                        Sleep 10
+                        Sleep 30
                         $openSSLOutput = Get-Content "$env:systemdrive\certInfo.txt" -Raw
-                        $certMatches = $openSSLOutput | Select-String '(?smi)(-----BEGIN CERTIFICATE-----[^-]+-----END CERTIFICATE-----)' -AllMatches | % {$_.Matches}
+                        $certMatches = $openSSLOutput | Select-String '(?smi)(-----BEGIN CERTIFICATE-----((?!-----END).)+-----END CERTIFICATE-----)' -AllMatches | % {$_.Matches}
                         if ($certMatches.Count) {
                             #last one is the root in chain
                             $certMatches[-1].Value | Out-File -FilePath "$env:systemdrive\$issuerCertFileName" -Encoding ascii
