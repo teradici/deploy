@@ -938,10 +938,10 @@ isMultiFactorAuthenticate=$isMfa
                 while(-not $foundCert)
                 {
                     try {
-                        Start-Process C:\OpenSSL-Win64\bin\openssl.exe -ArgumentList "s_client -showcerts -connect ${hostname}:${port}" -RedirectStandardOutput "certs.txt"
+                        Start-Process C:\OpenSSL-Win64\bin\openssl.exe -ArgumentList "s_client -showcerts -connect ${hostname}:${port}" -RedirectStandardOutput "$env:systemdrive\certInfo.txt"
                         # Wait a bit to ensure that the previous command completes
                         Sleep 10
-                        $openSSLOutput = Get-Content "certs.txt" -Raw
+                        $openSSLOutput = Get-Content "$env:systemdrive\certInfo.txt" -Raw
                         $certMatches = $openSSLOutput | Select-String '(?smi)(-----BEGIN CERTIFICATE-----[^-]+-----END CERTIFICATE-----)' -AllMatches | % {$_.Matches}
                         if ($certMatches.Count) {
                             #last one is the root in chain
