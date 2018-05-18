@@ -133,7 +133,8 @@
                     "osDisk": {
                         "name": "[concat(parameters('dnsLabelPrefix'), '-os')]",
                         "caching": "ReadWrite",
-                        "createOption": "FromImage"
+                        "createOption": "FromImage",
+                        "storageAccountType": "Premium_LRS"
                     },
                     "dataDisks": [ ]
                 },
