@@ -1489,7 +1489,7 @@ function New-ConnectionServiceDeployment() {
                 -SecretValue (ConvertTo-SecureString $connectionServiceNumber -AsPlainText -Force) `
                 -ErrorAction stop | Out-Null
             
-            Write-Host "Checking available resource group for connection service number $connectionServiceNumber"
+            Write-Host "Checking available resource group for connector number $connectionServiceNumber"
 
             $csRGName = $RGName + "-CN" + $connectionServiceNumber
             Set-AzureRMContext -Context $adminAzureContext | Out-Null
