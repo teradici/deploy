@@ -929,33 +929,103 @@ isMultiFactorAuthenticate=$isMfa
                 Write-Host "Looking for Issuer certificate for $dcvmfqdn"
 
                 $foundCert = $false
+                $caCert = $null
                 $loopCountRemaining = 30
 
                 # LDAPS Port and Host
                 $port=636
                 $hostname=$dcvmfqdn
+                $url="https://${hostname}:${port}"
                 #loop until it's created
                 while(-not $foundCert)
                 {
+                    $cert = $null
                     try {
-                        Start-Process C:\OpenSSL-Win64\bin\openssl.exe -ArgumentList "s_client -showcerts -connect ${hostname}:${port}" -RedirectStandardOutput "$env:systemdrive\certInfo.txt"
-                        # Wait a bit to ensure that the previous command completes
-                        Sleep 30
-                        $openSSLOutput = Get-Content "$env:systemdrive\certInfo.txt" -Raw
-                        $certMatches = $openSSLOutput | Select-String '(?smi)(-----BEGIN CERTIFICATE-----((?!-----END).)+-----END CERTIFICATE-----)' -AllMatches | % {$_.Matches}
-                        if ($certMatches.Count) {
+                        # Try to use multiple .NET methods to get Issuer Cert, fall back to openSSL if they fail
+                        Write-Host "Looking for LDAPS certificate for $hostname"
+                        $tcpclient = new-object System.Net.Sockets.tcpclient
+                        $tcpclient.Connect($hostname,$port)
+
+                        # Authenticate with SSL - trusting all certificates
+                        $sslstream = new-object System.Net.Security.SslStream -ArgumentList $tcpclient.GetStream(),$false,{$true}
+
+                        $sslstream.AuthenticateAsClient($hostname)
+                        $cert =  [System.Security.Cryptography.X509Certificates.X509Certificate2]($sslstream.remotecertificate)
+                        Write-Host "Found Certificate for $hostname, looking for Issuer Certificate"
+
+                        $chain = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Chain
+                        # Build the certificate chain from the file certificate
+                        if( -not $chain.Build($cert) ) {
+                            Write-Host "Failed to build certificate change, trying another method..."
+                            Write-Host "Looking for LDAPS certificate for $hostname"
+                            $WebRequest = [Net.WebRequest]::CreateHttp($url)
+                            $WebRequest.AllowAutoRedirect = $true
+                            $chain = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Chain
+                            [Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
+                            $chain.ChainPolicy.RevocationMode = [System.Security.Cryptography.X509Certificates.X509RevocationMode]::Online
+                            $chain.ChainPolicy.RevocationMode = [System.Security.Cryptography.X509Certificates.X509RevocationFlag]::EntireChain
+                                            
+                            #Request website
+                            try {$Response = $WebRequest.GetResponse()} catch {}
+
+                            Write-Host "Found Certificate for $hostname, looking for Issuer Certificate"
+                            #Creates Certificate
+                            $cert = $WebRequest.ServicePoint.Certificate.Handle
+                                        
+                            #Build chain
+                            if( $chain.Build($cert) ) {
+                                $listOfCertificates = ($chain.ChainElements | ForEach-Object {$_.Certificate})
+                            } else {
+                                # Use OpenSSL if chain couldn't be built
+                                Write-Host "Failed to build certificate change, trying another method..."
+                                Write-Host "Looking for LDAPS certificate for $hostname"
+
+                                Start-Process C:\OpenSSL-Win64\bin\openssl.exe -ArgumentList "s_client -showcerts -connect ${hostname}:${port}" -RedirectStandardOutput "$env:systemdrive\certInfo.txt"
+                                # Wait a bit to ensure that the previous command completes
+                                Sleep 30
+
+                                Write-Host "Found Certificate for $hostname, looking for Issuer Certificate"
+                                $openSSLOutput = Get-Content "$env:systemdrive\certInfo.txt" -Raw
+                                $certMatches = $openSSLOutput | Select-String '(?smi)(-----BEGIN CERTIFICATE-----((?!-----END).)+-----END CERTIFICATE-----)' -AllMatches | % {$_.Matches}
+                                if ($certMatches.Count) {
+                                    #last one is the root in chain
+                                    $certMatches[-1].Value | Out-File -FilePath "$env:systemdrive\$issuerCertFileName" -Encoding ascii
+                                    $foundCert=$true
+                                }
+                            }
+                            [Net.ServicePointManager]::ServerCertificateValidationCallback = $null
+                        } else {
+                            $listOfCertificates = ($chain.ChainElements | ForEach-Object {$_.Certificate})
+                        }
+
+                        if ($listOfCertificates) {
                             #last one is the root in chain
-                            $certMatches[-1].Value | Out-File -FilePath "$env:systemdrive\$issuerCertFileName" -Encoding ascii
+                            $caCert = $listOfCertificates[-1]
+                            $content = @(
+                                '-----BEGIN CERTIFICATE-----'
+                                [System.Convert]::ToBase64String($caCert.RawData, 'InsertLineBreaks')
+                                '-----END CERTIFICATE-----'
+                            )
+                                        
+                            $content | Out-File -FilePath "$env:systemdrive\$issuerCertFileName" -Encoding ascii
                             $foundCert=$true
                         }
                     } catch {
                         Write-Host "Failed to retrieve issuer certificate from ${hostname}:${port} because $_"
                     } finally {
-                        Taskkill /F /IM "openssl.exe"
+                        #cleanup
+                        if ($sslStream) {
+                            $sslstream.close()  | Out-Null
+                        }
+                        if ($tcpclient) {
+                            $tcpclient.close()  | Out-Null
+                        }
+                        Start-Process Taskkill -ArgumentList '/F /IM "openssl.exe"' -Wait
                     }
-                    
-                    if(-not $foundCert)
-                    {
+                                    
+                    if($foundCert) {
+                        Write-Host "Root Issuer Cert found!"
+                    } else {
                         Start-Sleep -Seconds 10
                         $loopCountRemaining = $loopCountRemaining - 1
                         if( $loopCountRemaining -eq 0 ) {
