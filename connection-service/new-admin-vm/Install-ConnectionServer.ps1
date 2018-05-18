@@ -991,7 +991,10 @@ isMultiFactorAuthenticate=$isMfa
                                     #last one is the root in chain
                                     $certMatches[-1].Value | Out-File -FilePath "$env:systemdrive\$issuerCertFileName" -Encoding ascii
                                     $foundCert=$true
+                                } else {
+                                    Write-Host "Final method failed to get full certificate chain, using certificates that were found instead"
                                 }
+
                             }
                             [Net.ServicePointManager]::ServerCertificateValidationCallback = $null
                         } else {
