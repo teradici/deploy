@@ -66,7 +66,7 @@ Configuration InstallPCoIPAgent
                }
     $retryCount = 5
     $delay = 60 # seconds
-    $orderNumArray = @('1st', '2nd', '3rd')
+    $orderNumArray = @('1st', '2nd', '3rd', '4th', '5th')
 
     $agentInstallerDLDirectory = "C:\WindowsAzure\PCoIPAgentInstaller"
 
@@ -108,7 +108,7 @@ Configuration InstallPCoIPAgent
             GetScript  = { @{ Result = "Install_SumoCollector" } }
 
             TestScript = { 
-                return (Test-Path "C:\sumo\sumo.conf" -PathType leaf) -or (!$using:sumoCollectorID)
+                return (!$using:sumoCollectorID) -or ( (Get-Service sumo-collector -ErrorAction SilentlyContinue) -ne $null )
             }
 
             SetScript  = {
@@ -119,18 +119,49 @@ Configuration InstallPCoIPAgent
                 $sasToken = ($using:sasTokenAsCred).GetNetworkCredential().password
                 $blobLocation = ($using:sasTokenAsCred).GetNetworkCredential().username
 
-                $sumo_package = 'https://collectors.sumologic.com/rest/download/win64'
-                $sumo_config = "$blobLocation/sumo.conf${sasToken}"
-                $sumo_collector_json = "$blobLocation/sumo-agent-vm.json${sasToken}"
                 $dest = "C:\sumo"
-                Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile "$dest\sumo.conf"
-                Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile "$dest\sumo-agent-vm.json"
+                $sumo_package = 'https://collectors.sumologic.com/rest/download/win64'
+                $sourceArray = @()
+                $destArray = @()
+                $sourceArray += $sumo_package
+                $destArray += "$dest\$installerFileName"
+                $sourceArray += "$blobLocation/sumo.conf${sasToken}"
+                $destArray += "$dest\sumo.conf"
+                $sourceArray += "$blobLocation/sumo-agent-vm.json${sasToken}"
+                $destArray += "$dest\sumo-agent-vm.json"
+
+                $orderNumArray = $using:orderNumArray
+                $retryMax = $using:retryCount
+
+                $downIdx = 0;
+                foreach ($source in $sourceArray) {
+                    $destFile = $destArray[$downIdx]
+
+                    for ($idx = 0; $idx -lt $retryMax; $idx++) {
+                        Write-Verbose ('It is the {0} try downloading file from {1} ...' -f $orderNumArray[$idx], $source)
+                        Try{
+                            Invoke-WebRequest $source -OutFile $destFile -UseBasicParsing -PassThru  -ErrorAction Stop
+                            break
+                        }Catch{
+                            $errMsg = "Attempt {0} of {1} to download file from {2} failed. Error Infomation: {3} " -f ($idx + 1), $retryMax, $source, $_.Exception.Message 
+                            Write-Verbose $errMsg
+                            if ($idx -ne ($retryMax - 1)) {
+                                Start-Sleep -s $using:delay
+                            } else {
+                                $errMsg = "Failed to install sumo collector because file {0} could not be downloaded" -f $source
+                                Write-Verbose $errMsg
+                                return                                 
+                            }
+                        }
+                    }
+
+                    $downIdx += 1
+                }
+
                 #
                 #Insert unique ID
                 $collectorID = "$using:sumoCollectorID"
                 (Get-Content -Path "$dest\sumo.conf").Replace("collectorID", $collectorID) | Set-Content -Path "$dest\sumo.conf"
-                
-                Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
                 
                 #install the collector
                 $command = "$dest\$installerFileName -console -q"
