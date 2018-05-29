@@ -111,7 +111,9 @@ Param(
     $CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/master/azuredeploy.json",
     $binaryLocation = "https://teradeploy.blob.core.windows.net/binaries",
     $outputParametersFileName = "cam-output.parameters.json",
-    $location
+    $location,
+
+    [switch]$updateSPCredential
 )
 
 function confirmDialog {
@@ -489,7 +491,148 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
     return $deploymentId
 }
 
+# updates service principal password in CAM KeyVault
+function Update-CAMUserCredential() {
+    Param(
+        [bool]
+        $verifyCAMSaaSCertificate = $true,
+        
+        # Retry for CAM Registration
+        $retryCount = 3,
+        $retryDelay = 10,
 
+        [parameter(Mandatory = $true)]
+        $client,
+        
+        [parameter(Mandatory = $true)]
+        $key,
+        
+        [parameter(Mandatory = $true)]
+        $tenant,
+        
+        [parameter(Mandatory = $true)]
+        $ownerTenant,
+
+        [parameter(Mandatory = $true)]
+        $ownerUpn,
+
+        [parameter(Mandatory = $true)]
+        $camSaasBaseUri
+    )
+
+    $spUpdatedSuccessfully = $false
+
+    #define variable to keep trace of the error during retry process
+    $camUpdateUserCredentialError = ""
+    for ($idx = 0; $idx -lt $retryCount; $idx++) {
+        # reset the variable at each iteration, so we can always keep the current loop error message
+        $camUpdateUserCredentialError = ""
+        try {
+            $certificatePolicy = [System.Net.ServicePointManager]::CertificatePolicy
+
+            if (!$verifyCAMSaaSCertificate) {
+                # Do this so SSL Errors are ignored
+                add-type @"
+using System.Net;
+using System.Security.Cryptography.X509Certificates;
+public class TrustAllCertsPolicy : ICertificatePolicy {
+    public bool CheckValidationResult(
+        ServicePoint srvPoint, X509Certificate certificate,
+        WebRequest request, int certificateProblem) {
+        return true;
+    }
+}
+"@
+
+                [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+            }
+
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+            ##
+
+
+            $userRequest = @{
+                username = $client
+                password = $key
+                tenantId = $tenant
+                ownerTenantId = $ownerTenant
+                ownerUpn = $ownerUpn
+            }
+
+            # Get a Sign-in token
+            $signInResult = ""
+            try {
+                $signInResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/signin") -Body $userRequest
+            }
+            catch {
+                if ($_.ErrorDetails.Message) {
+                    $signInResult = ConvertFrom-Json $_.ErrorDetails.Message
+                }
+                else {
+                    throw $_
+                }
+            }
+            Write-Verbose ((ConvertTo-Json $signInResult) -replace "\.*token.*", 'Token": "Sanitized"')
+            # Check if signIn succeded
+            if ($signInResult.code -ne 200) {
+                throw ("Signing in failed. Result was: " + (ConvertTo-Json $signInResult))
+            }
+            $tokenHeader = @{
+                authorization = $signInResult.data.token
+            }
+
+            $decodedToken = Get-DecodedJWT `
+                -Token $signInResult.data.token
+
+            $userId = $decodedToken.claims.oid
+
+            Write-Host "Cloud Access Manager sign in succeeded"
+
+            # Update service principal credential
+            $updateUserCredentialRequest = @{
+                password = $key
+            }
+            $updateUserCredentialRequestJson = $updateUserCredentialRequest | ConvertTo-Json;
+            $updateUserCredentialResult = ""
+            try {
+                $updateUserCredentialResult = Invoke-RestMethod -Method PUT -Uri ($camSaasBaseUri + "/api/v1/auth/users/" + $userId + "/credential") -Body $updateUserCredentialRequestJson -Headers $tokenHeader -ContentType 'application/json'
+            }
+            catch {
+                if ($_.ErrorDetails.Message) {
+                    $updateUserCredentialResult = ConvertFrom-Json $_.ErrorDetails.Message
+                }
+                else {
+                    throw $_
+                }
+            }
+            Write-Verbose ((ConvertTo-Json $updateUserCredentialResult) -replace "\.*registrationCode.*", 'registrationCode":"Sanitized"')
+            if ( $updateUserCredentialResult.code -eq 200 ) {
+                $spUpdatedSuccessfully = $true    
+            }
+
+            if ( !$spUpdatedSuccessfully ) {
+                throw ("Updating the Service Principal password in the Cloud Access Manager service failed. Result was: " + (ConvertTo-Json $updateUserCredentialResult))
+            }
+
+            Write-Host "Service Principal password has been updated successfully in Cloud Access Manager service"
+
+            break;
+        }
+        catch {
+            $camUpdateUserCredentialError = $_
+            Write-Verbose ( "Attempt {0} of $retryCount failed due to Error: {1}" -f ($idx + 1), $camUpdateUserCredentialError )
+            Start-Sleep -s $retryDelay
+        }
+        finally {
+            # restore CertificatePolicy 
+            [System.Net.ServicePointManager]::CertificatePolicy = $certificatePolicy
+        }
+    }
+    if ($camUpdateUserCredentialError) {
+        throw $camUpdateUserCredentialError
+    }
+    return $spUpdatedSuccessfully
+}
 
 function New-UserStorageAccount {
     Param(
@@ -1387,7 +1530,12 @@ function New-ConnectionServiceDeployment() {
         $radiusServerHost,
         $radiusServerPort,
         $radiusSharedSecret,
-        $vnetConfig
+        $vnetConfig,
+        $camSaasUri,
+        $verifyCAMSaaSCertificate,
+        $ownerTenantId,
+        $ownerUpn,
+        [switch]$updateSPCredential
     )
 
     $kvID = $keyVault.ResourceId
@@ -1443,15 +1591,53 @@ function New-ConnectionServiceDeployment() {
                 }
             }
 
-            # get the password (key)
-            $secret = Get-AzureKeyVaultSecret `
+            # Get the password (key)
+            # Let's update the AzureSPKey in KeyVault if the Service Principal credential has been updated
+            if ($updateSPCredential) {
+                $spNewCredential = Get-Credential -Message "Please update Service Principal credential"
+                $key = $spNewCredential.GetNetworkCredential().Password
+                
+                $spUpdatedSuccessfully = Update-CAMUserCredential `
+                    -client $client `
+                    -key $key `
+                    -tenant $tenantId `
+                    -ownerTenant $ownerTenantId `
+                    -ownerUpn $ownerUpn `
+                    -camSaasBaseUri $camSaasUri `
+                    -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
+
+                if ( $spUpdatedSuccessfully ) {
+                    Set-AzureKeyVaultSecret `
+                        -VaultName $kvName `
+                        -Name "AzureSPKey" `
+                        -SecretValue $spNewCredential.Password `
+                        -ErrorAction stop | Out-Null
+                }
+                
+            }
+            else {
+                $secret = Get-AzureKeyVaultSecret `
                 -VaultName $kvName `
                 -Name "AzureSPKey" `
                 -ErrorAction stop
-            $key = $secret.SecretValueText
+                $key = $secret.SecretValueText
+            }
         }
 
         $spCreds = New-Object PSCredential $client, (ConvertTo-SecureString $key -AsPlainText -Force)
+
+        try {
+            Add-AzureRmAccount `
+                -Credential $spCreds `
+                -ServicePrincipal `
+                -TenantId $tenantId `
+                -ErrorAction Stop
+        } 
+        catch {
+            Write-Host "`nPlease first make sure that the Service Principal password has not been expired (If so, please add a new key through the Azure Portal)."
+            Write-Host "Then restart the deployment by passing the updateSPCredential switch."
+            exit # <--- early exit!
+        }
 
         Write-Host "Using service principal $client in tenant $tenantId and subscription $subscriptionId"
         
@@ -2349,6 +2535,7 @@ function Deploy-CAM() {
                 continue
             }
             else {
+                Write-Host "`nPlease make sure that the Service Principal password has not been expired (If so, please add a new key through the Azure Portal)."
                 throw $caughtError
             }
         }
@@ -3244,7 +3431,6 @@ function Test-PasswordComplexity
 ############# Script starts here #############
 ##############################################
 
-
 if (-not (Confirm-ModuleVersion) ) {
     exit
 }
@@ -3403,6 +3589,14 @@ catch {
     # silently swallow - if we had an error we couldn't find the key vault, usually because the resource group didn't exist.
 }
 
+$claims = Get-Claims
+
+$upn = ""
+if (-not ([string]::IsNullOrEmpty($claims.upn)))
+{
+    $upn = $claims.upn
+}
+
 # If there is a root keyvault, verify there is only one and then query for connector deployment.
 if ($CAMRootKeyvault) {
     if ($CAMRootKeyvault -is [Array]) {
@@ -3474,7 +3668,12 @@ if ($CAMRootKeyvault) {
         -radiusServerHost $radiusServerHost `
         -radiusServerPort $radiusServerPort `
         -radiusSharedSecret $radiusSharedSecret `
-        -vnetConfig $vnetConfig
+        -vnetConfig $vnetConfig `
+        -camSaasUri $camSaasUri.Trim().TrimEnd('/') `
+        -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
+        -ownerTenantId $claims.tid `
+        -ownerUpn $upn `
+        -updateSPCredential:$updateSPCredential
 }
 else {
     # New CAM deployment. 
@@ -3878,14 +4077,6 @@ else {
         }
     } while (-not $registrationCode )
 
-    
-    $claims = Get-Claims
-
-    $upn = ""
-    if (-not ([string]::IsNullOrEmpty($claims.upn)))
-    {
-        $upn = $claims.upn
-    }
     
     Deploy-CAM `
         -domainAdminCredential $domainAdminCredential `
