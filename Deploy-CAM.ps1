@@ -1679,7 +1679,7 @@ function New-ConnectionServiceDeployment() {
                 -SecretValue (ConvertTo-SecureString $connectionServiceNumber -AsPlainText -Force) `
                 -ErrorAction stop | Out-Null
             
-            Write-Host "Checking available resource group for connection service number $connectionServiceNumber"
+            Write-Host "Checking available resource group for connector number $connectionServiceNumber"
 
             $csRGName = $RGName + "-CN" + $connectionServiceNumber
             Set-AzureRMContext -Context $adminAzureContext | Out-Null
@@ -2281,6 +2281,14 @@ function Deploy-CAM() {
     $CAMConfig.parameters.artifactsLocation = @{
         value      = (ConvertTo-SecureString $artifactsLocation -AsPlainText -Force)
         clearValue = $artifactsLocation
+    }
+
+    $CAMConfig.parameters.enableAddUser = @{
+        value      = if($deployOverDC) {
+            ConvertTo-SecureString "FALSE" -AsPlainText -Force
+        } else {
+            ConvertTo-SecureString "TRUE" -AsPlainText -Force
+        }
     }
 
     $CAMConfig.parameters.cloudAccessRegistrationCode = @{value = $registrationCode}
