@@ -112,7 +112,7 @@
         {
             "type": "Microsoft.Compute/virtualMachines",
             "name": "[parameters('dnsLabelPrefix')]",
-            "apiVersion": "2017-03-30",
+            "apiVersion": "2017-12-01",
             "location": "[resourceGroup().location]",
             "properties": {
                 "hardwareProfile": {
@@ -133,8 +133,7 @@
                     "osDisk": {
                         "name": "[concat(parameters('dnsLabelPrefix'), '-os')]",
                         "caching": "ReadWrite",
-                        "createOption": "FromImage",
-                        "storageAccountType": "Premium_LRS"
+                        "createOption": "FromImage"
                     },
                     "dataDisks": [ ]
                 },
