@@ -2082,6 +2082,14 @@ function Deploy-CAM() {
         clearValue = $artifactsLocation
     }
 
+    $CAMConfig.parameters.enableAddUser = @{
+        value      = if($deployOverDC) {
+            ConvertTo-SecureString "FALSE" -AsPlainText -Force
+        } else {
+            ConvertTo-SecureString "TRUE" -AsPlainText -Force
+        }
+    }
+
     $CAMConfig.parameters.cloudAccessRegistrationCode = @{value = $registrationCode}
 
     $CAMConfig.parameters.domainServiceAccountPassword = @{value = $domainAdminCredential.Password}
@@ -3496,15 +3504,6 @@ else {
             Write-Host "Using the virtual network location $vnetLocation"
         }
         $location = $vnetlocation
-    }
-
-    $CAMConfig.parameters.enableAddUser = @{
-        value      = if($deployOverDC) 
-        {
-            ConvertTo-SecureString "FALSE" -AsPlainText -Force
-        } else {
-            ConvertTo-SecureString "TRUE" -AsPlainText -Force
-        }
     }
 
     # Find the CAM root RG.
