@@ -3498,6 +3498,15 @@ else {
         $location = $vnetlocation
     }
 
+    $CAMConfig.parameters.enableAddUser = @{
+        value      = if($deployOverDC) 
+        {
+            ConvertTo-SecureString "FALSE" -AsPlainText -Force
+        } else {
+            ConvertTo-SecureString "TRUE" -AsPlainText -Force
+        }
+    }
+
     # Find the CAM root RG.
     $resourceGroups = Get-AzureRmResourceGroup
 
