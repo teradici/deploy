@@ -1594,7 +1594,7 @@ function New-ConnectionServiceDeployment() {
             # Get the password (key)
             # Let's update the AzureSPKey in KeyVault if the Service Principal credential has been updated
             if ($updateSPCredential) {
-                $spNewCredential = Get-Credential -Message "Please update Service Principal credential"
+                $spNewCredential = Get-Credential -Message "Please update Service Principal credential" -UserName $client
                 $key = $spNewCredential.GetNetworkCredential().Password
                 
                 $spUpdatedSuccessfully = Update-CAMUserCredential `
