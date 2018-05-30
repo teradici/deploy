@@ -2648,7 +2648,7 @@ function Confirm-ModuleVersion()
     $AzureRMModule = Get-Module -ListAvailable -Name "AzureRM"
     if ( $AzureRMModule ) {
         # have an AzureRM version - check that.
-        if (( $AzureRMModule.Version -ge [version]$MinAzureRMVersion) -eq $False) {
+        if (-not ( $AzureRMModule.Version -ge [version]$MinAzureRMVersion)) {
             Write-Host ("AzureRM module version must be equal or greater than " + $MinAzureRMVersion)
             return $false
         }
@@ -2663,7 +2663,7 @@ function Confirm-ModuleVersion()
             Write-Host ("Please install the Azure Command Line tools for Powershell from Microsoft. The Azure and AzureRM modules must be present.")
             return $false
         }
-        if (( $AzureModule.Version -ge [version]$MinAzureVersion) -eq $False) {
+        if (-not ( $AzureModule.Version -ge [version]$MinAzureVersion)) {
             Write-Host ("Azure module version must be equal or greater than " + $MinAzureVersion)
             return $false
         }
