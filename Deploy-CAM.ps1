@@ -3012,6 +3012,28 @@ function Write-Host-Warning() {
     Write-Host ("`n$message") -ForegroundColor Red
 }
 
+# Check resource group location for cores, if less than 7 exit the launch
+function Check-Location-Cores() {
+    param(
+        [parameter(Mandatory=$true)]
+        $rgLocation,
+        [parameter(Mandatory=$true)]
+        $neededCores
+    )
+    # "cores" is the Name.Value for "Total Regional vCPUs"
+    $totalRegionUsage = Get-AzureRmVMUsage -Location $rgLocation | Where-Object {$_.Name.Value -eq "cores"}
+    $availableCores = $totalRegionUsage.Limit - $totalRegionUsage.CurrentValue
+    if($availableCores -lt $neededCores){
+        if($availableCores -eq 1){
+            $areis = "is"
+        }else{
+            $areis = "are" 
+        }
+        Write-Host-Warning "Not enough vCPUs available in $rgLocation. $neededCores vCPUs are required, $availableCores $areis available."
+        exit
+    }
+}
+
 # Sets any unpopulated sections of the passed in vnetConfig structure, by prompting the user
 function Set-VnetConfig() {
     Param(
@@ -3070,6 +3092,10 @@ function Set-VnetConfig() {
 
     # Now select subnets
     $vnet = Get-AzureRmVirtualNetwork -Name $vnetName -ResourceGroupName $vnetRgName
+    
+    # Doesn't work on full deploy through existing vnet
+    Check-Location-Cores -rgLocation $vnet.Location -neededCores $minCoresAddConn
+    
     Write-Host "Using VNet: $($vnet.Id)`n"
 
     $subnets = $vnet.Subnets
@@ -3455,6 +3481,9 @@ $vnetConfig.CSsubnetName = $ConnectionServiceSubnetName
 $vnetConfig.GWsubnetName = $GatewaySubnetName
 $vnetConfig.RWsubnetName = $RemoteWorkstationSubnetName
 
+# Set the minimum vCPUs needed for a full deployment or an add-on connection
+$minCoresFullDeploy = 7
+$minCoresAddConn = 3
 
 # Get the user's subscription
 $rmContext = Get-AzureRmContext
@@ -3647,6 +3676,8 @@ if ($CAMRootKeyvault) {
         else {
             # Populate from key vault
 
+            Check-Location-Cores -rgLocation $rootLocation -neededCores $minCoresAddConn
+
             $secret = Get-AzureKeyVaultSecret `
                 -VaultName $CAMRootKeyvault.Name `
                 -Name "connectionServiceSubnet" `
@@ -3769,6 +3800,8 @@ else {
             }
             else {
                 $rgMatch = $resourceGroups[$rgIndex - 1]
+                
+                Check-Location-Cores -rgLocation $rgMatch.Location -neededCores $minCoresFullDeploy
                 $selectedRGName = $true
             }
             continue
@@ -3777,6 +3810,8 @@ else {
             # entered a name. Let's see if it matches any resource groups first
             $rgMatch = $resourceGroups | Where-Object {$_.ResourceGroupName -eq $rgIdentifier}
             if ($rgMatch) {
+                
+                Check-Location-Cores -rgLocation $rgMatch.Location -neededCores $minCoresFullDeploy
                 $selectedRGName = $true
             }
             else {
@@ -3802,7 +3837,8 @@ else {
                     }
                     Write-Host-Warning "$newRGLocation is not a valid location. "
                 }
-
+                
+                Check-Location-Cores  -rgLocation $newRGLocation -neededCores $minCoresFullDeploy
                 Write-Host "Creating Cloud Access Manager root resource group $inputRgName"
                 $newRgResult = New-AzureRmResourceGroup -Name $inputRgName -Location $newRGLocation
                 if ($newRgResult) {
