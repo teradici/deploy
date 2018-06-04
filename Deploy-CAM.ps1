@@ -3487,7 +3487,6 @@ $vnetConfig.RWsubnetName = $RemoteWorkstationSubnetName
 # Set the minimum vCPUs needed for a full deployment or an add-on connection
 $minCoresFullDeploy = 6
 $minCoresAddConn = 3
-$isExistingDC = $false
 
 # Get the user's subscription
 $rmContext = Get-AzureRmContext
