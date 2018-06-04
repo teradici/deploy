@@ -3012,7 +3012,7 @@ function Write-Host-Warning() {
     Write-Host ("`n$message") -ForegroundColor Red
 }
 
-# Check resource group location for cores, if less than 7 exit the launch
+# Check resource group location for cores, if less than $neededCores exit the launch
 function Check-Location-Cores() {
     param(
         [parameter(Mandatory=$true)]
