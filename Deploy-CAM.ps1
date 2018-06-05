@@ -116,6 +116,11 @@ Param(
     [switch]$updateSPCredential
 )
 
+# Global Variables
+# Set the minimum vCPUs needed for a full deployment or an add-on connection
+$minCoresFullDeploy = 6
+$minCoresAddConn = 3
+
 function confirmDialog {
     param(
         [parameter(Mandatory=$true)]
@@ -3024,12 +3029,8 @@ function Check-Location-Cores() {
     $totalRegionUsage = Get-AzureRmVMUsage -Location $rgLocation | Where-Object {$_.Name.Value -eq "cores"}
     $availableCores = $totalRegionUsage.Limit - $totalRegionUsage.CurrentValue
     if($availableCores -lt $neededCores){
-        if($availableCores -eq 1){
-            $areis = "is"
-        }else{
-            $areis = "are" 
-        }
-        Write-Host-Warning "Not enough vCPUs available in $rgLocation. $neededCores vCPUs are required, $availableCores $areis available."
+
+        Write-Host-Warning "Not enough vCPUs available in $rgLocation. $neededCores vCPUs required, $availableCores available."
         exit
     }
 }
@@ -3040,7 +3041,11 @@ function Set-VnetConfig() {
         [parameter(Mandatory=$true)]
         $vnetConfig,
         [parameter(Mandatory=$false)]
-        $setRWSubnet = $true
+        $setRWSubnet = $true,
+        [parameter(Mandatory=$false)]
+        $reqCores,
+        [parameter(Mandatory=$false)]
+        $domainController = $false
     )
 
     # prompt for vnet name, gateway subnet name, remote workstation subnet name, connector subnet name
@@ -3095,8 +3100,8 @@ function Set-VnetConfig() {
     
     # Only check if we are deploying to an existing CAM deployment, not to an existing domain controller.
     # Domain controller version can use a different location, so we check that one later.
-    if(-not $deployOverDC){
-        Check-Location-Cores -rgLocation $vnet.Location -neededCores $minCoresAddConn
+    if(-not $domainController){
+        Check-Location-Cores -rgLocation $vnet.Location -neededCores $reqCores
     }
 
     Write-Host "Using VNet: $($vnet.Id)`n"
@@ -3484,10 +3489,6 @@ $vnetConfig.CSsubnetName = $ConnectionServiceSubnetName
 $vnetConfig.GWsubnetName = $GatewaySubnetName
 $vnetConfig.RWsubnetName = $RemoteWorkstationSubnetName
 
-# Set the minimum vCPUs needed for a full deployment or an add-on connection
-$minCoresFullDeploy = 6
-$minCoresAddConn = 3
-
 # Get the user's subscription
 $rmContext = Get-AzureRmContext
 $subscriptions = Get-AzureRmSubscription -WarningAction Ignore
@@ -3674,7 +3675,7 @@ if ($CAMRootKeyvault) {
                 $vnetConfig.RWSubnetName = "dummy"
             }
 
-            Set-VnetConfig  -vnetConfig $vnetConfig -setRWSubnet $false
+            Set-VnetConfig  -vnetConfig $vnetConfig -setRWSubnet $false -reqCores $minCoresAddConn
         }
         else {
             # Populate from key vault
@@ -3742,7 +3743,7 @@ else {
 
     if($deployOverDC) {
         # Don't create new DC and vnet - prompt for which vnet and subnets to use
-        Set-VnetConfig -vnetConfig $vnetConfig
+        Set-VnetConfig -vnetConfig $vnetConfig -domainController $true
         $vnetLocation = (Get-AzureRmResource -ResourceId $vnetConfig.vnetID -ErrorAction Stop).Location
 
         if($location) {
