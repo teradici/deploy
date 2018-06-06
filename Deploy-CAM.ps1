@@ -116,6 +116,11 @@ Param(
     [switch]$updateSPCredential
 )
 
+# Global Variables
+# Set the minimum vCPUs needed for a full deployment or an add-on connection
+$minCoresFullDeploy = 6
+$minCoresAddConn = 3
+
 function confirmDialog {
     param(
         [parameter(Mandatory=$true)]
@@ -3012,13 +3017,35 @@ function Write-Host-Warning() {
     Write-Host ("`n$message") -ForegroundColor Red
 }
 
+# Check resource group location for cores, if less than $neededCores exit the launch
+function Check-Location-Cores() {
+    param(
+        [parameter(Mandatory=$true)]
+        $rgLocation,
+        [parameter(Mandatory=$true)]
+        $neededCores
+    )
+    # "cores" is the Name.Value for "Total Regional vCPUs"
+    $totalRegionUsage = Get-AzureRmVMUsage -Location $rgLocation | Where-Object {$_.Name.Value -eq "cores"}
+    $availableCores = $totalRegionUsage.Limit - $totalRegionUsage.CurrentValue
+    if($availableCores -lt $neededCores){
+
+        Write-Host-Warning "Not enough vCPUs available in $rgLocation. $neededCores vCPUs required, $availableCores available."
+        exit
+    }
+}
+
 # Sets any unpopulated sections of the passed in vnetConfig structure, by prompting the user
 function Set-VnetConfig() {
     Param(
         [parameter(Mandatory=$true)]
         $vnetConfig,
         [parameter(Mandatory=$false)]
-        $setRWSubnet = $true
+        $setRWSubnet = $true,
+        [parameter(Mandatory=$false)]
+        $reqCores,
+        [parameter(Mandatory=$false)]
+        $domainController = $false
     )
 
     # prompt for vnet name, gateway subnet name, remote workstation subnet name, connector subnet name
@@ -3070,6 +3097,13 @@ function Set-VnetConfig() {
 
     # Now select subnets
     $vnet = Get-AzureRmVirtualNetwork -Name $vnetName -ResourceGroupName $vnetRgName
+    
+    # Only check if we are deploying to an existing CAM deployment, not to an existing domain controller.
+    # Domain controller version can use a different location, so we check that one later.
+    if(-not $domainController){
+        Check-Location-Cores -rgLocation $vnet.Location -neededCores $reqCores
+    }
+
     Write-Host "Using VNet: $($vnet.Id)`n"
 
     $subnets = $vnet.Subnets
@@ -3455,7 +3489,6 @@ $vnetConfig.CSsubnetName = $ConnectionServiceSubnetName
 $vnetConfig.GWsubnetName = $GatewaySubnetName
 $vnetConfig.RWsubnetName = $RemoteWorkstationSubnetName
 
-
 # Get the user's subscription
 $rmContext = Get-AzureRmContext
 $subscriptions = Get-AzureRmSubscription -WarningAction Ignore
@@ -3642,10 +3675,12 @@ if ($CAMRootKeyvault) {
                 $vnetConfig.RWSubnetName = "dummy"
             }
 
-            Set-VnetConfig  -vnetConfig $vnetConfig -setRWSubnet $false
+            Set-VnetConfig  -vnetConfig $vnetConfig -setRWSubnet $false -reqCores $minCoresAddConn
         }
         else {
             # Populate from key vault
+
+            Check-Location-Cores -rgLocation $rootLocation -neededCores $minCoresAddConn
 
             $secret = Get-AzureKeyVaultSecret `
                 -VaultName $CAMRootKeyvault.Name `
@@ -3708,7 +3743,7 @@ else {
 
     if($deployOverDC) {
         # Don't create new DC and vnet - prompt for which vnet and subnets to use
-        Set-VnetConfig -vnetConfig $vnetConfig
+        Set-VnetConfig -vnetConfig $vnetConfig -domainController $true
         $vnetLocation = (Get-AzureRmResource -ResourceId $vnetConfig.vnetID -ErrorAction Stop).Location
 
         if($location) {
@@ -3760,6 +3795,13 @@ else {
         $rgIndex = 0
         $rgIsInt = [int]::TryParse($rgIdentifier, [ref]$rgIndex) # rgIndex will be 0 on parse failure
 
+        # If we are doing an existing domain controller deploy, it will only add the connection vms instead of the full set
+        if($deployOverDC){
+            $deployCost = $minCoresAddConn
+        }else{
+            $deployCost = $minCoresFullDeploy
+        }
+
         if ($rgIsInt) {
             # entered an integer - we are not supporting integer names here for new resource groups
             $rgArrayLength = $resourceGroups.Length
@@ -3769,6 +3811,8 @@ else {
             }
             else {
                 $rgMatch = $resourceGroups[$rgIndex - 1]
+                
+                Check-Location-Cores -rgLocation $rgMatch.Location -neededCores $deployCost
                 $selectedRGName = $true
             }
             continue
@@ -3777,6 +3821,8 @@ else {
             # entered a name. Let's see if it matches any resource groups first
             $rgMatch = $resourceGroups | Where-Object {$_.ResourceGroupName -eq $rgIdentifier}
             if ($rgMatch) {
+                
+                Check-Location-Cores -rgLocation $rgMatch.Location -neededCores $deployCost
                 $selectedRGName = $true
             }
             else {
@@ -3802,7 +3848,8 @@ else {
                     }
                     Write-Host-Warning "$newRGLocation is not a valid location. "
                 }
-
+                
+                Check-Location-Cores  -rgLocation $newRGLocation -neededCores $deployCost
                 Write-Host "Creating Cloud Access Manager root resource group $inputRgName"
                 $newRgResult = New-AzureRmResourceGroup -Name $inputRgName -Location $newRGLocation
                 if ($newRgResult) {
