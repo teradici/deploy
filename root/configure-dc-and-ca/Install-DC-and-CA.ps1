@@ -138,14 +138,13 @@ configuration CreateDCCA
             DependsOn = '[WindowsFeature]ADCS-Web-Enrollment','[xADCSCertificationAuthority]ADCS'
         }
 
-        #Create section for Set-ADUser, depends on certserv?
         Script Set_Admin_Password_Permanent
         {
             DependsOn  = @("[xADCSWebEnrollment]CertSrv")
             GetScript  = { @{ Result = "Set_Admin_Password_Permanent"}}
 
             TestScript = {
-                Test-Path -Path "C:\adminUpdate" #If script isn't found, then run SetScript.
+                Test-Path -Path "C:\adminUpdate" #If file isn't found, then run SetScript.
                 }
 
             SetScript  = {
