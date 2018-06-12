@@ -138,6 +138,45 @@ configuration CreateDCCA
             DependsOn = '[WindowsFeature]ADCS-Web-Enrollment','[xADCSCertificationAuthority]ADCS'
         }
 
+        #Create section for Set-ADUser, depends on certserv?
+        Script Set_Admin_Password_Permanent
+        {
+            DependsOn  = @("[xADCSWebEnrollment]CertSrv")
+            GetScript  = { @{ Result = "Set_Admin_Password_Permanent"}}
+
+            TestScript = {
+                Test-Path -Path "C:\adminUpdate" #If script isn't found, then run SetScript.
+                }
+
+            SetScript  = {
+                function Set-Password-Permanent($uName){
+                    if(-not (Get-Password-Permanent -uName $uName)){
+                        Set-ADUser -Identity $uName -PasswordNeverExpires $true
+                        return Get-Password-Permanent -uName $uName
+                    }else{
+                        return $true
+                    }                
+                }
+
+                function Get-Password-Permanent($uName){
+                    $uInfo = Get-ADUser -Identity $uName -Properties PasswordNeverExpires
+                    return $uInfo.PasswordNeverExpires
+                }
+
+                $retry = 3
+                while(-not (Set-Password-Permanent -uName $($using:Admincreds.Username))){
+                    if(($retry--) -le 0){
+                        Write-Host "Failure to connect to Azure, Admin password not set to permanent."
+                    }
+                    Start-Sleep -seconds 30 # Wait for another attempt
+                }
+
+                $fileTest = New-Item "C:\adminUpdate" -type File
+                Set-Content -Path $fileTest -Value "Admin password permanent."
+            }
+        }
+
+
         Script Ensure_LDAPS_is_Active
         {
             DependsOn  = @("[xADCSWebEnrollment]CertSrv")
