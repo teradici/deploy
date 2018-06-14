@@ -144,7 +144,8 @@ configuration CreateDCCA
             GetScript  = { @{ Result = "Set_Admin_Password_Permanent"}}
 
             TestScript = {
-                Test-Path -Path "C:\adminUpdate" #If file isn't found, then run SetScript.
+                # If file isn't found, then run SetScript.
+                Test-Path -Path "C:\adminUpdate" 
                 }
 
             SetScript  = {
@@ -163,15 +164,19 @@ configuration CreateDCCA
                 }
 
                 $retry = 3
-                while(-not (Set-Password-Permanent -uName $($using:Admincreds.Username))){
-                    if(($retry--) -le 0){
-                        Write-Host "Failure to connect to Azure, Admin password not set to permanent."
-                    }
-                    Start-Sleep -seconds 30 # Wait for another attempt
+                $passwordStatus = $false
+                while(-not ($passwordStatus = (Set-Password-Permanent -uName $($using:Admincreds.Username))) -and ($retry-- -gt 0)){
+                    # Wait for another attempt
+                    Start-Sleep -seconds 30 
                 }
 
-                $fileTest = New-Item "C:\adminUpdate" -type File
-                Set-Content -Path $fileTest -Value "Admin password permanent."
+                if($passwordStatus){ 
+                    # Create file if successful.
+                    $fileTest = New-Item "C:\adminUpdate" -type File 
+                    Set-Content -Path $fileTest -Value "Admin password permanent."
+                }else{
+                    Write-Host "Failure to connect to Azure, Admin password not set to permanent."
+                }
             }
         }
 
