@@ -3585,8 +3585,6 @@ $rmContext = Set-AzureRmContext -SubscriptionId $subscriptionsToDisplay[$chosenS
 $selectedTenantId = $subscriptionsToDisplay[$chosenSubscriptionIndex].TenantId
 $selectedSubcriptionId = $subscriptionsToDisplay[$chosenSubscriptionIndex].SubscriptionId
 
-# Now we have the subscription set. Ensure it has keyvault resource provider
-$keyVaultProviderExists = [bool](Get-AzureRmResourceProvider | Where-Object {$_.ProviderNamespace -eq "Microsoft.Keyvault"})
 # Pull the full list of Resource Providers for manipulation
 $providerList = Get-AzureRmResourceProvider
 
