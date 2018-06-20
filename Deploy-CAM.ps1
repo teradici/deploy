@@ -3017,6 +3017,35 @@ function Write-Host-Warning() {
     Write-Host ("`n$message") -ForegroundColor Red
 }
 
+# Check if a resource is currently registered to the Subscription
+function checkResource(){
+    param(
+        [parameter(Mandatory=$true)]
+        $resourceProviderList,
+        [parameter(Mandatory=$true)]
+        $resourceName,
+        [parameter(Mandatory=$true)]
+        $ignorePrompts,
+        [parameter(Mandatory=$true)]
+        $rmContext
+    )
+
+    $resource = $resourceProviderList | Where-Object {$_.ProviderNamespace -eq $resourceName}
+    Write-host "Checking $($resourceName)"
+    if(-not ($resource.RegistrationState -eq "Registered")) {
+        Write-Host "$($resourceName) is not registered as a resource provider for this subscription."
+        Write-Host "Cloud Access Manager requires access to features within $($resourceName) to deploy."
+        if(-not $ignorePrompts) {
+            $cancelDeployment = (confirmDialog "Do you want to register $($resourceName) with subscription $($rmContext.Subscription.Id) or 'no' to cancel deployment?" -defaultSelected 'Y') -eq "n"
+            if ($cancelDeployment) { exit }
+        }
+        Register-AzureRmResourceProvider -ProviderNamespace $resourceName -ErrorAction stop | Out-Null
+    }
+
+
+}
+
+
 # Check resource group location for cores, if less than $neededCores exit the launch
 function Check-Location-Cores() {
     param(
@@ -3556,18 +3585,12 @@ $rmContext = Set-AzureRmContext -SubscriptionId $subscriptionsToDisplay[$chosenS
 $selectedTenantId = $subscriptionsToDisplay[$chosenSubscriptionIndex].TenantId
 $selectedSubcriptionId = $subscriptionsToDisplay[$chosenSubscriptionIndex].SubscriptionId
 
-# Now we have the subscription set. Ensure it has keyvault resource provider
-$keyVaultProviderExists = [bool](Get-AzureRmResourceProvider | Where-Object {$_.ProviderNamespace -eq "Microsoft.Keyvault"})
+# Pull the full list of Resource Providers for manipulation
+$providerList = Get-AzureRmResourceProvider
 
-if(-not $keyVaultProviderExists) {
-    Write-Host "Microsoft.Keyvault is not registered as a resource provider for this subscription."
-    Write-Host "Cloud Access Manager requires a key vault to operate."
-    if(-not $ignorePrompts) {
-        $cancelDeployment = (confirmDialog "Do you want to register Microsoft.Keyvault with subscription $($rmContext.Subscription.Id) or 'no' to cancel deployment?" -defaultSelected 'Y') -eq "n"
-        if ($cancelDeployment) { exit }
-    }
-    Register-AzureRmResourceProvider -ProviderNamespace "Microsoft.KeyVault" -ErrorAction stop | Out-Null
-}
+checkResource -resourceProviderList $providerList -resourceName "Microsoft.Keyvault" -ignorePrompts $ignorePrompts -rmContext $rmContext
+checkResource -resourceProviderList $providerList -resourceName "Microsoft.Compute" -ignorePrompts $ignorePrompts -rmContext $rmContext
+checkResource -resourceProviderList $providerList -resourceName "Microsoft.Network" -ignorePrompts $ignorePrompts -rmContext $rmContext
 
 # Determine if we're upgrading a current deployment
 # This section returns a resource group name in $ResourceGroupName if one was found.
