@@ -350,7 +350,7 @@ EOF
 
 install_gui()
 {
-    sudo yum -y update  # --exclude=WALinuxAgent
+    sudo yum -y update  --exclude=WALinuxAgent
 
     # Install Desktop
     echo "-->Install desktop" | tee -a "$INST_LOG_FILE"
