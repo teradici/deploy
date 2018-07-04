@@ -126,7 +126,7 @@ if (-not $env:TEMP) {
     if ($isUnix) {
         $env:TEMP = "/tmp/"
     } else {
-        $env:TEMP = "C:\temp\"
+        $env:TEMP = "$env:SystemDrive\temp\"
     }
 }
 
@@ -366,11 +366,13 @@ function Register-CAM() {
         # reset the variable at each iteration, so we can always keep the current loop error message
         $camRegistrationError = ""
         try {
-            $certificatePolicy = [System.Net.ServicePointManager]::CertificatePolicy
-
-            if (!$verifyCAMSaaSCertificate) {
-                # Do this so SSL Errors are ignored
-                add-type @"
+            if ( -not $isUnix ) {
+                $certificatePolicy = [System.Net.ServicePointManager]::CertificatePolicy
+                # Can't disable SSL verification for Invoke-RestMethod on Unix with this method
+                # Not worth effort fixing since cert should always be valid
+                if (!$verifyCAMSaaSCertificate) {
+                    # Do this so SSL Errors are ignored
+                    add-type @"
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 public class TrustAllCertsPolicy : ICertificatePolicy {
@@ -382,7 +384,13 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 }
 "@
 
-                [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+                    [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+                }
+            }
+
+            # Security Rules on CAM firewall don't like default user-agent for cloudshell, overwrite with a different one (Chrome)
+            $baseHeaders = @{
+                "User-Agent"="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36"
             }
 
             [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -398,7 +406,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             }
             $registerUserResult = ""
             try {
-                $registerUserResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/users") -Body $userRequest
+                $registerUserResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/users") -Body $userRequest -Headers $baseHeaders
             }
             catch {
                 if ($_.ErrorDetails.Message) {
@@ -419,7 +427,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             # Get a Sign-in token
             $signInResult = ""
             try {
-                $signInResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/signin") -Body $userRequest
+                $signInResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/signin") -Body $userRequest -Headers $baseHeaders
             }
             catch {
                 if ($_.ErrorDetails.Message) {
@@ -434,7 +442,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             if ($signInResult.code -ne 200) {
                 throw ("Signing in failed. Result was: " + (ConvertTo-Json $signInResult))
             }
-            $tokenHeader = @{
+            $tokenHeader = $baseHeaders + @{
                 authorization = $signInResult.data.token
             }
             Write-Host "Cloud Access Manager sign in succeeded"
@@ -504,7 +512,9 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
         }
         finally {
             # restore CertificatePolicy 
-            [System.Net.ServicePointManager]::CertificatePolicy = $certificatePolicy
+            if ( -not $isUnix ) {
+                [System.Net.ServicePointManager]::CertificatePolicy = $certificatePolicy
+            }
         }
     }
     if ($camRegistrationError) {
