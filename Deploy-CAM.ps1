@@ -120,6 +120,7 @@ Param(
 # Set the minimum vCPUs needed for a full deployment or an add-on connection
 $minCoresFullDeploy = 6
 $minCoresAddConn = 3
+$isUnix = [Environment]::OSVersion.VersionString.Contains("Unix")
 
 function confirmDialog {
     param(
@@ -264,13 +265,21 @@ function Login-AzureRmAccountWithBetterReporting($Credential) {
 # uses session instance profile and TokenCache and returns an access token without having to authentication a second time
 function Get-AzureRmCachedAccessToken() {
     $ErrorActionPreference = 'Stop'
-    if(-not (Get-Module AzureRm.Profile)) {
-        Import-Module AzureRm.Profile
+    if(-not ((Get-Module AzureRm.Profile) -and (Get-Module AzureRm.Profile.Netcore))) {
+        if($isUnix) {
+            Import-Module AzureRm.Profile.NetCore
+        } else {
+            Import-Module AzureRm.Profile
+        }
     }
-    $azureRmProfileModuleVersion = (Get-Module AzureRm.Profile).Version
+    if($isUnix) {
+        $azureRmProfileModuleVersion = (Get-Module AzureRm.Profile.Netcore).Version
+    } else {
+        $azureRmProfileModuleVersion = (Get-Module AzureRm.Profile).Version
+    }
     
     # refactoring performed in AzureRm.Profile v3.0 or later
-    if($azureRmProfileModuleVersion.Major -ge 3) {
+    if( (-not $isUnix -and $azureRmProfileModuleVersion.Major -ge 3) -or ($isUnix -and $azureRmProfileModuleVersion.Major -ge 0 -and $azureRmProfileModuleVersion.Minor -ge 12) ) {
         $azureRmProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile
         if(-not $azureRmProfile.Accounts.Count) {
             Write-Error "Ensure you have logged in before calling this function."
@@ -2844,8 +2853,13 @@ function Deploy-CAM() {
 function Confirm-ModuleVersion()
 {
     # Check Azure RM version
-    $MinAzureRMVersion="6.0.0"
-    $AzureRMModule = Get-Module -ListAvailable -Name "AzureRM"
+    if ($isUnix) {
+        $MinAzureRMVersion="0.12.0"
+        $AzureRMModule = Get-Module -ListAvailable -Name "AzureRM.Netcore"
+    } else {
+        $MinAzureRMVersion="6.0.0"
+        $AzureRMModule = Get-Module -ListAvailable -Name "AzureRM"
+    }
     if ( $AzureRMModule ) {
         # have an AzureRM version - check that.
         if (-not ( $AzureRMModule.Version -ge [version]$MinAzureRMVersion)) {
