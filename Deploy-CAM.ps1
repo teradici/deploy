@@ -1157,77 +1157,107 @@ function Get-CertificateInfoForAppGateway() {
     if ($needToCreateSelfCert) {
         # create self signed certificate for Application Gateway.
         # System Administrators can override the self signed certificate if desired in future.
-        # In order to create the certificate you must be running as Administrator on a Windows 10/Server 2016 machine
-        # (Potentially Windows 8/Server 2012R2, but not Windows 7 or Server 2008R2)
+        if (-not $isUnix) {
+            # In order to create the certificate you must be running as Administrator on a Windows 10/Server 2016 machine
+            # (Potentially Windows 8/Server 2012R2, but not Windows 7 or Server 2008R2)
 
-        Write-Host "Creating Self-signed certificate for Application Gateway"
+            Write-Host "Creating Self-signed certificate for Application Gateway"
 
-        #TODO - this is broken??? No maybe fixed with new catch block below. Should re-test.
-        $currentPrincipal = New-Object Security.Principal.WindowsPrincipal( [Security.Principal.WindowsIdentity]::GetCurrent())
-        $isAdminSession = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-        if (!$isAdminSession) {
-            $errStr = "You must be running as administrator to create the self-signed certificate for the application gateway"
-            Write-error $errStr
-            throw $errStr
-        }
+            #TODO - this is broken??? No maybe fixed with new catch block below. Should re-test.
+            $currentPrincipal = New-Object Security.Principal.WindowsPrincipal( [Security.Principal.WindowsIdentity]::GetCurrent())
+            $isAdminSession = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+            if (!$isAdminSession) {
+                $errStr = "You must be running as administrator to create the self-signed certificate for the application gateway"
+                Write-error $errStr
+                throw $errStr
+            }
 
-        if (! (Get-Command New-SelfSignedCertificate -ErrorAction SilentlyContinue) ) {
-            $errStr = "New-SelfSignedCertificate cmdlet must be available - please ensure you are running on a supported OS such as Windows 10 or Server 2016."
-            Write-error $errStr
-            throw $errStr
-        }
+            if (! (Get-Command New-SelfSignedCertificate -ErrorAction SilentlyContinue) ) {
+                $errStr = "New-SelfSignedCertificate cmdlet must be available - please ensure you are running on a supported OS such as Windows 10 or Server 2016."
+                Write-error $errStr
+                throw $errStr
+            }
 
-        $certLoc = 'cert:Localmachine\My'
-        $startDate = [DateTime]::Now.AddDays(-1)
+            $certLoc = 'cert:Localmachine\My'
+            $startDate = [DateTime]::Now.AddDays(-1)
 
-        # add some randomization to the subject to get around the Firefox TLS issue referenced here:
-        # https://www.thesslstore.com/blog/troubleshoot-firefoxs-tls-handshake-message/
-        # (all lower case letters)
-        # (However this is causing issues with the software PCoIP Client so we need some more
-        # investigation on what is changable in the certificate.
-        #$subjectOU = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
+            # add some randomization to the subject to get around the Firefox TLS issue referenced here:
+            # https://www.thesslstore.com/blog/troubleshoot-firefoxs-tls-handshake-message/
+            # (all lower case letters)
+            # (However this is causing issues with the software PCoIP Client so we need some more
+            # investigation on what is changable in the certificate.
+            #$subjectOU = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
 
-        $subject = "CN=localhost,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"
+            $subject = "CN=localhost,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"
 
-        $cert = New-SelfSignedCertificate `
-            -certstorelocation $certLoc `
-            -DnsName "*.cloudapp.net" `
-            -Subject $subject `
-            -KeyLength 3072 `
-            -FriendlyName "PCoIP Application Gateway" `
-            -NotBefore $startDate `
-            -TextExtension @("2.5.29.19={critical}{text}ca=1") `
-            -HashAlgorithm SHA384 `
-            -KeyUsage DigitalSignature, CertSign, CRLSign, KeyEncipherment
+            $cert = New-SelfSignedCertificate `
+                -certstorelocation $certLoc `
+                -DnsName "*.cloudapp.net" `
+                -Subject $subject `
+                -KeyLength 3072 `
+                -FriendlyName "PCoIP Application Gateway" `
+                -NotBefore $startDate `
+                -TextExtension @("2.5.29.19={critical}{text}ca=1") `
+                -HashAlgorithm SHA384 `
+                -KeyUsage DigitalSignature, CertSign, CRLSign, KeyEncipherment
 
-        Write-Host "Certificate generated. Formatting as .pfx file."
+            Write-Host "Certificate generated. Formatting as .pfx file."
 
-        # Generate pfx file from certificate
-        $certPath = $certLoc + '\' + $cert.Thumbprint
+            # Generate pfx file from certificate
+            $certPath = $certLoc + '\' + $cert.Thumbprint
 
-        if (-not $tempDir) {
-            $tempDir = $env:TEMP
-        }
+            if (-not $tempDir) {
+                $tempDir = $env:TEMP
+            }
 
-        $certificateFile = Join-Path $tempDir "self-signed-cert.pfx"
-        if (Test-Path $certificateFile) {
-            Remove-Item $certificateFile
-        }
+            $certificateFile = Join-Path $tempDir "self-signed-cert.pfx"
+            if (Test-Path $certificateFile) {
+                Remove-Item $certificateFile
+            }
 
-        # Generate password for pfx file
-        # https://docs.microsoft.com/en-us/azure/application-gateway/application-gateway-ssl
-        # The certificate password must be between 4 to 12 characters made up of letters or numbers.
-        # Special characters are not accepted.
-        $certPswd = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 10 | % {[char]$_})
+            # Generate password for pfx file
+            # https://docs.microsoft.com/en-us/azure/application-gateway/application-gateway-ssl
+            # The certificate password must be between 4 to 12 characters made up of letters or numbers.
+            # Special characters are not accepted.
+            $certPswd = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 10 | % {[char]$_})
 
-        $certificateFilePassword = ConvertTo-SecureString -String $certPswd -AsPlainText -Force
+            $certificateFilePassword = ConvertTo-SecureString -String $certPswd -AsPlainText -Force
 
-        # Export pfx file
-        Export-PfxCertificate -Cert $certPath -FilePath $certificateFile -Password $certificateFilePassword
+            # Export pfx file
+            Export-PfxCertificate -Cert $certPath -FilePath $certificateFile -Password $certificateFilePassword
 
-        # Delete self-signed certificate
-        if (Test-Path $certPath) { 
-            Remove-Item $certPath -ErrorAction SilentlyContinue
+            # Delete self-signed certificate
+            if (Test-Path $certPath) { 
+                Remove-Item $certPath -ErrorAction SilentlyContinue
+            }
+        } else {
+            Write-Host "Creating Self-signed certificate for Application Gateway"
+            
+            $subject = "/CN=*.cloudapp.net,/CN=localhost,/O=Teradici Corporation,/OU=SoftPCoIP,/L=Burnaby,/ST=BC,/C=CA"
+            if (-not $tempDir) {
+                $tempDir = $env:TEMP
+            }
+
+            # Generate password for pfx file
+            # https://docs.microsoft.com/en-us/azure/application-gateway/application-gateway-ssl
+            # The certificate password must be between 4 to 12 characters made up of letters or numbers.
+            # Special characters are not accepted.
+            $certPswd = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 10 | % {[char]$_})
+            $certificateFilePassword = ConvertTo-SecureString -String $certPswd -AsPlainText -Force
+
+            openssl req -x509 -newkey rsa:3072 -keyout "$tempDir/key.pem" -out "$tempDir/cert.pem" -days 365 -subj $subject -sha384 -passout pass:$certPswd
+            
+            Write-Host "Certificate generated. Formatting as .pfx file."
+
+            $certificateFile = Join-Path $tempDir "self-signed-cert.pfx"
+            if (Test-Path $certificateFile) {
+                Remove-Item $certificateFile
+            }            
+
+            # Export pfx file
+            openssl pkcs12 -inkey "$tempDir/key.pem" -in "$tempDir/cert.pem" -export -out $certificateFile -passin pass:$certPswd -passout pass:$certPswd
+            Remove-Item cert.pem -ErrorAction SilentlyContinue
+            Remove-Item key.pem -ErrorAction SilentlyContinue
         }
     } 
 
