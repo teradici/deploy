@@ -815,10 +815,10 @@ function New-RemoteWorkstationTemplates {
     $gaLinuxAgentARMparam = ($gaLinuxAgentARM.split('.')[0]) + ".customparameters.json"
 
     #these will be put in the random temp directory to avoid filename conflicts
-    $ParamTargetFilePath = "$tempDir\$agentARMparam"
-    $GaParamTargetFilePath = "$tempDir\$gaAgentARMparam"
-    $LinuxParamTargetFilePath = "$tempDir\$linuxAgentARMparam"
-    $GaLinuxParamTargetFilePath = "$tempDir\$gaLinuxAgentARMparam"
+    $ParamTargetFilePath = Join-Path -Path "$tempDir" -ChildPath "$agentARMparam"
+    $GaParamTargetFilePath = Join-Path -Path "$tempDir" -ChildPath "$gaAgentARMparam"
+    $LinuxParamTargetFilePath = Join-Path -Path "$tempDir" -ChildPath "$linuxAgentARMparam"
+    $GaLinuxParamTargetFilePath = Join-Path -Path "$tempDir" -ChildPath "$gaLinuxAgentARMparam"
 
     # upload the param files to the blob
     $paramFiles = @(
@@ -1232,7 +1232,7 @@ function Get-CertificateInfoForAppGateway() {
             }
         } else {
             Write-Host "Creating Self-signed certificate for Application Gateway"
-            
+
             $subject = "/CN=*.cloudapp.net,/CN=localhost,/O=Teradici Corporation,/OU=SoftPCoIP,/L=Burnaby,/ST=BC,/C=CA"
             if (-not $tempDir) {
                 $tempDir = $env:TEMP
