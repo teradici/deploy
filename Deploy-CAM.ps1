@@ -122,6 +122,14 @@ $minCoresFullDeploy = 6
 $minCoresAddConn = 3
 $isUnix = [Environment]::OSVersion.VersionString.Contains("Unix")
 
+if (-not $env:TEMP) {
+    if ($isUnix) {
+        $env:TEMP = "/tmp/"
+    } else {
+        $env:TEMP = "C:\temp\"
+    }
+}
+
 function confirmDialog {
     param(
         [parameter(Mandatory=$true)]
