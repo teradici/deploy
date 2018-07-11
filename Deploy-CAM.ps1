@@ -1154,8 +1154,12 @@ function Get-CertificateInfoForAppGateway() {
     if ( $certificateFile -and $certificateFilePassword ) {
         Write-Host "using provided certificate $certificateFile for Application Gateway"
         try {
-            $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
-            $cert.Import($certificateFile, $certificateFilePassword, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]"DefaultKeySet")
+            if (-not $isUnix) {
+                $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2
+                $cert.Import($certificateFile, $certificateFilePassword, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]"DefaultKeySet")
+            } else {
+                $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2::Import($certificateFile, $certificateFilePassword, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]"DefaultKeySet")
+            }
             $needToCreateSelfCert = $false
         }
         catch {
