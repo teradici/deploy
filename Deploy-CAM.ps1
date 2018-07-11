@@ -120,6 +120,15 @@ Param(
 # Set the minimum vCPUs needed for a full deployment or an add-on connection
 $minCoresFullDeploy = 6
 $minCoresAddConn = 3
+$isUnix = [Environment]::OSVersion.VersionString.Contains("Unix")
+
+if (-not $env:TEMP) {
+    if ($isUnix) {
+        $env:TEMP = "/tmp/"
+    } else {
+        $env:TEMP = "$env:SystemDrive\temp\"
+    }
+}
 
 function confirmDialog {
     param(
@@ -264,13 +273,21 @@ function Login-AzureRmAccountWithBetterReporting($Credential) {
 # uses session instance profile and TokenCache and returns an access token without having to authentication a second time
 function Get-AzureRmCachedAccessToken() {
     $ErrorActionPreference = 'Stop'
-    if(-not (Get-Module AzureRm.Profile)) {
-        Import-Module AzureRm.Profile
+    if(-not ((Get-Module AzureRm.Profile) -and (Get-Module AzureRm.Profile.Netcore))) {
+        if($isUnix) {
+            Import-Module AzureRm.Profile.NetCore
+        } else {
+            Import-Module AzureRm.Profile
+        }
     }
-    $azureRmProfileModuleVersion = (Get-Module AzureRm.Profile).Version
+    if($isUnix) {
+        $azureRmProfileModuleVersion = (Get-Module AzureRm.Profile.Netcore).Version
+    } else {
+        $azureRmProfileModuleVersion = (Get-Module AzureRm.Profile).Version
+    }
     
     # refactoring performed in AzureRm.Profile v3.0 or later
-    if($azureRmProfileModuleVersion.Major -ge 3) {
+    if( (-not $isUnix -and $azureRmProfileModuleVersion.Major -ge 3) -or ($isUnix -and $azureRmProfileModuleVersion.Major -ge 0 -and $azureRmProfileModuleVersion.Minor -ge 12) ) {
         $azureRmProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile
         if(-not $azureRmProfile.Accounts.Count) {
             Write-Error "Ensure you have logged in before calling this function."
@@ -349,11 +366,13 @@ function Register-CAM() {
         # reset the variable at each iteration, so we can always keep the current loop error message
         $camRegistrationError = ""
         try {
-            $certificatePolicy = [System.Net.ServicePointManager]::CertificatePolicy
-
-            if (!$verifyCAMSaaSCertificate) {
-                # Do this so SSL Errors are ignored
-                add-type @"
+            if ( -not $isUnix ) {
+                $certificatePolicy = [System.Net.ServicePointManager]::CertificatePolicy
+                # Can't disable SSL verification for Invoke-RestMethod on Unix with this method
+                # Not worth effort fixing since cert should always be valid
+                if (!$verifyCAMSaaSCertificate) {
+                    # Do this so SSL Errors are ignored
+                    add-type @"
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 public class TrustAllCertsPolicy : ICertificatePolicy {
@@ -365,7 +384,13 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 }
 "@
 
-                [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+                    [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+                }
+            }
+
+            # Security Rules on CAM firewall don't like default user-agent for cloudshell, overwrite with a different one (Chrome)
+            $baseHeaders = @{
+                "User-Agent"="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36"
             }
 
             [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -381,7 +406,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             }
             $registerUserResult = ""
             try {
-                $registerUserResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/users") -Body $userRequest
+                $registerUserResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/users") -Body $userRequest -Headers $baseHeaders
             }
             catch {
                 if ($_.ErrorDetails.Message) {
@@ -402,7 +427,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             # Get a Sign-in token
             $signInResult = ""
             try {
-                $signInResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/signin") -Body $userRequest
+                $signInResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/signin") -Body $userRequest -Headers $baseHeaders
             }
             catch {
                 if ($_.ErrorDetails.Message) {
@@ -417,7 +442,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             if ($signInResult.code -ne 200) {
                 throw ("Signing in failed. Result was: " + (ConvertTo-Json $signInResult))
             }
-            $tokenHeader = @{
+            $tokenHeader = $baseHeaders + @{
                 authorization = $signInResult.data.token
             }
             Write-Host "Cloud Access Manager sign in succeeded"
@@ -487,7 +512,9 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
         }
         finally {
             # restore CertificatePolicy 
-            [System.Net.ServicePointManager]::CertificatePolicy = $certificatePolicy
+            if ( -not $isUnix ) {
+                [System.Net.ServicePointManager]::CertificatePolicy = $certificatePolicy
+            }
         }
     }
     if ($camRegistrationError) {
@@ -798,10 +825,10 @@ function New-RemoteWorkstationTemplates {
     $gaLinuxAgentARMparam = ($gaLinuxAgentARM.split('.')[0]) + ".customparameters.json"
 
     #these will be put in the random temp directory to avoid filename conflicts
-    $ParamTargetFilePath = "$tempDir\$agentARMparam"
-    $GaParamTargetFilePath = "$tempDir\$gaAgentARMparam"
-    $LinuxParamTargetFilePath = "$tempDir\$linuxAgentARMparam"
-    $GaLinuxParamTargetFilePath = "$tempDir\$gaLinuxAgentARMparam"
+    $ParamTargetFilePath = Join-Path -Path "$tempDir" -ChildPath "$agentARMparam"
+    $GaParamTargetFilePath = Join-Path -Path "$tempDir" -ChildPath "$gaAgentARMparam"
+    $LinuxParamTargetFilePath = Join-Path -Path "$tempDir" -ChildPath "$linuxAgentARMparam"
+    $GaLinuxParamTargetFilePath = Join-Path -Path "$tempDir" -ChildPath "$gaLinuxAgentARMparam"
 
     # upload the param files to the blob
     $paramFiles = @(
@@ -1140,77 +1167,107 @@ function Get-CertificateInfoForAppGateway() {
     if ($needToCreateSelfCert) {
         # create self signed certificate for Application Gateway.
         # System Administrators can override the self signed certificate if desired in future.
-        # In order to create the certificate you must be running as Administrator on a Windows 10/Server 2016 machine
-        # (Potentially Windows 8/Server 2012R2, but not Windows 7 or Server 2008R2)
+        if (-not $isUnix) {
+            # In order to create the certificate you must be running as Administrator on a Windows 10/Server 2016 machine
+            # (Potentially Windows 8/Server 2012R2, but not Windows 7 or Server 2008R2)
 
-        Write-Host "Creating Self-signed certificate for Application Gateway"
+            Write-Host "Creating Self-signed certificate for Application Gateway"
 
-        #TODO - this is broken??? No maybe fixed with new catch block below. Should re-test.
-        $currentPrincipal = New-Object Security.Principal.WindowsPrincipal( [Security.Principal.WindowsIdentity]::GetCurrent())
-        $isAdminSession = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-        if (!$isAdminSession) {
-            $errStr = "You must be running as administrator to create the self-signed certificate for the application gateway"
-            Write-error $errStr
-            throw $errStr
-        }
+            #TODO - this is broken??? No maybe fixed with new catch block below. Should re-test.
+            $currentPrincipal = New-Object Security.Principal.WindowsPrincipal( [Security.Principal.WindowsIdentity]::GetCurrent())
+            $isAdminSession = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+            if (!$isAdminSession) {
+                $errStr = "You must be running as administrator to create the self-signed certificate for the application gateway"
+                Write-error $errStr
+                throw $errStr
+            }
 
-        if (! (Get-Command New-SelfSignedCertificate -ErrorAction SilentlyContinue) ) {
-            $errStr = "New-SelfSignedCertificate cmdlet must be available - please ensure you are running on a supported OS such as Windows 10 or Server 2016."
-            Write-error $errStr
-            throw $errStr
-        }
+            if (! (Get-Command New-SelfSignedCertificate -ErrorAction SilentlyContinue) ) {
+                $errStr = "New-SelfSignedCertificate cmdlet must be available - please ensure you are running on a supported OS such as Windows 10 or Server 2016."
+                Write-error $errStr
+                throw $errStr
+            }
 
-        $certLoc = 'cert:Localmachine\My'
-        $startDate = [DateTime]::Now.AddDays(-1)
+            $certLoc = 'cert:Localmachine\My'
+            $startDate = [DateTime]::Now.AddDays(-1)
 
-        # add some randomization to the subject to get around the Firefox TLS issue referenced here:
-        # https://www.thesslstore.com/blog/troubleshoot-firefoxs-tls-handshake-message/
-        # (all lower case letters)
-        # (However this is causing issues with the software PCoIP Client so we need some more
-        # investigation on what is changable in the certificate.
-        #$subjectOU = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
+            # add some randomization to the subject to get around the Firefox TLS issue referenced here:
+            # https://www.thesslstore.com/blog/troubleshoot-firefoxs-tls-handshake-message/
+            # (all lower case letters)
+            # (However this is causing issues with the software PCoIP Client so we need some more
+            # investigation on what is changable in the certificate.
+            #$subjectOU = -join ((97..122) | Get-Random -Count 18 | ForEach-Object {[char]$_})
 
-        $subject = "CN=localhost,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"
+            $subject = "CN=localhost,O=Teradici Corporation,OU=SoftPCoIP,L=Burnaby,ST=BC,C=CA"
 
-        $cert = New-SelfSignedCertificate `
-            -certstorelocation $certLoc `
-            -DnsName "*.cloudapp.net" `
-            -Subject $subject `
-            -KeyLength 3072 `
-            -FriendlyName "PCoIP Application Gateway" `
-            -NotBefore $startDate `
-            -TextExtension @("2.5.29.19={critical}{text}ca=1") `
-            -HashAlgorithm SHA384 `
-            -KeyUsage DigitalSignature, CertSign, CRLSign, KeyEncipherment
+            $cert = New-SelfSignedCertificate `
+                -certstorelocation $certLoc `
+                -DnsName "*.cloudapp.net" `
+                -Subject $subject `
+                -KeyLength 3072 `
+                -FriendlyName "PCoIP Application Gateway" `
+                -NotBefore $startDate `
+                -TextExtension @("2.5.29.19={critical}{text}ca=1") `
+                -HashAlgorithm SHA384 `
+                -KeyUsage DigitalSignature, CertSign, CRLSign, KeyEncipherment
 
-        Write-Host "Certificate generated. Formatting as .pfx file."
+            Write-Host "Certificate generated. Formatting as .pfx file."
 
-        # Generate pfx file from certificate
-        $certPath = $certLoc + '\' + $cert.Thumbprint
+            # Generate pfx file from certificate
+            $certPath = $certLoc + '\' + $cert.Thumbprint
 
-        if (-not $tempDir) {
-            $tempDir = $env:TEMP
-        }
+            if (-not $tempDir) {
+                $tempDir = $env:TEMP
+            }
 
-        $certificateFile = Join-Path $tempDir "self-signed-cert.pfx"
-        if (Test-Path $certificateFile) {
-            Remove-Item $certificateFile
-        }
+            $certificateFile = Join-Path $tempDir "self-signed-cert.pfx"
+            if (Test-Path $certificateFile) {
+                Remove-Item $certificateFile
+            }
 
-        # Generate password for pfx file
-        # https://docs.microsoft.com/en-us/azure/application-gateway/application-gateway-ssl
-        # The certificate password must be between 4 to 12 characters made up of letters or numbers.
-        # Special characters are not accepted.
-        $certPswd = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 10 | % {[char]$_})
+            # Generate password for pfx file
+            # https://docs.microsoft.com/en-us/azure/application-gateway/application-gateway-ssl
+            # The certificate password must be between 4 to 12 characters made up of letters or numbers.
+            # Special characters are not accepted.
+            $certPswd = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 10 | % {[char]$_})
 
-        $certificateFilePassword = ConvertTo-SecureString -String $certPswd -AsPlainText -Force
+            $certificateFilePassword = ConvertTo-SecureString -String $certPswd -AsPlainText -Force
 
-        # Export pfx file
-        Export-PfxCertificate -Cert $certPath -FilePath $certificateFile -Password $certificateFilePassword
+            # Export pfx file
+            Export-PfxCertificate -Cert $certPath -FilePath $certificateFile -Password $certificateFilePassword
 
-        # Delete self-signed certificate
-        if (Test-Path $certPath) { 
-            Remove-Item $certPath -ErrorAction SilentlyContinue
+            # Delete self-signed certificate
+            if (Test-Path $certPath) { 
+                Remove-Item $certPath -ErrorAction SilentlyContinue
+            }
+        } else {
+            Write-Host "Creating Self-signed certificate for Application Gateway"
+
+            $subject = "/CN=*.cloudapp.net,/CN=localhost,/O=Teradici Corporation,/OU=SoftPCoIP,/L=Burnaby,/ST=BC,/C=CA"
+            if (-not $tempDir) {
+                $tempDir = $env:TEMP
+            }
+
+            # Generate password for pfx file
+            # https://docs.microsoft.com/en-us/azure/application-gateway/application-gateway-ssl
+            # The certificate password must be between 4 to 12 characters made up of letters or numbers.
+            # Special characters are not accepted.
+            $certPswd = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 10 | % {[char]$_})
+            $certificateFilePassword = ConvertTo-SecureString -String $certPswd -AsPlainText -Force
+
+            openssl req -x509 -newkey rsa:3072 -keyout "$tempDir/key.pem" -out "$tempDir/cert.pem" -days 365 -subj $subject -sha384 -passout pass:$certPswd
+            
+            Write-Host "Certificate generated. Formatting as .pfx file."
+
+            $certificateFile = Join-Path $tempDir "self-signed-cert.pfx"
+            if (Test-Path $certificateFile) {
+                Remove-Item $certificateFile
+            }            
+
+            # Export pfx file
+            openssl pkcs12 -inkey "$tempDir/key.pem" -in "$tempDir/cert.pem" -export -out $certificateFile -passin pass:$certPswd -passout pass:$certPswd
+            Remove-Item cert.pem -ErrorAction SilentlyContinue
+            Remove-Item key.pem -ErrorAction SilentlyContinue
         }
     } 
 
@@ -2844,8 +2901,13 @@ function Deploy-CAM() {
 function Confirm-ModuleVersion()
 {
     # Check Azure RM version
-    $MinAzureRMVersion="6.0.0"
-    $AzureRMModule = Get-Module -ListAvailable -Name "AzureRM"
+    if ($isUnix) {
+        $MinAzureRMVersion="0.12.0"
+        $AzureRMModule = Get-Module -ListAvailable -Name "AzureRM.Netcore"
+    } else {
+        $MinAzureRMVersion="6.0.0"
+        $AzureRMModule = Get-Module -ListAvailable -Name "AzureRM"
+    }
     if ( $AzureRMModule ) {
         # have an AzureRM version - check that.
         if (-not ( $AzureRMModule.Version -ge [version]$MinAzureRMVersion)) {
