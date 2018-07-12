@@ -132,8 +132,10 @@ Configuration InstallPCoIPAgent
 
                 $orderNumArray = $using:orderNumArray
                 $retryMax = $using:retryCount
-
                 $downIdx = 0;
+                # sumological server require TLS 1.2
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
                 foreach ($source in $sourceArray) {
                     $destFile = $destArray[$downIdx]
 
