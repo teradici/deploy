@@ -274,6 +274,8 @@ Configuration InstallConnectionServer
 
                 # Insert unique ID
                 $collectorID = "$using:sumoCollectorID"
+                $destConf = "$dest\$using:sumoConf"
+                Write-Host "Insert collector unique ID: $collectorID"
                 (Get-Content -Path $destConf).Replace("collectorID", $collectorID) | Set-Content -Path $destConf
                 
                 # Install the collector
