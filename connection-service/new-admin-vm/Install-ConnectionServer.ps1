@@ -146,7 +146,7 @@ Configuration InstallConnectionServer
     # Retry for CAM Registration
     $retryCount = 3
     $delay = 10
-
+    $orderNumArray = @('1st', '2nd', '3rd')
    
     Import-DscResource -ModuleName xPSDesiredStateConfiguration
 
@@ -227,25 +227,56 @@ Configuration InstallConnectionServer
             SetScript  = {
                 Write-Verbose "Install_SumoCollector"
 
-                $installerFileName = "SumoCollector.exe"
-                $sumo_package = 'https://collectors.sumologic.com/rest/download/win64'
-                $sumo_config = "$using:gitLocation/$using:sumoConf"
-                $sumo_collector_json = "$using:gitLocation/sumo-admin-vm.json"
                 $dest = "C:\sumo"
-                $destConf = "$dest\$using:sumoConf"
+                $installerFileName = "SumoCollector.exe"
 
-                Write-Host "Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile $destConf"
-                Invoke-WebRequest -UseBasicParsing -Uri $sumo_config -PassThru -OutFile $destConf
+                $sourceArray = @()
+                $destArray = @()
 
-                Write-Host "Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile $dest\sumo-admin-vm.conf"
-                Invoke-WebRequest -UseBasicParsing -Uri $sumo_collector_json -PassThru -OutFile "$dest\sumo-admin-vm.json"
-                
+                $sourceArray += "$using:gitLocation/$using:sumoConf"
+                $destArray += "$dest\$using:sumoConf"
+
+                $sourceArray += "$using:gitLocation/sumo-admin-vm.json"
+                $destArray += "$dest\sumo-admin-vm.json"
+
+                $sourceArray += "https://collectors.sumologic.com/rest/download/win64"
+                $destArray += "$dest\$installerFileName"
+
+                $orderNumArray = $using:orderNumArray
+                $retryMax = $using:retryCount
+                $downIdx = 0;
+                # sumologic server require TLS 1.2
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+                foreach ($source in $sourceArray) {
+                    $destFile = $destArray[$downIdx]
+
+                    for ($idx = 0; $idx -lt $retryMax; $idx++) {
+                        Write-Verbose ('It is the {0} try downloading file from {1} ...' -f $orderNumArray[$idx], $source)
+                        Try{
+                            Invoke-WebRequest $source -OutFile $destFile -UseBasicParsing -PassThru  -ErrorAction Stop
+                            break
+                        }Catch{
+                            $errMsg = "Attempt {0} of {1} to download file from {2} failed. Error Infomation: {3} " -f ($idx + 1), $retryMax, $source, $_.Exception.Message 
+                            Write-Verbose $errMsg
+                            if ($idx -ne ($retryMax - 1)) {
+                                Start-Sleep -s $using:delay
+                            } else {
+                                $errMsg = "Failed to install sumo collector because file {0} could not be downloaded" -f $source
+                                Write-Verbose $errMsg
+                                return                                 
+                            }
+                        }
+                    }
+
+                    $downIdx += 1
+                }
+
                 # Insert unique ID
                 $collectorID = "$using:sumoCollectorID"
+                $destConf = "$dest\$using:sumoConf"
+                Write-Host "Insert collector unique ID: $collectorID"
                 (Get-Content -Path $destConf).Replace("collectorID", $collectorID) | Set-Content -Path $destConf
-                
-                Write-Host "Before Invoke-WebRequest $sumo_package -Outfile $dest\$installerFileName"
-                Invoke-WebRequest $sumo_package -OutFile "$dest\$installerFileName"
                 
                 # Install the collector
                 Write-Host "Installing the collector"
