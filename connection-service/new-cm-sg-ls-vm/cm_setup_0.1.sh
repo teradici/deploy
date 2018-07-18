@@ -24,7 +24,7 @@
 # first argument is the FQDN of the broker.
 
 # Update system to latest
-yum -y update
+yum -y update --exclude=WALinuxAgent
 
 # Install and setup the Sumo Collector
 mkdir /tmp/sumo
