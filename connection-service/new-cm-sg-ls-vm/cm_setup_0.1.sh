@@ -45,7 +45,7 @@ service collector status
 
 
 # get the install zip files
-CM_SG_FILENAME='CM-1.8.1_SG-1.14.1.zip'
+CM_SG_FILENAME='CM_SG.zip'
 wget https://teradeploy.blob.core.windows.net/binaries/$CM_SG_FILENAME -P /tmp/
 unzip -o /tmp/$CM_SG_FILENAME
 
