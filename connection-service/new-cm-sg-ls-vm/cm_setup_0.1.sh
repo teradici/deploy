@@ -23,6 +23,29 @@
 # There must be one argument passed to this script.
 # first argument is the FQDN of the broker.
 
+install_bootup_script()
+{
+	# If anyone tries to shutdown the CM/SG, the public IP address of CM/SG would be different next time when you bootup. 
+	# This script will run at bootup time and change the ExternalRoutableIP 
+	echo "Setting up bootup script"
+	file_path=/root/update_ip.sh
+cat <<EOF >$file_path
+#!/bin/bash
+# Make sure SG and CM start up first
+sleep 15
+mypublicip=\$(dig +short myip.opendns.com @resolver1.opendns.com)
+cp -n /etc/SecurityGateway.conf /etc/SecurityGateway.conf.orig
+awk -v externalip="\$mypublicip" '/^ExternalRoutableIP/{printf "ExternalRoutableIP = %s\n",externalip;next};{print}' /etc/SecurityGateway.conf.orig > SecurityGateway.conf
+cp -f SecurityGateway.conf /etc/SecurityGateway.conf
+systemctl restart security_gateway
+systemctl restart connection_manager
+EOF
+	sed -i -e '$ a /root/update_ip.sh' /etc/rc.d/rc.local
+	chmod +x /root/update_ip.sh
+	chmod +x /etc/rc.d/rc.local
+}
+
+
 # Update system to latest
 yum -y update --exclude=WALinuxAgent
 
@@ -145,6 +168,8 @@ if [ ${sge} = "true" ]; then
 		cp -f SecurityGateway.conf /etc/SecurityGateway.conf
 
 		echo "Finished setting up SG"
+		install_bootup_script
+
 	else
 		echo "Enabling the security gateway but there is no detected public IP. Exiting."
 		exit 1
