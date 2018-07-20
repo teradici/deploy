@@ -131,7 +131,7 @@ install_nvidia_driver()
         exitCode=1
         echo "Binary Location not specified" | tee -a "$INST_LOG_FILE"
     else
-        local FILE_NAME="NVIDIA-Linux-x86_64-384.111-grid.run"
+        local FILE_NAME="NVIDIA-Linux-x86_64-390.57-grid.run"
         echo "-->Downloading nVidia Driver ${FILE_NAME} from ${BINARY_LOCATION}" | tee -a "$INST_LOG_FILE"
 
         wget --retry-connrefused --tries=3 --waitretry=5  "${BINARY_LOCATION}/${FILE_NAME}"
