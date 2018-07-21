@@ -290,13 +290,13 @@ function Get-AzureRmCachedAccessToken() {
     if( (-not $isUnix -and $azureRmProfileModuleVersion.Major -ge 3) -or ($isUnix -and $azureRmProfileModuleVersion.Major -ge 0 -and $azureRmProfileModuleVersion.Minor -ge 12) ) {
         $azureRmProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile
         if(-not $azureRmProfile.Accounts.Count) {
-            Write-Error "Ensure you have logged in before calling this function."
+            Write-Error "Ensure you have logged in before calling this function"
         }
     } else {
         # AzureRm.Profile < v3.0
         $azureRmProfile = [Microsoft.WindowsAzure.Commands.Common.AzureRmProfileProvider]::Instance.Profile
         if(-not $azureRmProfile.Context.Account.Count) {
-            Write-Error "Ensure you have logged in before calling this function."
+            Write-Error "Ensure you have logged in before calling this function"
         }
     }
     $currentAzureContext = Get-AzureRmContext
@@ -315,7 +315,7 @@ function Get-Claims() {
         return $decodedToken.claims
     }
     catch {
-        $errorMessage = "An error occured while retrieving owner upn."
+        $errorMessage = "An error occured while retrieving owner upn"
         throw "$errorMessage"
     }
 
@@ -419,7 +419,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             Write-Verbose (ConvertTo-Json $registerUserResult)
             # Check if registration succeeded or if it has been registered previously
             if ( !(($registerUserResult.code -eq 201) -or ($registerUserResult.data.reason.ToLower().Contains("already exist"))) ) {
-                throw ("Failed to register with Cloud Access Manager service. Result was: " + (ConvertTo-Json $registerUserResult))
+                throw ("Failed to register with Cloud Access Manager service with result: " + (ConvertTo-Json $registerUserResult))
             }
 
             Write-Host "Cloud Access Manager deployment has been registered successfully"
@@ -440,7 +440,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             Write-Verbose ((ConvertTo-Json $signInResult) -replace "\.*token.*", 'Token": "Sanitized"')
             # Check if signIn succeded
             if ($signInResult.code -ne 200) {
-                throw ("Signing in failed. Result was: " + (ConvertTo-Json $signInResult))
+                throw ("Signing in failed with result: " + (ConvertTo-Json $signInResult))
             }
             $tokenHeader = $baseHeaders + @{
                 authorization = $signInResult.data.token
@@ -472,7 +472,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             Write-Verbose ((ConvertTo-Json $registerDeploymentResult) -replace "\.*registrationCode.*", 'registrationCode":"Sanitized"')
             # Check if registration succeeded
             if ( !( ($registerDeploymentResult.code -eq 201) -or ($registerDeploymentResult.data.reason.ToLower().Contains("already exist")) ) ) {
-                throw ("Registering Deployment failed. Result was: " + (ConvertTo-Json $registerDeploymentResult))
+                throw ("Registering Deployment failed with result: " + (ConvertTo-Json $registerDeploymentResult))
             }
             $deploymentId = ""
             # Get the deploymentId
@@ -486,7 +486,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
                 catch {
                     if ($_.ErrorDetails.Message) {
                         $registeredDeployment = ConvertFrom-Json $_.ErrorDetails.Message
-                        throw ("Getting Deployment ID failed. Result was: " + (ConvertTo-Json $registeredDeployment))
+                        throw ("Getting Deployment ID failed with result: " + (ConvertTo-Json $registeredDeployment))
                     }
                     else {
                         throw $_
@@ -607,7 +607,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             Write-Verbose ((ConvertTo-Json $signInResult) -replace "\.*token.*", 'Token": "Sanitized"')
             # Check if signIn succeded
             if ($signInResult.code -ne 200) {
-                throw ("Signing in failed. Result was: " + (ConvertTo-Json $signInResult))
+                throw ("Signing in failed with result: " + (ConvertTo-Json $signInResult))
             }
             $tokenHeader = @{
                 authorization = $signInResult.data.token
@@ -643,7 +643,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             }
 
             if ( !$spUpdatedSuccessfully ) {
-                throw ("Updating the Service Principal password in the Cloud Access Manager service failed. Result was: " + (ConvertTo-Json $updateUserCredentialResult))
+                throw ("Updating the Service Principal password in the Cloud Access Manager service failed with result: " + (ConvertTo-Json $updateUserCredentialResult))
             }
 
             Write-Host "Service Principal password has been updated successfully in Cloud Access Manager service"
@@ -675,7 +675,7 @@ function New-UserStorageAccount {
     $saName = -join ((97..122) | Get-Random -Count 16 | % {[char]$_})
     $saName = 'cam0' + $saName
 
-    Write-Host "Creating user data storage account $saName in resource group $RGName and location $location."
+    Write-Host "Creating user data storage account $saName in resource group $RGName and location $location"
 
     $acct = New-AzureRmStorageAccount `
         -ResourceGroupName $RGName `
@@ -855,7 +855,7 @@ function New-RemoteWorkstationTemplates {
             # file already exists do nothing
         }
         Catch {
-            Write-Host "Uploading $filepath to blob.."
+            Write-Host "Uploading $filepath to blob"
             Set-AzureStorageBlobContent `
                 -File $filepath `
                 -Container $storageAccountContainerName `
@@ -864,7 +864,7 @@ function New-RemoteWorkstationTemplates {
         }
     }
 
-    Write-Host "Finished Creating default template parameters file data."
+    Write-Host "Finished Creating default template parameters file data"
 }
 
 
@@ -937,7 +937,7 @@ function Populate-UserBlob {
                 # file already exists do nothing
             }
             Catch {
-                Write-Host "Uploading $fileURI to blob.."
+                Write-Host "Uploading $fileURI to blob"
                 Start-AzureStorageBlobCopy `
                     -AbsoluteUri $fileURI `
                     -DestContainer $container_name `
@@ -1127,7 +1127,7 @@ function Generate-Certificate-And-Passwords() {
     $CAMConfig.parameters.CAMCSCertificate.value = $certInfo.cert
     $CAMConfig.parameters.CAMCSCertificatePassword.value = $certInfo.passwd
 
-    Write-Host "Successfully imported certificate."
+    Write-Host "Successfully imported certificate"
 }
 
 
@@ -1187,7 +1187,7 @@ function Get-CertificateInfoForAppGateway() {
             }
 
             if (! (Get-Command New-SelfSignedCertificate -ErrorAction SilentlyContinue) ) {
-                $errStr = "New-SelfSignedCertificate cmdlet must be available - please ensure you are running on a supported OS such as Windows 10 or Server 2016."
+                $errStr = "New-SelfSignedCertificate cmdlet must be available - please ensure you are running on a supported OS such as Windows 10 or Server 2016"
                 Write-error $errStr
                 throw $errStr
             }
@@ -1215,7 +1215,7 @@ function Get-CertificateInfoForAppGateway() {
                 -HashAlgorithm SHA384 `
                 -KeyUsage DigitalSignature, CertSign, CRLSign, KeyEncipherment
 
-            Write-Host "Certificate generated. Formatting as .pfx file."
+            Write-Host "Certificate generated, formatting as .pfx file"
 
             # Generate pfx file from certificate
             $certPath = $certLoc + '\' + $cert.Thumbprint
@@ -1261,7 +1261,7 @@ function Get-CertificateInfoForAppGateway() {
 
             openssl req -x509 -newkey rsa:3072 -keyout "$tempDir/key.pem" -out "$tempDir/cert.pem" -days 365 -subj $subject -sha384 -passout pass:$certPswd
             
-            Write-Host "Certificate generated. Formatting as .pfx file."
+            Write-Host "Certificate generated, formatting as .pfx file"
 
             $certificateFile = Join-Path $tempDir "self-signed-cert.pfx"
             if (Test-Path $certificateFile) {
@@ -1305,7 +1305,7 @@ function Add-SecretsToKeyVault() {
         [parameter(Mandatory = $true)]
         $CAMConfig
     )
-    Write-Host "Populating keyvault."
+    Write-Host "Populating Key Vault"
 
     foreach ($key in $CAMConfig.parameters.keys) {
         Write-Host "Writing secret to keyvault: $key"
@@ -1315,7 +1315,7 @@ function Add-SecretsToKeyVault() {
             -SecretValue $CAMConfig.parameters[$key].value `
             -ErrorAction stop | Out-Null
     }
-    Write-Host "Completed writing secrets to keyvault."
+    Write-Host "Completed writing secrets to Key Vault"
 }
 
 
@@ -1327,14 +1327,14 @@ function New-CAMAppSP() {
 
     # Application name
     $appName = "CAM-$RGName"
-    Write-Host "Calling Azure Active Directory to make app $appName and a service principal."
+    Write-Host "Calling Azure Active Directory to make app $appName and a service principal"
 
     # 16 letter password
     $generatedPassword = ConvertTo-SecureString -String ( -join ((65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})) -AsPlainText -Force
     $generatedID = -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})
     $appURI = "https://www.$generatedID.com"
 
-    Write-Host "Purge any registered app's with the same name."
+    Write-Host "Purge any registered apps with the same name"
 
     # first make sure if there is an app there (or more than one if that's possible?)
     # that they're deleted.
@@ -1355,7 +1355,7 @@ function New-CAMAppSP() {
         }
     }
 
-    Write-Host "Purge complete. Creating new app $appName."
+    Write-Host "Purge complete, creating new app $appName"
 
     # Retry required on app registration (it seems) if there is a race condition with the deleted application.
     $newAppCreateRetry = 60
@@ -1385,7 +1385,7 @@ function New-CAMAppSP() {
     }
 
 
-    Write-Host "New app creation complete. Creating service principal."
+    Write-Host "New app creation complete, creating service principal"
 
     # Retry required since it can take a few seconds for the app registration to percolate through Azure.
     # (Online recommendation was sleep 15 seconds - this is both faster and more conservative)
@@ -1405,7 +1405,7 @@ function New-CAMAppSP() {
             Start-sleep -Seconds 1
             if ($SPCreateRetry -eq 0) {
                 #re-throw whatever the original exception was
-                Write-Error "Failure to create service principal for $appName."
+                Write-Error "Failure to create service principal for $appName"
                 throw
             }
         }
@@ -1433,7 +1433,7 @@ function New-CAMDeploymentInfo() {
         $kvName # Key Vault name
     )
 
-    Write-Host "Populating CAMDeploymentInfo structure."
+    Write-Host "Populating CAMDeploymentInfo structure"
 
 
     # Mapping CAM deployment info environment variable parameters
@@ -1489,7 +1489,7 @@ graphURL=https\://graph.windows.net/
     $camDeploymenInfoURLSecure = ConvertTo-SecureString $camDeploymenInfoURL -AsPlainText -Force
 
     # Put URL encoded blob into Key Vault 
-    Write-Host "Writing secret to keyvault: CAMDeploymentInfo"
+    Write-Host "Writing secret to Key Vault: CAMDeploymentInfo"
     Set-AzureKeyVaultSecret `
         -VaultName $kvName `
         -Name "CAMDeploymentInfo" `
@@ -1547,7 +1547,7 @@ function Append-AzureRMLog {
         $trackingID = ([regex]::matches($text, $GUIDpattern))[0].value
 
         if($trackingID) {
-            Write-Host-Warning "Deployment Error Occurred. Azure tracking ID is '$trackingID'"
+            Write-Host-Warning "Deployment Error Occurred, Azure tracking ID is '$trackingID'"
             $index = 60 # around 5 minutes
             $badAzureRMLogCount = 10 # if the structure isn't fully populated, give another few tries
             while ($index--){
@@ -1563,7 +1563,7 @@ function Append-AzureRMLog {
                     {
                         if($badAzureRMLogCount--)
                         {
-                            Write-Host "Unexpected error format. Tries remaining: $badAzureRMLogCount"
+                            Write-Host "Unexpected error format - retries remaining: $badAzureRMLogCount"
                         }
                         else {
                             Write-Host ($azureRMLog | Out-String)
@@ -1572,7 +1572,7 @@ function Append-AzureRMLog {
                     }
     
                 }
-                Write-Host "Getting error details. Tries remaining: $index"
+                Write-Host "Getting error details - retries remaining: $index"
                 Start-sleep -Seconds 5
             }
         }
@@ -1631,7 +1631,7 @@ function New-ConnectionServiceDeployment() {
             catch {
                 $err = $_
                 if ($err.Exception.Message -eq "Access denied") {
-                    Write-Host "Cannot access key vault secret. Attempting to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
+                    Write-Host "Cannot access Key Vault secret, attempting to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
                     try {
                         Set-AzureRmKeyVaultAccessPolicy `
                             -VaultName $kvName `
@@ -1648,7 +1648,7 @@ function New-ConnectionServiceDeployment() {
                     catch {
                         Write-Host "`nFailed to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)."
                         Write-Host "Please use the Azure Portal to provide the current logged-in account with get, list, and set access"
-                        Write-Host "to the secrets in $kvName"
+                        Write-Host "to the secrets in $kvName."
                         exit # <--- early exit!
                     }
                 }
@@ -1794,14 +1794,14 @@ function New-ConnectionServiceDeployment() {
         foreach($role in $spRoles) {
             $roleName = $role.RoleDefinitionName
             if (($roleName -eq "Contributor") -or ($roleName -eq "Owner") -or ($roleName -eq $camCustomRoleDefinition.Name)) {
-                Write-Host "$client already has $roleName for $csRGName."
+                Write-Host "$client already has $roleName for $csRGName"
                 $hasAccess = $true
                 break
             }
         }
 
         if(-not $hasAccess) {
-            Write-Host "Giving $client '$($camCustomRoleDefinition.Name)' access to $csRGName."
+            Write-Host "Giving $client '$($camCustomRoleDefinition.Name)' access to $csRGName"
             Set-AzureRMContext -Context $adminAzureContext | Out-Null
             New-AzureRmRoleAssignment `
                 -RoleDefinitionName $camCustomRoleDefinition.Name `
@@ -2044,7 +2044,7 @@ function New-ConnectionServiceDeployment() {
                             -ResourceGroupName $csRGName `
                             -ErrorAction SilentlyContinue | Out-Null
 
-                        Write-Host-Warning "Retrying deployment. Retries remaining: $remaining. If this countdown stops the deployment is happening."
+                        Write-Host-Warning "Retrying deployment - retries remaining: $remaining"
                         Start-sleep -Seconds 10
                     }
                     else {
@@ -2194,7 +2194,7 @@ function Add-SPScopeToVnet()
         foreach($role in $spRoles) {
             $roleName = $role.RoleDefinitionName
             if (($roleName -eq "Contributor") -or ($roleName -eq "Owner") -or ($roleName -eq $camCustomRoleDefinition.Name)) {
-                Write-Host "$client already has $roleName for $vnetName."
+                Write-Host "$client already has $roleName for $vnetName"
                 $hasAccess = $true
                 break
             }
@@ -2509,7 +2509,7 @@ function Deploy-CAM() {
 
     if($tenantIDsMatch) {
         # Service principal info exists but needs to get rights to the required resource groups
-        Write-Host "Adding role assignments for the service principal account."
+        Write-Host "Adding role assignments for the service principal account"
 
         $camCustomRoleDefinition = Get-CAMRoleDefinition -subscriptionID $subscriptionID
         
@@ -2538,14 +2538,14 @@ function Deploy-CAM() {
                     foreach($role in $spRoles) {
                         $roleName = $role.RoleDefinitionName
                         if (($roleName -eq "Contributor") -or ($roleName -eq "Owner") -or ($roleName -eq $camCustomRoleDefinition.Name)) {
-                            Write-Host "$client already has $roleName for $rgn."
+                            Write-Host "$client already has $roleName for $rgn"
                             $hasAccess = $true
                             break
                         }
                     }
 
                     if(-not $hasAccess) {
-                        Write-Host "Giving $client '$($camCustomRoleDefinition.Name)' access to $rgn."
+                        Write-Host "Giving $client '$($camCustomRoleDefinition.Name)' access to $rgn"
                         New-AzureRmRoleAssignment `
                             -RoleDefinitionName $camCustomRoleDefinition.Name `
                             -ResourceGroupName $rgn `
@@ -2565,7 +2565,7 @@ function Deploy-CAM() {
                 break # while loop
             } catch {
                 #TODO: we should only be catching the 'Service principal or app not found' error
-                Write-Host "Waiting for service principal. Remaining: $rollAssignmentRetry"
+                Write-Host "Waiting for service principal - retries remaining: $rollAssignmentRetry"
                 Start-sleep -Seconds 1
                 if ($rollAssignmentRetry -eq 0) {
                     #re-throw whatever the original exception was
@@ -2609,7 +2609,7 @@ function Deploy-CAM() {
                 continue
             }
             else {
-                Write-Host "`nPlease make sure that the Service Principal password has not been expired (If so, please add a new key through the Azure Portal)."
+                Write-Host "`nPlease make sure that the Service Principal password has not been expired (If so, please add a new key through the Azure Portal)"
                 throw $caughtError
             }
         }
@@ -2861,7 +2861,7 @@ function Deploy-CAM() {
             $outputParametersFilePath = Join-Path $tempDir $outputParametersFileName
             Set-Content $outputParametersFilePath  $generatedDeploymentParameters
 
-            Write-Host "`nDeploying Cloud Access Manager. This process can take up to 90 minutes."
+            Write-Host "`nDeploying Cloud Access Manager. This process can take up to 120 minutes."
             Write-Host "Please feel free to watch here for early errors for a few minutes and then go do something else. Or go for coffee!"
             Write-Host "If this script is running in Azure Cloud Shell then you may let the shell timeout and the deployment will continue."
             Write-Host "Please watch the resource group $RGName in the Azure Portal for current status. Cloud Access Manager deployment is"
@@ -2926,7 +2926,7 @@ function Confirm-ModuleVersion()
 
         if ( -not $AzureModule ) {
             # neither module found
-            Write-Host ("Please install the Azure Command Line tools for Powershell from Microsoft. The Azure and AzureRM modules must be present.")
+            Write-Host ("Please install the Azure Command Line tools for Powershell from Microsoft, Azure and AzureRM modules must be present")
             return $false
         }
         if (-not ( $AzureModule.Version -ge [version]$MinAzureVersion)) {
@@ -3099,8 +3099,8 @@ function checkResource(){
     $resource = $resourceProviderList | Where-Object {$_.ProviderNamespace -eq $resourceName}
     Write-host "Checking $($resourceName)"
     if(-not ($resource.RegistrationState -eq "Registered")) {
-        Write-Host "$($resourceName) is not registered as a resource provider for this subscription."
-        Write-Host "Cloud Access Manager requires access to features within $($resourceName) to deploy."
+        Write-Host "$($resourceName) is not registered as a resource provider for this subscription,"
+        Write-Host "Cloud Access Manager requires access to features within $($resourceName) to deploy"
         if(-not $ignorePrompts) {
             $cancelDeployment = (confirmDialog "Do you want to register $($resourceName) with subscription $($rmContext.Subscription.Id) or 'no' to cancel deployment?" -defaultSelected 'Y') -eq "n"
             if ($cancelDeployment) { exit }
@@ -3125,7 +3125,7 @@ function Check-Location-Cores() {
     $availableCores = $totalRegionUsage.Limit - $totalRegionUsage.CurrentValue
     if($availableCores -lt $neededCores){
 
-        Write-Host-Warning "Not enough vCPUs available in $rgLocation. $neededCores vCPUs required, $availableCores available."
+        Write-Host-Warning "Not enough vCPUs available in $rgLocation, $neededCores vCPUs required, $availableCores available"
         exit
     }
 }
@@ -3368,7 +3368,7 @@ function Set-RadiusSettings() {
             if ($isRadiusMfaEnabled) {
                 $currentRadiusSetting = "enabled"
             }
-            $enableRadiusMfa = (confirmDialog "RADIUS Multi-Factor Authentication is currently $currentRadiusSetting. Do you want to enable Multi-Factor Authentication using your RADIUS Server?") -eq 'y'
+            $enableRadiusMfa = (confirmDialog "RADIUS Multi-Factor Authentication is currently $currentRadiusSetting, do you want to enable Multi-Factor Authentication using your RADIUS Server?") -eq 'y'
         } elseif ( ($enableRadiusMfa -eq $null) -and $ignorePrompts ) {
             $enableRadiusMfa = $isRadiusMfaEnabled
         }
@@ -3381,7 +3381,7 @@ function Set-RadiusSettings() {
 
         if ($radiusConfig.enableRadiusMfa) {
             if ((-not $radiusServerHost) -and (-not $ignorePrompts)) {
-                if((confirmDialog "RADIUS Server Host is currently $currentRadiusHost. Do you want to change your RADIUS Server Host?") -eq 'y') {
+                if((confirmDialog "RADIUS Server Host is currently $currentRadiusHost, do you want to change your RADIUS Server Host?") -eq 'y') {
                     do {
                         $radiusConfig.radiusServerHost = (Read-Host "Enter your RADIUS Server's Hostname or IP").Trim()
                     } while (-not $radiusConfig.radiusServerHost)
@@ -3391,14 +3391,14 @@ function Set-RadiusSettings() {
             }
 
             if ((-not $radiusServerPort) -and (-not $ignorePrompts)) {
-                if((confirmDialog "RADIUS Server Port is currently $currentRadiusPort. Do you want to change your RADIUS Server Port?") -eq 'y') {
+                if((confirmDialog "RADIUS Server Port is currently $currentRadiusPort, do you want to change your RADIUS Server Port?") -eq 'y') {
                     do {
                         $radiusPort = 0
                         $portString = (Read-Host  "Enter your RADIUS Server's Listening port")
                         [int]::TryParse($portString, [ref]$radiusPort) | Out-Null # radiusPort will be 0 on parse failure
                         $radiusConfig.radiusServerPort = $radiusPort
                         if ( ($radiusConfig.radiusServerPort -le 0) -or ($radiusConfig.radiusServerPort -gt 65535) ) {
-                            Write-Host-Warning "Entered port is invalid. It should be between 1 and 65535."
+                            Write-Host-Warning "Entered port is invalid, it should be between 1 and 65535"
                             $radiusConfig.radiusServerPort = $null
                         }      
                     } while (-not $radiusConfig.radiusServerPort )
@@ -3408,7 +3408,7 @@ function Set-RadiusSettings() {
                 $portValid = $false
                 do {
                     if ( ($radiusConfig.radiusServerPort -le 0) -or ($radiusConfig.radiusServerPort -gt 65535) ) {
-                        Write-Host-Warning "Entered port is invalid. It should be between 1 and 65535."
+                        Write-Host-Warning "Entered port is invalid, it should be between 1 and 65535"
                         $portValid = $false
                     } else {
                         $portValid=$true
@@ -3483,7 +3483,7 @@ function Set-KeyVaultAccess()
     catch {
         $err = $_
         if ($err.Exception.Message -eq "Access denied") {
-            Write-Host "Cannot access key vault secret. Attempting to set access policy for vault $kvName for user $($claims.unique_name)"
+            Write-Host "Cannot access Key Vault secret, attempting to set access policy for vault $kvName for user $($claims.unique_name)"
             try {
                 Set-AzureRmKeyVaultAccessPolicy `
                     -VaultName $kvName `
@@ -3495,7 +3495,7 @@ function Set-KeyVaultAccess()
             catch {
                 Write-Host "`nFailed to set access policy for vault $kvName for user $($claims.unique_name)."
                 Write-Host "Please use the Azure Portal to provide the current logged-in account with get, list, and set access"
-                Write-Host "to the secrets in $kvName"
+                Write-Host "to the secrets in $kvName."
                 return $false
             }
         }
@@ -3528,14 +3528,14 @@ function Test-PasswordComplexity
 
     # password can't contain username
     if (Test-StringInString $pass $userName) {
-        Write-Host-Warning "Password cannot contain the user's username."
+        Write-Host-Warning "Password cannot contain the user's username"
         $complexEnough = $false
     }
 
     # Must be 12 characters long (or 8? we think 12...)
     # https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/password-must-meet-complexity-requirements
     if ($pass.Length -lt 12) {
-        Write-Host-Warning "Password must be a minimum of 12 characters long."
+        Write-Host-Warning "Password must be a minimum of 12 characters long"
         $complexEnough = $false
     }
 
@@ -3549,7 +3549,7 @@ function Test-PasswordComplexity
     
     if ($count -lt 3) { # three of the above are needed
         Write-Host-Warning ("Password must contain at least three of the following categories:`n" +
-                            "Uppercase letters, lowercase letters, digits, and symbols.")
+                            "Uppercase letters, lowercase letters, digits, and symbols")
 
         $complexEnough = $false
     }
@@ -3591,7 +3591,7 @@ $subscriptionsToDisplay = $subscriptions | Where-Object { $_.State -eq 'Enabled'
 
 $chosenSubscriptionIndex = $null
 if ($subscriptionsToDisplay.Length -lt 1) {
-    Write-Host-Warning "Account $($rmContext.Account.Id) has access to no enabled subscriptions. Exiting."
+    Write-Host-Warning "Account $($rmContext.Account.Id) has access to no enabled subscriptions"
     exit
 }
 
@@ -3619,7 +3619,7 @@ ForEach ($s in $subscriptionsToDisplay) {
 }
 
 if ($subscriptionsToDisplay.Length -eq 1) {
-    Write-Host ("Account " + $rmContext.Account.Id + " has access to a single enabled subscription.")
+    Write-Host ("Account " + $rmContext.Account.Id + " has access to a single enabled subscription")
     $chosenSubscriptionNumber = 0
 }
 else {
@@ -3679,7 +3679,7 @@ if((-not $ResourceGroupName) -and ($deploymentIndex -gt 0)) {
     
     
         Write-Host ("To upgrade or modify a Cloud Access Manager Deployment, select the resource group of the`n" +
-           "Cloud Access Manager deployment root by number, or hit enter to create a new deployment.")
+           "Cloud Access Manager deployment root by number, or hit enter to create a new deployment")
         $rgIdentifier = (Read-Host "Resource group").Trim()
         
         # If empty string just exit loop
@@ -3730,19 +3730,18 @@ if (-not ([string]::IsNullOrEmpty($claims.upn)))
 # If there is a root keyvault, verify there is only one and then query for connector deployment.
 if ($CAMRootKeyvault) {
     if ($CAMRootKeyvault -is [Array]) {
-        Write-Host "More than one CAM Key Vault found in this resource group."
-        Write-Host "Please move or remove all but one."
+        Write-Host "More than one CAM Key Vault found in this resource group, please move or remove all but one"
         return   # early return!
     }
 
-    Write-Host "The resource group $ResourceGroupName has a CAM deployment."
-    Write-Host "Using key vault $($CAMRootKeyvault.Name)"
+    Write-Host "The resource group $ResourceGroupName has a CAM deployment,"
+    Write-Host "using Key Vault $($CAMRootKeyvault.Name)"
 
     # Ensure this user account can get secrets from the key vault
     $hasKVAccess = Set-KeyVaultAccess -CAMRootKeyvault $CAMRootKeyvault
     if(-not $hasKVAccess) {return}
 
-    Write-Host "`nCreating a new Cloud Access connector for this Cloud Access Manager deployment. Hit CTRL-C if you want to cancel.`n"
+    Write-Host "`nCreating a new Cloud Access connector for this Cloud Access Manager deployment`n"
 
     $externalAccessPrompt = "Do you want to enable external network access for this connector?"
 
@@ -3756,7 +3755,7 @@ if ($CAMRootKeyvault) {
     if ((-not $vnetConfig.CSSubnetName) -or (-not $vnetConfig.GWSubnetName))
     {
         $rootLocation = (Get-AzureRmResourceGroup -ResourceGroupName $ResourceGroupName -ErrorAction stop).location
-        $reselectNetwork = (confirmDialog "Do you want to deploy into a different region than $rootLocation" -defaultSelected 'N') -eq 'y'
+        $reselectNetwork = (confirmDialog "Do you want to deploy into a different region than $rootLocation?" -defaultSelected 'N') -eq 'y'
 
         if($reselectNetwork) {
             # We don't need the RWSubnetName so don't prompt
@@ -3814,12 +3813,11 @@ else {
     if( -not $ignorePrompts) {
         Write-Host "`nBy deploying Cloud Access Manager, you accept the terms of the Teradici Cloud Access Software End User License Agreement"
         Write-Host "http://www.teradici.com/eula/1609005 and Privacy Policy https://www.teradici.com/privacy-policy/cloud-access-manager"
-        Write-Host "And have read and agree to be bound by the software license for use of the third-party drivers."
+        Write-Host "and have read and agree to be bound by the software license for use of the third-party drivers."
 
         $acceptEULA = (confirmDialog "Do you accept the policies and agreements?") -eq 'y'
 
         if(-not $acceptEULA) {
-            Write-Host "Exiting."
             exit 
         }
     }
@@ -3870,14 +3868,14 @@ else {
             Write-Host "`nAvailable Resource Groups"
             Write-Host ($resourceGroups | Select-Object -Property Number, ResourceGroupName, Location | Format-Table | Out-String)
             Write-Host ("`nSelect the root resource group of the new Cloud Access Manager deployment by number`n" +
-            "or type in a new resource group name.")
+            "or type in a new resource group name")
             $rgIdentifier = (Read-Host "Resource group").Trim()
         }
 
         $ResourceGroupName = $null # clear out parameter if passed to avoid infinite retry loop
 
         if (!$rgIdentifier) {
-            Write-Host-Warning "Value not provided."
+            Write-Host-Warning "Value not provided"
             continue       
         }
 
@@ -3896,7 +3894,7 @@ else {
             $rgArrayLength = $resourceGroups.Length
             if ( -not (( $rgIndex -ge 1) -and ( $rgIndex -le $rgArrayLength))) {
                 #invalid range 
-                Write-Host-Warning "Please enter a range between 1 and $rgArrayLength or the name of a new resource group."
+                Write-Host-Warning "Please enter a range between 1 and $rgArrayLength or the name of a new resource group"
             }
             else {
                 $rgMatch = $resourceGroups[$rgIndex - 1]
@@ -3926,7 +3924,7 @@ else {
                         $newRGLocation = $location
                     }
                     else {
-                        Write-Host("Available Azure Locations")
+                        Write-Host("`nAvailable Azure Locations")
                         Write-Host ($azureLocation | Select-Object -Property Location, DisplayName | Format-Table | Out-String )
                         $newRGLocation = (Read-Host "`nEnter resource group location").Trim()
                     }
@@ -3935,7 +3933,7 @@ else {
                     if ($locations -Contains $newRGLocation){
                         break
                     }
-                    Write-Host-Warning "$newRGLocation is not a valid location. "
+                    Write-Host-Warning "$newRGLocation is not a valid location"
                 }
                 
                 Check-Location-Cores  -rgLocation $newRGLocation -neededCores $deployCost
@@ -3964,8 +3962,8 @@ else {
         # Connector upgrades should have been caught above. If we got here they manually typed in a resource
         # group that already had a deployment. Abort.
 
-        Write-Host "The selected resource group already has a CAM deployment. Please select a different"
-        Write-Host "resource group for a new Cloud Access Manager deployment."
+        Write-Host "The selected resource group already has a CAM deployment, please select a different"
+        Write-Host "resource group for a new Cloud Access Manager deployment"
         return   # early return!
     }
 
@@ -4002,7 +4000,7 @@ else {
     if($csrg)
     {
         # assume it's there for a reason? Alternately we could fail but...
-        Write-Host "Cloud Access connector resource group $csRGName exists. Using it."
+        Write-Host "Using Cloud Access connector resource group $csRGName"
     }
     else {
         Write-Host "Creating Cloud Access connector resource group $csRGName"
@@ -4013,7 +4011,7 @@ else {
     if($rwrg)
     {
         # assume it's there for a reason? Alternately we could fail but...
-        Write-Host "Remote workstation resource group $rwRGName exists. Using it."
+        Write-Host "Using remote workstation resource group $rwRGName"
     }
     else {
         Write-Host "Creating remote workstation resource group $rwRGName"
@@ -4037,7 +4035,7 @@ else {
 
         # https://social.technet.microsoft.com/Forums/scriptcenter/en-US/db2d8388-f2c2-4f67-9f84-c17b060504e1/regex-for-computer-fqdn?forum=winserverpowershell
         if (-not $($domainName -imatch '(?=^.{1,254}$)(^(?:(?!\d+\.|-)[a-zA-Z0-9_\-]{1,63}(?<!-)\.?)+(?:[a-zA-Z]{2,})$)')) {
-            Write-Host-Warning "Invalid Domain name. Please see https://support.microsoft.com/en-ca/help/909264/naming-conventions-in-active-directory-for-computers-domains-sites-and for valid domain names."
+            Write-Host-Warning "Invalid domain name, please see https://support.microsoft.com/en-ca/help/909264/naming-conventions-in-active-directory-for-computers-domains-sites-and for valid domain names"
             $domainName = $null
             continue
         }
@@ -4070,7 +4068,7 @@ else {
         # only check if it is not deployOverDC
         if (-not $deployOverDC) {
             if ((-not ($username -imatch '^[A-Za-z\d]+(?:[_-][A-Za-z\d]+)*$')) -or ($username.Length -gt 20)) {
-                Write-Host-Warning "Please enter a valid username. It can only contain letters and numbers and cannot be longer than 20 characters."
+                Write-Host-Warning "Please enter a valid username, it can only contain letters and numbers and cannot be longer than 20 characters"
                 $username = $null
                 continue
             }
@@ -4081,7 +4079,7 @@ else {
                                   'sql', 'support', 'support_388945a0', 'sys', 'test2', 'test3', 'user4', 'user5' )
             
             if ($username -in $reservedUsername) {
-                Write-Host-Warning "$username is a reserved username. Please try again"
+                Write-Host-Warning "$username is a reserved username, please try again"
                 $username = $null
                 continue                
             }
@@ -4097,10 +4095,10 @@ else {
     do {
         if ( -not $password ) {
             if( -not $deployOverDC ) {
-                Write-Host "`nYou must now create a domain administrator password."
-                Write-Host "It must be a minimum of 12 characters long and must not contain the username."
-                Write-Host "It must contain at least three of the following categories:"
-                Write-Host "Uppercase letters, lowercase letters, digits, and symbols.`n"
+                Write-Host "`nEnter the password for the new domain administrator"
+                Write-Host "It must be a minimum of 12 characters long, it must not contain the username"
+                Write-Host "and it must contain at least three of the following categories:"
+                Write-Host "Uppercase letters, lowercase letters, digits, and symbols`n"
 
                 $pawdMessage = "Enter the domain administrator password"
             }
@@ -4178,7 +4176,7 @@ else {
                     $radiusConfig.radiusServerPort = $radiusPort
                 }
                 if ( ($radiusConfig.radiusServerPort -le 0) -or ($radiusConfig.radiusServerPort -gt 65535) ) {
-                    Write-Host-Warning "Entered port is invalid. It should be between 1 and 65535."
+                    Write-Host-Warning "Entered port is invalid, it should be between 1 and 65535"
                     $radiusConfig.radiusServerPort = $null
                 }
             } while (-not $radiusConfig.radiusServerPort )
