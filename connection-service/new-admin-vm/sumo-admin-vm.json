@@ -67,6 +67,24 @@
                     ],
         "cutoffTimestamp": 0,
         "encoding":  "UTF-8",
+        "pathExpression":  "C:\\tomcat\\apache-tomcat-*\\CAMBroker\\logs\\broker\\*.out",
+        "blacklist":  [
+                      ],
+        "sourceType":  "LocalFile",
+        "alive":  false
+    },
+    {
+        "name":  "CAM_Deploy_ConnectionServer_Win_Teradici_Broker_Tomcat_Logs",
+        "category":  "CAM/Deploy/ConnectionServer/Win/Teradici/Broker/TomcatLogs",
+        "automaticDateParsing":  true,
+        "multilineProcessingEnabled":  false,
+        "useAutolineMatching":  false,
+        "forceTimeZone":  false,
+        "timeZone":  "Etc/UTC",
+        "filters":  [
+                    ],
+        "cutoffTimestamp": 0,
+        "encoding":  "UTF-8",
         "pathExpression":  "C:\\tomcat\\apache-tomcat-*\\CAMBroker\\logs\\*.log",
         "blacklist":  [
                       ],
