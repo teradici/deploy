@@ -3734,8 +3734,8 @@ if ($CAMRootKeyvault) {
         return   # early return!
     }
 
-    Write-Host "The resource group $ResourceGroupName has a CAM deployment,"
-    Write-Host "using Key Vault $($CAMRootKeyvault.Name)"
+    Write-Host "The resource group $ResourceGroupName has a CAM deployment"
+    Write-Host "Using Key Vault $($CAMRootKeyvault.Name)"
 
     # Ensure this user account can get secrets from the key vault
     $hasKVAccess = Set-KeyVaultAccess -CAMRootKeyvault $CAMRootKeyvault
