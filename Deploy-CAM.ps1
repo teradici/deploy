@@ -259,7 +259,7 @@ function Login-AzureRmAccountWithBetterReporting($Credential) {
         switch ($exceptionMessageErrorCode) {
             "AADSTS50076" {$es += "Please ensure your account does not require Multi-Factor Authentication`n"; break}
             "Federated service at https" {$es += "Unable to perform federated login - Unknown username or password?`n"; break}
-            "unknown_user_type" {$es += "Please ensure your username is in UPN format. e.g., user@example.com`n"; break}
+            "unknown_user_type" {$es += "Please ensure your username is in UPN format, e.g. user@example.com`n"; break}
             "AADSTS50126" {$es += "User not found in directory`n"; break}
             "AADSTS70002" {$es += "Please check your password`n"; break}
         }
@@ -1114,7 +1114,7 @@ function Generate-Certificate-And-Passwords() {
     $rwLocalAdminPassword = ConvertTo-SecureString $rwLocalAdminPasswordStr -AsPlainText -Force
     $CAMConfig.parameters.remoteWorkstationLocalAdminPassword.value = $rwLocalAdminPassword
 
-    Write-Host "Creating Local Admin Password for Cloud Access connector servers"
+    Write-Host "Creating Local Admin Password for Cloud Access Connector servers"
 
     $csLocalAdminPasswordStr = "5!" + ( -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})) # "5!" is to ensure numbers and symbols
 
@@ -1348,7 +1348,7 @@ function New-CAMAppSP() {
         catch {
             $exceptionContext = Get-AzureRmContext
             $exceptionTenantId = $exceptionContext.Tenant.Id
-            Write-Error "Failure to remove application $appName from tenant $exceptionTenantId. Please check your AAD tenant permissions."
+            Write-Error "Failure to remove application $appName from tenant $exceptionTenantId, please check your AAD tenant permissions"
 
             # Re-throw whatever the original exception was
             throw
@@ -1378,7 +1378,7 @@ function New-CAMAppSP() {
                 #re-throw whatever the original exception was
                 $exceptionContext = Get-AzureRmContext
                 $exceptionTenantId = $exceptionContext.Tenant.Id
-                Write-Error "Failure to add application $appName to tenant $exceptionTenantId. Please check your AAD tenant permissions."
+                Write-Error "Failure to add application $appName to tenant $exceptionTenantId, please check your AAD tenant permissions"
                 throw
             }
         }
@@ -1646,9 +1646,9 @@ function New-ConnectionServiceDeployment() {
                         $client = $secret.SecretValueText
                     }
                     catch {
-                        Write-Host "`nFailed to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)."
+                        Write-Host "`nFailed to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
                         Write-Host "Please use the Azure Portal to provide the current logged-in account with get, list, and set access"
-                        Write-Host "to the secrets in $kvName."
+                        Write-Host "to the secrets in $kvName"
                         exit # <--- early exit!
                     }
                 }
@@ -1700,8 +1700,8 @@ function New-ConnectionServiceDeployment() {
                 -ErrorAction Stop
         } 
         catch {
-            Write-Host "`nPlease first make sure that the Service Principal password has not been expired (If so, please add a new key through the Azure Portal)."
-            Write-Host "Then restart the deployment by passing the updateSPCredential switch."
+            Write-Host "`nPlease first make sure that the Service Principal password has not expired (If so, please add a new key through the Azure Portal)"
+            Write-Host "then restart the deployment by passing the updateSPCredential switch"
             exit # <--- early exit!
         }
 
@@ -1745,7 +1745,7 @@ function New-ConnectionServiceDeployment() {
                 -SecretValue (ConvertTo-SecureString $connectionServiceNumber -AsPlainText -Force) `
                 -ErrorAction stop | Out-Null
             
-            Write-Host "Checking available resource group for connector number $connectionServiceNumber"
+            Write-Host "Checking available resource group for Connector number $connectionServiceNumber"
 
             $csRGName = $RGName + "-CN" + $connectionServiceNumber
             Set-AzureRMContext -Context $adminAzureContext | Out-Null
@@ -1991,12 +1991,12 @@ function New-ConnectionServiceDeployment() {
         $outputParametersFilePath = Join-Path $tempDir $outputParametersFileName
         Set-Content $outputParametersFilePath  $generatedDeploymentParameters
 
-        Write-Host "`nDeploying Cloud Access connector. This process can take up to 60 minutes."
-        Write-Host "Please feel free to watch here for early errors for a few minutes and then go do something else. Or go for coffee!"
-        Write-Host "If this script is running in Azure Cloud Shell then you may let the shell timeout and the deployment will continue."
-        Write-Host "Please watch the resource group $csRGName in the Azure Portal for current status. The Connection Service deployment is"
-        Write-Host "complete when all deployments are showing as 'Succeeded'. Error information is also available through the deployments"
-        Write-Host "area of the resource group pane."
+        Write-Host "`nDeploying Cloud Access Connector, this process can take up to 60 minutes"
+        Write-Host "Please feel free to watch here for early errors for a few minutes and then go do something else, or go for coffee!"
+        Write-Host "If this script is running in Azure Cloud Shell then you may let the shell timeout and the deployment will continue"
+        Write-Host "Please watch the resource group $csRGName in the Azure Portal for current status, the Connection Service deployment is"
+        Write-Host "complete when all deployments are showing as 'Succeeded'"
+        Write-Host "Error information is also available through the deployments area of the resource group pane"
 
         if ($testDeployment) {
             # just do a test if $true
@@ -2033,9 +2033,9 @@ function New-ConnectionServiceDeployment() {
                     if ($_.Exception.Message -like "*does not have authorization*")
                     {
                         $remaining = $maxRetries - $idx - 1
-                        Write-Host "Authorization error. Usually this means we are waiting for the authorization to percolate through Azure."
+                        Write-Host "Authorization error, usually this means we are waiting for the authorization to percolate through Azure"
                         Write-Host "This error can take a long time to clear especially if there is another deployment"
-                        Write-Host "happening concurrently using the same service principal account."
+                        Write-Host "happening concurrently using the same service principal account"
                         Write-Host "Reason: $($_.Exception.Message)"
 
                         # Try to stop the deployment in case that helps, but don't warn or fail.
@@ -2463,16 +2463,16 @@ function Deploy-CAM() {
 
     if (-not $tenantIDsMatch) {
         Write-Host "The Current Azure context is for a different tenant ($currentContextTenant) that"
-        Write-Host "does not match the tenant of the deploment ($tenantId)."
-        Write-Host "This can happen in Azure Cloud Powershell when an account has access to multiple tenants."
+        Write-Host "does not match the tenant of the deployment ($tenantId)"
+        Write-Host "This can happen in Azure Cloud Powershell when an account has access to multiple tenants"
         if (-not $spCredential) {
-            Write-Host "Please make a service principal through the Azure Portal or other means and provide here."
+            Write-Host "Please make a service principal through the Azure Portal or other means and provide here"
         }
         else {
-            Write-Host "Thank-you for providing service principal credentials."
+            Write-Host "Thank you for providing service principal credentials"
         }
         Write-Host "Note - the service principal must already have Contributor rights to the subscription or target"
-        Write-Host "resource groups because role assignment is not possible in this case."
+        Write-Host "resource groups because role assignment is not possible in this case"
     }
 
     $spInfo = $null
@@ -2571,7 +2571,7 @@ function Deploy-CAM() {
                     #re-throw whatever the original exception was
                     $exceptionContext = Get-AzureRmContext
                     $exceptionSubscriptionId = $exceptionContext.Subscription.Id
-                    Write-Error "Failure to create Contributor role for $client. Subscription: $exceptionSubscriptionId. Please check your subscription permissions."
+                    Write-Error "Failure to create Contributor role for $client in subscription: $exceptionSubscriptionId, please check your subscription permissions"
                     throw
                 }
             }
@@ -2605,7 +2605,7 @@ function Deploy-CAM() {
                 -and ($caughtError.Exception.ServiceErrorCodes[0] -eq 70001) `
                 -and ($idx -gt 0))
             {
-                Write-Host "Could not find application ID for tenant. Retries remaining: $idx"
+                Write-Host "Could not find application ID for tenant - retries remaining: $idx"
                 continue
             }
             else {
@@ -2861,12 +2861,12 @@ function Deploy-CAM() {
             $outputParametersFilePath = Join-Path $tempDir $outputParametersFileName
             Set-Content $outputParametersFilePath  $generatedDeploymentParameters
 
-            Write-Host "`nDeploying Cloud Access Manager. This process can take up to 120 minutes."
-            Write-Host "Please feel free to watch here for early errors for a few minutes and then go do something else. Or go for coffee!"
-            Write-Host "If this script is running in Azure Cloud Shell then you may let the shell timeout and the deployment will continue."
-            Write-Host "Please watch the resource group $RGName in the Azure Portal for current status. Cloud Access Manager deployment is"
-            Write-Host "complete when all deployments are showing as 'Succeeded'. Error information is also available through the deployments"
-            Write-Host "area of the resource group pane."
+            Write-Host "`nDeploying Cloud Access Manager, this process can take up to 120 minutes"
+            Write-Host "Please feel free to watch here for early errors for a few minutes and then go do something else, or go for coffee!"
+            Write-Host "If this script is running in Azure Cloud Shell then you may let the shell timeout and the deployment will continue"
+            Write-Host "Please watch the resource group $RGName in the Azure Portal for current status, the Cloud Access Manager deployment is"
+            Write-Host "complete when all deployments are showing as 'Succeeded'"
+            Write-Host "Error information is also available through the deployments area of the resource group pane"
 
             if ($testDeployment) {
                 # just do a test if $true
@@ -3156,10 +3156,10 @@ function Set-VnetConfig() {
                 $v.Number = ++$vnetIndex
             }
 
-            Write-Host "`nPlease provide the VNet information that the Cloud Access connectors, gateways, and remote workstations"
-            Write-Host "will be using. Please enter the number of the vnet in the following list or the complete VNet ID in"
+            Write-Host "`nPlease provide the VNet information that the Cloud Access Connectors, gateways, and remote workstations will be using"
+            Write-Host "Please enter the number of the vnet in the following list or the complete VNet ID in"
             Write-Host "the form /subscriptions/{subscriptionID}/resourceGroups/{vnetResourceGroupName}/providers/Microsoft.Network/virtualNetworks/{vnetName}`n"
-            Write-Host "The service principal account for this Cloud Access Manager deployment will be provided access rights to the selected virtual network." -ForegroundColor Yellow
+            Write-Host "The service principal account for this Cloud Access Manager deployment will be provided access rights to the selected virtual network" -ForegroundColor Yellow
             $vnets | Select-Object -Property Number, Name, ResourceGroupName, Location | Format-Table
 
             $chosenVnet = Read-Host "VNet"
@@ -3213,7 +3213,7 @@ function Set-VnetConfig() {
     # connector Subnet
     do {
         if ( -not $vnetConfig.CSsubnetName ) {
-            Write-Host "Please provide the Cloud Access connector subnet number from the list below, or name"
+            Write-Host "Please provide the Cloud Access Connector subnet number from the list below, or name"
             $subnets | Select-Object -Property Number, Name | Format-Table
             $chosenSubnet = Read-Host "Subnet"
             $subnetIndex = 0
@@ -3234,12 +3234,12 @@ function Set-VnetConfig() {
             $vnetConfig.CSsubnetName = $null
         }
     } while (-not $vnetConfig.CSsubnetName)
-    Write-Host "Cloud Access Connector Subnet: $($vnetConfig.CSsubnetName)`n"
+    Write-Host "Cloud Access Connector subnet: $($vnetConfig.CSsubnetName)`n"
 
     # Application Gateway Subnet
     do {
         if ( -not $vnetConfig.GWsubnetName ) {
-            Write-Host "Please provide Application Gateway Subnet number from the list below, or name"
+            Write-Host "Please provide Application Gateway subnet number from the list below, or name"
             $subnets | Select-Object -Property Number, Name | Format-Table
             $chosenSubnet = Read-Host "Subnet"
             $subnetIndex = 0
@@ -3260,13 +3260,13 @@ function Set-VnetConfig() {
             $vnetConfig.GWsubnetName = $null
         }
     } while (-not $vnetConfig.GWsubnetName)
-    Write-Host "Application Gateway Subnet: $($vnetConfig.GWsubnetName)`n"
+    Write-Host "Application Gateway subnet: $($vnetConfig.GWsubnetName)`n"
     
     # Remote Workstation Subnet
     if(-not $setRWSubnet) {return}  # <--- early return!
     do {
         if ( -not $vnetConfig.RWsubnetName ) {
-            Write-Host "Please provide Remote Workstation Subnet number from the list below, or name"
+            Write-Host "Please provide Remote Workstation subnet number from the list below, or name"
             $subnets | Select-Object -Property Number, Name | Format-Table
             $chosenSubnet = Read-Host "Subnet"
             $subnetIndex = 0
@@ -3287,7 +3287,7 @@ function Set-VnetConfig() {
             $vnetConfig.RWsubnetName = $null
         }
     } while (-not $vnetConfig.RWsubnetName)
-    Write-Host "Remote Workstation Subnet: $($vnetConfig.RWsubnetName)`n"
+    Write-Host "Remote Workstation subnet: $($vnetConfig.RWsubnetName)`n"
 }
 
 
@@ -3493,9 +3493,9 @@ function Set-KeyVaultAccess()
                 return $true
             }
             catch {
-                Write-Host "`nFailed to set access policy for vault $kvName for user $($claims.unique_name)."
+                Write-Host "`nFailed to set access policy for vault $kvName for user $($claims.unique_name)"
                 Write-Host "Please use the Azure Portal to provide the current logged-in account with get, list, and set access"
-                Write-Host "to the secrets in $kvName."
+                Write-Host "to the secrets in $kvName"
                 return $false
             }
         }
@@ -3741,9 +3741,9 @@ if ($CAMRootKeyvault) {
     $hasKVAccess = Set-KeyVaultAccess -CAMRootKeyvault $CAMRootKeyvault
     if(-not $hasKVAccess) {return}
 
-    Write-Host "`nCreating a new Cloud Access connector for this Cloud Access Manager deployment`n"
+    Write-Host "`nCreating a new Cloud Access Connector for this Cloud Access Manager deployment`n"
 
-    $externalAccessPrompt = "Do you want to enable external network access for this connector?"
+    $externalAccessPrompt = "Do you want to enable external network access for this Connector?"
 
     if ($enableExternalAccess -eq $null) {
         $enableExternalAccess = (confirmDialog $externalAccessPrompt -defaultSelected 'Y') -eq 'y'
@@ -3785,7 +3785,7 @@ if ($CAMRootKeyvault) {
         }
     }
         
-    Write-Host "Deploying a new Cloud Access connector"
+    Write-Host "Deploying a new Cloud Access Connector"
 
     New-ConnectionServiceDeployment `
         -RGName $ResourceGroupName `
@@ -3813,7 +3813,7 @@ else {
     if( -not $ignorePrompts) {
         Write-Host "`nBy deploying Cloud Access Manager, you accept the terms of the Teradici Cloud Access Software End User License Agreement"
         Write-Host "http://www.teradici.com/eula/1609005 and Privacy Policy https://www.teradici.com/privacy-policy/cloud-access-manager"
-        Write-Host "and have read and agree to be bound by the software license for use of the third-party drivers."
+        Write-Host "and have read and agree to be bound by the software license for use of the third-party drivers"
 
         $acceptEULA = (confirmDialog "Do you accept the policies and agreements?") -eq 'y'
 
@@ -4000,10 +4000,10 @@ else {
     if($csrg)
     {
         # assume it's there for a reason? Alternately we could fail but...
-        Write-Host "Using Cloud Access connector resource group $csRGName"
+        Write-Host "Using Cloud Access Connector resource group $csRGName"
     }
     else {
-        Write-Host "Creating Cloud Access connector resource group $csRGName"
+        Write-Host "Creating Cloud Access Connector resource group $csRGName"
         $csrg = New-AzureRmResourceGroup -Name $csRGName -Location $rgMatch.Location -ErrorAction Stop
     }
 
