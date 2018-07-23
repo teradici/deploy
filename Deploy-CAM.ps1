@@ -1114,7 +1114,7 @@ function Generate-Certificate-And-Passwords() {
     $rwLocalAdminPassword = ConvertTo-SecureString $rwLocalAdminPasswordStr -AsPlainText -Force
     $CAMConfig.parameters.remoteWorkstationLocalAdminPassword.value = $rwLocalAdminPassword
 
-    Write-Host "Creating Local Admin Password for Cloud Access Connector servers"
+    Write-Host "Creating Local Admin Password for Cloud Access connector servers"
 
     $csLocalAdminPasswordStr = "5!" + ( -join ((65..90) + (97..122) | Get-Random -Count 12 | % {[char]$_})) # "5!" is to ensure numbers and symbols
 
@@ -1745,7 +1745,7 @@ function New-ConnectionServiceDeployment() {
                 -SecretValue (ConvertTo-SecureString $connectionServiceNumber -AsPlainText -Force) `
                 -ErrorAction stop | Out-Null
             
-            Write-Host "Checking available resource group for Connector number $connectionServiceNumber"
+            Write-Host "Checking available resource group for connector number $connectionServiceNumber"
 
             $csRGName = $RGName + "-CN" + $connectionServiceNumber
             Set-AzureRMContext -Context $adminAzureContext | Out-Null
@@ -1991,7 +1991,7 @@ function New-ConnectionServiceDeployment() {
         $outputParametersFilePath = Join-Path $tempDir $outputParametersFileName
         Set-Content $outputParametersFilePath  $generatedDeploymentParameters
 
-        Write-Host "`nDeploying Cloud Access Connector, this process can take up to 60 minutes"
+        Write-Host "`nDeploying Cloud Access connector, this process can take up to 60 minutes"
         Write-Host "Please feel free to watch here for early errors for a few minutes and then go do something else, or go for coffee!"
         Write-Host "If this script is running in Azure Cloud Shell then you may let the shell timeout and the deployment will continue"
         Write-Host "Please watch the resource group $csRGName in the Azure Portal for current status, the Connection Service deployment is"
@@ -3156,7 +3156,7 @@ function Set-VnetConfig() {
                 $v.Number = ++$vnetIndex
             }
 
-            Write-Host "`nPlease provide the VNet information that the Cloud Access Connectors, gateways, and remote workstations will be using"
+            Write-Host "`nPlease provide the VNet information that the Cloud Access connectors, gateways, and remote workstations will be using"
             Write-Host "Please enter the number of the vnet in the following list or the complete VNet ID in"
             Write-Host "the form /subscriptions/{subscriptionID}/resourceGroups/{vnetResourceGroupName}/providers/Microsoft.Network/virtualNetworks/{vnetName}`n"
             Write-Host "The service principal account for this Cloud Access Manager deployment will be provided access rights to the selected virtual network" -ForegroundColor Yellow
@@ -3213,7 +3213,7 @@ function Set-VnetConfig() {
     # connector Subnet
     do {
         if ( -not $vnetConfig.CSsubnetName ) {
-            Write-Host "Please provide the Cloud Access Connector subnet number from the list below, or name"
+            Write-Host "Please provide the Cloud Access connector subnet number from the list below, or name"
             $subnets | Select-Object -Property Number, Name | Format-Table
             $chosenSubnet = Read-Host "Subnet"
             $subnetIndex = 0
@@ -3234,7 +3234,7 @@ function Set-VnetConfig() {
             $vnetConfig.CSsubnetName = $null
         }
     } while (-not $vnetConfig.CSsubnetName)
-    Write-Host "Cloud Access Connector subnet: $($vnetConfig.CSsubnetName)`n"
+    Write-Host "Cloud Access connector subnet: $($vnetConfig.CSsubnetName)`n"
 
     # Application Gateway Subnet
     do {
@@ -3741,9 +3741,9 @@ if ($CAMRootKeyvault) {
     $hasKVAccess = Set-KeyVaultAccess -CAMRootKeyvault $CAMRootKeyvault
     if(-not $hasKVAccess) {return}
 
-    Write-Host "`nCreating a new Cloud Access Connector for this Cloud Access Manager deployment`n"
+    Write-Host "`nCreating a new Cloud Access connector for this Cloud Access Manager deployment`n"
 
-    $externalAccessPrompt = "Do you want to enable external network access for this Connector?"
+    $externalAccessPrompt = "Do you want to enable external network access for this connector?"
 
     if ($enableExternalAccess -eq $null) {
         $enableExternalAccess = (confirmDialog $externalAccessPrompt -defaultSelected 'Y') -eq 'y'
@@ -3785,7 +3785,7 @@ if ($CAMRootKeyvault) {
         }
     }
         
-    Write-Host "Deploying a new Cloud Access Connector"
+    Write-Host "Deploying a new Cloud Access connector"
 
     New-ConnectionServiceDeployment `
         -RGName $ResourceGroupName `
@@ -4000,10 +4000,10 @@ else {
     if($csrg)
     {
         # assume it's there for a reason? Alternately we could fail but...
-        Write-Host "Using Cloud Access Connector resource group $csRGName"
+        Write-Host "Using Cloud Access connector resource group $csRGName"
     }
     else {
-        Write-Host "Creating Cloud Access Connector resource group $csRGName"
+        Write-Host "Creating Cloud Access connector resource group $csRGName"
         $csrg = New-AzureRmResourceGroup -Name $csRGName -Location $rgMatch.Location -ErrorAction Stop
     }
 
