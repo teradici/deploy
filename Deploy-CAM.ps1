@@ -3368,7 +3368,7 @@ function Set-RadiusSettings() {
             if ($isRadiusMfaEnabled) {
                 $currentRadiusSetting = "enabled"
             }
-            $enableRadiusMfa = (confirmDialog "RADIUS Multi-Factor Authentication is currently $currentRadiusSetting, do you want to enable Multi-Factor Authentication using your RADIUS Server?") -eq 'y'
+            $enableRadiusMfa = (confirmDialog "RADIUS Multi-Factor Authentication is currently $($currentRadiusSetting), do you want to enable Multi-Factor Authentication using your RADIUS Server?") -eq 'y'
         } elseif ( ($enableRadiusMfa -eq $null) -and $ignorePrompts ) {
             $enableRadiusMfa = $isRadiusMfaEnabled
         }
@@ -3381,7 +3381,7 @@ function Set-RadiusSettings() {
 
         if ($radiusConfig.enableRadiusMfa) {
             if ((-not $radiusServerHost) -and (-not $ignorePrompts)) {
-                if((confirmDialog "RADIUS Server Host is currently $currentRadiusHost, do you want to change your RADIUS Server Host?") -eq 'y') {
+                if((confirmDialog "RADIUS Server Host is currently $($currentRadiusHost), do you want to change your RADIUS Server Host?") -eq 'y') {
                     do {
                         $radiusConfig.radiusServerHost = (Read-Host "Enter your RADIUS Server's Hostname or IP").Trim()
                     } while (-not $radiusConfig.radiusServerHost)
@@ -3391,7 +3391,7 @@ function Set-RadiusSettings() {
             }
 
             if ((-not $radiusServerPort) -and (-not $ignorePrompts)) {
-                if((confirmDialog "RADIUS Server Port is currently $currentRadiusPort, do you want to change your RADIUS Server Port?") -eq 'y') {
+                if((confirmDialog "RADIUS Server Port is currently $($currentRadiusPort), do you want to change your RADIUS Server Port?") -eq 'y') {
                     do {
                         $radiusPort = 0
                         $portString = (Read-Host  "Enter your RADIUS Server's Listening port")
@@ -3755,7 +3755,7 @@ if ($CAMRootKeyvault) {
     if ((-not $vnetConfig.CSSubnetName) -or (-not $vnetConfig.GWSubnetName))
     {
         $rootLocation = (Get-AzureRmResourceGroup -ResourceGroupName $ResourceGroupName -ErrorAction stop).location
-        $reselectNetwork = (confirmDialog "Do you want to deploy into a different region than $rootLocation?" -defaultSelected 'N') -eq 'y'
+        $reselectNetwork = (confirmDialog "Do you want to deploy into a different region than $($rootLocation)?" -defaultSelected 'N') -eq 'y'
 
         if($reselectNetwork) {
             # We don't need the RWSubnetName so don't prompt
