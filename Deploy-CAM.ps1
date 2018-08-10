@@ -1306,14 +1306,30 @@ function Add-SecretsToKeyVault() {
         $CAMConfig
     )
     Write-Host "Populating Key Vault"
-
-    foreach ($key in $CAMConfig.parameters.keys) {
-        Write-Host "Writing secret to keyvault: $key"
-        Set-AzureKeyVaultSecret `
-            -VaultName $kvName `
-            -Name $key `
-            -SecretValue $CAMConfig.parameters[$key].value `
-            -ErrorAction stop | Out-Null
+    try {
+        foreach ($key in $CAMConfig.parameters.keys) {
+            $retryCount = 10
+            while($retryCount -ge 0){
+                $retryCount--
+                try {
+                    Write-Host "Writing secret to Key Vault: $key"
+                    Set-AzureKeyVaultSecret `
+                        -VaultName $kvName `
+                        -Name $key `
+                        -SecretValue $CAMConfig.parameters[$key].value `
+                        -ErrorAction stop | Out-Null
+                    break
+                } catch {
+                    if($retryCount -eq 0){
+                        throw
+                    }
+                    Write-host "Unsuccessful write of $key to Key Vault - retries remaining: $retryCount"
+                    Start-sleep -Seconds 1
+                }
+            }
+        }
+    } catch {
+        Write-Error "Failed to write secret $key to Key Vault"
     }
     Write-Host "Completed writing secrets to Key Vault"
 }
@@ -1452,6 +1468,7 @@ function New-CAMDeploymentInfo() {
 
     $camDeploymenRegInfo = @{}
     foreach ($key in $camDeploymenRegInfoParameters.keys) {
+
         $secretName = $camDeploymenRegInfoParameters.$key
         Write-Host "Setting $key to value of secret $secretName"
         $secret = Get-AzureKeyVaultSecret `
@@ -1459,6 +1476,7 @@ function New-CAMDeploymentInfo() {
             -Name $secretName `
             -ErrorAction stop
         $camDeploymenRegInfo.$key = $secret.SecretValueText
+    
     }
     $camDeploymenRegInfo.Add("CAM_USER_BLOB_URI", "userStorageAccountUri")
     $camDeploymenRegInfo.Add("CAM_USER_STORAGE_ACCOUNT_NAME", "userStorageName")
@@ -1489,13 +1507,29 @@ graphURL=https\://graph.windows.net/
     $camDeploymenInfoURLSecure = ConvertTo-SecureString $camDeploymenInfoURL -AsPlainText -Force
 
     # Put URL encoded blob into Key Vault 
-    Write-Host "Writing secret to Key Vault: CAMDeploymentInfo"
-    Set-AzureKeyVaultSecret `
-        -VaultName $kvName `
-        -Name "CAMDeploymentInfo" `
-        -SecretValue $camDeploymenInfoURLSecure `
-        -ErrorAction stop | Out-Null
-
+    try {
+        $retryCount = 10
+        while($retryCount -ge 0){
+            $retryCount--
+            try { 
+                Write-Host "Writing secret to Key Vault: CAMDeploymentInfo"
+                Set-AzureKeyVaultSecret `
+                    -VaultName $kvName `
+                    -Name "CAMDeploymentInfo" `
+                    -SecretValue $camDeploymenInfoURLSecure `
+                    -ErrorAction stop | Out-Null
+                break
+            } catch {
+                if($retryCount -eq 0){
+                    throw
+                }
+                Write-host "Unsuccessful write of CamDeploymentInfo to Key Vault - retries remaining: $retryCount"
+                Start-sleep -Seconds 1
+            }
+        }
+    } catch {
+        Write-Error "Failed to write secret CamDeploymentInfo to Key Vault"
+    }
     <# Test code for encoding/decoding
     $camDeploymenInfoURL
     $camDeploymenInfoJSONDecoded = [System.Web.HttpUtility]::UrlDecode($camDeploymenInfoURL)
