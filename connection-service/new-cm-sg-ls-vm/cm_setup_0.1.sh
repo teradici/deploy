@@ -136,10 +136,9 @@ service connection_manager stop
 # make the 'original' file
 cp -n /etc/ConnectionManager.conf /etc/ConnectionManager.conf.orig
 awk -v broker="$1" '/^PcoipAddress/{printf "PcoipAddress = %s\n",broker;next};{print}' /etc/ConnectionManager.conf.orig > ConnectionManager.conf
-
+sed --in-place --expression="s|\(LogLevel\s*=\).*|\1 TRACE|g" ConnectionManager.conf
 
 cp -f ConnectionManager.conf /etc/ConnectionManager.conf
-
 
 echo "Setting up Tomcat to allow an unencrypted link over port 8080"
 
