@@ -1014,7 +1014,7 @@ function New-CAM-KeyVault() {
         $generatedKVID = -join ((65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
         $kvName = "CAM-$generatedKVID"
 
-        Write-Host "Creating Azure KeyVault $kvName"
+        Write-Host "Creating Azure Key Vault $kvName"
 
         $rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName
         $keyVault = New-AzureRmKeyVault `
@@ -1026,7 +1026,7 @@ function New-CAM-KeyVault() {
             -EnableSoftDelete `
             -WarningAction Ignore
 
-        Write-Host "Setting Access Policy on Azure KeyVault $kvName"
+        Write-Host "Setting Access Policy on Azure Key Vault $kvName"
 
         #keyvault populate retry is to catch the case where the DNS has not been updated
         #from the keyvault creation by the time we get here
@@ -1045,7 +1045,7 @@ function New-CAM-KeyVault() {
                 break
             }
             catch {
-                Write-Host "Waiting for key vault: $keyVaultPopulateRetry"
+                Write-Host "Waiting for Key Vault: $keyVaultPopulateRetry"
                 if ( $keyVaultPopulateRetry -eq 0) {
                     #TODO: be smarter - we should only retry if the vault doesn't exist yet not on rights issues...
                     #re-throw whatever the original exception was
@@ -1056,7 +1056,7 @@ function New-CAM-KeyVault() {
         }
     }
     catch {
-        throw
+        Write-Error "Error creating Key Vault"
     }
 
     # Try to set key vault access for the calling administrator (if they have rights...)
@@ -1308,13 +1308,9 @@ function Add-SecretsToKeyVault() {
     Write-Host "Populating Key Vault"
 
     foreach ($key in $CAMConfig.parameters.keys) {
-        Write-Host "Writing secret to keyvault: $key"
-        Set-AzureKeyVaultSecret `
-            -VaultName $kvName `
-            -Name $key `
-            -SecretValue $CAMConfig.parameters[$key].value `
-            -ErrorAction stop | Out-Null
+        Set-KVSecret -kvName $kvName -secretName $key -secretValue $CAMConfig.parameters[$key].value
     }
+
     Write-Host "Completed writing secrets to Key Vault"
 }
 
@@ -1451,15 +1447,16 @@ function New-CAMDeploymentInfo() {
 
 
     $camDeploymenRegInfo = @{}
+
     foreach ($key in $camDeploymenRegInfoParameters.keys) {
         $secretName = $camDeploymenRegInfoParameters.$key
         Write-Host "Setting $key to value of secret $secretName"
-        $secret = Get-AzureKeyVaultSecret `
-            -VaultName $kvName `
-            -Name $secretName `
-            -ErrorAction stop
+
+        $secret = Get-KVSecret -kvName $kvName -secretName $secretName
         $camDeploymenRegInfo.$key = $secret.SecretValueText
+    
     }
+
     $camDeploymenRegInfo.Add("CAM_USER_BLOB_URI", "userStorageAccountUri")
     $camDeploymenRegInfo.Add("CAM_USER_STORAGE_ACCOUNT_NAME", "userStorageName")
     $camDeploymenRegInfo.Add("CAM_USER_STORAGE_ACCOUNT_KEY", "userStorageAccountKey")
@@ -1489,12 +1486,7 @@ graphURL=https\://graph.windows.net/
     $camDeploymenInfoURLSecure = ConvertTo-SecureString $camDeploymenInfoURL -AsPlainText -Force
 
     # Put URL encoded blob into Key Vault 
-    Write-Host "Writing secret to Key Vault: CAMDeploymentInfo"
-    Set-AzureKeyVaultSecret `
-        -VaultName $kvName `
-        -Name "CAMDeploymentInfo" `
-        -SecretValue $camDeploymenInfoURLSecure `
-        -ErrorAction stop | Out-Null
+    Set-KVSecret -kvName $kvName -secretname "CAMDeploymentInfo" -secretValue $camDeploymenInfoURLSecure
 
     <# Test code for encoding/decoding
     $camDeploymenInfoURL
@@ -1673,19 +1665,12 @@ function New-ConnectionServiceDeployment() {
                     -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
 
                 if ( $spUpdatedSuccessfully ) {
-                    Set-AzureKeyVaultSecret `
-                        -VaultName $kvName `
-                        -Name "AzureSPKey" `
-                        -SecretValue $spNewCredential.Password `
-                        -ErrorAction stop | Out-Null
+                    Set-KVSecret -kvName $kvName -secretName "AzureSPKey" -secretValue $spNewCredential.Password
                 }
                 
             }
             else {
-                $secret = Get-AzureKeyVaultSecret `
-                -VaultName $kvName `
-                -Name "AzureSPKey" `
-                -ErrorAction stop
+                $secret = Get-KVSecret -kvName $kvName -secretName "AzureSPKey"
                 $key = $secret.SecretValueText
             }
         }
@@ -1726,6 +1711,7 @@ function New-ConnectionServiceDeployment() {
                 -ServicePrincipal `
                 -TenantId $tenantId `
                 -ErrorAction Stop | Out-Null
+            
             $secret = Get-AzureKeyVaultSecret `
                 -VaultName $kvName `
                 -Name "connectionServiceNumber" `
@@ -1739,12 +1725,9 @@ function New-ConnectionServiceDeployment() {
                 $connectionServiceNumber = ([int]$secret.SecretValueText) + 1
             }
 
-            Set-AzureKeyVaultSecret `
-                -VaultName $kvName `
-                -Name "connectionServiceNumber" `
-                -SecretValue (ConvertTo-SecureString $connectionServiceNumber -AsPlainText -Force) `
-                -ErrorAction stop | Out-Null
-            
+            $secretValue = (ConvertTo-SecureString $connectionServiceNumber -AsPlainText -Force)
+            Set-KVSecret -kvName $kvName -secretName "connectionServiceNumber" -secretValue $secretValue
+
             Write-Host "Checking available resource group for connector number $connectionServiceNumber"
 
             $csRGName = $RGName + "-CN" + $connectionServiceNumber
@@ -1847,18 +1830,13 @@ function New-ConnectionServiceDeployment() {
             -kvName $CAMRootKeyvault.Name
 
         # Get the template URI
-        $secret = Get-AzureKeyVaultSecret `
-            -VaultName $kvName `
-            -Name "artifactsLocation" `
-            -ErrorAction stop
+        $secret = Get-KVSecret -kvName $kvName -secretName "artifactsLocation"
         $artifactsLocation = $secret.SecretValueText
         $CSDeploymentTemplateURI = $artifactsLocation + "/connection-service/azuredeploy.json"
 
         # Get the RegistrationCode
-        $secret = Get-AzureKeyVaultSecret `
-            -VaultName $kvName `
-            -Name "cloudAccessRegistrationCode" `
-            -ErrorAction stop
+        $secret = Get-KVSecret -kvName $kvName -secretName "cloudAccessRegistrationCode"
+
         # Get license instance Id from registration code
         $licenseInstanceId = $secret.SecretValueText.Split('@')[0]
 
@@ -3316,28 +3294,16 @@ function Set-RadiusSettings() {
         $radiusSharedSecret  
     )
     # Check current MFA settings
-    $isRadiusMfaEnabled = Get-AzureKeyVaultSecret `
-        -VaultName $VaultName `
-        -Name "enableRadiusMfa" `
-        -ErrorAction stop
+    $isRadiusMfaEnabled = Get-KVSecret -kvName $VaultName -secretName "enableRadiusMfa"
     $isRadiusMfaEnabled = ([bool]($isRadiusMfaEnabled.SecretValueText.ToLower() -eq "true"))
 
-    $currentRadiusHost = Get-AzureKeyVaultSecret `
-        -VaultName $VaultName `
-        -Name "radiusServerHost" `
-        -ErrorAction stop
+    $currentRadiusHost = Get-KVSecret -kvName $VaultName -secretName "radiusServerHost"
     $currentRadiusHost = ([string]$currentRadiusHost.SecretValueText)
 
-    $currentRadiusPort = Get-AzureKeyVaultSecret `
-        -VaultName $VaultName `
-        -Name "radiusServerPort" `
-        -ErrorAction stop
+    $currentRadiusPort = Get-KVSecret -kvName $VaultName -secretName "radiusServerPort"
     $currentRadiusPort = ([string]$currentRadiusPort.SecretValueText)
 
-    $currentRadiusSecret = Get-AzureKeyVaultSecret `
-        -VaultName $VaultName `
-        -Name "radiusSharedSecret" `
-        -ErrorAction stop
+    $currentRadiusSecret = Get-KVSecret -kvName $VaultName -secretName "radiusSharedSecret"
     $currentRadiusSecret = ([string]$currentRadiusSecret.SecretValueText)
 
     # Prompt for RADIUS configuration if RADIUS has not been already explicitly been disabled
@@ -3458,6 +3424,81 @@ function Set-RadiusSettings() {
         Add-SecretsToKeyVault `
             -kvName $VaultName `
             -CAMConfig $camConfig
+    }
+}
+
+# Get secret with retries
+function Get-KVSecret(){
+    param(
+        [parameter(Mandatory=$true)]
+        [string]$kvName,
+
+        [parameter(Mandatory=$true)]
+        [string]$secretName
+    )
+
+    try {
+        $retryCount = 3
+        while($retryCount -ge 0) {
+            $retryCount--; 
+            try {
+                $secret = Get-AzureKeyVaultSecret `
+                    -VaultName $kvName `
+                    -Name $secretName `
+                    -ErrorAction stop
+                break
+            } catch {
+                if($retryCount -eq 0){
+                    throw
+                }
+                Write-Host "Unsuccessful retrieval of $key - retries remaining: $retryCount" 
+                Start-Sleep -Seconds 5
+            }
+        }
+    } catch {
+        Write-Error "Failed to retrieve secret $key from Key Vault"
+        exit
+    }
+
+    return $secret
+}
+
+# Set secret with retries
+function Set-KVSecret(){
+    param(
+        [parameter(Mandatory=$true)]
+        [string]$kvName,
+
+        [parameter(Mandatory=$true)]
+        [string]$secretName,
+
+        [parameter(Mandatory=$true)]
+        $secretValue
+    )
+
+    try {
+        Write-Host "Writing secret $secretName to Key Vault"
+        $retryCount = 3
+        while($retryCount -ge 0){
+            $retryCount--
+            try {
+                Set-AzureKeyVaultSecret `
+                    -VaultName $kvName `
+                    -Name $secretName `
+                    -SecretValue $secretValue `
+                    -ErrorAction stop | Out-Null
+                break
+            } catch {
+                if($retryCount -eq 0) {
+                    throw
+                }
+                Write-Host "Unsuccessful write of $secretName to Key Vault - retries remaining: $retryCount"
+                Start-Sleep -Seconds 5
+            }
+        }
+    } catch {
+        Write-Error "Failed to write secret $secretName to Key Vault"
+        exit
     }
 }
 
