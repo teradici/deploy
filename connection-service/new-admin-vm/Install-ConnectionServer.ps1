@@ -866,7 +866,7 @@ ldapHost=ldaps://$domainControllerFQDN
                 # Add an HTTP port for broker requests as well - we would use this for direct PCoIP client <-> broker communications
                 # The SSL termination will happen on the app gateway
                 $newBrokerHTTPConnector = [xml] ('<Connector
-                port="'+$using:brokerInecurePort+'"
+                port="'+$using:brokerHTTPPort+'"
                 protocol="HTTP/1.1"
                 executor="tomcatThreadPool"
                 />')
