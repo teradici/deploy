@@ -51,7 +51,7 @@ Configuration InstallConnectionServer
         [System.Management.Automation.PSCredential]$CAMDeploymentInfo,
 
         [string]
-        $javaInstaller = "jdk-8u144-windows-x64.exe",
+        $javaInstaller = "jdk-8u181-windows-x64.exe",
 
         [string]
         $openSSL = "Win64OpenSSL_Light-1_0_2o.exe",
@@ -93,7 +93,10 @@ Configuration InstallConnectionServer
         [String]$sumoCollectorID,
 
         [Parameter(Mandatory=$false)]
-        [String]$brokerPort = "8444",
+        [String]$brokerHTTPSPort = "8444",
+
+        [Parameter(Mandatory=$false)]
+        [String]$brokerHTTPPort = "8888",
 
         [Parameter(Mandatory = $false)]
         [String]$enableRadiusMfa
@@ -125,7 +128,7 @@ Configuration InstallConnectionServer
     $family   = "Windows Server 2016"
 
     #Java locations
-    $JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_144"
+    $JavaRootLocation = "$env:systemdrive\Program Files\Java\jdk1.8.0_181"
     $JavaBinLocation = $JavaRootLocation + "\bin"
     $JavaLibLocation = $JavaRootLocation + "\jre\lib"
 
@@ -841,8 +844,8 @@ ldapHost=ldaps://$domainControllerFQDN
                 #remove unwanted default connectors
                 ($xml.Server.Service.Connector) | ForEach-Object { [void]$_.ParentNode.removeChild($_) }
 
-                $NewConnector = [xml] ('<Connector
-                    port="'+$using:brokerPort+'"
+                $newBrokerHTTPSConnector = [xml] ('<Connector
+                    port="'+$using:brokerHTTPSPort+'"
                     protocol="org.apache.coyote.http11.Http11NioProtocol"
                     SSLEnabled="true"
                     keystoreFile="'+$using:LocalDLPath+'\.keystore"
@@ -856,18 +859,34 @@ ldapHost=ldaps://$domainControllerFQDN
 
                 $xml.Server.Service.InsertBefore(
                     # new child
-                    $xml.ImportNode($NewConnector.Connector,$true),
+                    $xml.ImportNode($newBrokerHTTPSConnector.Connector,$true),
                     #ref child
                     $xml.Server.Service.Engine )
+
+                # Add an HTTP port for broker requests as well - we would use this for direct PCoIP client <-> broker communications
+                # The SSL termination will happen on the app gateway
+                $newBrokerHTTPConnector = [xml] ('<Connector
+                port="'+$using:brokerInecurePort+'"
+                protocol="HTTP/1.1"
+                executor="tomcatThreadPool"
+                />')
+
+                $xml.Server.Service.InsertBefore(
+                    # new child
+                    $xml.ImportNode($newBrokerHTTPConnector.Connector,$true),
+                    #ref child
+                    $xml.Server.Service.Engine )
+
 
                 $xml.save($serverXMLFile)
 
 
 
-                Write-Host "Opening port $using:brokerPort"
+                Write-Host "Opening port $using:brokerHTTPSPort"
 
-                #open port in firewall
-                netsh advfirewall firewall add rule name="Open Port $using:brokerPort" dir=in action=allow protocol=TCP localport=$using:brokerPort
+                #open ports in firewall
+                netsh advfirewall firewall add rule name="Open Port $using:brokerHTTPSPort" dir=in action=allow protocol=TCP localport=$using:brokerHTTPSPort
+                netsh advfirewall firewall add rule name="Open Port $using:brokerHTTPSPort" dir=in action=allow protocol=TCP localport=$using:brokerHTTPPort
 
                 # Install and start service for new config
 

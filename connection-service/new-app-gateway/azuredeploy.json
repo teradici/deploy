@@ -94,6 +94,7 @@
     "appGwFrontendHttpPort": 80,
     "appGwFrontendSecondaryHttpsPort": 60443,
     "appGwBackendPort": 8080,
+    "appGwBackendDirectBrokerPort": 8888,
     "internalExternalConfigurations": {
       "internal": {
         "frontendPorts": [
@@ -296,7 +297,7 @@
                 "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayPrivateHttpsListener')]"
               },
               "urlPathMap": {
-                "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/pcoipBrokerProtocolUserInterfacePath')]"
+                "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/pcoipDirectBrokerProtocolPath')]"
               }
             }
           }
@@ -340,7 +341,7 @@
                 "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayPrivateHttpsListener')]"
               },
               "urlPathMap": {
-                "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/pcoipBrokerProtocolUserInterfacePath')]"
+                "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/pcoipDirectBrokerProtocolPath')]"
               }
             }
           }
@@ -372,7 +373,7 @@
                 "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayPrivateHttpsListener')]"
               },
               "urlPathMap": {
-                "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/pcoipBrokerProtocolPath')]"
+                "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/pcoipDirectBrokerProtocolPath')]"
               }
             }
           }
@@ -404,7 +405,7 @@
                 "id": "[concat(variables('applicationGatewayID'), '/httpListeners/appGatewayPrivateHttpsListener')]"
               },
               "urlPathMap": {
-                "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/pcoipBrokerProtocolUserInterfacePath')]"
+                "id": "[concat(variables('applicationGatewayID'), '/urlPathMaps/pcoipDirectBrokerProtocolPath')]"
               }
             }
           }
@@ -423,6 +424,22 @@
           },
           "backendHttpSettings": {
             "id": "[concat(variables('applicationGatewayID'), '/backendHttpSettingsCollection/appGatewayBackendHttpSettings')]"
+          }
+        }
+      }
+    ],
+    "pcoipDirectBrokerPathRules" : [
+      {
+        "name": "pcoipDirectBrokerProtocolRule",
+        "properties": {
+          "paths": [
+            "[parameters('pathMatch1')]"
+          ],
+          "backendAddressPool": {
+            "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/', parameters('CSBackendPoolName') )]"
+          },
+          "backendHttpSettings": {
+            "id": "[concat(variables('applicationGatewayID'), '/backendHttpSettingsCollection/appGatewayDirectBrokerHttpSettings')]"
           }
         }
       }
@@ -495,6 +512,19 @@
               "CookieBasedAffinity": "Enabled",
               "RequestTimeout": "90"
             }
+          },
+          {
+            "name": "appGatewayDirectBrokerHttpSettings",
+            "properties": {
+              "Port": "[variables('appGwBackendDirectBrokerPort')]",
+              "Protocol": "Http",
+              "CookieBasedAffinity": "Enabled",
+              "RequestTimeout": "90",
+              "pickHostNameFromBackendAddress": true,
+              "Probe": {
+                "id": "[concat(variables('applicationGatewayID'), '/probes/broker-probe')]"
+              }
+            }
           }
         ],
         "urlPathMaps": [
@@ -509,7 +539,7 @@
               },
               "pathRules": "[variables('pcoipPathRules')]"
             }
-          }, 
+          },
           {
             "name": "pcoipBrokerProtocolPath",
             "properties": {
@@ -521,6 +551,39 @@
               },
               "pathRules": "[variables('pcoipPathRules')]"
             }
+          },
+          {
+            "name": "pcoipDirectBrokerProtocolPath",
+            "properties": {
+              "defaultBackendAddressPool": {
+                "id": "[concat(variables('applicationGatewayID'), '/backendAddressPools/', parameters('CSBackendPoolName') )]"
+              },
+              "defaultBackendHttpSettings": {
+                "id": "[concat(variables('applicationGatewayID'), '/backendHttpSettingsCollection/appGatewayBackendHttpSettings')]"
+              },
+              "pathRules": "[variables('pcoipDirectBrokerPathRules')]"
+            }
+          }
+        ],
+        "probes": [
+          {
+              "name": "broker-probe",
+              "properties": {
+                  "protocol": "Http",
+                  "path": "/pcoip-broker/xml",
+                  "interval": 30,
+                  "timeout": 30,
+                  "unhealthyThreshold": 3,
+                  "pickHostNameFromBackendHttpSettings": true,
+                  "minServers": 0,
+                  "match": {
+                      "body": "",
+                      "statusCodes": [
+                          "200-499"
+                      ]
+                  }
+              },
+              "type": "Microsoft.Network/applicationGateways/probes"
           }
         ]
       }
