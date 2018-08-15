@@ -882,11 +882,11 @@ ldapHost=ldaps://$domainControllerFQDN
 
 
 
-                Write-Host "Opening port $using:brokerHTTPSPort"
+                Write-Host "Opening broker ports $using:brokerHTTPPort and $using:brokerHTTPSPort"
 
                 #open ports in firewall
-                netsh advfirewall firewall add rule name="Open Port $using:brokerHTTPSPort" dir=in action=allow protocol=TCP localport=$using:brokerHTTPSPort
-                netsh advfirewall firewall add rule name="Open Port $using:brokerHTTPSPort" dir=in action=allow protocol=TCP localport=$using:brokerHTTPPort
+                netsh advfirewall firewall add rule name="Open Broker Port $using:brokerHTTPSPort" dir=in action=allow protocol=TCP localport=$using:brokerHTTPSPort
+                netsh advfirewall firewall add rule name="Open Broker Port $using:brokerHTTPSPort" dir=in action=allow protocol=TCP localport=$using:brokerHTTPPort
 
                 # Install and start service for new config
 
