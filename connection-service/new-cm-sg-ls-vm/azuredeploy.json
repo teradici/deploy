@@ -176,7 +176,7 @@
                 "properties": {
                   "publisher": "Microsoft.OSTCExtensions",
                   "type": "CustomScriptForLinux",
-                  "typeHandlerVersion": "1.0",
+                  "typeHandlerVersion": "2.0",
                   "autoUpgradeMinorVersion": true,
                   "settings": {
                     "fileUris": "[split(variables('scriptFileURI'), ' ')]"
