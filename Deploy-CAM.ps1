@@ -273,21 +273,31 @@ function Login-AzureRmAccountWithBetterReporting($Credential) {
 # uses session instance profile and TokenCache and returns an access token without having to authentication a second time
 function Get-AzureRmCachedAccessToken() {
     $ErrorActionPreference = 'Stop'
+    $isNetcore = $false
     if(-not ((Get-Module AzureRm.Profile) -and (Get-Module AzureRm.Profile.Netcore))) {
         if($isUnix) {
-            Import-Module AzureRm.Profile.NetCore
+            try {
+                Import-Module AzureRm.Profile.NetCore
+                $isNetcore = $true
+            } catch {
+                Import-Module Az.Profile
+            }
         } else {
             Import-Module AzureRm.Profile
         }
     }
     if($isUnix) {
-        $azureRmProfileModuleVersion = (Get-Module AzureRm.Profile.Netcore).Version
+        if ($isNetcore) {
+            $azureRmProfileModuleVersion = (Get-Module AzureRm.Profile.Netcore).Version
+        } else {
+            $azureRmProfileModuleVersion = (Get-Module Az.Profile).Version
+        }
     } else {
         $azureRmProfileModuleVersion = (Get-Module AzureRm.Profile).Version
     }
     
     # refactoring performed in AzureRm.Profile v3.0 or later
-    if( (-not $isUnix -and $azureRmProfileModuleVersion.Major -ge 3) -or ($isUnix -and $azureRmProfileModuleVersion.Major -ge 0 -and $azureRmProfileModuleVersion.Minor -ge 12) ) {
+    if( (-not $isUnix -and $azureRmProfileModuleVersion.Major -ge 3) -or ($isUnix -and $isNetcore -and $azureRmProfileModuleVersion.Major -ge 0 -and $azureRmProfileModuleVersion.Minor -ge 12) -or ($isUnix -and -not $isNetcore -and $azureRmProfileModuleVersion.Major -ge 0 -and $azureRmProfileModuleVersion.Minor -ge 1) ) {
         $azureRmProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile
         if(-not $azureRmProfile.Accounts.Count) {
             Write-Error "Ensure you have logged in before calling this function"
@@ -2886,6 +2896,10 @@ function Confirm-ModuleVersion()
     if ($isUnix) {
         $MinAzureRMVersion="0.12.0"
         $AzureRMModule = Get-Module -ListAvailable -Name "AzureRM.Netcore"
+        if( -not $AzureRMModule ) {
+            $MinAzureRMVersion="0.1.0"
+            $AzureRMModule = Get-Module -ListAvailable -Name "Az.*"
+        }
     } else {
         $MinAzureRMVersion="6.0.0"
         $AzureRMModule = Get-Module -ListAvailable -Name "AzureRM"
