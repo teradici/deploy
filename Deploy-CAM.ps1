@@ -109,7 +109,7 @@ Param(
 
     $camSaasUri = "https://cam.teradici.com",
     $CAMDeploymentTemplateURI = "https://raw.githubusercontent.com/teradici/deploy/single-connector-app-gw-configuration/azuredeploy.json",
-    $binaryLocation = "https://teradeploy.blob.core.windows.net/binaries",
+    $binaryLocation = "https://teradeploy.blob.core.windows.net/singleconnector",
     $outputParametersFileName = "cam-output.parameters.json",
     $location,
 
