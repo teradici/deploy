@@ -11,7 +11,7 @@ subscription by running a few instructions in an Azure PowerShell
 Cloud Shell session. Click on the following link for Cloud Access
 Manager documentation:
 
-[Instructions for deploying Cloud Access Manager](http://www.teradici.com/web-help/CAM/site/index.html)
+[Instructions for deploying Cloud Access Manager](http://www.teradici.com/web-help/pcoip_cloud_access_manager/current/)
 
 ## License ##
 
