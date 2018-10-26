@@ -937,6 +937,7 @@ brokerPlatform=$Using:family
 brokerProductVersion=1.0
 brokerIpaddress=$ipaddressString
 brokerLocale=en_US
+domainName=$using:domainName
 "@
               
                 $isMfa = $using:enableRadiusMfa
