@@ -273,18 +273,14 @@ function Login-AzureRmAccountWithBetterReporting($Credential) {
 # uses session instance profile and TokenCache and returns an access token without having to authentication a second time
 function Get-AzureRmCachedAccessToken() {
     $ErrorActionPreference = 'Stop'
-    $isNetcore = $false
-    $isAz = $false
-    if(-not ((Get-Module AzureRm.Profile) -and (Get-Module AzureRm.Profile.Netcore))) {
+    if(-not ((Get-Module AzureRm.Profile) -or (Get-Module AzureRm.Profile.Netcore) -or (Get-Module Az.Profile) -or (Get-Module Az.Accounts))) {
         if($isUnix) {
             try {
                 Import-Module AzureRm.Profile.NetCore
-                $isNetcore = $true
             } catch {
                 try {
                     Import-Module Az.Profile
                 } catch {
-                    $isAz = $true
                     Import-Module Az.Accounts
                 }
             }
@@ -292,31 +288,20 @@ function Get-AzureRmCachedAccessToken() {
             Import-Module AzureRm.Profile
         }
     }
-    if($isUnix) {
-        if ($isNetcore) {
-            $azureRmProfileModuleVersion = (Get-Module AzureRm.Profile.Netcore).Version
-        } elseif ($isAz) {
-            $azureRmProfileModuleVersion = (Get-Module Az.Accounts).Version
-        } else {
-            $azureRmProfileModuleVersion = (Get-Module Az.Profile).Version
-        }
-    } else {
+    if( -not $isUnix) {
         $azureRmProfileModuleVersion = (Get-Module AzureRm.Profile).Version
     }
     
     # refactoring performed in AzureRm.Profile v3.0 or later
-    if( (-not $isUnix -and $azureRmProfileModuleVersion.Major -ge 3) -or 
-        ($isUnix -and $isAz -and $azureRmProfileModuleVersion.Major -ge 1 -and $azureRmProfileModuleVersion.Minor -ge 0) -or
-        ($isUnix -and $isNetcore -and $azureRmProfileModuleVersion.Major -ge 0 -and $azureRmProfileModuleVersion.Minor -ge 12) -or 
-        ($isUnix -and -not $isNetcore -and $azureRmProfileModuleVersion.Major -ge 0 -and $azureRmProfileModuleVersion.Minor -ge 1) ) {
-        $azureRmProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile
-        if(-not $azureRmProfile.Accounts.Count) {
-            Write-Error "Ensure you have logged in before calling this function"
-        }
-    } else {
+    if( (-not $isUnix -and $azureRmProfileModuleVersion.Major -lt 3) ) {
         # AzureRm.Profile < v3.0
         $azureRmProfile = [Microsoft.WindowsAzure.Commands.Common.AzureRmProfileProvider]::Instance.Profile
         if(-not $azureRmProfile.Context.Account.Count) {
+            Write-Error "Ensure you have logged in before calling this function"
+        }
+    } else {
+        $azureRmProfile = [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmProfileProvider]::Instance.Profile
+        if(-not $azureRmProfile.Accounts.Count) {
             Write-Error "Ensure you have logged in before calling this function"
         }
     }
