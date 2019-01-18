@@ -581,11 +581,13 @@ function Update-CAMUserCredential() {
         # reset the variable at each iteration, so we can always keep the current loop error message
         $camUpdateUserCredentialError = ""
         try {
-            $certificatePolicy = [System.Net.ServicePointManager]::CertificatePolicy
-
-            if (!$verifyCAMSaaSCertificate) {
-                # Do this so SSL Errors are ignored
-                add-type @"
+            if ( -not $isUnix ) {
+                $certificatePolicy = [System.Net.ServicePointManager]::CertificatePolicy
+                # Can't disable SSL verification for Invoke-RestMethod on Unix with this method
+                # Not worth effort fixing since cert should always be valid
+                if (!$verifyCAMSaaSCertificate) {
+                    # Do this so SSL Errors are ignored
+                    add-type @"
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 public class TrustAllCertsPolicy : ICertificatePolicy {
@@ -597,7 +599,8 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 }
 "@
 
-                [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+                    [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+                }
             }
 
             [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -612,10 +615,14 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
                 ownerUpn = $ownerUpn
             }
 
+            $baseHeaders = @{
+                "User-Agent"="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36"
+            }
+
             # Get a Sign-in token
             $signInResult = ""
             try {
-                $signInResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/signin") -Body $userRequest
+                $signInResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/signin") -Body $userRequest -Headers $baseHeaders
             }
             catch {
                 if ($_.ErrorDetails.Message) {
@@ -630,7 +637,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             if ($signInResult.code -ne 200) {
                 throw ("Signing in failed with result: " + (ConvertTo-Json $signInResult))
             }
-            $tokenHeader = @{
+            $tokenHeader = $baseHeaders + @{
                 authorization = $signInResult.data.token
             }
 
@@ -678,7 +685,9 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
         }
         finally {
             # restore CertificatePolicy 
-            [System.Net.ServicePointManager]::CertificatePolicy = $certificatePolicy
+            if ( -not $isUnix ) {
+                [System.Net.ServicePointManager]::CertificatePolicy = $certificatePolicy
+            }
         }
     }
     if ($camUpdateUserCredentialError) {
