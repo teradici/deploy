@@ -4142,8 +4142,8 @@ else {
 
         # only check if it is not deployOverDC
         if (-not $deployOverDC) {
-            if ((-not ($username -imatch '^[A-Za-z\d]+(?:[_-][A-Za-z\d]+)*$')) -or ($username.Length -gt 20)) {
-                Write-Host-Warning "Please enter a valid username, it can only contain letters and numbers and cannot be longer than 20 characters"
+            if ((-not ($username -imatch '^[A-Za-z\d]+(?:[\._-][A-Za-z\d]+)*$')) -or ($username.Length -gt 64)) {
+                Write-Host-Warning "Please enter a valid username, it can only contain letters and numbers and cannot be longer than 64 characters"
                 $username = $null
                 continue
             }
