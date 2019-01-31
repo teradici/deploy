@@ -2023,7 +2023,7 @@ function New-ConnectionServiceDeployment() {
                     New-AzureRmResourceGroupDeployment `
                         -DeploymentName $deploymentName `
                         -ResourceGroupName $csRGName `
-                        -TemplateFile $CSDeploymentTemplateURI `
+                        -TemplateUri $CSDeploymentTemplateURI `
                         -TemplateParameterFile $outputParametersFilePath `
                         -ErrorAction stop `
                         -WarningAction Ignore
@@ -2888,7 +2888,7 @@ function Deploy-CAM() {
                 New-AzureRmResourceGroupDeployment `
                     -DeploymentName "CAM" `
                     -ResourceGroupName $RGName `
-                    -TemplateFile $CAMDeploymentTemplateURI `
+                    -TemplateUri $CAMDeploymentTemplateURI `
                     -TemplateParameterFile $outputParametersFilePath `
                     -ErrorAction stop `
                     -WarningAction Ignore
