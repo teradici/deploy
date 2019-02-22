@@ -3655,11 +3655,13 @@ function Update-CAMAzureKeyVault() {
         -Name "camManagementUserGroup" `
         -ErrorAction stop
     if (-not $secret) {
-        if ($camManagementUserGroup -eq $null) {
+        if ($camManagementUserGroup -eq $null -and (-not $ignorePrompts)) {
             $camManagementUserGroup = Read-Host "Enter the User Group Name or the Distinguished Name for the User Group to log into the CAM Management Interface. Default is 'Domain Admins'. (eg, 'Domain Admins' or 'CN=Domain Admins,CN=Users,DC=example,DC=com')"
             if(-not $camManagementUserGroup) {
                 $camManagementUserGroup = "Domain Admins"
             }
+        } elseif (-not $camManagementUserGroup -and $ignorePrompts) {
+            $camManagementUserGroup = "Domain Admins"
         }
         
         Set-KVSecret `
@@ -4268,11 +4270,13 @@ else {
         radiusSharedSecret = $radiusSharedSecret
     }
 
-    if ($camManagementUserGroup -eq $null) {
+    if ($camManagementUserGroup -eq $null -and (-not $ignorePrompts)) {
         $camManagementUserGroup = Read-Host "Enter the User Group Name or the Distinguished Name for the User Group to log into the CAM Management Interface. Default is 'Domain Admins'. (eg, 'Domain Admins' or 'CN=Domain Admins,CN=Users,DC=example,DC=com')"
         if(-not $camManagementUserGroup) {
             $camManagementUserGroup = "Domain Admins"
         }
+    } elseif (-not $camManagementUserGroup -and $ignorePrompts) {
+        $camManagementUserGroup = "Domain Admins"
     }
 
     # Prompt for RADIUS configuration if RADIUS has not been already explicitly been disabled
