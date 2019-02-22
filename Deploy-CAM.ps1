@@ -113,6 +113,9 @@ Param(
     $outputParametersFileName = "cam-output.parameters.json",
     $location,
 
+    [parameter(Mandatory=$false)]
+    $camManagementUserGroup = $null,
+
     [switch]$updateSPCredential
 )
 
@@ -2319,7 +2322,10 @@ function Deploy-CAM() {
 
         [parameter(Mandatory=$false)]
         [String]
-        $camUserGroup
+        $camUserGroup,
+        
+        [parameter(Mandatory=$false)]
+        $camManagementUserGroup = $null
     )
 
     # Artifacts location 'folder' is where the template is stored
@@ -2347,6 +2353,9 @@ function Deploy-CAM() {
     $CAMConfig.parameters.domainName = @{
         value      = (ConvertTo-SecureString $domainName -AsPlainText -Force)
         clearValue = $domainName
+    }
+    $CAMConfig.parameters.camManagementUserGroup = @{
+        value = (ConvertTo-SecureString $camManagementUserGroup -AsPlainText -Force)
     }
     $CAMConfig.parameters.binaryLocation = @{
         value      = (ConvertTo-SecureString $binaryLocation -AsPlainText -Force)
@@ -3631,6 +3640,36 @@ function Test-PasswordComplexity
     return $complexEnough
 }
 
+# Update the CAM Azure KeyVault with new secrets that get added with updates
+function Update-CAMAzureKeyVault() {
+    param(
+        [String]
+        $VaultName,
+
+        [parameter(Mandatory=$false)]
+        $camManagementUserGroup=$null
+    )
+
+    $secret = Get-AzureKeyVaultSecret `
+        -VaultName $VaultName `
+        -Name "camManagementUserGroup" `
+        -ErrorAction stop
+    if (-not $secret) {
+        if ($camManagementUserGroup -eq $null) {
+            $camManagementUserGroup = Read-Host "Enter the User Group Name or the Distinguished Name for the User Group to log into the CAM Management Interface. Default is 'Domain Admins'. (eg, 'Domain Admins' or 'CN=Domain Admins,CN=Users,DC=example,DC=com')"
+            if(-not $setGroup) {
+                $camManagementUserGroup = "Domain Admins"
+            }
+        }
+        
+        Set-KVSecret `
+            -kvName $VaultName `
+            -secretName "camManagementUserGroup" `
+            -secretValue (ConvertTo-SecureString $camManagementUserGroup -Force -AsPlainText)
+    }
+
+}
+
 # Test-PasswordComplexity "C0mplex!"           # $False
 # Test-PasswordComplexity "abc123456789"       # $False
 # Test-PasswordComplexity "ABC123456789"       # $False
@@ -3818,6 +3857,11 @@ if ($CAMRootKeyvault) {
 
     Write-Host "`nCreating a new Cloud Access connector for this Cloud Access Manager deployment`n"
 
+    # Update KeyVault with new Secrets
+    Update-CAMAzureKeyVault `
+        -camManagementUserGroup $camManagementUserGroup `
+        -VaultName $CAMRootKeyvault.Name
+
     $externalAccessPrompt = "Do you want to enable external network access for this connector?"
 
     if ($enableExternalAccess -eq $null) {
@@ -3879,7 +3923,8 @@ if ($CAMRootKeyvault) {
         -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
         -ownerTenantId $claims.tid `
         -ownerUpn $upn `
-        -updateSPCredential:$updateSPCredential
+        -updateSPCredential:$updateSPCredential `
+        -camManagementUserGroup $camManagementUserGroup
 }
 else {
     # New CAM deployment. 
@@ -4222,6 +4267,14 @@ else {
         radiusServerPort = $radiusServerPort 
         radiusSharedSecret = $radiusSharedSecret
     }
+
+    if ($camManagementUserGroup -eq $null) {
+        $camManagementUserGroup = Read-Host "Enter the User Group Name or the Distinguished Name for the User Group to log into the CAM Management Interface. Default is 'Domain Admins'. (eg, 'Domain Admins' or 'CN=Domain Admins,CN=Users,DC=example,DC=com')"
+        if(-not $setGroup) {
+            $camManagementUserGroup = "Domain Admins"
+        }
+    }
+
     # Prompt for RADIUS configuration if RADIUS has not been already explicitly been disabled
     if ( -not ($enableRadiusMfa -eq $false) ) {
         # Prompt for whether to enable RADIUS integration
@@ -4322,5 +4375,6 @@ else {
         -enableExternalAccess $enableExternalAccess `
         -domainControllerOsType $domainControllerOsType `
         -defaultIdleShutdownTime $defaultIdleShutdownTime `
-        -camUserGroup $camUserGroup
+        -camUserGroup $camUserGroup `
+        -camManagementUserGroup $camManagementUserGroup
 }
