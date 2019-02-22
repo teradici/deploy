@@ -3654,21 +3654,24 @@ function Update-CAMAzureKeyVault() {
         -VaultName $VaultName `
         -Name "camManagementUserGroup" `
         -ErrorAction stop
-    if (-not $secret) {
+
+    do {
         if ($camManagementUserGroup -eq $null -and (-not $ignorePrompts)) {
-            $camManagementUserGroup = Read-Host "Enter the User Group Name or the Distinguished Name for the User Group to log into the CAM Management Interface. Default is 'Domain Admins'. (eg, 'Domain Admins' or 'CN=Domain Admins,CN=Users,DC=example,DC=com')"
+            $camManagementUserGroup = Read-Host "Enter the Distinguished Name for the User Group to log into the CAM Management Interface. Default is 'Domain Admins'. (eg, 'CN=CAM Admins,CN=Users,DC=example,DC=com')"
             if(-not $camManagementUserGroup) {
                 $camManagementUserGroup = "Domain Admins"
+                break
             }
         } elseif (-not $camManagementUserGroup -and $ignorePrompts) {
             $camManagementUserGroup = "Domain Admins"
+            break
         }
-        
-        Set-KVSecret `
-            -kvName $VaultName `
-            -secretName "camManagementUserGroup" `
-            -secretValue (ConvertTo-SecureString $camManagementUserGroup -Force -AsPlainText)
-    }
+        if( -not ($camManagementUserGroup.Contains("DC=") -and $camManagementUserGroup.Contains("CN=")))
+        {
+            Write-Host "Speicifed Distinguished Name is not valid"
+            $camManagementUserGroup=$null
+        }
+    } while ($camManagementUserGroup -eq $null)
 
 }
 
@@ -4270,14 +4273,23 @@ else {
         radiusSharedSecret = $radiusSharedSecret
     }
 
-    if ($camManagementUserGroup -eq $null -and (-not $ignorePrompts)) {
-        $camManagementUserGroup = Read-Host "Enter the User Group Name or the Distinguished Name for the User Group to log into the CAM Management Interface. Default is 'Domain Admins'. (eg, 'Domain Admins' or 'CN=Domain Admins,CN=Users,DC=example,DC=com')"
-        if(-not $camManagementUserGroup) {
+    do {
+        if ($camManagementUserGroup -eq $null -and (-not $ignorePrompts)) {
+            $camManagementUserGroup = Read-Host "Enter the Distinguished Name for the User Group to log into the CAM Management Interface. Default is 'Domain Admins'. (eg, 'CN=CAM Admins,CN=Users,DC=example,DC=com')"
+            if(-not $camManagementUserGroup) {
+                $camManagementUserGroup = "Domain Admins"
+                break
+            }
+        } elseif (-not $camManagementUserGroup -and $ignorePrompts) {
             $camManagementUserGroup = "Domain Admins"
+            break
         }
-    } elseif (-not $camManagementUserGroup -and $ignorePrompts) {
-        $camManagementUserGroup = "Domain Admins"
-    }
+        if( -not ($camManagementUserGroup.Contains("DC=") -and $camManagementUserGroup.Contains("CN=")))
+        {
+            Write-Host "Speicifed Distinguished Name is not valid"
+            $camManagementUserGroup=$null
+        }
+    } while ($camManagementUserGroup -eq $null)
 
     # Prompt for RADIUS configuration if RADIUS has not been already explicitly been disabled
     if ( -not ($enableRadiusMfa -eq $false) ) {
