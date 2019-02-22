@@ -3657,7 +3657,7 @@ function Update-CAMAzureKeyVault() {
     if (-not $secret) {
         if ($camManagementUserGroup -eq $null) {
             $camManagementUserGroup = Read-Host "Enter the User Group Name or the Distinguished Name for the User Group to log into the CAM Management Interface. Default is 'Domain Admins'. (eg, 'Domain Admins' or 'CN=Domain Admins,CN=Users,DC=example,DC=com')"
-            if(-not $setGroup) {
+            if(-not $camManagementUserGroup) {
                 $camManagementUserGroup = "Domain Admins"
             }
         }
@@ -4270,7 +4270,7 @@ else {
 
     if ($camManagementUserGroup -eq $null) {
         $camManagementUserGroup = Read-Host "Enter the User Group Name or the Distinguished Name for the User Group to log into the CAM Management Interface. Default is 'Domain Admins'. (eg, 'Domain Admins' or 'CN=Domain Admins,CN=Users,DC=example,DC=com')"
-        if(-not $setGroup) {
+        if(-not $camManagementUserGroup) {
             $camManagementUserGroup = "Domain Admins"
         }
     }
