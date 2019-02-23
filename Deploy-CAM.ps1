@@ -3654,25 +3654,31 @@ function Update-CAMAzureKeyVault() {
         -VaultName $VaultName `
         -Name "camManagementUserGroup" `
         -ErrorAction stop
-
-    do {
-        if ($camManagementUserGroup -eq $null -and (-not $ignorePrompts)) {
-            $camManagementUserGroup = Read-Host "Enter the Distinguished Name for the User Group to log into the CAM Management Interface. Default is 'Domain Admins'. (eg, 'CN=CAM Admins,CN=Users,DC=example,DC=com')"
-            if(-not $camManagementUserGroup) {
+    
+    if(-not $secret) {
+        do {
+            if ($camManagementUserGroup -eq $null -and (-not $ignorePrompts)) {
+                $camManagementUserGroup = Read-Host "Enter the Distinguished Name for the User Group to log into the CAM Management Interface. Default is 'Domain Admins'. (eg, 'CN=CAM Admins,CN=Users,DC=example,DC=com')"
+                if(-not $camManagementUserGroup) {
+                    $camManagementUserGroup = "Domain Admins"
+                    break
+                }
+            } elseif (-not $camManagementUserGroup -and $ignorePrompts) {
                 $camManagementUserGroup = "Domain Admins"
                 break
             }
-        } elseif (-not $camManagementUserGroup -and $ignorePrompts) {
-            $camManagementUserGroup = "Domain Admins"
-            break
-        }
-        if( -not ($camManagementUserGroup.Contains("DC=") -and $camManagementUserGroup.Contains("CN=")))
-        {
-            Write-Host "Speicifed Distinguished Name is not valid"
-            $camManagementUserGroup=$null
-        }
-    } while ($camManagementUserGroup -eq $null)
+            if( -not ($camManagementUserGroup.Contains("DC=") -and $camManagementUserGroup.Contains("CN=")))
+            {
+                Write-Host "Specified Distinguished Name is not valid"
+                $camManagementUserGroup=$null
+            }
+        } while ($camManagementUserGroup -eq $null)
 
+        Set-KVSecret `
+            -kvName $VaultName `
+            -secretName "camManagementUserGroup" `
+            -secretValue (ConvertTo-SecureString $camManagementUserGroup -Force -AsPlainText)
+    }
 }
 
 # Test-PasswordComplexity "C0mplex!"           # $False
