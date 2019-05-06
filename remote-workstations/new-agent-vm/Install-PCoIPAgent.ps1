@@ -303,7 +303,7 @@ Configuration InstallPCoIPAgent
 
                 $downloadUrl =  $pcoipAgentInstallerUrl + $metaFileName
                 
-                $destFile = $using:agentInstallerDLDirectory + '\' + $metaFileName
+                $destFile = Join-Path -Path $using:agentInstallerDLDirectory -ChildPath $metaFileName
 
                 $orderNumArray = $using:orderNumArray
                 $retryCount = $using:retryCount
@@ -324,13 +324,14 @@ Configuration InstallPCoIPAgent
                     }
                 }
 
-                # download installer
+                # parsing meta file
                 $meta=(Get-Content -Raw -Path  $destFile | ConvertFrom-Json)
                 $installerFileName =$meta.filename
 
+                # download installer
                 $downloadUrl =  $pcoipAgentInstallerUrl + $installerFileName
                 
-                $destFile = $using:agentInstallerDLDirectory + '\' + $installerFileName
+                $destFile = Join-Path -Path $using:agentInstallerDLDirectory -ChildPath $installerFileName
 
                 for ($idx = 1; $idx -le $retryCount; $idx++) {
                     Write-Verbose ('It is the {0} try downloading {1} from {2} ...' -f $orderNumArray[$idx -1], $installerFileName, $pcoipAgentInstallerUrl)
