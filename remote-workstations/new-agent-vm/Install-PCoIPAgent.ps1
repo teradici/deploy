@@ -64,6 +64,12 @@ Configuration InstallPCoIPAgent
                Else {
                     "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\PCoIP Graphics Agent"
                }
+    $regPath64 = If ($isSA) {
+                    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\PCoIP Standard Agent"
+               }
+               Else {
+                    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\PCoIP Graphics Agent"
+               }
     $retryCount = 5
     $delay = 60 # seconds
     $orderNumArray = @('1st', '2nd', '3rd', '4th', '5th')
@@ -269,7 +275,9 @@ Configuration InstallPCoIPAgent
             #TODO: Check for other agent types as well?
             TestScript = {
                 $regPath = $using:regPath
-                if ( Test-Path -path $regPath)  {
+                $regPath64 = $using:regPath64
+
+                if ( (Test-Path -path $regPath) -or (Test-Path -path $regPath64) )  {
                     return $true
                 }else {
                     return $false
@@ -282,32 +290,55 @@ Configuration InstallPCoIPAgent
                 #agent installer exit code 1641 require reboot machine
                 Set-Variable EXIT_CODE_REBOOT 1641 -Option Constant
 
-                $installerFileName = "PCoIP_agent_release_installer_standard.exe"
-
-                if (! $using:isSA) {
-                    $installerFileName = "PCoIP_agent_release_installer_graphics.exe"
-                }
-
                 $pcoipAgentInstallerUrl = $using:pcoipAgentInstallerUrl
-
                 if (! $pcoipAgentInstallerUrl.EndsWith('/') ) {
                      $pcoipAgentInstallerUrl =  $pcoipAgentInstallerUrl + '/';
                 }
 
-                $pcoipAgentInstallerUrl =  $pcoipAgentInstallerUrl + $installerFileName;
+                # download meta file first
+                $metaFileName = "latest-standard-agent.json"
+                if (! $using:isSA) {
+                    $metaFileName = "latest-graphics-agent.json"
+                }
+
+                $downloadUrl =  $pcoipAgentInstallerUrl + $metaFileName
                 
-                $destFile = $using:agentInstallerDLDirectory + '\' + $installerFileName
+                $destFile = $using:agentInstallerDLDirectory + '\' + $metaFileName
 
                 $orderNumArray = $using:orderNumArray
                 $retryCount = $using:retryCount
 
                 for ($idx = 1; $idx -le $retryCount; $idx++) {
-                    Write-Verbose ('It is the {0} try downloading PCoIP Agent installer from {1} ...' -f $orderNumArray[$idx -1], $pcoipAgentInstallerUrl)
+                    Write-Verbose ('It is the {0} try downloading {1} from {2} ...' -f $orderNumArray[$idx -1], $metaFileName, $pcoipAgentInstallerUrl)
                     Try{
-                        Invoke-WebRequest $pcoipAgentInstallerUrl -OutFile $destFile -UseBasicParsing -PassThru -ErrorAction Stop
+                        Invoke-WebRequest $downloadUrl -OutFile $destFile -UseBasicParsing -PassThru -ErrorAction Stop
                         break
                     } Catch {
-                        $errMsg = "Attempt {0} of {1} to download PCoIP Agent installer failed. Error Infomation: {2} " -f $idx, $retryCount, $_.Exception.Message 
+                        $errMsg = "Attempt {0} of {1} to download {2} failed. Error Infomation: {3} " -f $idx, $retryCount, $metaFileName, $_.Exception.Message 
+                        Write-Verbose $errMsg
+                        if ($idx -ne $retryCount) {
+                            Start-Sleep -s $using:delay
+                        } else {
+                            throw $errMsg
+                        }
+                    }
+                }
+
+                # download installer
+                $meta=(Get-Content -Raw -Path  $destFile | ConvertFrom-Json)
+                $installerFileName =$meta.filename
+
+                $downloadUrl =  $pcoipAgentInstallerUrl + $installerFileName
+                
+                $destFile = $using:agentInstallerDLDirectory + '\' + $installerFileName
+
+                for ($idx = 1; $idx -le $retryCount; $idx++) {
+                    Write-Verbose ('It is the {0} try downloading {1} from {2} ...' -f $orderNumArray[$idx -1], $installerFileName, $pcoipAgentInstallerUrl)
+                    Try{
+                        Invoke-WebRequest $downloadUrl -OutFile $destFile -UseBasicParsing -PassThru -ErrorAction Stop
+                        break
+                    } Catch {
+                        $errMsg = "Attempt {0} of {1} to download {2} failed. Error Infomation: {3} " -f $idx, $retryCount, $installerFileName, $_.Exception.Message 
                         Write-Verbose $errMsg
                         if ($idx -ne $retryCount) {
                             Start-Sleep -s $using:delay
@@ -332,7 +363,7 @@ Configuration InstallPCoIPAgent
                         Write-Verbose "Finished PCoIP Agent Installation"
                         break
                     } else {
-                        $errMsg = "Attempt {0} of [1} to install PCoIP Agent failed. Exit Code: {2}." -f $idx, $retryCount, $ret.ExitCode
+                        $errMsg = "Attempt {0} of {1} to install PCoIP Agent failed. Exit Code: {2}." -f $idx, $retryCount, $ret.ExitCode
                         Write-Verbose $errMsg
                         if ($idx -ne $retryCount) {
                             Start-Sleep -s $using:delay
@@ -351,8 +382,13 @@ Configuration InstallPCoIPAgent
             GetScript  = { return 'registration'}
             
             TestScript = { 
-                cd "C:\Program Files (x86)\Teradici\PCoIP Agent"
-                 $ret = & .\pcoip-validate-license.ps1
+                $path = "C:\Program Files (x86)\Teradici\PCoIP Agent"
+                if (!(Test-Path -path $path))  {
+                    $path = "C:\Program Files\Teradici\PCoIP Agent"
+                }
+
+                cd $path
+                $ret = & .\pcoip-validate-license.ps1
 
                 # the powershell variable $? to indicate the last executing command status
                 return $?
@@ -363,7 +399,11 @@ Configuration InstallPCoIPAgent
                 $registrationCode = ($using:registrationCodeCredential).GetNetworkCredential().password
                 if ($registrationCode) {
                     # Insert a delay before registering
-                    cd "C:\Program Files (x86)\Teradici\PCoIP Agent"
+                    $path = "C:\Program Files (x86)\Teradici\PCoIP Agent"
+                    if (!(Test-Path -path $path))  {
+                        $path = "C:\Program Files\Teradici\PCoIP Agent"
+                    }
+                    cd $path
 
                     $retryCount = $using:retryCount
                     $orderNumArray = $using:orderNumArray
@@ -468,7 +508,15 @@ Configuration InstallPCoIPAgent
             }
 
             SetScript  = {
-                cd "C:\Program Files (x86)\Teradici\PCoIP Agent\bin\"
+            	$is64 = $false
+                $path = "C:\Program Files (x86)\Teradici\PCoIP Agent\bin"
+                if (!(Test-Path -path $path))  {
+                    $path = "C:\Program Files\Teradici\PCoIP Agent\bin"
+                    $is64 = $true
+                }
+
+                cd $path
+
                 $serviceName = "CAMIdleShutdown"
 
                 $ret = .\IdleShutdownAgent.exe -install
@@ -480,6 +528,10 @@ Configuration InstallPCoIPAgent
                 }
 
                 $idleTimerRegKeyPath = "HKLM:SOFTWARE\WOW6432Node\Teradici\CAMShutdownIdleMachineAgent"
+                if ($is64) {
+	                $idleTimerRegKeyPath = "HKLM:SOFTWARE\Teradici\CAMShutdownIdleMachineAgent"
+                }
+                
                 $idleTimerRegKeyName = "MinutesIdleBeforeShutdown"
                 $idleTimerRegKeyValue = $using:autoShutdownIdleTime
 
