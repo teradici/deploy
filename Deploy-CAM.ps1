@@ -714,7 +714,8 @@ function New-UserStorageAccount {
         -ResourceGroupName $RGName `
         -AccountName $saName `
         -Location $location `
-        -SkuName "Standard_LRS"
+        -SkuName "Standard_LRS" `
+        -EnableHttpsTrafficOnly $false
 
     return $acct
 }
