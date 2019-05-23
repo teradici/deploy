@@ -2960,7 +2960,13 @@ function Confirm-ModuleVersion()
 }
 
 function Get-CAMRoleDefinitionName() {
-    return "Cloud Access Manager"
+    param(
+        [String]$subscriptionId=""
+    )
+    if ( -not $subscriptionId ) {
+        return "Cloud Access Manager"
+    }
+    return "Cloud Access Manager", $subscriptionId -Join "-"
 }
 
 # Create a custom role for CAM with necessary permissions
@@ -2968,13 +2974,20 @@ function Get-CAMRoleDefinitionName() {
 # See https://docs.microsoft.com/en-us/azure/active-directory/role-based-access-built-in-roles for details on Azure Built in Roles
 function Get-CAMRoleDefinition() {
     param(
-        [parameter(Mandatory = $false)]
-        [String]$subscriptionId
+        [String]$subscriptionId=""
     )
 
+    # Check for old "Cloud Access Manager" Role Deifinition
     $roleName = Get-CAMRoleDefinitionName
-
     $camCustomRoleDefinition = Get-AzureRmRoleDefinition $roleName
+    # Check for new "Cloud Access Manager-$subsctionId" Role Definition if old is invalid
+    if ( -not $camCustomRoleDefinition -or ($camCustomRoleDefinition -and -not ( `
+            $camCustomRoleDefinition.AssignableScopes.Contains("/subscriptions/$subscriptionId") `
+            -or $camCustomRoleDefinition.AssignableScopes.Contains("/subscriptions/*")))) {
+        $roleName = Get-CAMRoleDefinitionName -subscriptionId $subscriptionId
+        $camCustomRoleDefinition = Get-AzureRmRoleDefinition $roleName
+    }
+    
     # Create Role Defintion Based off of Contributor if it doesn't already exist
     if ( -not $camCustomRoleDefinition ) {
         Write-Host "Creating '$roleName' Role Definition"
