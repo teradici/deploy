@@ -282,7 +282,6 @@ Description=Teradici CAM Idle Shutdown monitoring service
 
 [Timer]
 OnBootSec=30
-OnUnitActiveSec=15min
 Unit=${SERVICE}
 
 [Install]
