@@ -7,7 +7,13 @@ This is a CloudShell script for adding non-Cloud Access Manager provisioned mach
 If you have manually created a machine in Azure and wish to use Teradici's CAM power management features, this script will perform the neccesary steps so that the Azure Service Principal account can perform power operations on that machine and then add it to the CAM service so that user entitlements can be added through the management interface
 
 .EXAMPLE
+./AddManagedMachine.ps1 -MachineName myMachine -ConnectorRootResourceGroup IT-Prod-CAM-RG -MachineResourceGroup myMachineRG
+
+.EXAMPLE
 ./AddManagedMachine.ps1 -MachineName myMachine -ConnectorRootResourceGroup IT-Prod-CAM-RG
+
+.EXAMPLE
+./AddManagedMachine.ps1 -MachineName myMachine
 
 #>
 
