@@ -398,11 +398,16 @@ function Find-CamMachine () {
 if(-not $MachineName) {
     throw "Machine Name is required"
 }
-if(-not $ConnectorRootResourceGroup) {
-    throw "Connector's Route Resource Group is required"
-}
 
-$CAMKeyVault = Get-CamKeyVault -ConnectorRootResourceGroup $ConnectorRootResourceGroup
+if(-not $ConnectorRootResourceGroup) {
+    $CAMKeyVaults = (Get-AzureRmResource -ResourceType "Microsoft.KeyVault/vaults" -ErrorAction SilentlyContinue) | Where-object {$_.Name -like "CAM-*"}
+    if( -not $CAMKeyVaults.Length -eq 1 ) {
+        throw "Connector's Root Resource Group is required"
+    }
+    $CAMKeyVault = $CAMKeyVaults
+} else {
+    $CAMKeyVault = Get-CamKeyVault -ConnectorRootResourceGroup $ConnectorRootResourceGroup
+}
 
 Write-Host "Checking if machine exists..."
 $machine = Find-CamMachine -MachineName $MachineName -MachineResourceGroup $MachineResourceGroup
