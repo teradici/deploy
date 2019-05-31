@@ -157,7 +157,7 @@ function Add-CamManagedMachine() {
     if ($AddMachineResult.code -ne 201) {
         throw ("Adding machine failed with result: " + (ConvertTo-Json $signInResult))
     }
-    
+    Write-Host "Success!"
     return $AddMachineResult   
 }
 
