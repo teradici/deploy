@@ -308,7 +308,6 @@ EOF
 
 function enable_service() {
     echo "Starting auto-shutdown service"
-    systemctl enable ${SERVICE}
     systemctl enable ${TIMER}
     systemctl start ${SERVICE}
     systemctl start ${TIMER}
@@ -319,7 +318,6 @@ function disable_service() {
     systemctl stop ${TIMER}
     systemctl stop ${SERVICE}
     systemctl disable ${TIMER}
-    systemctl disable ${SERVICE}
 }
 
 function remove() {
