@@ -137,7 +137,7 @@ service connection_manager stop
 cp -n /etc/ConnectionManager.conf /etc/ConnectionManager.conf.orig
 awk -v broker="$1" '/^PcoipAddress/{printf "PcoipAddress = %s\n",broker;next};{print}' /etc/ConnectionManager.conf.orig > ConnectionManager.conf
 sed --in-place --expression="s|\(LogLevel\s*=\).*|\1 TRACE|g" ConnectionManager.conf
-sed --in-place --expression="s|\(BrokerMaxRespWaitSeconds\s*=\).*|\1 60|g" ConnectionManager.conf
+sed --in-place --expression="s|\(BrokerMaxRespWaitSeconds\s*=\).*|\1 55|g" ConnectionManager.conf
 
 cp -f ConnectionManager.conf /etc/ConnectionManager.conf
 
