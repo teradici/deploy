@@ -116,7 +116,9 @@ Param(
     [parameter(Mandatory=$false)]
     $camManagementUserGroup = $null,
 
-    [switch]$updateSPCredential
+    [switch]$updateSPCredential,
+    [bool]$isRetrieveAgentState = $true,
+    [bool]$isDisplayAgentState = $true
 )
 
 # Global Variables
@@ -1627,7 +1629,9 @@ function New-ConnectionServiceDeployment() {
         $verifyCAMSaaSCertificate,
         $ownerTenantId,
         $ownerUpn,
-        [switch]$updateSPCredential
+        [switch]$updateSPCredential,
+        [bool]$isRetrieveAgentState,
+        [bool]$isDisplayAgentState
     )
 
     $kvID = $keyVault.ResourceId
@@ -1987,6 +1991,12 @@ function New-ConnectionServiceDeployment() {
                 "licenseInstanceId": {
                     "value": "$licenseInstanceId"
                 },
+                "isRetrieveAgentState": {
+                    "value": $isRetrieveAgentState
+                },
+                "isDisplayAgentState": {
+                    "value": $isDisplayAgentState
+                },                
                 "_baseArtifactsLocation": {
                     "reference": {
                         "keyVault": {
@@ -2326,7 +2336,10 @@ function Deploy-CAM() {
         $camUserGroup,
         
         [parameter(Mandatory=$false)]
-        $camManagementUserGroup = $null
+        $camManagementUserGroup = $null,
+
+        [bool]$isRetrieveAgentState,
+        [bool]$isDisplayAgentState
     )
 
     # Artifacts location 'folder' is where the template is stored
@@ -2678,7 +2691,9 @@ function Deploy-CAM() {
                 -radiusServerHost $radiusConfig.radiusServerHost `
                 -radiusServerPort $radiusConfig.radiusServerPort `
                 -radiusSharedSecret $radiusConfig.radiusSharedSecret `
-                -vnetConfig $vnetConfig
+                -vnetConfig $vnetConfig `
+                -isRetrieveAgentState $isRetrieveAgentState `
+                -isDisplayAgentState $isDisplayAgentState
         }
         else
         {
@@ -2871,6 +2886,12 @@ function Deploy-CAM() {
         },
         "autoShutdownIdleTime" : {
             "value": $defaultIdleShutdownTime
+        },
+        "isRetrieveAgentState" : {
+            "value": $isRetrieveAgentState
+        },
+        "isDisplayAgentState" : {
+            "value": $isDisplayAgentState
         }
     }
 }
@@ -3949,7 +3970,9 @@ if ($CAMRootKeyvault) {
         -ownerTenantId $claims.tid `
         -ownerUpn $upn `
         -updateSPCredential:$updateSPCredential `
-        -camManagementUserGroup $camManagementUserGroup
+        -camManagementUserGroup $camManagementUserGroup `
+        -isRetrieveAgentState $isRetrieveAgentState `
+        -isDisplayAgentState $isDisplayAgentState        
 }
 else {
     # New CAM deployment. 
@@ -4412,5 +4435,7 @@ else {
         -domainControllerOsType $domainControllerOsType `
         -defaultIdleShutdownTime $defaultIdleShutdownTime `
         -camUserGroup $camUserGroup `
-        -camManagementUserGroup $camManagementUserGroup
+        -camManagementUserGroup $camManagementUserGroup `
+        -isRetrieveAgentState $isRetrieveAgentState `
+        -isDisplayAgentState $isDisplayAgentState
 }

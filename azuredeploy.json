@@ -202,6 +202,20 @@
         "description": "Default time the Remote Workstation will idle for before automatically shutting down"
       },
       "defaultValue": 240
+    },
+    "isRetrieveAgentState": {
+      "type": "bool",
+      "metadata": {
+        "description": "configuration of retrieving pcoip agent state"
+      },
+      "defaultValue": true
+    },
+    "isDisplayAgentState": {
+      "type": "bool",
+      "metadata": {
+        "description": "configuration of display pcoip agent state"
+      },
+      "defaultValue": true
     }
   },
   "variables": {
@@ -324,6 +338,12 @@
           },
           "licenseInstanceId": {
             "value": "[variables('licenseInstanceId')]"
+          },
+          "isRetrieveAgentState": {
+            "value": "[parameters('isRetrieveAgentState')]"
+          },
+          "isDisplayAgentState": {
+            "value": "[parameters('isDisplayAgentState')]"
           }
         }
       }
