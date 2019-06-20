@@ -1992,10 +1992,10 @@ function New-ConnectionServiceDeployment() {
                     "value": "$licenseInstanceId"
                 },
                 "isRetrieveAgentState": {
-                    "value": $isRetrieveAgentState
+                    "value": $($isRetrieveAgentState | ConvertTo-Json)
                 },
                 "isDisplayAgentState": {
-                    "value": $isDisplayAgentState
+                    "value": $($isDisplayAgentState | ConvertTo-Json)
                 },                
                 "_baseArtifactsLocation": {
                     "reference": {
@@ -2888,10 +2888,10 @@ function Deploy-CAM() {
             "value": $defaultIdleShutdownTime
         },
         "isRetrieveAgentState" : {
-            "value": $isRetrieveAgentState
+            "value": $($isRetrieveAgentState | ConvertTo-Json)
         },
         "isDisplayAgentState" : {
-            "value": $isDisplayAgentState
+            "value": $($isDisplayAgentState | ConvertTo-Json)
         }
     }
 }
