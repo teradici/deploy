@@ -98,8 +98,8 @@ Configuration InstallConnectionServer
         [Parameter(Mandatory = $false)]
         [String]$enableRadiusMfa,
 
-        [bool] $isRetrieveAgentState = $true,
-        [bool] $isDisplayAgentState = $true
+        [bool] $brokerRetrieveAgentState = $true,
+        [bool] $clientShowAgentState = $true
     )
 
     # Get DC information
@@ -941,8 +941,8 @@ brokerProductVersion=1.0
 brokerIpaddress=$ipaddressString
 brokerLocale=en_US
 domainName=$using:domainName
-isRetrieveAgentState=$using:isRetrieveAgentState
-isDisplayAgentState=$using:isDisplayAgentState
+isRetrieveAgentState=$using:brokerRetrieveAgentState
+isDisplayAgentState=$using:clientShowAgentState
 "@
               
                 $isMfa = $using:enableRadiusMfa

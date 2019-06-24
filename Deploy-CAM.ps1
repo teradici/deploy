@@ -117,8 +117,8 @@ Param(
     $camManagementUserGroup = $null,
 
     [switch]$updateSPCredential,
-    [bool]$isRetrieveAgentState = $true,
-    [bool]$isDisplayAgentState = $true
+    [bool]$retreiveAgentState = $true,
+    [bool]$showAgentState = $true
 )
 
 # Global Variables
@@ -1630,8 +1630,8 @@ function New-ConnectionServiceDeployment() {
         $ownerTenantId,
         $ownerUpn,
         [switch]$updateSPCredential,
-        [bool]$isRetrieveAgentState,
-        [bool]$isDisplayAgentState
+        [bool]$brokerRetreiveAgentState,
+        [bool]$clientShowAgentState
     )
 
     $kvID = $keyVault.ResourceId
@@ -1991,11 +1991,11 @@ function New-ConnectionServiceDeployment() {
                 "licenseInstanceId": {
                     "value": "$licenseInstanceId"
                 },
-                "isRetrieveAgentState": {
-                    "value": $($isRetrieveAgentState | ConvertTo-Json)
+                "brokerRetrieveAgentState": {
+                    "value": $($brokerRetreiveAgentState | ConvertTo-Json)
                 },
-                "isDisplayAgentState": {
-                    "value": $($isDisplayAgentState | ConvertTo-Json)
+                "clientShowAgentState": {
+                    "value": $($clientShowAgentState | ConvertTo-Json)
                 },                
                 "_baseArtifactsLocation": {
                     "reference": {
@@ -2338,8 +2338,8 @@ function Deploy-CAM() {
         [parameter(Mandatory=$false)]
         $camManagementUserGroup = $null,
 
-        [bool]$isRetrieveAgentState,
-        [bool]$isDisplayAgentState
+        [bool]$brokerRetreiveAgentState,
+        [bool]$clientShowAgentState
     )
 
     # Artifacts location 'folder' is where the template is stored
@@ -2692,8 +2692,8 @@ function Deploy-CAM() {
                 -radiusServerPort $radiusConfig.radiusServerPort `
                 -radiusSharedSecret $radiusConfig.radiusSharedSecret `
                 -vnetConfig $vnetConfig `
-                -isRetrieveAgentState $isRetrieveAgentState `
-                -isDisplayAgentState $isDisplayAgentState
+                -brokeRetrieveAgentState $brokerRetreiveAgentState `
+                -clientShowAgentState $clientShowAgentState
         }
         else
         {
@@ -2887,11 +2887,11 @@ function Deploy-CAM() {
         "autoShutdownIdleTime" : {
             "value": $defaultIdleShutdownTime
         },
-        "isRetrieveAgentState" : {
-            "value": $($isRetrieveAgentState | ConvertTo-Json)
+        "brokerRetrieveAgentState" : {
+            "value": $($brokerRetreiveAgentState | ConvertTo-Json)
         },
-        "isDisplayAgentState" : {
-            "value": $($isDisplayAgentState | ConvertTo-Json)
+        "clientShowAgentState" : {
+            "value": $($clientShowAgentState | ConvertTo-Json)
         }
     }
 }
@@ -3971,8 +3971,8 @@ if ($CAMRootKeyvault) {
         -ownerUpn $upn `
         -updateSPCredential:$updateSPCredential `
         -camManagementUserGroup $camManagementUserGroup `
-        -isRetrieveAgentState $isRetrieveAgentState `
-        -isDisplayAgentState $isDisplayAgentState        
+        -brokerRetreiveAgentState $retrieveAgentState `
+        -clientShowAgentState $showAgentState        
 }
 else {
     # New CAM deployment. 
@@ -4436,6 +4436,6 @@ else {
         -defaultIdleShutdownTime $defaultIdleShutdownTime `
         -camUserGroup $camUserGroup `
         -camManagementUserGroup $camManagementUserGroup `
-        -isRetrieveAgentState $isRetrieveAgentState `
-        -isDisplayAgentState $isDisplayAgentState
+        -brokerRetreiveAgentState $retrieveAgentState `
+        -clientShowAgentState $showAgentState
 }

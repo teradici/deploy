@@ -70,14 +70,14 @@
             "description": "License Instance Id for the CAM deployment"
             }
         },
-        "isRetrieveAgentState": {
+        "brokerRetrieveAgentState": {
           "type": "bool",
           "metadata": {
             "description": "configuration of retrieving pcoip agent state"
           },
           "defaultValue": true
         },
-        "isDisplayAgentState": {
+        "clientShowAgentState": {
           "type": "bool",
           "metadata": {
             "description": "configuration of display pcoip agent state"
@@ -125,8 +125,8 @@
                         "gitLocation": "[parameters('_artifactsLocation')]",
                         "sumoCollectorID": "[concat('CAM-', parameters('licenseInstanceId'), '-', subscription().subscriptionId, '-', resourceGroup().name, '-', parameters('dnsLabelPrefix'))]",
                         "enableRadiusMfa": "[parameters('enableRadiusMfa')]",
-                        "isRetrieveAgentState": "[parameters('isRetrieveAgentState')]",
-                        "isDisplayAgentState": "[parameters('isDisplayAgentState')]"
+                        "brokerRetrieveAgentState": "[parameters('brokerRetrieveAgentState')]",
+                        "clientShowAgentState": "[parameters('clientShowAgentState')]"
                     }
                 },
                 "protectedSettings": {

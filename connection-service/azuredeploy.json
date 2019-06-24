@@ -114,14 +114,14 @@
         "description": "License Instance Id for the CAM deployment"
       }
     },
-    "isRetrieveAgentState": {
+    "brokerRetrieveAgentState": {
       "type": "bool",
       "metadata": {
         "description": "configuration of retrieving pcoip agent state"
       },
       "defaultValue": true
     },
-    "isDisplayAgentState": {
+    "clientShowAgentState": {
       "type": "bool",
       "metadata": {
         "description": "configuration of display pcoip agent state"
@@ -255,11 +255,11 @@
           "licenseInstanceId": {
             "value": "[parameters('licenseInstanceId')]"
           },
-          "isRetrieveAgentState": {
-            "value": "[parameters('isRetrieveAgentState')]"
+          "brokerRetrieveAgentState": {
+            "value": "[parameters('brokerRetrieveAgentState')]"
           },
-          "isDisplayAgentState": {
-            "value": "[parameters('isDisplayAgentState')]"
+          "clientShowAgentState": {
+            "value": "[parameters('clientShowAgentState')]"
           }
         }
       }

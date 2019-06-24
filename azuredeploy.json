@@ -85,49 +85,49 @@
     "connectionServiceResourceGroup": {
       "type": "string",
       "metadata": {
-          "description": "The resource group the connection service is deployed in"
+        "description": "The resource group the connection service is deployed in"
       }
     },
     "remoteWorkstationResourceGroup": {
       "type": "string",
       "metadata": {
-          "description": "The resource group where the remote workstations are deployed"
+        "description": "The resource group where the remote workstations are deployed"
       }
     },
     "vnetName": {
       "type": "string",
       "metadata": {
-          "description": "The name of the virtual network to be created for CAM"
+        "description": "The name of the virtual network to be created for CAM"
       }
     },
     "rootSubnetName": {
       "type": "string",
       "metadata": {
-          "description": "The name of the root subnet in the virtual network"
+        "description": "The name of the root subnet in the virtual network"
       }
     },
     "remoteWorkstationSubnetName": {
       "type": "string",
       "metadata": {
-          "description": "The name of the remote workstation subnet in the virtual network"
+        "description": "The name of the remote workstation subnet in the virtual network"
       }
     },
     "connectionServiceSubnetName": {
       "type": "string",
       "metadata": {
-          "description": "The name of the connection service subnet in the virtual network"
+        "description": "The name of the connection service subnet in the virtual network"
       }
     },
     "gatewaySubnetName": {
       "type": "string",
       "metadata": {
-          "description": "The name of the subnet for application gateways in the virtual network"
+        "description": "The name of the subnet for application gateways in the virtual network"
       }
     },
     "AgentChannel": {
       "type": "string",
       "defaultValue": "stable",
-      "allowedValues": ["stable","beta","dev"],
+      "allowedValues": [ "stable", "beta", "dev" ],
       "metadata": {
         "description": "PCoIP Agent channel to use for installer download"
       }
@@ -135,7 +135,7 @@
     "CAMDeploymentInfo": {
       "type": "securestring",
       "metadata": {
-          "description": "Encoded blob of authorization and URL information for the CAM Connection Service"
+        "description": "Encoded blob of authorization and URL information for the CAM Connection Service"
       }
     },
     "binaryLocation": {
@@ -182,7 +182,7 @@
       },
       "defaultValue": ""
     },
-    "enableRadiusMfa" : {
+    "enableRadiusMfa": {
       "type": "string",
       "metadata": {
         "description": "Is RADIUS MFA enabled?"
@@ -193,27 +193,27 @@
       "type": "string",
       "defaultValue": "true",
       "metadata": {
-          "description": "'true' if the security gateway should be enabled and a Public IP address created, otherwise 'false'."
+        "description": "'true' if the security gateway should be enabled and a Public IP address created, otherwise 'false'."
       }
     },
-    "autoShutdownIdleTime" : {
+    "autoShutdownIdleTime": {
       "type": "int",
       "metadata": {
         "description": "Default time the Remote Workstation will idle for before automatically shutting down"
       },
       "defaultValue": 240
     },
-    "isRetrieveAgentState": {
+    "brokerRetreiveAgentState": {
       "type": "bool",
       "metadata": {
-        "description": "configuration of retrieving pcoip agent state"
+        "description": "configuration of broker retrieving pcoip agent state"
       },
       "defaultValue": true
     },
-    "isDisplayAgentState": {
+    "clientShowAgentState": {
       "type": "bool",
       "metadata": {
-        "description": "configuration of display pcoip agent state"
+        "description": "configuration of display pcoip agent state in pcoip client"
       },
       "defaultValue": true
     }
@@ -339,11 +339,11 @@
           "licenseInstanceId": {
             "value": "[variables('licenseInstanceId')]"
           },
-          "isRetrieveAgentState": {
-            "value": "[parameters('isRetrieveAgentState')]"
+          "brokerRetrieveAgentState": {
+            "value": "[parameters('brokerRetreiveAgentState')]"
           },
-          "isDisplayAgentState": {
-            "value": "[parameters('isDisplayAgentState')]"
+          "clientShowAgentState": {
+            "value": "[parameters('clientShowAgentState')]"
           }
         }
       }
