@@ -117,7 +117,7 @@ Param(
     $camManagementUserGroup = $null,
 
     [switch]$updateSPCredential,
-    [bool]$retreiveAgentState = $true,
+    [bool]$retrieveAgentState = $true,
     [bool]$showAgentState = $true
 )
 
@@ -1630,7 +1630,7 @@ function New-ConnectionServiceDeployment() {
         $ownerTenantId,
         $ownerUpn,
         [switch]$updateSPCredential,
-        [bool]$brokerRetreiveAgentState,
+        [bool]$brokerRetrieveAgentState,
         [bool]$clientShowAgentState
     )
 
@@ -1992,7 +1992,7 @@ function New-ConnectionServiceDeployment() {
                     "value": "$licenseInstanceId"
                 },
                 "brokerRetrieveAgentState": {
-                    "value": $($brokerRetreiveAgentState | ConvertTo-Json)
+                    "value": $($brokerRetrieveAgentState | ConvertTo-Json)
                 },
                 "clientShowAgentState": {
                     "value": $($clientShowAgentState | ConvertTo-Json)
@@ -2338,7 +2338,7 @@ function Deploy-CAM() {
         [parameter(Mandatory=$false)]
         $camManagementUserGroup = $null,
 
-        [bool]$brokerRetreiveAgentState,
+        [bool]$brokerRetrieveAgentState,
         [bool]$clientShowAgentState
     )
 
@@ -2692,7 +2692,7 @@ function Deploy-CAM() {
                 -radiusServerPort $radiusConfig.radiusServerPort `
                 -radiusSharedSecret $radiusConfig.radiusSharedSecret `
                 -vnetConfig $vnetConfig `
-                -brokeRetrieveAgentState $brokerRetreiveAgentState `
+                -brokeRetrieveAgentState $brokerRetrieveAgentState `
                 -clientShowAgentState $clientShowAgentState
         }
         else
@@ -2888,7 +2888,7 @@ function Deploy-CAM() {
             "value": $defaultIdleShutdownTime
         },
         "brokerRetrieveAgentState" : {
-            "value": $($brokerRetreiveAgentState | ConvertTo-Json)
+            "value": $($brokerRetrieveAgentState | ConvertTo-Json)
         },
         "clientShowAgentState" : {
             "value": $($clientShowAgentState | ConvertTo-Json)
@@ -3971,7 +3971,7 @@ if ($CAMRootKeyvault) {
         -ownerUpn $upn `
         -updateSPCredential:$updateSPCredential `
         -camManagementUserGroup $camManagementUserGroup `
-        -brokerRetreiveAgentState $retrieveAgentState `
+        -brokerRetrieveAgentState $retrieveAgentState `
         -clientShowAgentState $showAgentState        
 }
 else {
@@ -4436,6 +4436,6 @@ else {
         -defaultIdleShutdownTime $defaultIdleShutdownTime `
         -camUserGroup $camUserGroup `
         -camManagementUserGroup $camManagementUserGroup `
-        -brokerRetreiveAgentState $retrieveAgentState `
+        -brokerRetrieveAgentState $retrieveAgentState `
         -clientShowAgentState $showAgentState
 }

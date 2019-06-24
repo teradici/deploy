@@ -203,7 +203,7 @@
       },
       "defaultValue": 240
     },
-    "brokerRetreiveAgentState": {
+    "brokerRetrieveAgentState": {
       "type": "bool",
       "metadata": {
         "description": "configuration of broker retrieving pcoip agent state"
@@ -340,7 +340,7 @@
             "value": "[variables('licenseInstanceId')]"
           },
           "brokerRetrieveAgentState": {
-            "value": "[parameters('brokerRetreiveAgentState')]"
+            "value": "[parameters('brokerRetrieveAgentState')]"
           },
           "clientShowAgentState": {
             "value": "[parameters('clientShowAgentState')]"
