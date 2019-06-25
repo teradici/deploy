@@ -96,7 +96,10 @@ Configuration InstallConnectionServer
         [String]$brokerPort = "8444",
 
         [Parameter(Mandatory = $false)]
-        [String]$enableRadiusMfa
+        [String]$enableRadiusMfa,
+
+        [bool] $brokerRetrieveAgentState = $true,
+        [bool] $clientShowAgentState = $true
     )
 
     # Get DC information
@@ -938,6 +941,8 @@ brokerProductVersion=1.0
 brokerIpaddress=$ipaddressString
 brokerLocale=en_US
 domainName=$using:domainName
+isRetrieveAgentState=$using:brokerRetrieveAgentState
+isDisplayAgentState=$using:clientShowAgentState
 "@
               
                 $isMfa = $using:enableRadiusMfa

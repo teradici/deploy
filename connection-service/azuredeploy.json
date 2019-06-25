@@ -113,6 +113,20 @@
       "metadata": {
         "description": "License Instance Id for the CAM deployment"
       }
+    },
+    "brokerRetrieveAgentState": {
+      "type": "bool",
+      "metadata": {
+        "description": "configuration of retrieving pcoip agent state"
+      },
+      "defaultValue": true
+    },
+    "clientShowAgentState": {
+      "type": "bool",
+      "metadata": {
+        "description": "configuration of display pcoip agent state"
+      },
+      "defaultValue": true
     }
   },
   "variables": {
@@ -235,11 +249,17 @@
           "CAMDeploymentInfo": {
             "value": "[parameters('CAMDeploymentInfo')]"
           },
-          "enableRadiusMfa" : {
-            "value" : "[parameters('enableRadiusMfa')]"
+          "enableRadiusMfa": {
+            "value": "[parameters('enableRadiusMfa')]"
           },
           "licenseInstanceId": {
             "value": "[parameters('licenseInstanceId')]"
+          },
+          "brokerRetrieveAgentState": {
+            "value": "[parameters('brokerRetrieveAgentState')]"
+          },
+          "clientShowAgentState": {
+            "value": "[parameters('clientShowAgentState')]"
           }
         }
       }
