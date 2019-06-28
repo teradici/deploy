@@ -117,7 +117,7 @@ Param(
     $camManagementUserGroup = $null,
 
     [switch]$updateSPCredential,
-    [bool]$retrieveAgentState = $true,
+    [bool]$retrieveAgentState = $false,
     [bool]$showAgentState = $true
 )
 
