@@ -57,8 +57,6 @@ Configuration InstallPCoIPAgent
         )
     
     $isSA = [string]::IsNullOrWhiteSpace($videoDriverUrl)
-    
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
     $regPath = If ($isSA) {
                     "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\PCoIP Standard Agent"
@@ -141,7 +139,9 @@ Configuration InstallPCoIPAgent
                 $orderNumArray = $using:orderNumArray
                 $retryMax = $using:retryCount
                 $downIdx = 0;
+
                 # sumologic server require TLS 1.2
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
                 foreach ($source in $sourceArray) {
                     $destFile = $destArray[$downIdx]
@@ -295,6 +295,9 @@ Configuration InstallPCoIPAgent
                 if (! $pcoipAgentInstallerUrl.EndsWith('/') ) {
                      $pcoipAgentInstallerUrl =  $pcoipAgentInstallerUrl + '/';
                 }
+
+                # Downloading PCoIP Agent requires TLS 1.2
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
                 # download meta file first
                 $metaFileName = "latest-standard-agent.json"
@@ -768,6 +771,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
                         
                             [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
                         }
+                        # CAM requires TLS 1.2
                         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
                         
                         # Get a Sign-in token
