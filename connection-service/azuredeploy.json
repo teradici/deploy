@@ -127,6 +127,15 @@
         "description": "configuration of display pcoip agent state"
       },
       "defaultValue": true
+    },
+    "tag": {
+      "type": "object",
+      "metadata": {
+        "description": "Add Azure tags to deployed resources"
+      },
+      "defaultValue": {
+        "CloudAccessConnectorType" : "CACv1"
+      }
     }
   },
   "variables": {
@@ -154,6 +163,9 @@
         "parameters": {
           "sgNsgName": {
             "value": "[variables('sgNsgName')]"
+          },
+          "tag": { 
+            "value": "[parameters('tag')]"
           }
         }
       }
@@ -207,6 +219,9 @@
           },
           "_artifactsLocationSasToken": {
             "value": "[parameters('_artifactsLocationSasToken')]"
+          },
+          "tag": { 
+            "value": "[parameters('tag')]"
           }
         }
       }
@@ -260,6 +275,9 @@
           },
           "clientShowAgentState": {
             "value": "[parameters('clientShowAgentState')]"
+          },
+          "tag": { 
+            "value": "[parameters('tag')]"
           }
         }
       }
@@ -313,6 +331,9 @@
           },
           "disableExternalUserInterface": {
             "value": "[bool(parameters('enableRadiusMfa'))]"
+          },
+          "tag": { 
+            "value": "[parameters('tag')]"
           }
         }
       }
@@ -370,6 +391,9 @@
           },
           "licenseInstanceId": {
             "value": "[parameters('licenseInstanceId')]"
+          },
+          "tag": { 
+            "value": "[parameters('tag')]"
           }
         }
       }

@@ -81,6 +81,15 @@
         "description": "Auto-generated token to access _artifactsLocation"
       },
       "defaultValue": ""
+    },
+    "tag": {
+      "type": "object",
+      "metadata": {
+        "description": "Add Azure tags to deployed resources"
+      },
+      "defaultValue": {
+        "CloudAccessConnectorType" : "CACv1"
+      }
     }
   },
   "variables": {
@@ -170,6 +179,9 @@
           },
           "gatewaySubnetRange": {
             "value": "[variables('networkSettings').subnets.gatewaySubnet.prefix]"
+          },
+          "tag": { 
+            "value": "[parameters('tag')]"
           }
         }
       }
@@ -187,6 +199,9 @@
         "parameters": {
           "dcnsgName": {
             "value": "[variables('networkSettings').networkSecurityGroups.dcnsgName]"
+          },
+          "tag": { 
+            "value": "[parameters('tag')]"
           }
         }
       }
@@ -195,6 +210,7 @@
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[variables('networkSettings').subnets.rootSubnet.adNicName]",
       "apiVersion": "2016-03-30",
+      "tags": "[parameters('tag')]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
         "VNet",
@@ -222,6 +238,7 @@
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[variables('adVMName')]",
       "apiVersion": "2017-03-30",
+      "tags": "[parameters('tag')]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
         "VNet",
@@ -295,6 +312,9 @@
           },
           "binaryLocation": {
             "value": "[parameters('binaryLocation')]"
+          },
+          "tag": { 
+            "value": "[parameters('tag')]"
           }
         }
       }
@@ -345,6 +365,9 @@
           },
           "DNSServerAddress": {
             "value": [ "[variables('networkSettings').subnets.rootSubnet.adNicIPAddress]" ]
+          },
+          "tag": { 
+            "value": "[parameters('tag')]"
           }
         }
       }

@@ -167,6 +167,15 @@
             "metadata": {
                 "description": "PCoIP Agent channel to use for installer download."
             }
+        },
+        "tag": {
+          "type": "object",
+          "metadata": {
+            "description": "Add Azure tags to deployed resources"
+          },
+          "defaultValue": {
+            "CloudAccessConnectorType" : "CACv1"
+          }
         }
     },
     "variables": {
@@ -207,6 +216,7 @@
             "type": "Microsoft.Network/networkInterfaces",
             "name": "[variables('nicName')]",
             "apiVersion": "[variables('apiVersion')]",
+            "tags": "[parameters('tag')]",
             "location": "[parameters('location')]",
             "properties": {
                 "ipConfigurations": [
@@ -226,6 +236,7 @@
             "type": "Microsoft.Compute/virtualMachines",
             "name": "[variables('vmSettings').vmNamePrefix]",
             "apiVersion": "2017-03-30",
+            "tags": "[parameters('tag')]",
             "location": "[parameters('location')]",
             "properties": {
                 "hardwareProfile": {
@@ -261,6 +272,7 @@
           "type": "Microsoft.Compute/virtualMachines/extensions",
           "name": "[concat(parameters('dnsLabelPrefix'),'/PCoIPAgentShellScript')]",
           "apiVersion": "2017-03-30",
+          "tags": "[parameters('tag')]",
           "location": "[parameters('location')]",
           "dependsOn": [
               "[resourceId('Microsoft.Compute/virtualMachines', parameters('dnsLabelPrefix'))]"

@@ -83,6 +83,15 @@
       "metadata": {
           "description": "Suffix to add to connection service resources to ensure uniqueness."
       }
+    },
+    "tag": {
+      "type": "object",
+      "metadata": {
+        "description": "Add Azure tags to deployed resources"
+      },
+      "defaultValue": {
+        "CloudAccessConnectorType" : "CACv1"
+      }
     }
   },
   "variables": {
@@ -432,6 +441,7 @@
   "resources": [
     {
       "apiVersion": "[variables('apiVersion')]",
+      "tags": "[parameters('tag')]",
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[variables('publicIPAddressName')]",
       "condition": "[parameters('enableExternalAccess')]",
@@ -442,6 +452,7 @@
     },
     {
       "apiVersion": "[variables('apiVersion')]",
+      "tags": "[parameters('tag')]",
       "name": "[parameters('applicationGatewayName')]",
       "type": "Microsoft.Network/applicationGateways",
       "location": "[resourceGroup().location]",

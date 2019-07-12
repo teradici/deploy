@@ -11,6 +11,16 @@
                 "minLength": 1,
                 "maxLength": 80
             }
+        },
+        "tag": {
+          "type": "object",
+          "metadata": {
+            "description": "Add Azure tags to deployed resources"
+          },
+          "defaultValue": {
+            "CloudAccessConnectorType" : "CACv1",
+            "displayName": "NSG - Domain Controller"
+          }
         }
     },
 
@@ -24,10 +34,7 @@
             "type": "Microsoft.Network/networkSecurityGroups",
             "name": "[parameters('dcnsgName')]",
             "location": "[resourceGroup().location]",
-            "tags": {
-                "displayName": "NSG - Domain Controller"
-            },
-
+            "tags": "[parameters('tag')]",
             "properties": {
                 "securityRules": [
                     {

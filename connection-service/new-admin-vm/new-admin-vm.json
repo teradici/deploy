@@ -83,6 +83,15 @@
             "description": "configuration of display pcoip agent state"
           },
           "defaultValue": true
+        },
+        "tag": {
+          "type": "object",
+          "metadata": {
+            "description": "Add Azure tags to deployed resources"
+          },
+          "defaultValue": {
+            "CloudAccessConnectorType" : "CACv1"
+          }
         }
     },
     "variables": {
@@ -98,6 +107,7 @@
             "type": "Microsoft.Compute/virtualMachines/extensions",
             "name": "[concat(parameters('dnsLabelPrefix'),'/InstallAdminGUIDscExtension')]",
             "apiVersion": "[variables('apiVersion')]",
+            "tags": "[parameters('tag')]",
             "location": "[resourceGroup().location]",
             "properties": {
                 "publisher": "Microsoft.Powershell",

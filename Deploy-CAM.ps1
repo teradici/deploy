@@ -118,7 +118,8 @@ Param(
 
     [switch]$updateSPCredential,
     [bool]$retrieveAgentState = $false,
-    [bool]$showAgentState = $true
+    [bool]$showAgentState = $true,
+    [Hashtable]$tag = @{CloudAccessConnectorType="CACv1"}
 )
 
 # Global Variables
@@ -704,7 +705,9 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 function New-UserStorageAccount {
     Param(
         $RGName,
-        $location
+        $location, 
+        [HashTable]
+        $tag
     )
 
     $saName = -join ((97..122) | Get-Random -Count 16 | % {[char]$_})
@@ -717,7 +720,8 @@ function New-UserStorageAccount {
         -AccountName $saName `
         -Location $location `
         -SkuName "Standard_LRS" `
-        -EnableHttpsTrafficOnly $false
+        -EnableHttpsTrafficOnly $false `
+        -Tag $tag
 
     return $acct
 }
@@ -731,7 +735,8 @@ function New-RemoteWorkstationTemplates {
         $storageAccountContainerName,
         $storageAccountSecretName,
         $storageAccountKeyName,
-        $tempDir
+        $tempDir,
+        $tag
     )
 
     Write-Host "Creating default remote workstation template parameters file data"
@@ -748,6 +753,7 @@ function New-RemoteWorkstationTemplates {
     $domainFQDN = $CAMConfig.parameters.domainName.clearValue
 
     $agentChannel = $CAMConfig.internal.agentChannel
+    $tagString = $tag | ConvertTo-Json -Compress
 
     $armParamContent = @"
 {
@@ -764,6 +770,7 @@ function New-RemoteWorkstationTemplates {
         "binaryLocation": { "value": "$binaryLocation" },
         "subnetID": { "value": "$($CAMConfig.parameters.remoteWorkstationSubnet.clearValue)" },
         "domainUsername": { "value": "$domainServiceAccountUsername" },
+        "tag": { "value": $tagString},
         "userStorageAccountName": {
             "reference": {
                 "keyVault": {
@@ -916,7 +923,8 @@ function Populate-UserBlob {
         $idleShutdownLinux,
         $RGName,
         $kvInfo,
-        $tempDir
+        $tempDir,
+        $tag
     )
 
     $kvId = $kvInfo.ResourceId
@@ -1020,7 +1028,8 @@ function Populate-UserBlob {
             -storageAccountContainerName $container_name `
             -storageAccountSecretName $storageAccountSecretName `
             -storageAccountKeyName $storageAccountKeyName `
-            -tempDir $tempDir
+            -tempDir $tempDir `
+            -tag $tag
     )
 }
 
@@ -1039,14 +1048,17 @@ function New-CAM-KeyVault() {
         $spName,
 
         [parameter(Mandatory = $true)]
-        $adminAzureContext
+        $adminAzureContext,
+
+        [HashTable]
+        $tag
     )
 
 
     $keyVault = $null
     try {
-
         #KeyVault names must be globally (or at least regionally) unique, so make a unique string
+
         $generatedKVID = -join ((65..90) + (97..122) | Get-Random -Count 16 | % {[char]$_})
         $kvName = "CAM-$generatedKVID"
 
@@ -1060,7 +1072,8 @@ function New-CAM-KeyVault() {
             -EnabledForTemplateDeployment `
             -EnabledForDeployment `
             -EnableSoftDelete `
-            -WarningAction Ignore
+            -WarningAction Ignore `
+            -Tag $tag
 
         Write-Host "Setting Access Policy on Azure Key Vault $kvName"
 
@@ -1631,7 +1644,8 @@ function New-ConnectionServiceDeployment() {
         $ownerUpn,
         [switch]$updateSPCredential,
         [bool]$brokerRetrieveAgentState,
-        [bool]$clientShowAgentState
+        [bool]$clientShowAgentState,
+        [HashTable]$tag
     )
 
     $kvID = $keyVault.ResourceId
@@ -1795,7 +1809,7 @@ function New-ConnectionServiceDeployment() {
 
             Write-Host "Creating resource group $csRGName in location $location"
 
-            New-AzureRmResourceGroup -Name $csRGName -Location $location -ErrorAction stop | Out-Null
+            New-AzureRmResourceGroup -Name $csRGName -Location $location -ErrorAction stop -Tag $tag | Out-Null
         }
 
         $csRG = Get-AzureRmResourceGroup -Name $csRGName
@@ -1877,6 +1891,9 @@ function New-ConnectionServiceDeployment() {
 
         # Get license instance Id from registration code
         $licenseInstanceId = $secret.SecretValueText.Split('@')[0]
+
+        #Convert tags to JSON string
+        $tagString = $tag | ConvertTo-Json -Compress
 
         $generatedDeploymentParameters = @"
         {
@@ -2004,6 +2021,9 @@ function New-ConnectionServiceDeployment() {
                         },
                         "secretName": "artifactsLocation"
                     }
+                },
+                "tag": {
+                    "value": $tagString
                 }
             }
         }
@@ -2108,7 +2128,9 @@ function New-CAMDeploymentRoot()
         $verifyCAMSaaSCertificate,
         $subscriptionID,
         $ownerTenantId,
-        $ownerUpn
+        $ownerUpn,
+        [HashTable]
+        $tag
     )
 
     $rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName
@@ -2123,7 +2145,8 @@ function New-CAMDeploymentRoot()
     $kvInfo = New-CAM-KeyVault `
         -RGName $RGName `
         -spName $spInfo.spCreds.UserName `
-        -adminAzureContext $azureContext
+        -adminAzureContext $azureContext `
+        -Tag $tag
 
     Generate-Certificate-And-Passwords `
         -kvName $kvInfo.VaultName `
@@ -2134,7 +2157,8 @@ function New-CAMDeploymentRoot()
    
     $userDataStorageAccount = New-UserStorageAccount `
         -RGName $RGName `
-        -Location $rg.Location
+        -Location $rg.Location `
+        -Tag $tag
 
     Populate-UserBlob `
         -CAMConfig $CAMConfig `
@@ -2143,7 +2167,8 @@ function New-CAMDeploymentRoot()
         -binaryLocation $binaryLocation `
         -RGName $RGName `
         -kvInfo $kvInfo `
-        -tempDir $tempDir | Out-Null
+        -tempDir $tempDir `
+        -tag $tag | Out-Null
 
     Write-Host "Registering Cloud Access Manager Deployment to Cloud Access Manager Service"
     $deploymentId = Register-CAM `
@@ -2339,7 +2364,8 @@ function Deploy-CAM() {
         $camManagementUserGroup = $null,
 
         [bool]$brokerRetrieveAgentState,
-        [bool]$clientShowAgentState
+        [bool]$clientShowAgentState,
+        [Hashtable]$tag
     )
 
     # Artifacts location 'folder' is where the template is stored
@@ -2660,7 +2686,8 @@ function Deploy-CAM() {
             -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
             -subscriptionID $subscriptionID `
             -ownerTenantId $ownerTenantId `
-            -ownerUpn $ownerUpn
+            -ownerUpn $ownerUpn `
+            -Tag $tag
 
         # Populate/re-populate CAMDeploymentInfo before deploying the connector
         New-CAMDeploymentInfo `
@@ -2693,12 +2720,15 @@ function Deploy-CAM() {
                 -radiusSharedSecret $radiusConfig.radiusSharedSecret `
                 -vnetConfig $vnetConfig `
                 -brokeRetrieveAgentState $brokerRetrieveAgentState `
-                -clientShowAgentState $clientShowAgentState
+                -clientShowAgentState $clientShowAgentState `
+                -Tag $tag
         }
         else
         {
             # keyvault ID of the form: /subscriptions/$subscriptionID/resourceGroups/$azureRGName/providers/Microsoft.KeyVault/vaults/$kvName
             $kvId = $kvInfo.ResourceId
+
+            $tagString = $tag | ConvertTo-Json -Compress
 
             $generatedDeploymentParameters = @"
 {
@@ -2892,6 +2922,9 @@ function Deploy-CAM() {
         },
         "clientShowAgentState" : {
             "value": $($clientShowAgentState | ConvertTo-Json)
+        },
+        "tag" : {
+            "value": $tagString
         }
     }
 }
@@ -3972,7 +4005,8 @@ if ($CAMRootKeyvault) {
         -updateSPCredential:$updateSPCredential `
         -camManagementUserGroup $camManagementUserGroup `
         -brokerRetrieveAgentState $retrieveAgentState `
-        -clientShowAgentState $showAgentState        
+        -clientShowAgentState $showAgentState `
+        -Tag $tag
 }
 else {
     # New CAM deployment. 
@@ -4106,7 +4140,7 @@ else {
                 
                 Check-Location-Cores  -rgLocation $newRGLocation -neededCores $deployCost
                 Write-Host "Creating Cloud Access Manager root resource group $inputRgName"
-                $newRgResult = New-AzureRmResourceGroup -Name $inputRgName -Location $newRGLocation
+                $newRgResult = New-AzureRmResourceGroup -Name $inputRgName -Location $newRGLocation -Tag $tag
                 if ($newRgResult) {
                     # Success!
                     $selectedRGName = $true
@@ -4172,7 +4206,7 @@ else {
     }
     else {
         Write-Host "Creating Cloud Access connector resource group $csRGName"
-        $csrg = New-AzureRmResourceGroup -Name $csRGName -Location $rgMatch.Location -ErrorAction Stop
+        $csrg = New-AzureRmResourceGroup -Name $csRGName -Location $rgMatch.Location -ErrorAction Stop -Tag $tag
     }
 
     $rwrg = Get-AzureRmResourceGroup -ResourceGroupName $rwRGName -ErrorAction SilentlyContinue
@@ -4183,7 +4217,7 @@ else {
     }
     else {
         Write-Host "Creating remote workstation resource group $rwRGName"
-        $rwrg = New-AzureRmResourceGroup -Name $rwRGName -Location $rgMatch.Location -ErrorAction Stop
+        $rwrg = New-AzureRmResourceGroup -Name $rwRGName -Location $rgMatch.Location -ErrorAction Stop -Tag $tag
     }
 
 
@@ -4437,5 +4471,6 @@ else {
         -camUserGroup $camUserGroup `
         -camManagementUserGroup $camManagementUserGroup `
         -brokerRetrieveAgentState $retrieveAgentState `
-        -clientShowAgentState $showAgentState
+        -clientShowAgentState $showAgentState `
+        -Tag $tag
 }

@@ -73,6 +73,15 @@
         "description": "The DNS address(es) of the DNS Server(s) used by the VNET"
       },
       "defaultValue": []
+    },
+    "tag": {
+      "type": "object",
+      "metadata": {
+        "description": "Add Azure tags to deployed resources"
+      },
+      "defaultValue": {
+        "CloudAccessConnectorType" : "CACv1"
+      }
     }
   },
   "resources": [
@@ -80,6 +89,7 @@
       "type": "Microsoft.Network/virtualNetworks",
       "name": "[parameters('virtualNetworkName')]",
       "apiVersion": "2017-06-01",
+      "tags": "[parameters('tag')]",
       "location": "[resourceGroup().location]",
       "properties": {
         "addressSpace": {

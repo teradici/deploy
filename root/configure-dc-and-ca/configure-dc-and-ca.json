@@ -31,6 +31,15 @@
             "metadata": {
               "description": "The location of the blobs for admin GUI machine installation"
             }
+          },
+        "tag": {
+            "type": "object",
+            "metadata": {
+              "description": "Add Azure tags to deployed resources"
+            },
+            "defaultValue": {
+              "CloudAccessConnectorType" : "CACv1"
+            }
           }
         },
     "resources": [
@@ -38,6 +47,7 @@
             "type": "Microsoft.Compute/virtualMachines/extensions",
             "name": "[concat(parameters('domainControllerVMName'),'/CreateADForestAndCA')]",
             "apiVersion": "2015-06-15",
+            "tags": "[parameters('tag')]",
             "location": "[resourceGroup().location]",
             "properties": {
                 "publisher": "Microsoft.Powershell",
