@@ -116,6 +116,15 @@
           "metadata": {
               "description": "Time in minutes that a remote workstation should be idle for before the automatic shutdown feature is engaged (if enabled)"
           }
+        },
+        "tag": {
+          "type": "object",
+          "metadata": {
+            "description": "Add Azure tags to deployed resources"
+          },
+          "defaultValue": {
+            "CloudAccessConnectorType" : "CACv1"
+          }
         }
   },
   "variables": {
@@ -198,8 +207,10 @@
           },
           "autoShutdownIdleTime": {
             "value": "[parameters('autoShutdownIdleTime')]"
+          },
+          "tag": { 
+            "value": "[parameters('tag')]"
           }
-
         }
       }
     }

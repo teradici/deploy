@@ -76,7 +76,16 @@
               "description": "Auto-generated token to access _artifactsLocation"
             },
             "defaultValue": ""
-          }   
+          },
+          "tag": {
+            "type": "object",
+            "metadata": {
+              "description": "Add Azure tags to deployed resources"
+            },
+            "defaultValue": {
+              "CloudAccessConnectorType" : "CACv1"
+            }
+          }
         },
     "variables": {
         "imagePublisher": "MicrosoftWindowsServer",
@@ -90,6 +99,7 @@
             "type": "Microsoft.Network/networkInterfaces",
             "name": "[variables('nicName')]",
             "apiVersion": "2017-06-01",
+            "tags": "[parameters('tag')]",
             "location": "[resourceGroup().location]",
             "properties": {
                 "ipConfigurations": [
@@ -113,6 +123,7 @@
             "type": "Microsoft.Compute/virtualMachines",
             "name": "[parameters('dnsLabelPrefix')]",
             "apiVersion": "2017-12-01",
+            "tags": "[parameters('tag')]",
             "location": "[resourceGroup().location]",
             "properties": {
                 "hardwareProfile": {
@@ -174,6 +185,9 @@
                     },
                     "applicationGatewayPoolReference": {
                         "value": "[parameters('applicationGatewayPoolReference')]"
+                    },
+                    "tag": {
+                        "value": "[parameters('tag')]"
                     }
                 }
             }

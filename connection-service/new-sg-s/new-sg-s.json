@@ -11,8 +11,17 @@
                 "minLength": 1,
                 "maxLength": 80
             }
+        },
+        "tag": {
+          "type": "object",
+          "metadata": {
+            "description": "Add Azure tags to deployed resources"
+          },
+          "defaultValue": {
+            "CloudAccessConnectorType" : "CACv1",
+            "displayName": "NSG - Connection Manager"
+          }
         }
-
     },
 
     "variables": {
@@ -26,10 +35,7 @@
             "type": "Microsoft.Network/networkSecurityGroups",
             "name": "[parameters('sgNsgName')]",
             "location": "[resourceGroup().location]",
-            "tags": {
-                "displayName": "NSG - Connection Manager"
-            },
-
+            "tags": "[parameters('tag')]",
             "properties": {
                 "securityRules": [
                     {

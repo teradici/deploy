@@ -216,6 +216,15 @@
         "description": "configuration of display pcoip agent state in pcoip client"
       },
       "defaultValue": true
+    },
+    "tag": {
+      "type": "object",
+      "metadata": {
+        "description": "Add Azure tags to deployed resources"
+      },
+      "defaultValue": {
+        "CloudAccessConnectorType" : "CACv1"
+      }
     }
   },
   "variables": {
@@ -269,6 +278,9 @@
           },
           "_artifactsLocationSasToken": {
             "value": "[parameters('_artifactsLocationSasToken')]"
+          },
+          "tag": { 
+            "value": "[parameters('tag')]"
           }
         }
       }
@@ -344,6 +356,9 @@
           },
           "clientShowAgentState": {
             "value": "[parameters('clientShowAgentState')]"
+          },
+          "tag": { 
+            "value": "[parameters('tag')]"
           }
         }
       }
@@ -419,6 +434,9 @@
           },
           "autoShutdownIdleTime" : {
             "value": "[parameters('autoShutdownIdleTime')]"
+          },
+          "tag": { 
+            "value": "[parameters('tag')]"
           }
         }
       }

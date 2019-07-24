@@ -84,6 +84,15 @@
               "description": "Auto-generated token to access _artifactsLocation"
           },
           "defaultValue": ""
+      },
+      "tag": {
+        "type": "object",
+        "metadata": {
+          "description": "Add Azure tags to deployed resources"
+        },
+        "defaultValue": {
+          "CloudAccessConnectorType" : "CACv1"
+        }
       }
     },
     "variables": {
@@ -109,6 +118,7 @@
       "name": "[variables('namingInfix')]",
       "location": "[resourceGroup().location]",
       "apiVersion": "[variables('computeApiVersion')]",
+      "tags": "[parameters('tag')]",
       "sku": {
         "name": "[parameters('vmSku')]",
         "tier": "Standard",
