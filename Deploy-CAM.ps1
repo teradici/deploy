@@ -2719,7 +2719,7 @@ function Deploy-CAM() {
                 -radiusServerPort $radiusConfig.radiusServerPort `
                 -radiusSharedSecret $radiusConfig.radiusSharedSecret `
                 -vnetConfig $vnetConfig `
-                -brokeRetrieveAgentState $brokerRetrieveAgentState `
+                -brokerRetrieveAgentState $brokerRetrieveAgentState `
                 -clientShowAgentState $clientShowAgentState `
                 -Tag $tag
         }
