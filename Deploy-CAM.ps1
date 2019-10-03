@@ -3715,7 +3715,10 @@ function Update-CAMAzureKeyVault() {
         $VaultName,
 
         [parameter(Mandatory=$false)]
-        $camManagementUserGroup=$null
+        $camManagementUserGroup=$null,
+
+        [parameter(Mandatory=$false)]
+        $AzureSPObjectId=$null
     )
 
     $secret = Get-AzureKeyVaultSecret `
@@ -3746,6 +3749,18 @@ function Update-CAMAzureKeyVault() {
             -kvName $VaultName `
             -secretName "camManagementUserGroup" `
             -secretValue (ConvertTo-SecureString $camManagementUserGroup -Force -AsPlainText)
+    }
+
+    $secret = Get-AzureKeyVaultSecret `
+        -VaultName $VaultName `
+        -Name "AzureSPObjectId" `
+        -ErrorAction stop
+    
+    if(-not $secret) {
+        Set-KVSecret `
+            -kvName $VaultName `
+            -secretName "AzureSPObjectId" `
+            -secretValue (ConvertTo-SecureString $AzureSPObjectId -Force -AsPlainText)
     }
 }
 
@@ -3936,9 +3951,11 @@ if ($CAMRootKeyvault) {
 
     Write-Host "`nCreating a new Cloud Access connector for this Cloud Access Manager deployment`n"
 
+    $AzureSPObjectId = (Get-AzureRmADApplication -DisplayNameStartWith "CAM-$ResourceGroupName").ObjectId
     # Update KeyVault with new Secrets
     Update-CAMAzureKeyVault `
         -camManagementUserGroup $camManagementUserGroup `
+        -AzureSPObjectId $AzureSPObjectId `
         -VaultName $CAMRootKeyvault.Name
 
     $externalAccessPrompt = "Do you want to enable external network access for this connector?"
