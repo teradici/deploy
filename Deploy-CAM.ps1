@@ -1569,7 +1569,7 @@ function Generate-CamDeploymentInfoParameters {
     $CAMConfig.parameters.AzureSPClientID.value = (ConvertTo-SecureString $spInfo.spCreds.UserName -AsPlainText -Force)
     $CAMConfig.parameters.AzureSPKey.value = $spInfo.spCreds.Password
     $CAMConfig.parameters.AzureSPTenantID.value = (ConvertTo-SecureString $spInfo.tenantId -AsPlainText -Force)
-    $CAMConfig.parameters.AzureSPObjectId.value = $spInfo.objectId
+    $CAMConfig.parameters.AzureSPObjectId.value = (ConvertTo-SecureString $spInfo.objectId -AsPlainText -Force)
     $CAMConfig.parameters.CAMServiceURI.value = (ConvertTo-SecureString $camSaasUri -AsPlainText -Force)
     $CAMConfig.parameters.CAMDeploymentID.value = (ConvertTo-SecureString $deploymentId -AsPlainText -Force)
     $CAMConfig.parameters.AzureSubscriptionID.value = (ConvertTo-SecureString $subscriptionID -AsPlainText -Force)
