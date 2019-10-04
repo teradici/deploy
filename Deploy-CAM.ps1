@@ -1467,6 +1467,7 @@ function New-CAMAppSP() {
     $spInfo = @{}
     $spInfo.Add("spCreds", $spCreds);
     $spInfo.Add("tenantId", $tenantID);
+    $spInfo.Add("objectId", $app.ObjectId);
 
     return $spInfo
 }
@@ -1568,6 +1569,7 @@ function Generate-CamDeploymentInfoParameters {
     $CAMConfig.parameters.AzureSPClientID.value = (ConvertTo-SecureString $spInfo.spCreds.UserName -AsPlainText -Force)
     $CAMConfig.parameters.AzureSPKey.value = $spInfo.spCreds.Password
     $CAMConfig.parameters.AzureSPTenantID.value = (ConvertTo-SecureString $spInfo.tenantId -AsPlainText -Force)
+    $CAMConfig.parameters.AzureSPObjectId.value = $spInfo.objectId
     $CAMConfig.parameters.CAMServiceURI.value = (ConvertTo-SecureString $camSaasUri -AsPlainText -Force)
     $CAMConfig.parameters.CAMDeploymentID.value = (ConvertTo-SecureString $deploymentId -AsPlainText -Force)
     $CAMConfig.parameters.AzureSubscriptionID.value = (ConvertTo-SecureString $subscriptionID -AsPlainText -Force)
@@ -2363,6 +2365,8 @@ function Deploy-CAM() {
         [parameter(Mandatory=$false)]
         $camManagementUserGroup = $null,
 
+        [parameter(Mandatory=$false)]
+        $AzureSPObjectId=$null,
         [bool]$brokerRetrieveAgentState,
         [bool]$clientShowAgentState,
         [Hashtable]$tag
@@ -2447,6 +2451,7 @@ function Deploy-CAM() {
     $CAMConfig.parameters.AzureSPClientID = @{}
     $CAMConfig.parameters.AzureSPKey = @{}
     $CAMConfig.parameters.AzureSPTenantID = @{}
+    $CAMConfig.parameters.AzureSPObjectId = @{}
     $CAMConfig.parameters.CAMServiceURI = @{}
     $CAMConfig.parameters.CAMDeploymentID = @{}
     $CAMConfig.parameters.AzureSubscriptionID = @{}
@@ -2544,6 +2549,7 @@ function Deploy-CAM() {
             $spInfo = @{}
             $spinfo.spCreds = $spCredential
             $spInfo.tenantId = $tenantId
+            $spInfo.objectId = $AzureSPObjectId
         }
         else {
             # generate service principal
@@ -4019,7 +4025,7 @@ if ($CAMRootKeyvault) {
         -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
         -ownerTenantId $claims.tid `
         -ownerUpn $upn `
-        -updateSPCredential:$updateSPCredential `
+        -updateSPCredential $updateSPCredential `
         -camManagementUserGroup $camManagementUserGroup `
         -brokerRetrieveAgentState $retrieveAgentState `
         -clientShowAgentState $showAgentState `
@@ -4489,5 +4495,6 @@ else {
         -camManagementUserGroup $camManagementUserGroup `
         -brokerRetrieveAgentState $retrieveAgentState `
         -clientShowAgentState $showAgentState `
-        -Tag $tag
+        -Tag $tag `
+        -AzureSPObjectId $AzureSPObjectId
 }
