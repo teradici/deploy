@@ -2563,6 +2563,7 @@ function Deploy-CAM() {
         $spInfo = @{}
         $spinfo.spCreds = $spCredential
         $spInfo.tenantId = $tenantId
+        $spInfo.objectId = $AzureSPObjectId
     }
 
     $client = $spInfo.spCreds.UserName
