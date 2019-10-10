@@ -84,6 +84,27 @@
           },
           "defaultValue": true
         },
+        "brokerCacheTimeoutSeconds": {
+            "type": "int",
+            "metadata": {
+              "description": "configuration of broker cache timeout in seconds"
+            },
+            "defaultValue": 28800 
+        },
+        "brokerCacheSize": {
+            "type": "int",
+            "metadata": {
+              "description": "configuration of number of entries in broker cache"
+            },
+            "defaultValue": 1000 
+        },
+        "isBrokerCacheEnabled": {
+            "type": "bool",
+            "metadata": {
+              "description": "configuraton of broker cache enabled"
+            },
+            "defaultValue": false
+        },
         "tag": {
           "type": "object",
           "metadata": {
@@ -136,7 +157,10 @@
                         "sumoCollectorID": "[concat('CAM-', parameters('licenseInstanceId'), '-', subscription().subscriptionId, '-', resourceGroup().name, '-', parameters('dnsLabelPrefix'))]",
                         "enableRadiusMfa": "[parameters('enableRadiusMfa')]",
                         "brokerRetrieveAgentState": "[parameters('brokerRetrieveAgentState')]",
-                        "clientShowAgentState": "[parameters('clientShowAgentState')]"
+                        "clientShowAgentState": "[parameters('clientShowAgentState')]",
+                        "brokerCacheTimeoutSeconds": "[parameters('brokerCacheTimeoutSeconds')]",
+                        "brokerCacheSize": "[parameters('brokerCacheSize')]",
+                        "isBrokerCacheEnabled": "[parameters('isBrokerCacheEnabled')]"
                     }
                 },
                 "protectedSettings": {

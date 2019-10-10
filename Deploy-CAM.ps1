@@ -119,6 +119,19 @@ Param(
     [switch]$updateSPCredential,
     [bool]$retrieveAgentState = $false,
     [bool]$showAgentState = $true,
+
+    [parameter(Mandatory = $false)]
+    [bool]
+    $isBrokerCacheEnabled = $false,
+
+    [parameter(Mandatory = $false)]
+    [int]
+    $brokerCacheSize,
+
+    [parameter(Mandatory = $false)]
+    [int]
+    $brokerCacheTimeoutSeconds,
+
     [Hashtable]$tag = @{CloudAccessConnectorType="CACv1"}
 )
 
@@ -1645,6 +1658,9 @@ function New-ConnectionServiceDeployment() {
         [switch]$updateSPCredential,
         [bool]$brokerRetrieveAgentState,
         [bool]$clientShowAgentState,
+        $brokerCacheTimeoutSeconds,
+        $brokerCacheSize,
+        [bool]$isBrokerCacheEnabled,
         [HashTable]$tag
     )
 
@@ -2022,6 +2038,15 @@ function New-ConnectionServiceDeployment() {
                         "secretName": "artifactsLocation"
                     }
                 },
+                "brokerCacheTimeoutSeconds": {
+                    "value": $($brokerCacheTimeoutSeconds)
+                },
+                "brokerCacheSize": {
+                    "value": $($brokerCacheSize)
+                },
+                "isBrokerCacheEnabled": {
+                    "value": $($isBrokerCacheEnabled | ConvertTo-Json)
+                },
                 "tag": {
                     "value": $tagString
                 }
@@ -2365,6 +2390,19 @@ function Deploy-CAM() {
 
         [bool]$brokerRetrieveAgentState,
         [bool]$clientShowAgentState,
+
+        [parameter(Mandatory = $false)]
+        [bool]
+        $isBrokerCacheEnabled = $false,
+    
+        [parameter(Mandatory = $false)]
+        [int]
+        $brokerCacheSize,
+    
+        [parameter(Mandatory = $false)]
+        [int]
+        $brokerCacheTimeoutSeconds,
+
         [Hashtable]$tag
     )
 
@@ -2721,6 +2759,9 @@ function Deploy-CAM() {
                 -vnetConfig $vnetConfig `
                 -brokerRetrieveAgentState $brokerRetrieveAgentState `
                 -clientShowAgentState $clientShowAgentState `
+                -brokerCacheTimeoutSeconds $brokerCacheTimeoutSeconds `
+                -brokerCacheSize $brokerCacheSize `
+                -isBrokerCacheEnabled $isBrokerCacheEnabled `
                 -Tag $tag
         }
         else
@@ -4006,6 +4047,9 @@ if ($CAMRootKeyvault) {
         -camManagementUserGroup $camManagementUserGroup `
         -brokerRetrieveAgentState $retrieveAgentState `
         -clientShowAgentState $showAgentState `
+        -brokerCacheTimeoutSeconds $brokerCacheTimeoutSeconds `
+        -brokerCacheSize $brokerCacheSize `
+        -isBrokerCacheEnabled $isBrokerCacheEnabled `
         -Tag $tag
 }
 else {
@@ -4472,5 +4516,8 @@ else {
         -camManagementUserGroup $camManagementUserGroup `
         -brokerRetrieveAgentState $retrieveAgentState `
         -clientShowAgentState $showAgentState `
+        -brokerCacheTimeoutSeconds $brokerCacheTimeoutSeconds `
+        -brokerCacheSize $brokerCacheSize `
+        -isBrokerCacheEnabled $isBrokerCacheEnabled `
         -Tag $tag
 }
