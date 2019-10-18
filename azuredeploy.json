@@ -217,6 +217,27 @@
       },
       "defaultValue": true
     },
+    "brokerCacheTimeoutSeconds": {
+      "type": "int",
+      "metadata": {
+        "description": "configuration of broker cache timeout in seconds"
+      },
+      "defaultValue": 28800 
+    },
+    "brokerCacheSize": {
+      "type": "int",
+      "metadata": {
+        "description": "configuration of number of entries in broker cache"
+      },
+      "defaultValue": 1000 
+    },
+    "isBrokerCacheEnabled": {
+      "type": "bool",
+      "metadata": {
+        "description": "configuraton of broker cache enabled"
+      },
+      "defaultValue": false
+    },
     "tag": {
       "type": "object",
       "metadata": {
@@ -356,6 +377,15 @@
           },
           "clientShowAgentState": {
             "value": "[parameters('clientShowAgentState')]"
+          },
+          "brokerCacheTimeoutSeconds": {
+            "value": "[parameters('brokerCacheTimeoutSeconds')]"
+          },
+          "brokerCacheSize": {
+            "value": "[parameters('brokerCacheSize')]"
+          },
+          "isBrokerCacheEnabled": {
+            "value": "[parameters('isBrokerCacheEnabled')]"
           },
           "tag": { 
             "value": "[parameters('tag')]"

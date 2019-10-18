@@ -99,7 +99,16 @@ Configuration InstallConnectionServer
         [String]$enableRadiusMfa,
 
         [bool] $brokerRetrieveAgentState = $true,
-        [bool] $clientShowAgentState = $true
+        [bool] $clientShowAgentState = $true,
+
+        [Parameter(Mandatory = $false)]
+        [bool] $isBrokerCacheEnabled = $false,
+    
+        [Parameter(Mandatory = $false)]
+        [int] $brokerCacheSize,
+    
+        [Parameter(Mandatory = $false)]
+        [int] $brokerCacheTimeoutSeconds
     )
 
     # Get DC information
@@ -943,6 +952,10 @@ brokerLocale=en_US
 domainName=$using:domainName
 isRetrieveAgentState=$using:brokerRetrieveAgentState
 isDisplayAgentState=$using:clientShowAgentState
+brokerCacheTimeoutSeconds=$using:brokerCacheTimeoutSeconds
+brokerCacheSize=$using:brokerCacheSize
+isBrokerCacheEnabled=$using:isBrokerCacheEnabled
+
 "@
               
                 $isMfa = $using:enableRadiusMfa
