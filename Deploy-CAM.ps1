@@ -2039,10 +2039,10 @@ function New-ConnectionServiceDeployment() {
                     }
                 },
                 "brokerCacheTimeoutSeconds": {
-                    "value": $($brokerCacheTimeoutSeconds)
+                    "value": $brokerCacheTimeoutSeconds
                 },
                 "brokerCacheSize": {
-                    "value": $($brokerCacheSize)
+                    "value": $brokerCacheSize
                 },
                 "isBrokerCacheEnabled": {
                     "value": $($isBrokerCacheEnabled | ConvertTo-Json)
@@ -2965,10 +2965,10 @@ function Deploy-CAM() {
             "value": $($clientShowAgentState | ConvertTo-Json)
         },
         "brokerCacheTimeoutSeconds": {
-            "value": $($brokerCacheTimeoutSeconds)
+            "value": $brokerCacheTimeoutSeconds
         },
         "brokerCacheSize": {
-            "value": $($brokerCacheSize)
+            "value": $brokerCacheSize
         },
         "isBrokerCacheEnabled": {
             "value": $($isBrokerCacheEnabled | ConvertTo-Json)
