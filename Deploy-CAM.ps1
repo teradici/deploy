@@ -126,11 +126,11 @@ Param(
 
     [parameter(Mandatory = $false)]
     [int]
-    $brokerCacheSize,
+    $brokerCacheSize = 1000,
 
     [parameter(Mandatory = $false)]
     [int]
-    $brokerCacheTimeoutSeconds,
+    $brokerCacheTimeoutSeconds = 28800,
 
     [Hashtable]$tag = @{CloudAccessConnectorType="CACv1"}
 )
