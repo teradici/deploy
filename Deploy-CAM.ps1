@@ -458,7 +458,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             }
             Write-Verbose (ConvertTo-Json $registerUserResult)
             # Check if registration succeeded or if it has been registered previously
-            if ( !(($registerUserResult.code -eq 201) -or ($registerUserResult.data.reason.ToLower().Contains("already exist"))) ) {
+            if ( !(($registerUserResult.code -eq 201) -or ($registerUserResult.data.reason -ne $null -and $registerUserResult.data.reason.ToLower().Contains("already exist"))) ) {
                 throw ("Failed to register with Cloud Access Manager service with result: " + (ConvertTo-Json $registerUserResult))
             }
 
@@ -496,6 +496,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
                 resourceGroup    = $RGName
                 subscriptionId   = $subscriptionId
                 registrationCode = $clearRegCode
+                deploymentName   = $RGName
             }
             $registerDeploymentResult = ""
             try {
@@ -511,7 +512,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             }
             Write-Verbose ((ConvertTo-Json $registerDeploymentResult) -replace "\.*registrationCode.*", 'registrationCode":"Sanitized"')
             # Check if registration succeeded
-            if ( !( ($registerDeploymentResult.code -eq 201) -or ($registerDeploymentResult.data.reason.ToLower().Contains("already exist")) ) ) {
+            if ( !( ($registerDeploymentResult.code -eq 201) -or ($registerDeploymentResult.data.reason -ne $null -and $registerDeploymentResult.data.reason.ToLower().Contains("already exist")) ) ) {
                 throw ("Registering Deployment failed with result: " + (ConvertTo-Json $registerDeploymentResult))
             }
             $deploymentId = ""
