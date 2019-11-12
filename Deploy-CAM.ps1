@@ -462,7 +462,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
                 throw ("Failed to register with Cloud Access Manager service with result: " + (ConvertTo-Json $registerUserResult))
             }
 
-            Write-Host "Cloud Access Manager deployment has been registered successfully"
+            Write-Host "Cloud Access Manager user has been registered successfully"
 
             # Get a Sign-in token
             $signInResult = ""
