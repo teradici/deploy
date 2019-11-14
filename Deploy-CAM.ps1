@@ -493,7 +493,6 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 
             # Register Deployment
             $deploymentRequest = @{
-                resourceGroup    = $RGName
                 registrationCode = $clearRegCode
                 deploymentName   = $RGName
             }
