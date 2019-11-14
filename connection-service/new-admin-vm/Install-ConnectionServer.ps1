@@ -60,7 +60,7 @@ Configuration InstallConnectionServer
         $sumoConf = "sumo.conf",
 
         [string]
-        $tomcatInstaller = "apache-tomcat-8.5.23-windows-x64.zip",
+        $tomcatInstaller = "apache-tomcat-8.5.47-windows-x64.zip",
 
         [string]
         $brokerWAR = "pcoip-broker.war",
@@ -99,7 +99,16 @@ Configuration InstallConnectionServer
         [String]$enableRadiusMfa,
 
         [bool] $brokerRetrieveAgentState = $true,
-        [bool] $clientShowAgentState = $true
+        [bool] $clientShowAgentState = $true,
+
+        [Parameter(Mandatory = $false)]
+        [bool] $isBrokerCacheEnabled = $false,
+    
+        [Parameter(Mandatory = $false)]
+        [int] $brokerCacheSize,
+    
+        [Parameter(Mandatory = $false)]
+        [int] $brokerCacheTimeoutSeconds
     )
 
     # Get DC information
@@ -134,7 +143,7 @@ Configuration InstallConnectionServer
 
     #Tomcat locations
     $localtomcatpath = "$env:systemdrive\tomcat"
-    $CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.5.23"
+    $CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.5.47"
     $CatalinaBinLocation = $CatalinaHomeLocation + "\bin"
 
     $brokerServiceName = "CAMBroker"
@@ -943,6 +952,10 @@ brokerLocale=en_US
 domainName=$using:domainName
 isRetrieveAgentState=$using:brokerRetrieveAgentState
 isDisplayAgentState=$using:clientShowAgentState
+brokerCacheTimeoutSeconds=$using:brokerCacheTimeoutSeconds
+brokerCacheSize=$using:brokerCacheSize
+isBrokerCacheEnabled=$using:isBrokerCacheEnabled
+
 "@
               
                 $isMfa = $using:enableRadiusMfa

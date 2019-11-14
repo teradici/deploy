@@ -119,6 +119,19 @@ Param(
     [switch]$updateSPCredential,
     [bool]$retrieveAgentState = $false,
     [bool]$showAgentState = $true,
+
+    [parameter(Mandatory = $false)]
+    [bool]
+    $isBrokerCacheEnabled = $false,
+
+    [parameter(Mandatory = $false)]
+    [int]
+    $brokerCacheSize = 1000,
+
+    [parameter(Mandatory = $false)]
+    [int]
+    $brokerCacheTimeoutSeconds = 28800,
+
     [Hashtable]$tag = @{CloudAccessConnectorType="CACv1"}
 )
 
@@ -445,11 +458,11 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             }
             Write-Verbose (ConvertTo-Json $registerUserResult)
             # Check if registration succeeded or if it has been registered previously
-            if ( !(($registerUserResult.code -eq 201) -or ($registerUserResult.data.reason.ToLower().Contains("already exist"))) ) {
+            if ( !(($registerUserResult.code -eq 201) -or (($registerUserResult.data.reason -ne $null) -and $registerUserResult.data.reason.ToLower().Contains("already exist"))) ) {
                 throw ("Failed to register with Cloud Access Manager service with result: " + (ConvertTo-Json $registerUserResult))
             }
 
-            Write-Host "Cloud Access Manager deployment has been registered successfully"
+            Write-Host "Cloud Access Manager user has been registered successfully"
 
             # Get a Sign-in token
             $signInResult = ""
@@ -480,9 +493,8 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
 
             # Register Deployment
             $deploymentRequest = @{
-                resourceGroup    = $RGName
-                subscriptionId   = $subscriptionId
                 registrationCode = $clearRegCode
+                deploymentName   = $RGName
             }
             $registerDeploymentResult = ""
             try {
@@ -498,7 +510,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             }
             Write-Verbose ((ConvertTo-Json $registerDeploymentResult) -replace "\.*registrationCode.*", 'registrationCode":"Sanitized"')
             # Check if registration succeeded
-            if ( !( ($registerDeploymentResult.code -eq 201) -or ($registerDeploymentResult.data.reason.ToLower().Contains("already exist")) ) ) {
+            if ( !( ($registerDeploymentResult.code -eq 201) -or (($registerDeploymentResult.data.reason -ne $null) -and $registerDeploymentResult.data.reason.ToLower().Contains("already exist")) ) ) {
                 throw ("Registering Deployment failed with result: " + (ConvertTo-Json $registerDeploymentResult))
             }
             $deploymentId = ""
@@ -1647,6 +1659,9 @@ function New-ConnectionServiceDeployment() {
         [switch]$updateSPCredential,
         [bool]$brokerRetrieveAgentState,
         [bool]$clientShowAgentState,
+        $brokerCacheTimeoutSeconds,
+        $brokerCacheSize,
+        [bool]$isBrokerCacheEnabled,
         [HashTable]$tag
     )
 
@@ -2024,6 +2039,15 @@ function New-ConnectionServiceDeployment() {
                         "secretName": "artifactsLocation"
                     }
                 },
+                "brokerCacheTimeoutSeconds": {
+                    "value": $brokerCacheTimeoutSeconds
+                },
+                "brokerCacheSize": {
+                    "value": $brokerCacheSize
+                },
+                "isBrokerCacheEnabled": {
+                    "value": $($isBrokerCacheEnabled | ConvertTo-Json)
+                },
                 "tag": {
                     "value": $tagString
                 }
@@ -2369,6 +2393,19 @@ function Deploy-CAM() {
         $AzureSPObjectId=$null,
         [bool]$brokerRetrieveAgentState,
         [bool]$clientShowAgentState,
+
+        [parameter(Mandatory = $false)]
+        [bool]
+        $isBrokerCacheEnabled = $false,
+    
+        [parameter(Mandatory = $false)]
+        [int]
+        $brokerCacheSize,
+    
+        [parameter(Mandatory = $false)]
+        [int]
+        $brokerCacheTimeoutSeconds,
+
         [Hashtable]$tag
     )
 
@@ -2728,6 +2765,9 @@ function Deploy-CAM() {
                 -vnetConfig $vnetConfig `
                 -brokerRetrieveAgentState $brokerRetrieveAgentState `
                 -clientShowAgentState $clientShowAgentState `
+                -brokerCacheTimeoutSeconds $brokerCacheTimeoutSeconds `
+                -brokerCacheSize $brokerCacheSize `
+                -isBrokerCacheEnabled $isBrokerCacheEnabled `
                 -Tag $tag
         }
         else
@@ -2929,6 +2969,15 @@ function Deploy-CAM() {
         },
         "clientShowAgentState" : {
             "value": $($clientShowAgentState | ConvertTo-Json)
+        },
+        "brokerCacheTimeoutSeconds": {
+            "value": $brokerCacheTimeoutSeconds
+        },
+        "brokerCacheSize": {
+            "value": $brokerCacheSize
+        },
+        "isBrokerCacheEnabled": {
+            "value": $($isBrokerCacheEnabled | ConvertTo-Json)
         },
         "tag" : {
             "value": $tagString
@@ -4030,6 +4079,9 @@ if ($CAMRootKeyvault) {
         -camManagementUserGroup $camManagementUserGroup `
         -brokerRetrieveAgentState $retrieveAgentState `
         -clientShowAgentState $showAgentState `
+        -brokerCacheTimeoutSeconds $brokerCacheTimeoutSeconds `
+        -brokerCacheSize $brokerCacheSize `
+        -isBrokerCacheEnabled $isBrokerCacheEnabled `
         -Tag $tag
 }
 else {
@@ -4496,6 +4548,9 @@ else {
         -camManagementUserGroup $camManagementUserGroup `
         -brokerRetrieveAgentState $retrieveAgentState `
         -clientShowAgentState $showAgentState `
-        -Tag $tag `
-        -AzureSPObjectId $AzureSPObjectId
+        -AzureSPObjectId $AzureSPObjectId `
+        -brokerCacheTimeoutSeconds $brokerCacheTimeoutSeconds `
+        -brokerCacheSize $brokerCacheSize `
+        -isBrokerCacheEnabled $isBrokerCacheEnabled `
+        -Tag $tag
 }
