@@ -4075,7 +4075,7 @@ if ($CAMRootKeyvault) {
         -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
         -ownerTenantId $claims.tid `
         -ownerUpn $upn `
-        -updateSPCredential $updateSPCredential `
+        -updateSPCredential:$updateSPCredential `
         -camManagementUserGroup $camManagementUserGroup `
         -brokerRetrieveAgentState $retrieveAgentState `
         -clientShowAgentState $showAgentState `
