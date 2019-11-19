@@ -1003,20 +1003,24 @@ isMultiFactorAuthenticate=$isMfa
                             $cert = $null
                             try {
                                 # Try to use multiple .NET methods to get Issuer Cert, fall back to openSSL if they fail
-                                Write-Host "Looking for LDAPS certificate for $hostname"
-                                $tcpclient = new-object System.Net.Sockets.tcpclient
-                                $tcpclient.Connect($hostname,$port)
+                                try{
+                                    Write-Host "Looking for LDAPS certificate for $hostname"
+                                    $tcpclient = new-object System.Net.Sockets.tcpclient
+                                    $tcpclient.Connect($hostname,$port)
 
-                                # Authenticate with SSL - trusting all certificates
-                                $sslstream = new-object System.Net.Security.SslStream -ArgumentList $tcpclient.GetStream(),$false,{$true}
+                                    # Authenticate with SSL - trusting all certificates
+                                    $sslstream = new-object System.Net.Security.SslStream -ArgumentList $tcpclient.GetStream(),$false,{$true}
 
-                                $sslstream.AuthenticateAsClient($hostname)
-                                $cert =  [System.Security.Cryptography.X509Certificates.X509Certificate2]($sslstream.remotecertificate)
-                                Write-Host "Found Certificate for $hostname, looking for Issuer Certificate"
+                                    $sslstream.AuthenticateAsClient($hostname)
+                                    $cert =  [System.Security.Cryptography.X509Certificates.X509Certificate2]($sslstream.remotecertificate)
+                                    Write-Host "Found Certificate for $hostname, looking for Issuer Certificate"
 
-                                $chain = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Chain
+                                    $chain = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Chain
+                                } catch {
+                                    Write-Host "Failed to connect to DC with PowerShell SSLStream"
+                                }
                                 # Build the certificate chain from the file certificate
-                                if( -not $chain.Build($cert) ) {
+                                if( -not ($chain -and $chain.Build($cert)) ) {
                                     Write-Host "Failed to build certificate chain, trying another method..."
                                     Write-Host "Looking for LDAPS certificate for $hostname"
                                     $WebRequest = [Net.WebRequest]::CreateHttp($url)
