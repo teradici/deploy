@@ -1004,7 +1004,7 @@ isMultiFactorAuthenticate=$isMfa
                             try {
                                 # Try to use multiple .NET methods to get Issuer Cert, fall back to openSSL if they fail
                                 try{
-                                    Write-Host "Looking for LDAPS certificate for $hostname"
+                                    Write-Host "Looking for LDAPS certificate for $hostname using SSL Stream"
                                     $tcpclient = new-object System.Net.Sockets.tcpclient
                                     $tcpclient.Connect($hostname,$port)
 
@@ -1017,12 +1017,12 @@ isMultiFactorAuthenticate=$isMfa
 
                                     $chain = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Chain
                                 } catch {
-                                    Write-Host "Failed to connect to DC with PowerShell SSLStream"
+                                    Write-Host "Failed to connect to DC with PowerShell SSLStream because: $_"
                                 }
                                 # Build the certificate chain from the file certificate
                                 if( -not ($chain -and $chain.Build($cert)) ) {
                                     Write-Host "Failed to build certificate chain, trying another method..."
-                                    Write-Host "Looking for LDAPS certificate for $hostname"
+                                    Write-Host "Looking for LDAPS certificate for $hostname using WebRequest"
                                     $WebRequest = [Net.WebRequest]::CreateHttp($url)
                                     $WebRequest.AllowAutoRedirect = $true
                                     $chain = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Chain
@@ -1042,8 +1042,8 @@ isMultiFactorAuthenticate=$isMfa
                                         $listOfCertificates = ($chain.ChainElements | ForEach-Object {$_.Certificate})
                                     } else {
                                         # Use OpenSSL if chain couldn't be built
-                                        Write-Host "Failed to build certificate change, trying another method..."
-                                        Write-Host "Looking for LDAPS certificate for $hostname"
+                                        Write-Host "Failed to build certificate chain, trying another method..."
+                                        Write-Host "Looking for LDAPS certificate for $hostname using OpenSSL"
 
                                         Start-Process C:\OpenSSL-Win64\bin\openssl.exe -ArgumentList "s_client -showcerts -connect ${hostname}:${port}" -RedirectStandardOutput "$env:systemdrive\certInfo.txt"
                                         # Wait a bit to ensure that the previous command completes
