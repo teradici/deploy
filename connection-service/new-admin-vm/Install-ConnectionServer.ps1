@@ -583,16 +583,41 @@ Configuration InstallConnectionServer
 
                 Write-Verbose "Ensure Nuget Package Provider and AzureRM module are installed"
 
-                If(-not [bool](Get-PackageProvider -ListAvailable | where {$_.Name -eq "NuGet"}))
+                $numRetries = 10
+                $nugetInstallRetries = 0
+                $err = $null
+                while(-not ([bool](Get-PackageProvider -ListAvailable | where {$_.Name -eq "NuGet"}) -or ($nugetInstallRetries -ge $numRetries)))
                 {
-                    Write-Verbose "Installing NuGet"
-                    Install-packageProvider -Name NuGet -Force
+                    Write-Verbose "Installing NuGet attempt $nugetInstallRetries"
+                    try {
+                        Install-packageProvider -Name NuGet -Force -ErrorAction Stop
+                    } catch {
+                        $err = $_
+                        Write-Verbose "Install Error for attempt ${nugetInstallRetries}: $err"
+                        $nugetInstallRetries = $nugetInstallRetries + 1
+                        Sleep 5
+                    }
+                }
+                if($err -and ($nugetInstallRetries -ge $numRetries)) {
+                    throw "Failed to Install NuGet Package Provider because of: $err"
                 }
 
-                If(-not [bool](Get-InstalledModule | where {$_.Name -eq "AzureRM"}))
+                $azureRmInstallRetries = 0
+                $err = $null
+                while(-not ([bool](Get-InstalledModule | where {$_.Name -eq "asd"}) -or ($azureRmInstallRetries -ge $numRetries)) )
                 {
-                    Write-Verbose "Installing AzureRM"
-                    Install-Module -Name AzureRM -MaximumVersion 4.4.1 -Force
+                    Write-Verbose "Installing AzureRM attempt $azureRmInstallRetries" -ErrorAction Stop
+                    try {
+                        Install-Module -Name asd -MaximumVersion 4.4.1 -Force
+                    } catch {
+                        $err = $_
+                        Write-Verbose "Install Error for attempt ${azureRmInstallRetries}: $err"
+                        $azureRmInstallRetries = $azureRmInstallRetries + 1
+                        Sleep 5
+                    }
+                }
+                if($err -and ($azureRmInstallRetries -ge $numRetries)) {
+                    throw "Failed to Install AzureRM Module because of: $err"
                 }
 
                 Write-Verbose "Install_CAM"
