@@ -2389,8 +2389,6 @@ function Deploy-CAM() {
         [parameter(Mandatory=$false)]
         $camManagementUserGroup = $null,
 
-        [parameter(Mandatory=$false)]
-        $AzureSPObjectId=$null,
         [bool]$brokerRetrieveAgentState,
         [bool]$clientShowAgentState,
 
@@ -2586,7 +2584,7 @@ function Deploy-CAM() {
             $spInfo = @{}
             $spinfo.spCreds = $spCredential
             $spInfo.tenantId = $tenantId
-            $spInfo.objectId = $AzureSPObjectId
+            $spInfo.objectId = (Get-AzureRmADApplication -ApplicationId $spCredential.UserName).ObjectId
         }
         else {
             # generate service principal
@@ -2600,7 +2598,7 @@ function Deploy-CAM() {
         $spInfo = @{}
         $spinfo.spCreds = $spCredential
         $spInfo.tenantId = $tenantId
-        $spInfo.objectId = $AzureSPObjectId
+        $spInfo.objectId = (Get-AzureRmADApplication -ApplicationId $spCredential.UserName).ObjectId
     }
 
     $client = $spInfo.spCreds.UserName
@@ -4007,7 +4005,11 @@ if ($CAMRootKeyvault) {
 
     Write-Host "`nCreating a new Cloud Access connector for this Cloud Access Manager deployment`n"
 
-    $AzureSPObjectId = (Get-AzureRmADApplication -DisplayNameStartWith "CAM-$ResourceGroupName").ObjectId
+    if($spCredential) {
+        $AzureSPObjectId = (Get-AzureRmADApplication -ApplicationId $spCredential.UserName).ObjectId
+    } else {
+        $AzureSPObjectId = (Get-AzureRmADApplication -DisplayNameStartWith "CAM-$ResourceGroupName").ObjectId
+    }
     # Update KeyVault with new Secrets
     Update-CAMAzureKeyVault `
         -camManagementUserGroup $camManagementUserGroup `
@@ -4548,7 +4550,6 @@ else {
         -camManagementUserGroup $camManagementUserGroup `
         -brokerRetrieveAgentState $retrieveAgentState `
         -clientShowAgentState $showAgentState `
-        -AzureSPObjectId $AzureSPObjectId `
         -brokerCacheTimeoutSeconds $brokerCacheTimeoutSeconds `
         -brokerCacheSize $brokerCacheSize `
         -isBrokerCacheEnabled $isBrokerCacheEnabled `
