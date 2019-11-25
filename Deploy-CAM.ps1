@@ -1479,6 +1479,7 @@ function New-CAMAppSP() {
     $spInfo = @{}
     $spInfo.Add("spCreds", $spCreds);
     $spInfo.Add("tenantId", $tenantID);
+    $spInfo.Add("objectId", $app.ObjectId);
 
     return $spInfo
 }
@@ -1580,6 +1581,7 @@ function Generate-CamDeploymentInfoParameters {
     $CAMConfig.parameters.AzureSPClientID.value = (ConvertTo-SecureString $spInfo.spCreds.UserName -AsPlainText -Force)
     $CAMConfig.parameters.AzureSPKey.value = $spInfo.spCreds.Password
     $CAMConfig.parameters.AzureSPTenantID.value = (ConvertTo-SecureString $spInfo.tenantId -AsPlainText -Force)
+    $CAMConfig.parameters.AzureSPObjectId.value = (ConvertTo-SecureString $spInfo.objectId -AsPlainText -Force)
     $CAMConfig.parameters.CAMServiceURI.value = (ConvertTo-SecureString $camSaasUri -AsPlainText -Force)
     $CAMConfig.parameters.CAMDeploymentID.value = (ConvertTo-SecureString $deploymentId -AsPlainText -Force)
     $CAMConfig.parameters.AzureSubscriptionID.value = (ConvertTo-SecureString $subscriptionID -AsPlainText -Force)
@@ -2387,6 +2389,8 @@ function Deploy-CAM() {
         [parameter(Mandatory=$false)]
         $camManagementUserGroup = $null,
 
+        [parameter(Mandatory=$false)]
+        $AzureSPObjectId=$null,
         [bool]$brokerRetrieveAgentState,
         [bool]$clientShowAgentState,
 
@@ -2484,6 +2488,7 @@ function Deploy-CAM() {
     $CAMConfig.parameters.AzureSPClientID = @{}
     $CAMConfig.parameters.AzureSPKey = @{}
     $CAMConfig.parameters.AzureSPTenantID = @{}
+    $CAMConfig.parameters.AzureSPObjectId = @{}
     $CAMConfig.parameters.CAMServiceURI = @{}
     $CAMConfig.parameters.CAMDeploymentID = @{}
     $CAMConfig.parameters.AzureSubscriptionID = @{}
@@ -2581,6 +2586,7 @@ function Deploy-CAM() {
             $spInfo = @{}
             $spinfo.spCreds = $spCredential
             $spInfo.tenantId = $tenantId
+            $spInfo.objectId = $AzureSPObjectId
         }
         else {
             # generate service principal
@@ -2594,6 +2600,7 @@ function Deploy-CAM() {
         $spInfo = @{}
         $spinfo.spCreds = $spCredential
         $spInfo.tenantId = $tenantId
+        $spInfo.objectId = $AzureSPObjectId
     }
 
     $client = $spInfo.spCreds.UserName
@@ -3764,7 +3771,10 @@ function Update-CAMAzureKeyVault() {
         $VaultName,
 
         [parameter(Mandatory=$false)]
-        $camManagementUserGroup=$null
+        $camManagementUserGroup=$null,
+
+        [parameter(Mandatory=$false)]
+        $AzureSPObjectId=$null
     )
 
     $secret = Get-AzureKeyVaultSecret `
@@ -3795,6 +3805,18 @@ function Update-CAMAzureKeyVault() {
             -kvName $VaultName `
             -secretName "camManagementUserGroup" `
             -secretValue (ConvertTo-SecureString $camManagementUserGroup -Force -AsPlainText)
+    }
+
+    $secret = Get-AzureKeyVaultSecret `
+        -VaultName $VaultName `
+        -Name "AzureSPObjectId" `
+        -ErrorAction stop
+    
+    if(-not $secret) {
+        Set-KVSecret `
+            -kvName $VaultName `
+            -secretName "AzureSPObjectId" `
+            -secretValue (ConvertTo-SecureString $AzureSPObjectId -Force -AsPlainText)
     }
 }
 
@@ -3985,9 +4007,11 @@ if ($CAMRootKeyvault) {
 
     Write-Host "`nCreating a new Cloud Access connector for this Cloud Access Manager deployment`n"
 
+    $AzureSPObjectId = (Get-AzureRmADApplication -DisplayNameStartWith "CAM-$ResourceGroupName").ObjectId
     # Update KeyVault with new Secrets
     Update-CAMAzureKeyVault `
         -camManagementUserGroup $camManagementUserGroup `
+        -AzureSPObjectId $AzureSPObjectId `
         -VaultName $CAMRootKeyvault.Name
 
     $externalAccessPrompt = "Do you want to enable external network access for this connector?"
@@ -4524,6 +4548,7 @@ else {
         -camManagementUserGroup $camManagementUserGroup `
         -brokerRetrieveAgentState $retrieveAgentState `
         -clientShowAgentState $showAgentState `
+        -AzureSPObjectId $AzureSPObjectId `
         -brokerCacheTimeoutSeconds $brokerCacheTimeoutSeconds `
         -brokerCacheSize $brokerCacheSize `
         -isBrokerCacheEnabled $isBrokerCacheEnabled `
