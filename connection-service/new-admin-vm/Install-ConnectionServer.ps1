@@ -604,11 +604,11 @@ Configuration InstallConnectionServer
 
                 $azureRmInstallRetries = 0
                 $err = $null
-                while(-not ([bool](Get-InstalledModule | where {$_.Name -eq "asd"}) -or ($azureRmInstallRetries -ge $numRetries)) )
+                while(-not ([bool](Get-InstalledModule | where {$_.Name -eq "AzureRm"}) -or ($azureRmInstallRetries -ge $numRetries)) )
                 {
-                    Write-Verbose "Installing AzureRM attempt $azureRmInstallRetries" -ErrorAction Stop
+                    Write-Verbose "Installing AzureRM attempt $azureRmInstallRetries"
                     try {
-                        Install-Module -Name asd -MaximumVersion 4.4.1 -Force
+                        Install-Module -Name AzureRm -MaximumVersion 4.4.1 -Force -ErrorAction Stop
                     } catch {
                         $err = $_
                         Write-Verbose "Install Error for attempt ${azureRmInstallRetries}: $err"
