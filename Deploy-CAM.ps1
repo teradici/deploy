@@ -27,6 +27,8 @@ Param(
 
     [System.Management.Automation.PSCredential]
     $spCredential,
+    [parameter(Mandatory=$false)]
+    $AzureSPObjectId=$null,
 
     $domainName,
 
@@ -2586,7 +2588,7 @@ function Deploy-CAM() {
             $spInfo = @{}
             $spinfo.spCreds = $spCredential
             $spInfo.tenantId = $tenantId
-            $spInfo.objectId = $AzureSPObjectId
+            $spInfo.objectId = (Get-AzureRmADApplication -ApplicationId $spCredential.UserName).ObjectId
         }
         else {
             # generate service principal
@@ -2597,6 +2599,7 @@ function Deploy-CAM() {
     else {
         # service principal credential provided in parameter list
         if ($tenantId -eq $null) {throw "Service principal provided but no tenantId"}
+        if ($AzureSPObjectId -eq $null) {throw "Service principal providede but no ObjectId. Please run '(Get-AzureRmADApplication -ApplicationId " + $spCredential.UserName + ").ObjectId' and provide the output with the '-AzureSPObjectId' switch."}
         $spInfo = @{}
         $spinfo.spCreds = $spCredential
         $spInfo.tenantId = $tenantId
@@ -3812,7 +3815,7 @@ function Update-CAMAzureKeyVault() {
         -Name "AzureSPObjectId" `
         -ErrorAction stop
     
-    if(-not $secret) {
+    if($AzureSPObjectId -and -not $secret) {
         Set-KVSecret `
             -kvName $VaultName `
             -secretName "AzureSPObjectId" `
@@ -4007,7 +4010,13 @@ if ($CAMRootKeyvault) {
 
     Write-Host "`nCreating a new Cloud Access connector for this Cloud Access Manager deployment`n"
 
-    $AzureSPObjectId = (Get-AzureRmADApplication -DisplayNameStartWith "CAM-$ResourceGroupName").ObjectId
+    if (-not $AzureSPObjectId) {
+        if($spCredential) {
+            $AzureSPObjectId = (Get-AzureRmADApplication -ApplicationId $spCredential.UserName).ObjectId
+        } else {
+            $AzureSPObjectId = (Get-AzureRmADApplication -DisplayNameStartWith "CAM-$ResourceGroupName").ObjectId
+        }
+    }
     # Update KeyVault with new Secrets
     Update-CAMAzureKeyVault `
         -camManagementUserGroup $camManagementUserGroup `
@@ -4548,9 +4557,9 @@ else {
         -camManagementUserGroup $camManagementUserGroup `
         -brokerRetrieveAgentState $retrieveAgentState `
         -clientShowAgentState $showAgentState `
-        -AzureSPObjectId $AzureSPObjectId `
         -brokerCacheTimeoutSeconds $brokerCacheTimeoutSeconds `
         -brokerCacheSize $brokerCacheSize `
         -isBrokerCacheEnabled $isBrokerCacheEnabled `
+        -AzureSPObjectId $AzureSPObjectId `
         -Tag $tag
 }
