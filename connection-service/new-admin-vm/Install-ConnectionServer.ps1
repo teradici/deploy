@@ -583,16 +583,41 @@ Configuration InstallConnectionServer
 
                 Write-Verbose "Ensure Nuget Package Provider and AzureRM module are installed"
 
-                If(-not [bool](Get-PackageProvider -ListAvailable | where {$_.Name -eq "NuGet"}))
+                $numRetries = 10
+                $nugetInstallRetries = 0
+                $err = $null
+                while(-not ([bool](Get-PackageProvider -ListAvailable | where {$_.Name -eq "NuGet"}) -or ($nugetInstallRetries -ge $numRetries)))
                 {
-                    Write-Verbose "Installing NuGet"
-                    Install-packageProvider -Name NuGet -Force
+                    Write-Verbose "Installing NuGet attempt $nugetInstallRetries"
+                    try {
+                        Install-packageProvider -Name NuGet -Force -ErrorAction Stop
+                    } catch {
+                        $err = $_
+                        Write-Verbose "Install Error for attempt ${nugetInstallRetries}: $err"
+                        $nugetInstallRetries = $nugetInstallRetries + 1
+                        Sleep 5
+                    }
+                }
+                if($err -and ($nugetInstallRetries -ge $numRetries)) {
+                    throw "Failed to Install NuGet Package Provider because of: $err"
                 }
 
-                If(-not [bool](Get-InstalledModule | where {$_.Name -eq "AzureRM"}))
+                $azureRmInstallRetries = 0
+                $err = $null
+                while(-not ([bool](Get-InstalledModule | where {$_.Name -eq "AzureRm"}) -or ($azureRmInstallRetries -ge $numRetries)) )
                 {
-                    Write-Verbose "Installing AzureRM"
-                    Install-Module -Name AzureRM -MaximumVersion 4.4.1 -Force
+                    Write-Verbose "Installing AzureRM attempt $azureRmInstallRetries"
+                    try {
+                        Install-Module -Name AzureRm -MaximumVersion 4.4.1 -Force -ErrorAction Stop
+                    } catch {
+                        $err = $_
+                        Write-Verbose "Install Error for attempt ${azureRmInstallRetries}: $err"
+                        $azureRmInstallRetries = $azureRmInstallRetries + 1
+                        Sleep 5
+                    }
+                }
+                if($err -and ($azureRmInstallRetries -ge $numRetries)) {
+                    throw "Failed to Install AzureRM Module because of: $err"
                 }
 
                 Write-Verbose "Install_CAM"
@@ -1003,22 +1028,26 @@ isMultiFactorAuthenticate=$isMfa
                             $cert = $null
                             try {
                                 # Try to use multiple .NET methods to get Issuer Cert, fall back to openSSL if they fail
-                                Write-Host "Looking for LDAPS certificate for $hostname"
-                                $tcpclient = new-object System.Net.Sockets.tcpclient
-                                $tcpclient.Connect($hostname,$port)
+                                try{
+                                    Write-Host "Looking for LDAPS certificate for $hostname using SSL Stream"
+                                    $tcpclient = new-object System.Net.Sockets.tcpclient
+                                    $tcpclient.Connect($hostname,$port)
 
-                                # Authenticate with SSL - trusting all certificates
-                                $sslstream = new-object System.Net.Security.SslStream -ArgumentList $tcpclient.GetStream(),$false,{$true}
+                                    # Authenticate with SSL - trusting all certificates
+                                    $sslstream = new-object System.Net.Security.SslStream -ArgumentList $tcpclient.GetStream(),$false,{$true}
 
-                                $sslstream.AuthenticateAsClient($hostname)
-                                $cert =  [System.Security.Cryptography.X509Certificates.X509Certificate2]($sslstream.remotecertificate)
-                                Write-Host "Found Certificate for $hostname, looking for Issuer Certificate"
+                                    $sslstream.AuthenticateAsClient($hostname)
+                                    $cert =  [System.Security.Cryptography.X509Certificates.X509Certificate2]($sslstream.remotecertificate)
+                                    Write-Host "Found Certificate for $hostname, looking for Issuer Certificate"
 
-                                $chain = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Chain
+                                    $chain = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Chain
+                                } catch {
+                                    Write-Host "Failed to connect to DC with PowerShell SSLStream because: $_"
+                                }
                                 # Build the certificate chain from the file certificate
-                                if( -not $chain.Build($cert) ) {
+                                if( -not ($chain -and $chain.Build($cert)) ) {
                                     Write-Host "Failed to build certificate chain, trying another method..."
-                                    Write-Host "Looking for LDAPS certificate for $hostname"
+                                    Write-Host "Looking for LDAPS certificate for $hostname using WebRequest"
                                     $WebRequest = [Net.WebRequest]::CreateHttp($url)
                                     $WebRequest.AllowAutoRedirect = $true
                                     $chain = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Chain
@@ -1038,8 +1067,8 @@ isMultiFactorAuthenticate=$isMfa
                                         $listOfCertificates = ($chain.ChainElements | ForEach-Object {$_.Certificate})
                                     } else {
                                         # Use OpenSSL if chain couldn't be built
-                                        Write-Host "Failed to build certificate change, trying another method..."
-                                        Write-Host "Looking for LDAPS certificate for $hostname"
+                                        Write-Host "Failed to build certificate chain, trying another method..."
+                                        Write-Host "Looking for LDAPS certificate for $hostname using OpenSSL"
 
                                         Start-Process C:\OpenSSL-Win64\bin\openssl.exe -ArgumentList "s_client -showcerts -connect ${hostname}:${port}" -RedirectStandardOutput "$env:systemdrive\certInfo.txt"
                                         # Wait a bit to ensure that the previous command completes
