@@ -3780,6 +3780,7 @@ function Update-CAMAzureKeyVault() {
         $AzureSPObjectId=$null
     )
 
+    # Add camManagementUserGroup if it is not set
     $secret = Get-AzureKeyVaultSecret `
         -VaultName $VaultName `
         -Name "camManagementUserGroup" `
@@ -3810,6 +3811,7 @@ function Update-CAMAzureKeyVault() {
             -secretValue (ConvertTo-SecureString $camManagementUserGroup -Force -AsPlainText)
     }
 
+    # Add AzureSPObjectId if it is not set
     $secret = Get-AzureKeyVaultSecret `
         -VaultName $VaultName `
         -Name "AzureSPObjectId" `
@@ -3820,6 +3822,37 @@ function Update-CAMAzureKeyVault() {
             -kvName $VaultName `
             -secretName "AzureSPObjectId" `
             -secretValue (ConvertTo-SecureString $AzureSPObjectId -Force -AsPlainText)
+    }
+
+    # Update Application Gateway Certificate
+    $secret = Get-AzureKeyVaultSecret `
+        -VaultName $VaultName `
+        -Name "CAMCSCertificate" `
+        -ErrorAction stop
+    if($secret) {
+        if (-not $tempDir) {
+            $tempDir = $env:TEMP
+        }
+        [System.IO.File]::WriteAllBytes("$tempDir/cert.pfx", [System.Convert]::FromBase64String($secret.SecretValueText))
+        $certPassword = (Get-AzureKeyVaultSecret `
+            -VaultName $VaultName `
+            -Name "CAMCSCertificatePassword" `
+            -ErrorAction stop).SecretValueText
+        $cert = openssl pkcs12 -in "$tempDir/cert.pfx" -passin pass:$certPassword -passout pass:$certPassword -info
+        $certSubject = $cert | grep "subject"
+        $subject = "subject=/CN=*.cloudapp.net,/CN=localhost,/O=Teradici Corporation,/OU=SoftPCoIP,/L=Burnaby,/ST=BC,/C=CA"
+        if($subject.ToLower() -eq $certSubject.ToLower()) {
+            # Update Cert
+            $certInfo = Get-CertificateInfoForAppGateway
+            Set-KVSecret `
+                -kvName $VaultName `
+                -secretName "CAMCSCertificate" `
+                -secretValue $certInfo.cert
+            Set-KVSecret `
+                -kvName $VaultName `
+                -secretName "CAMCSCertificatePassword" `
+                -secretValue $certInfo.passwd
+        }
     }
 }
 
