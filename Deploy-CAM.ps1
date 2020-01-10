@@ -1007,11 +1007,6 @@ function Populate-UserBlob {
                     -Blob "$targetDir/$fileName" `
                     -File $localRemoteFile `
                     -Force
-                Start-AzureStorageBlobCopy `
-                    -AbsoluteUri $fileURI `
-                    -DestContainer $container_name `
-                    -DestBlob "$targetDir/$fileName" `
-                    -DestContext $ctx
             }
         }
 
