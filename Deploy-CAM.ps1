@@ -995,27 +995,19 @@ function Populate-UserBlob {
                 # file already exists do nothing
             }
             Catch {
-                Write-Host "Uploading $fileURI to blob"
-                Start-AzureStorageBlobCopy `
-                    -AbsoluteUri $fileURI `
-                    -DestContainer $container_name `
-                    -DestBlob "$targetDir/$fileName" `
-                    -DestContext $ctx
+                Write-Host "Downloading $fileURI"
+                $localRemoteFile=Join-Path -Path $tempDir -ChildPath $fileName
+                Invoke-WebRequest `
+                    -Uri $fileURI `
+                    -OutFile $localRemoteFile
+                Write-Host "Uploading $fileName to blob"
+                Set-AzureStorageBlobContent `
+                    -Container $container_name `
+                    -Context $ctx `
+                    -Blob "$targetDir/$fileName" `
+                    -File $localRemoteFile `
+                    -Force
             }
-        }
-
-        #TODO: Check for errors...
-        Write-Host "Waiting for blob copy completion"
-        ForEach ($fileRecord in $new_agent_vm_files) {
-            $fileURI = $fileRecord[0]
-            $targetDir = $fileRecord[1]
-            $fileName = $fileURI.Substring($fileURI.lastIndexOf('/') + 1)
-            Write-Host "Waiting for $fileName"
-            Get-AzureStorageBlobCopyState `
-                -Blob "$targetDir/$fileName" `
-                -Container $container_name `
-                -Context $ctx `
-                -WaitForComplete
         }
         Write-Host "Blob copy complete"
 
