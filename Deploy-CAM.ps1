@@ -995,7 +995,18 @@ function Populate-UserBlob {
                 # file already exists do nothing
             }
             Catch {
-                Write-Host "Uploading $fileURI to blob"
+                Write-Host "Downloading $fileURI"
+                $localRemoteFile=Join-Path -Path $tempDir -ChildPath $fileName
+                Invoke-WebRequest `
+                    -Uri $fileURI `
+                    -OutFile $localRemoteFile
+                Write-Host "Uploading $fileName to blob"
+                Set-AzureStorageBlobContent `
+                    -Container $container_name `
+                    -Context $ctx `
+                    -Blob "$targetDir/$fileName" `
+                    -File $localRemoteFile `
+                    -Force
                 Start-AzureStorageBlobCopy `
                     -AbsoluteUri $fileURI `
                     -DestContainer $container_name `
