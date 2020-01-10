@@ -1009,20 +1009,6 @@ function Populate-UserBlob {
                     -Force
             }
         }
-
-        #TODO: Check for errors...
-        Write-Host "Waiting for blob copy completion"
-        ForEach ($fileRecord in $new_agent_vm_files) {
-            $fileURI = $fileRecord[0]
-            $targetDir = $fileRecord[1]
-            $fileName = $fileURI.Substring($fileURI.lastIndexOf('/') + 1)
-            Write-Host "Waiting for $fileName"
-            Get-AzureStorageBlobCopyState `
-                -Blob "$targetDir/$fileName" `
-                -Container $container_name `
-                -Context $ctx `
-                -WaitForComplete
-        }
         Write-Host "Blob copy complete"
 
         $blobUri = $ctx.BlobEndPoint + $container_name + '/'
