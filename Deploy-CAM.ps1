@@ -3145,8 +3145,6 @@ function Get-CAMRoleDefinition() {
             # Remove ability to access route filters and tables
             'Microsoft.Network/routeFilters/*'
             'Microsoft.Network/routeTables/*'
-            # Remove ability to access secure gateways
-            'Microsoft.Network/securegateways/*'
             # Remove ability to access service endpoint policies
             'Microsoft.Network/serviceEndpointPolicies/*'
             # Remove ability to access traffic management
