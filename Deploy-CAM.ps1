@@ -3193,7 +3193,7 @@ function Get-CAMRoleDefinition() {
 
         # Add Actions required to be enabled
         foreach ( $Action in $requiredActions) {
-            if ( (Get-AzureRmProviderOperation $notAction) -and -not $camCustomRoleDefinition.Actions.Contains($Action)) {
+            if ( (Get-AzureRmProviderOperation $Action) -and -not $camCustomRoleDefinition.Actions.Contains($Action)) {
                 $camCustomRoleDefinition.Actions.Add($Action)
             }
         }
