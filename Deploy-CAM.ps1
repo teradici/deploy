@@ -3173,7 +3173,6 @@ function Get-CAMRoleDefinition() {
 
         # Add Not Actions required to be disabled
         foreach ( $notAction in $requiredNotActions) {
-            Get-AzureRmProviderOperation $notAction
             if ( (Get-AzureRmProviderOperation $notAction) -and -not $camCustomRoleDefinition.NotActions.Contains($notAction)) {
                 $camCustomRoleDefinition.NotActions.Add($notAction)
             }
