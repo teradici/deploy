@@ -3145,8 +3145,6 @@ function Get-CAMRoleDefinition() {
             # Remove ability to access route filters and tables
             'Microsoft.Network/routeFilters/*'
             'Microsoft.Network/routeTables/*'
-            # Remove ability to access secure gateways
-            'Microsoft.Network/securegateways/*'
             # Remove ability to access service endpoint policies
             'Microsoft.Network/serviceEndpointPolicies/*'
             # Remove ability to access traffic management
@@ -3175,7 +3173,7 @@ function Get-CAMRoleDefinition() {
 
         # Add Not Actions required to be disabled
         foreach ( $notAction in $requiredNotActions) {
-            if ( -not $camCustomRoleDefinition.NotActions.Contains($notAction)) {
+            if ( (Get-AzureRmProviderOperation $notAction) -and -not $camCustomRoleDefinition.NotActions.Contains($notAction)) {
                 $camCustomRoleDefinition.NotActions.Add($notAction)
             }
         }
@@ -3194,7 +3192,7 @@ function Get-CAMRoleDefinition() {
 
         # Add Actions required to be enabled
         foreach ( $Action in $requiredActions) {
-            if ( -not $camCustomRoleDefinition.Actions.Contains($Action)) {
+            if ( (Get-AzureRmProviderOperation $Action) -and -not $camCustomRoleDefinition.Actions.Contains($Action)) {
                 $camCustomRoleDefinition.Actions.Add($Action)
             }
         }
