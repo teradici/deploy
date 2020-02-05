@@ -183,13 +183,6 @@ Configuration InstallConnectionServer
             MatchSource = $false
         }
 
-        xRemoteFile Download_Keystore
-        {
-            Uri = "$sourceURI/.keystore"
-            DestinationPath = "$LocalDLPath\.keystore"
-            MatchSource = $false
-        }
-
         xRemoteFile Download_Broker_WAR
         {
             Uri = "$sourceURI/$brokerWAR"
@@ -416,9 +409,24 @@ Configuration InstallConnectionServer
             }
         }
 
+        Script Generate_Certificate
+        {
+            DependsOn = @("[Script]Install_Java")
+            GetScript = { @{Results = "Generate_Certificate"}}
+            TestScript = {
+                return Test-Path "$using:LocalDLPath\.keystore"
+            }
+            SetScript = {
+                Write-Verbose "Generating Self-Signed Certificate for Tomcat"
+                keytool -keystore "$using:LocalDLPath\.keystore" -storetype pkcs12 -storepass changeit -keypass changeit `
+                    -genkey -alias tomcat -keyalg RSA -keysize 2048 -validity 7320 `
+                    -dname "CN=localhost, OU=SoftPCoIP, O=Teradici Corporation, L=Burnaby, S=British Columbia, C=CA"
+            }
+        }
+
         Script Install_Tomcat
         {
-            DependsOn = @("[xRemoteFile]Download_Tomcat_Installer", "[Script]Install_Java", "[xRemoteFile]Download_Keystore")
+            DependsOn = @("[xRemoteFile]Download_Tomcat_Installer", "[Script]Install_Java", "[Script]Generate_Certificate")
             GetScript  = { @{ Result = "Install_Tomcat" } }
 
             TestScript = { 
@@ -467,7 +475,7 @@ Configuration InstallConnectionServer
 
         Script Setup_AUI_Service
         {
-            DependsOn = @("[Script]Install_Tomcat", "[xRemoteFile]Download_Keystore")
+            DependsOn = @("[Script]Install_Tomcat", "[Script]Generate_Certificate")
             GetScript  = { @{ Result = "Setup_AUI_Service" } }
 
             TestScript = {
@@ -831,7 +839,7 @@ ldapHost=ldaps://$domainControllerFQDN
 
         Script Setup_Broker_Service
         {
-            DependsOn = @("[Script]Install_Tomcat", "[xRemoteFile]Download_Keystore")
+            DependsOn = @("[Script]Install_Tomcat", "[Script]Generate_Certificate")
             GetScript  = { @{ Result = "Setup_Broker_Service" } }
 
             TestScript = {
