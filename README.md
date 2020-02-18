@@ -74,7 +74,7 @@ ForEach ($binary in $binaries) {
 ```PowerShell
 cd $home/clouddrive
 Invoke-Webrequest -usebasicparsing "https://raw.githubusercontent.com/<yourGithubAccount>/deploy/master/Deploy-CAM.ps1" -OutFile Deploy-CAM.ps1
-./Deploy-CAM.ps1 -binaryLocation <BaseUrlForContianer> -CAMDeploymentTemplateURI "https://raw.githubusercontent.com/<yourGithubAccount>/deploy/master/azuredeploy.json"
+./Deploy-CAM.ps1 -binaryLocation <BaseUrlForContainer> -CAMDeploymentTemplateURI "https://raw.githubusercontent.com/<yourGithubAccount>/deploy/master/azuredeploy.json"
 ```
 
 ## Creating a DSC Zip File
@@ -82,17 +82,19 @@ This section outlines how to create a DSC zip file for the Cloud Access Connecto
 
 1. Download the following required dependencies:
     - `Install-ConnectionServer`: 
-        xPSDeiredStateConfiguration v7.0.0.1 - https://github.com/dsccommunity/xPSDesiredStateConfiguration/archive/v7.0.0.tar.gz
+        - xPSDeiredStateConfiguration v7.0.0.1 - https://github.com/dsccommunity/xPSDesiredStateConfiguration/archive/v7.0.0.tar.gz
     - `Install-PCoIPAgent`: 
-        xPSDeiredStateConfiguration v7.0.0.1 - https://github.com/dsccommunity/xPSDesiredStateConfiguration/archive/v7.0.0.tar.gz
+        - xPSDeiredStateConfiguration v7.0.0.1 - https://github.com/dsccommunity/xPSDesiredStateConfiguration/archive/v7.0.0.tar.gz
     - `Install-DC-and-CA`: 
-        xActiveDirectory v2.16.0.0: https://github.com/dsccommunity/ActiveDirectoryDsc/archive/v2.16.0.tar.gz
-        xAdcsDeployment v1.2.0.0: https://github.com/dsccommunity/ActiveDirectoryCSDsc/archive/v1.2.0.tar.gz
-        xDisk v1.0: https://github.com/PowerShell/xDisk/archive/1.0-PSGallery.tar.gz
-        xNetworking v5.2.0.0: https://github.com/dsccommunity/NetworkingDsc/archive/v5.2.0.tar.gz
+        - xActiveDirectory v2.16.0.0: https://github.com/dsccommunity/ActiveDirectoryDsc/archive/v2.16.0.tar.gz
+        - xAdcsDeployment v1.2.0.0: https://github.com/dsccommunity/ActiveDirectoryCSDsc/archive/v1.2.0.tar.gz
+        - xDisk v1.0: https://github.com/PowerShell/xDisk/archive/1.0-PSGallery.tar.gz
+        - xNetworking v5.2.0.0: https://github.com/dsccommunity/NetworkingDsc/archive/v5.2.0.tar.gz
 2. Create a folder with the DSC script at the root level.
-3. Add each dependency to seperate folders, for example for `Install-ConnectionServer` the structure should look like dscmetadata.json Install-ConnectionServer.ps1
-xPSDesiredStateConfiguration\→ The contents of xPSDeiredStateConfiguration v7.0.0.1.tar.gz\xPSDesiredStateConfiguration-7.0.0/.
+3. Add each dependency to seperate folders, for example for `Install-ConnectionServer` the structure should look like:
+    - dscmetadata.json
+    - Install-ConnectionServer.ps1
+    - xPSDesiredStateConfiguration\→ The contents of xPSDeiredStateConfiguration v7.0.0.1.tar.gz\xPSDesiredStateConfiguration-7.0.0.
 3. The `dscmetadata.json` files is a simple JSON file that details location information for where to load modules from.
 4. Zip ip the contents of the folders and name them appropriately. 
 
