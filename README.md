@@ -13,6 +13,8 @@ Manager documentation:
 
 [Instructions for deploying Cloud Access Manager](http://www.teradici.com/web-help/pcoip_cloud_access_manager/current/)
 
+# Creating your own fork of Cloud Access Manager #
+
 ## Copying Artifacts and Binaries to Azure Storage Blob
 This section outlines how to ensure that Cloud Access Connectors deployments are always the same version and stable, and are only updated after an internal review by copying the required artifacts and binaries to the Azure Storage Blob:
 
