@@ -56,16 +56,16 @@ $binaries = @(
 "https://teradeploy.blob.core.windows.net/binaries/jdk-8u144-windows-x64.exe",
 "https://teradeploy.blob.core.windows.net/binaries/Win64OpenSSL_Light-1_0_2o.exe")
 ForEach ($binary in $binaries) {
-  $fileName = ($binary -Split "/")[-1]
-  Invoke-WebRequest `
-    -Uri $binary `
-    -OutFile $fileName
-  Set-AzureStorageBlobContent `
-    -Container $container.Name `
-    -Context $acct.Context `
-    -Blob "$fileName" `
-    -File "./$fileName" `
-    -Force
+    $fileName = ($binary -Split "/")[-1]
+    Invoke-WebRequest `
+        -Uri $binary `
+        -OutFile $fileName
+    Set-AzureStorageBlobContent `
+        -Container $container.Name `
+        -Context $acct.Context `
+        -Blob "$fileName" `
+        -File "./$fileName" `
+        -Force
 }
 ```
 7. Run the `Deploy-CAM.ps1` script as you normal but specify the location of the source and binary files as follows:
@@ -79,9 +79,15 @@ Invoke-Webrequest -usebasicparsing "https://raw.githubusercontent.com/<yourGithu
 This section outlines how to create a DSC zip file for the Cloud Access Connector for Azure:
 
 1. Download the following required dependencies:
-    - `Install-ConnectionServer`: xPSDeiredStateConfiguration v7.0.0.1 - https://github.com/dsccommunity/xPSDesiredStateConfiguration/archive/v7.0.0.tar.gz
-    - `Install-PCoIPAgent`: xPSDeiredStateConfiguration v7.0.0.1 - https://github.com/dsccommunity/xPSDesiredStateConfiguration/archive/v7.0.0.tar.gz
-    - `Install-DC-and-CA`: xActiveDirectory v2.16.0.0: https://github.com/dsccommunity/ActiveDirectoryDsc/archive/v2.16.0.tar.gz - xAdcsDeployment v1.2.0.0: https://github.com/dsccommunity/ActiveDirectoryCSDsc/archive/v1.2.0.tar.gz - xDisk v1.0: https://github.com/PowerShell/xDisk/archive/1.0-PSGallery.tar.gz - xNetworking v5.2.0.0: https://github.com/dsccommunity/NetworkingDsc/archive/v5.2.0.tar.gz
+    - `Install-ConnectionServer`: 
+        xPSDeiredStateConfiguration v7.0.0.1 - https://github.com/dsccommunity/xPSDesiredStateConfiguration/archive/v7.0.0.tar.gz
+    - `Install-PCoIPAgent`: 
+        xPSDeiredStateConfiguration v7.0.0.1 - https://github.com/dsccommunity/xPSDesiredStateConfiguration/archive/v7.0.0.tar.gz
+    - `Install-DC-and-CA`: 
+        xActiveDirectory v2.16.0.0: https://github.com/dsccommunity/ActiveDirectoryDsc/archive/v2.16.0.tar.gz
+        xAdcsDeployment v1.2.0.0: https://github.com/dsccommunity/ActiveDirectoryCSDsc/archive/v1.2.0.tar.gz
+        xDisk v1.0: https://github.com/PowerShell/xDisk/archive/1.0-PSGallery.tar.gz
+        xNetworking v5.2.0.0: https://github.com/dsccommunity/NetworkingDsc/archive/v5.2.0.tar.gz
 2. Create a folder with the DSC script at the root level.
 3. Add each dependency to seperate folders, for example for `Install-ConnectionServer` the structure should look like dscmetadata.json Install-ConnectionServer.ps1
 xPSDesiredStateConfiguration\→ The contents of xPSDeiredStateConfiguration v7.0.0.1.tar.gz\xPSDesiredStateConfiguration-7.0.0/.
