@@ -123,9 +123,9 @@ Invoke-WebRequest -Uri https://github.com/PowerShell/xDisk/archive/1.0-PSGallery
 mkdir xDisk
 tar xf ./xDisk.tar.gz -C xDisk --strip-components 1
  
-Invoke-WebRequest -Uri https://github.com/PowerShell/xDisk/archive/1.0-PSGallery.tar.gz -OutFile xNetworking.tar.gz
+Invoke-WebRequest -Uri https://github.com/dsccommunity/NetworkingDsc/archive/v5.2.0.tar.gz -OutFile xNetworking.tar.gz
 mkdir xNetworking
-tar xf ./xPSDesiredStateConfiguration.tar.gz -C xNetworking --strip-components 1
+tar xf ./xNetworking.tar.gz -C xNetworking --strip-components 1
  
 cp -r xPSDesiredStateConfiguration ./Install-PCoIPAgent/
 cp -r xPSDesiredStateConfiguration ./Install-ConnectionServer/
@@ -152,14 +152,13 @@ $dscs = @(
 "Install-ConnectionServer.ps1.zip")
  
 $acct =  Get-AzureRmStorageAccount -Name $storageAccountName -ResourceGroupName $stogareAccountResourceGroupName
-$blobName = "binaries"
 ForEach ($dsc in $dscs) {
-Set-AzureStorageBlobContent `
--Container $containerName `
--Context $acct.Context `
--Blob "$dsc" `
--File "./$dsc" `
--Force
+    Set-AzureStorageBlobContent `
+        -Container $containerName `
+        -Context $acct.Context `
+        -Blob "$dsc" `
+        -File "./$dsc" `
+        -Force
 }
 ```
 
