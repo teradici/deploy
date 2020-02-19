@@ -15,6 +15,8 @@ Manager documentation:
 
 # Creating your own fork of Cloud Access Manager #
 
+Running the deployment script will deploy the latest version of the CACv1 connector. If for some reason you wish to not use the latest version, you can create your own fork of the deployment script, Azure templates, and required binaries for deployment in order to lock the version. A fork of this repo can be created by clicking the "Fork" button at the top of this page.
+
 ## Copying Artifacts and Binaries to Azure Storage Blob
 This section outlines how to ensure that Cloud Access Connectors deployments are always the same version and stable, and are only updated after an internal review by copying the required artifacts and binaries to the Azure Storage Blob:
 
