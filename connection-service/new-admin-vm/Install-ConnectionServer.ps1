@@ -60,7 +60,7 @@ Configuration InstallConnectionServer
         $sumoConf = "sumo.conf",
 
         [string]
-        $tomcatInstaller = "apache-tomcat-8.5.47-windows-x64.zip",
+        $tomcatInstaller = "apache-tomcat-8.5.51-windows-x64.zip",
 
         [string]
         $brokerWAR = "pcoip-broker.war",
@@ -143,7 +143,7 @@ Configuration InstallConnectionServer
 
     #Tomcat locations
     $localtomcatpath = "$env:systemdrive\tomcat"
-    $CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.5.47"
+    $CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.5.51"
     $CatalinaBinLocation = $CatalinaHomeLocation + "\bin"
 
     $brokerServiceName = "CAMBroker"
