@@ -512,6 +512,8 @@ Configuration InstallConnectionServer
                         -Destination ($origServerXMLFile)
                 }
 
+                Set-Content -Path $serverXMLFile -Value (Get-Content -Path $serverXMLFile | Select-String -Pattern "AJP" -NotMatch)
+
                 #update server.xml file
                 $xml = [xml](Get-Content ($origServerXMLFile))
 
