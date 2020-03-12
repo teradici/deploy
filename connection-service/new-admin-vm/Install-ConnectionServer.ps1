@@ -512,8 +512,6 @@ Configuration InstallConnectionServer
                         -Destination ($origServerXMLFile)
                 }
 
-                Set-Content -Path $serverXMLFile -Value (Get-Content -Path $serverXMLFile | Select-String -Pattern "AJP" -NotMatch)
-
                 #update server.xml file
                 $xml = [xml](Get-Content ($origServerXMLFile))
 
@@ -548,6 +546,8 @@ Configuration InstallConnectionServer
                     $xml.Server.Service.Engine )
 
                 $xml.save($ServerXMLFile)
+
+                Set-Content -Path $ServerXMLFile -Value (Get-Content -Path $ServerXMLFile | Select-String -Pattern "AJP" -NotMatch)
 
 
 
@@ -908,6 +908,8 @@ ldapHost=ldaps://$domainControllerFQDN
                     $xml.Server.Service.Engine )
 
                 $xml.save($serverXMLFile)
+
+                Set-Content -Path $ServerXMLFile -Value (Get-Content -Path $ServerXMLFile | Select-String -Pattern "AJP" -NotMatch)
 
 
 
