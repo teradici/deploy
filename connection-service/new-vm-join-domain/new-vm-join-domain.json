@@ -139,7 +139,7 @@
                         "publisher": "[variables('imagePublisher')]",
                         "offer": "[variables('imageOffer')]",
                         "sku": "[variables('windowsOSVersion')]",
-                        "version": "2016.127.20181010"
+                        "version": "latest"
                     },
                     "osDisk": {
                         "name": "[concat(parameters('dnsLabelPrefix'), '-os')]",
