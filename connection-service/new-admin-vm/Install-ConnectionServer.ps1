@@ -60,7 +60,7 @@ Configuration InstallConnectionServer
         $sumoConf = "sumo.conf",
 
         [string]
-        $tomcatInstaller = "apache-tomcat-8.5.47-windows-x64.zip",
+        $tomcatInstaller = "apache-tomcat-8.5.51-windows-x64.zip",
 
         [string]
         $brokerWAR = "pcoip-broker.war",
@@ -143,7 +143,7 @@ Configuration InstallConnectionServer
 
     #Tomcat locations
     $localtomcatpath = "$env:systemdrive\tomcat"
-    $CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.5.47"
+    $CatalinaHomeLocation = "$localtomcatpath\apache-tomcat-8.5.51"
     $CatalinaBinLocation = $CatalinaHomeLocation + "\bin"
 
     $brokerServiceName = "CAMBroker"
@@ -545,8 +545,14 @@ Configuration InstallConnectionServer
                     #ref child
                     $xml.Server.Service.Engine )
 
-                $xml.save($ServerXMLFile)
+                $protocol = "AJP/1.3"
 
+                ($xml.Server.Service.Connector | Where-Object { $protocol -eq $_.protocol }) | ForEach-Object {
+                    # Remove each node from its parent
+                    [void]$_.ParentNode.RemoveChild($_)
+                }
+
+                $xml.save($ServerXMLFile)
 
 
                 Write-Host "Opening port 8443 and 8080"
@@ -905,8 +911,14 @@ ldapHost=ldaps://$domainControllerFQDN
                     #ref child
                     $xml.Server.Service.Engine )
 
-                $xml.save($serverXMLFile)
+                $protocol = "AJP/1.3"
 
+                ($xml.Server.Service.Connector | Where-Object { $protocol -eq $_.protocol }) | ForEach-Object {
+                    # Remove each node from its parent
+                    [void]$_.ParentNode.RemoveChild($_)
+                }
+                
+                $xml.save($serverXMLFile)
 
 
                 Write-Host "Opening port $using:brokerPort"

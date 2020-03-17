@@ -38,7 +38,7 @@ $container = New-AzureStorageContainer -Name <ContainerName> -Context $acct.Cont
     - Windows DSC script for provisioning Windows Remote Workstations: https://teradeploy.blob.core.windows.net/binaries/Install-PCoIPAgent.ps1.zip
     - Windows DSC script for provisioning a stand-alone Domain Controller for testing: https://teradeploy.blob.core.windows.net/binaries/Install-DC-and-CA.ps1.zip
     - Windows DSC script for provisioning Connection Server machine to run PCoIP Broker and Management Interface: https://teradeploy.blob.core.windows.net/binaries/Install-ConnectionServer.ps1.zip
-    - Apache Tomcat binary used for running PCoIP Broker and Management Interface: https://teradeploy.blob.core.windows.net/binaries/apache-tomcat-8.5.47-windows-x64.zip
+    - Apache Tomcat binary used for running PCoIP Broker and Management Interface: https://teradeploy.blob.core.windows.net/binaries/apache-tomcat-8.5.51-windows-x64.zip
     - NVIDIA Grid Driver for Windows: https://teradeploy.blob.core.windows.net/binaries/391.58_grid_win10_server2016_64bit_international.exe
     - NVIDIA Grid Driver for Linux: https://teradeploy.blob.core.windows.net/binaries/NVIDIA-Linux-x86_64-390.57-grid.run
     - Java 8 JDK Installer: https://teradeploy.blob.core.windows.net/binaries/jdk-8u144-windows-x64.exe
@@ -54,7 +54,7 @@ $binaries = @(
 "https://teradeploy.blob.core.windows.net/binaries/Install-PCoIPAgent.ps1.zip",
 "https://teradeploy.blob.core.windows.net/binaries/Install-DC-and-CA.ps1.zip",
 "https://teradeploy.blob.core.windows.net/binaries/Install-ConnectionServer.ps1.zip",
-"https://teradeploy.blob.core.windows.net/binaries/apache-tomcat-8.5.47-windows-x64.zip",
+"https://teradeploy.blob.core.windows.net/binaries/apache-tomcat-8.5.51-windows-x64.zip",
 "https://teradeploy.blob.core.windows.net/binaries/391.58_grid_win10_server2016_64bit_international.exe",
 "https://teradeploy.blob.core.windows.net/binaries/NVIDIA-Linux-x86_64-390.57-grid.run",
 "https://teradeploy.blob.core.windows.net/binaries/jdk-8u144-windows-x64.exe",
