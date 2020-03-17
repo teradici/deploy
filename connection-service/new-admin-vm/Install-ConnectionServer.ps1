@@ -545,10 +545,14 @@ Configuration InstallConnectionServer
                     #ref child
                     $xml.Server.Service.Engine )
 
+                $protocol = "AJP/1.3"
+
+                ($xml.Server.Service.Connector | Where-Object { $protocol -eq $_.protocol }) | ForEach-Object {
+                    # Remove each node from its parent
+                    [void]$_.ParentNode.RemoveChild($_)
+                }
+
                 $xml.save($ServerXMLFile)
-
-                Set-Content -Path $ServerXMLFile -Value (Get-Content -Path $ServerXMLFile | Select-String -Pattern "AJP" -NotMatch)
-
 
 
                 Write-Host "Opening port 8443 and 8080"
@@ -907,10 +911,14 @@ ldapHost=ldaps://$domainControllerFQDN
                     #ref child
                     $xml.Server.Service.Engine )
 
+                $protocol = "AJP/1.3"
+
+                ($xml.Server.Service.Connector | Where-Object { $protocol -eq $_.protocol }) | ForEach-Object {
+                    # Remove each node from its parent
+                    [void]$_.ParentNode.RemoveChild($_)
+                }
+                
                 $xml.save($serverXMLFile)
-
-                Set-Content -Path $ServerXMLFile -Value (Get-Content -Path $ServerXMLFile | Select-String -Pattern "AJP" -NotMatch)
-
 
 
                 Write-Host "Opening port $using:brokerPort"
