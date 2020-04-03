@@ -111,6 +111,9 @@ Configuration InstallConnectionServer
         [int] $brokerCacheTimeoutSeconds
     )
 
+    # default is Ssl3 and Tls1.0, sumolog and install-packageProvider required 1.2
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
     # Get DC information
     # The alternate way is to do a nslookup for the dns srv record for: _ldap._tcp.dc._msdcs.<DOMAIN>
 
@@ -257,8 +260,6 @@ Configuration InstallConnectionServer
                 $orderNumArray = $using:orderNumArray
                 $retryMax = $using:retryCount
                 $downIdx = 0;
-                # sumologic server require TLS 1.2
-                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
                 foreach ($source in $sourceArray) {
                     $destFile = $destArray[$downIdx]
