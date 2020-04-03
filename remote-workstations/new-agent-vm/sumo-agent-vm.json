@@ -20,24 +20,6 @@
         "alive":  false
     },
     {
-        "name":"CAM_Deploy_RemoteWorkstation_Win_Events",
-        "category":"CAM/Deploy/RemoteWorkstation/Win/Events",
-        "automaticDateParsing":true,
-        "multilineProcessingEnabled":true,
-        "useAutolineMatching":false,
-        "manualPrefixRegexp":"",
-        "forceTimeZone":false,
-        "defaultDateFormat":"dd/MMM/yyyy HH:mm:ss",
-        "timeZone":"Etc/UTC",
-        "filters":[],
-        "cutoffTimestamp":0,
-        "encoding":"UTF-8",
-        "logNames":["Security","Application"],
-        "renderMessages":true,
-        "sidStyle":2,
-        "sourceType":"LocalWindowsEventLog"
-    },
-    {
         "name":  "CAM_Deploy_RemoteWorkstation_Win_Azure_Logs",
         "category":  "CAM/Deploy/RemoteWorkstation/Win/Azure/Logs",
         "automaticDateParsing":  true,
