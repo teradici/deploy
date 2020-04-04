@@ -111,6 +111,8 @@ Configuration InstallConnectionServer
         [int] $brokerCacheTimeoutSeconds
     )
 
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
     # Get DC information
     # The alternate way is to do a nslookup for the dns srv record for: _ldap._tcp.dc._msdcs.<DOMAIN>
 
