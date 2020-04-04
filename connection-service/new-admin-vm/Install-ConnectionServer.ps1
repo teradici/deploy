@@ -111,8 +111,6 @@ Configuration InstallConnectionServer
         [int] $brokerCacheTimeoutSeconds
     )
 
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
     # Get DC information
     # The alternate way is to do a nslookup for the dns srv record for: _ldap._tcp.dc._msdcs.<DOMAIN>
 
@@ -596,6 +594,7 @@ Configuration InstallConnectionServer
                 $localtomcatpath = $using:localtomcatpath
                 $CatalinaHomeLocation = $using:CatalinaHomeLocation
                 $catalinaBase = "$CatalinaHomeLocation" #\$using:AUIServiceName"
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
                 Write-Verbose "Ensure Nuget Package Provider and AzureRM module are installed"
 
