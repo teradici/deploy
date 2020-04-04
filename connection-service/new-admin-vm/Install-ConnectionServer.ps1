@@ -594,6 +594,7 @@ Configuration InstallConnectionServer
                 $localtomcatpath = $using:localtomcatpath
                 $CatalinaHomeLocation = $using:CatalinaHomeLocation
                 $catalinaBase = "$CatalinaHomeLocation" #\$using:AUIServiceName"
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
                 Write-Verbose "Ensure Nuget Package Provider and AzureRM module are installed"
 
