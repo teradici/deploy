@@ -168,24 +168,7 @@ join_domain()
     echo "-->Install required packages to join domain" | tee -a "$INST_LOG_FILE"
     sudo yum -y install sssd realmd oddjob oddjob-mkhomedir adcli samba-common samba-common-tools krb5-workstation openldap-clients policycoreutils-python
 
-    echo "-->restarting messagebus service" | tee -a "$INST_LOG_FILE"
-    sudo systemctl restart messagebus    
-    local exitCode=$?
-    if [[ $exitCode -ne 0 ]]
-    then
-        echo "Failed to restart messagebus service" | tee -a "$INST_LOG_FILE"
-        return 106
-    fi
-
-    echo "-->enable and start sssd service" | tee -a "$INST_LOG_FILE"
-    sudo systemctl enable sssd --now    
-    exitCode=$?
-    if [[ $exitCode -ne 0 ]]
-    then
-        echo "Failed to start sssd service" | tee -a "$INST_LOG_FILE"
-        return 106
-    fi
-
+    # join domain will generate sssd.conf file
     echo "-->Joining the domain" | tee -a "$INST_LOG_FILE"
     if [[ -n "${OU}" ]]
     then
@@ -206,6 +189,25 @@ join_domain()
     sudo sed -i '$ a\dyndns_update = True\ndyndns_ttl = 3600\ndyndns_refresh_interval = 43200\ndyndns_update_ptr = True\nldap_user_principal = nosuchattribute' /etc/sssd/sssd.conf
     sudo sed -c -i "s/\\(use_fully_qualified_names *= *\\).*/\\1False/" /etc/sssd/sssd.conf
     sudo sed -c -i "s/\\(fallback_homedir *= *\\).*/\\1\\/home\\/%u/" /etc/sssd/sssd.conf
+
+    echo "-->restarting messagebus service" | tee -a "$INST_LOG_FILE"
+    sudo systemctl restart messagebus    
+    local exitCode=$?
+    if [[ $exitCode -ne 0 ]]
+    then
+        echo "Failed to restart messagebus service" | tee -a "$INST_LOG_FILE"
+        return 106
+    fi
+
+    echo "-->enable and start sssd service" | tee -a "$INST_LOG_FILE"
+    sudo systemctl enable sssd --now    
+    exitCode=$?
+    if [[ $exitCode -ne 0 ]]
+    then
+        echo "Failed to start sssd service" | tee -a "$INST_LOG_FILE"
+        return 106
+    fi
+
     sudo domainname "$VM_NAME.$DOMAIN_NAME"
     echo "%$DOMAIN_NAME\\\\Domain\\ Admins ALL=(ALL) ALL" > /etc/sudoers.d/sudoers
 
