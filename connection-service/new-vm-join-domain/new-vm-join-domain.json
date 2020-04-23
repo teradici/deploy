@@ -159,38 +159,6 @@
             "dependsOn": [
                 "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
             ]
-        },
-        {
-            "type": "Microsoft.Resources/deployments",
-            "name": "[concat(variables('nicName'),'-updateip')]",
-            "apiVersion": "2015-01-01",
-            "dependsOn": [
-                "[concat('Microsoft.Compute/virtualMachines/', parameters('dnsLabelPrefix'))]"
-            ],
-            "properties": {
-                "mode": "Incremental",
-                "templateLink": {
-                    "uri": "[variables('updateipTemplateUri')]",
-                    "contentVersion": "1.0.0.0"
-                },
-                "parameters": {
-                    "nicName": {
-                        "value": "[variables('nicName')]"
-                    },
-                    "SubnetRef": {
-                        "value": "[parameters('subnetId')]"
-                    },
-                    "privateIp": {
-                        "value": "[reference(concat('Microsoft.Network/networkInterfaces/', variables('nicName'))).ipConfigurations[0].properties.privateIPAddress]"
-                    },
-                    "applicationGatewayPoolReference": {
-                        "value": "[parameters('applicationGatewayPoolReference')]"
-                    },
-                    "tag": {
-                        "value": "[parameters('tag')]"
-                    }
-                }
-            }
         }
     ],
     "outputs": {
