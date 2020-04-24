@@ -33,7 +33,7 @@
       {
         "type": "Microsoft.Network/networkInterfaces",
         "name": "[parameters('nicName')]",
-        "apiVersion": "2015-06-15",
+        "apiVersion": "2020-03-01",
         "tags": "[parameters('tag')]",
         "location": "[resourceGroup().location]",
         "dependsOn": [
