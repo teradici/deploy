@@ -1071,15 +1071,28 @@ function New-CAM-KeyVault() {
         Write-Host "Creating Azure Key Vault $kvName"
 
         $rg = Get-AzureRmResourceGroup -ResourceGroupName $RGName
-        $keyVault = New-AzureRmKeyVault `
-            -VaultName $kvName `
-            -ResourceGroupName $RGName `
-            -Location $rg.Location `
-            -EnabledForTemplateDeployment `
-            -EnabledForDeployment `
-            -EnableSoftDelete `
-            -WarningAction Ignore `
-            -Tag $tag
+        # Some Versions of New-AzureRmKeyVault have no EnableSoftDelete opyion since it's enabled
+        # by default (it has DisableSoftDelete instead)
+        try {
+            $keyVault = New-AzureRmKeyVault `
+                -VaultName $kvName `
+                -ResourceGroupName $RGName `
+                -Location $rg.Location `
+                -EnabledForTemplateDeployment `
+                -EnabledForDeployment `
+                -EnableSoftDelete `
+                -WarningAction Ignore `
+                -Tag $tag
+        } catch {
+            $keyVault = New-AzureRmKeyVault `
+                -Name $kvName `
+                -ResourceGroupName $RGName `
+                -Location $rg.Location `
+                -EnabledForTemplateDeployment `
+                -EnabledForDeployment `
+                -WarningAction Ignore `
+                -Tag $tag
+        }
 
         Write-Host "Setting Access Policy on Azure Key Vault $kvName"
 
