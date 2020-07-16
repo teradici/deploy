@@ -45,9 +45,12 @@ EOF
 	chmod +x /etc/rc.d/rc.local
 }
 
+yum -y install yum-plugin-versionlock
+# lock WALinuxAgent version
+yum versionlock WALinuxAgent
 
 # Update system to latest
-yum -y update --exclude=WALinuxAgent
+yum -y update
 
 # Install and setup the Sumo Collector
 mkdir /tmp/sumo
@@ -125,9 +128,6 @@ case "$FOLDER_NAME" in
            echo "no space in directory name"
            ;;
 esac
-
-# Exclude WALinuxAgent From updates in cm_setup script
-sed --in-place --expression="s|\(.*\)yum\s*update\(.*\)|\1yum update --exclude=WALinuxAgent\2|g" "$FOLDER_NAME"/cm_setup.sh
 
 sh "$FOLDER_NAME"/cm_setup.sh
 
