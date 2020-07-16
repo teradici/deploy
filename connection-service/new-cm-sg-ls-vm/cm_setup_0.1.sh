@@ -126,6 +126,9 @@ case "$FOLDER_NAME" in
            ;;
 esac
 
+# Exclude WALinuxAgent From updates in cm_setup script
+sed --expression="s|\(.*\)yum\s*update\(.*\)|\1yum update --exclude=WALinuxAgent\2|g" "$FOLDER_NAME"/cm_setup.sh
+
 sh "$FOLDER_NAME"/cm_setup.sh
 
 service security_gateway stop
