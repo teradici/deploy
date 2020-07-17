@@ -564,6 +564,212 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
     return $deploymentId
 }
 
+# Get  CAM and returns the deployment ID
+function Update-CAMSumoCreds() {
+    Param(
+        [bool]
+        $verifyCAMSaaSCertificate = $true,
+        
+        # Retry for CAM Registration
+        $retryCount = 3,
+        $retryDelay = 10,
+
+        [parameter(Mandatory = $true)] 
+        $subscriptionId,
+        
+        [parameter(Mandatory = $true)]
+        $client,
+        
+        [parameter(Mandatory = $true)]
+        $key,
+        
+        [parameter(Mandatory = $true)]
+        $tenant,
+
+        [parameter(Mandatory = $true)]
+        $camSaasBaseUri,
+
+        [parameter(Mandatory = $true)]
+        $RootRGName,
+
+        [parameter(Mandatory = $true)]
+        $tempDir
+    )
+
+    #define variable to keep trace of the error during retry process
+    $camRegistrationError = ""
+    for ($idx = 0; $idx -lt $retryCount; $idx++) {
+        # reset the variable at each iteration, so we can always keep the current loop error message
+        $camRegistrationError = ""
+        try {
+            if ( -not $isUnix ) {
+                $certificatePolicy = [System.Net.ServicePointManager]::CertificatePolicy
+                # Can't disable SSL verification for Invoke-RestMethod on Unix with this method
+                # Not worth effort fixing since cert should always be valid
+                if (!$verifyCAMSaaSCertificate) {
+                    # Do this so SSL Errors are ignored
+                    add-type @"
+using System.Net;
+using System.Security.Cryptography.X509Certificates;
+public class TrustAllCertsPolicy : ICertificatePolicy {
+    public bool CheckValidationResult(
+        ServicePoint srvPoint, X509Certificate certificate,
+        WebRequest request, int certificateProblem) {
+        return true;
+    }
+}
+"@
+
+                    [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+                }
+            }
+
+            # Security Rules on CAM firewall don't like default user-agent for cloudshell, overwrite with a different one (Chrome)
+            $baseHeaders = @{
+                "User-Agent"="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36"
+            }
+
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+            ##
+
+
+            $userRequest = @{
+                username = $client
+                password = $key
+                tenantId = $tenant
+                ownerTenantId = $ownerTenant
+                ownerUpn = $ownerUpn
+            }
+
+            # Get a Sign-in token
+            $signInResult = ""
+            try {
+                $signInResult = Invoke-RestMethod -Method Post -Uri ($camSaasBaseUri + "/api/v1/auth/signin") -Body $userRequest -Headers $baseHeaders
+            }
+            catch {
+                if ($_.ErrorDetails.Message) {
+                    $signInResult = ConvertFrom-Json $_.ErrorDetails.Message
+                }
+                else {
+                    throw $_
+                }
+            }
+            Write-Verbose ((ConvertTo-Json $signInResult) -replace "\.*token.*", 'Token": "Sanitized"')
+            # Check if signIn succeded
+            if ($signInResult.code -ne 200) {
+                throw ("Signing in failed with result: " + (ConvertTo-Json $signInResult))
+            }
+            $tokenHeader = $baseHeaders + @{
+                authorization = $signInResult.data.token
+            }
+            Write-Host "Cloud Access Manager sign in succeeded"
+
+            Write-Host "Retreiving DeplotmentID"
+            # Deployment is already registered so the deplymentId needs to be retrieved
+            $registeredDeployment = ""
+            $deploymentRequest = @{
+                deploymentName   = $RootRGName
+            }
+            try {
+                $registeredDeployment = Invoke-RestMethod -Method Get -Uri ($camSaasBaseUri + "/api/v1/deployments") -Body $deploymentRequest -Headers $tokenHeader
+                if ($registeredDeployment.total -eq 0) {
+                    $registeredDeployment = Invoke-RestMethod -Method Get -Uri ($camSaasBaseUri + "/api/v1/deployments?deploymentName=$RootRGName-RW") -Headers $tokenHeader
+                }
+                $deploymentId = $registeredDeployment.data.deploymentId
+                if ( -not $deploymentId ) {
+                    throw ("Getting Deployment ID failed")
+                }
+            }
+            catch {
+                if ($_.ErrorDetails.Message) {
+                    $registeredDeployment = ConvertFrom-Json $_.ErrorDetails.Message
+                    throw ("Getting Deployment ID failed with result: " + (ConvertTo-Json $registeredDeployment))
+                }
+                else {
+                    throw $_
+                }
+            }
+        
+            # Get Sumo Creds
+            $getSumoCredsResult = ""
+            try {
+                $getSumoCredsResult = Invoke-RestMethod -Method Get -Uri ($camSaasBaseUri + "/api/v1/deployments/$deploymentId/settings/logconfig") -Headers $tokenHeader
+            }
+            catch {
+                if ($_.ErrorDetails.Message) {
+                    $getSumoCredsResult = ConvertFrom-Json $_.ErrorDetails.Message
+                }
+                else {
+                    throw $_
+                }
+            }
+            # Check if registration succeeded
+            if ( !( $getSumoCredsResult.code -eq 200) ) {
+                throw ("Fetching SumoLogic Credentials failed with result: " + (ConvertTo-Json $getSumoCredsResult))
+            }
+            else {
+                $sumoCreds = $getSumoCredsResult.data
+            }
+            Write-Host "SumoLogic Credentials retreived successfully from Cloud Access Manager service"
+            break;
+        }
+        catch {
+            $camRegistrationError = $_
+            Write-Verbose ( "Attempt {0} of $retryCount failed due to Error: {1}" -f ($idx + 1), $camRegistrationError )
+            Start-Sleep -s $retryDelay
+        }
+        finally {
+            # restore CertificatePolicy 
+            if ( -not $isUnix ) {
+                [System.Net.ServicePointManager]::CertificatePolicy = $certificatePolicy
+            }
+        }
+    }
+    if ($camRegistrationError) {
+        throw $camRegistrationError
+    }
+    $sumoCreds = [System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String($sumoCreds)) | ConvertFrom-Json
+    
+    # Update Sumo Creds
+    $userPropertiesContent = @"
+collector.name=collectorID
+sumo.accessid=$($sumoCreds.sumo_id)
+sumo.accesskey=$($sumoCreds.sumo_key)
+syncSources=syncsourceFile
+"@
+    $sumoConfContent = @"
+name=collectorID
+accessid=$($sumoCreds.sumo_id)
+accesskey=$($sumoCreds.sumo_key)
+syncSources=C:\\sumo\\sumo-agent-vm.json
+"@
+    $outputUserProp = Join-Path $tempDir "user.properties"
+    $outputSumoConf = Join-Path $tempDir "sumo.conf"
+    Set-Content $outputUserProp $userPropertiesContent
+    Set-Content $outputSumoConf $sumoConfContent
+    
+    Write-Host "Logging into Azure Storage Account" 
+    $container_name = "cloudaccessmanager"
+    $userDataStorageAccount = Get-AzureRmStorageAccount -ResourceGroupName $RootRGName | Where {$_.StorageAccountName -match "cam"}
+    $acct_name = $userDataStorageAccount.StorageAccountName
+    $acctKey = (Get-AzureRmStorageAccountKey -ResourceGroupName $RootRGName -AccountName $acct_name).Value[0]
+    $ctx = New-AzureStorageContext -StorageAccountName $acct_name -StorageAccountKey $acctKey
+    
+    Set-AzureStorageBlobContent `
+        -Container $container_name `
+        -Context $ctx `
+        -Blob "remote-workstation/user.properties" `
+        -File $outputUserProp `
+        -Force
+
+    Set-AzureStorageBlobContent `
+        -Container $container_name `
+        -Context $ctx `
+        -Blob "remote-workstation/sumo.conf" `
+        -File $outputSumoConf `
+        -Force
+}
+
 # updates service principal password in CAM KeyVault
 function Update-CAMUserCredential() {
     Param(
@@ -626,13 +832,10 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
             ##
 
-
             $userRequest = @{
                 username = $client
                 password = $key
                 tenantId = $tenant
-                ownerTenantId = $ownerTenant
-                ownerUpn = $ownerUpn
             }
 
             $baseHeaders = @{
@@ -956,8 +1159,6 @@ function Populate-UserBlob {
         @("$binaryLocation/Install-PCoIPAgent.ps1.zip", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/sumo-agent-vm.json", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/sumo-agent-vm-linux.json", "remote-workstation"),
-        @("$artifactsLocation/remote-workstations/new-agent-vm/sumo.conf", "remote-workstation"),
-        @("$artifactsLocation/remote-workstations/new-agent-vm/user.properties", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/Install-Idle-Shutdown.sh", "remote-workstation"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/$($CAMConfig.internal.linuxAgentARM)", "remote-workstation-template"),
         @("$artifactsLocation/remote-workstations/new-agent-vm/$($CAMConfig.internal.gaLinuxAgentARM)", "remote-workstation-template"),
@@ -1901,6 +2102,16 @@ function New-ConnectionServiceDeployment() {
             New-Item $tempDir -type directory | Out-Null
         }
 
+        Update-CAMSumoCreds `
+            -SubscriptionId $subscriptionID `
+            -client $client `
+            -key $key `
+            -tenant $tenantId `
+            -camSaasBaseUri $camSaasUri `
+            -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
+            -RootRGName $RGName `
+            -tempDir $tempDir
+
         # Refresh the CAMDeploymentInfo structure
         New-CAMDeploymentInfo `
             -kvName $CAMRootKeyvault.Name
@@ -2231,6 +2442,17 @@ function New-CAMDeploymentRoot()
         -registrationCode $registrationCode `
         -camSaasBaseUri $camSaasUri `
         -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate
+    
+    Update-CAMSumoCreds `
+        -SubscriptionId $subscriptionID `
+        -client $client `
+        -key $key `
+        -tenant $tenant `
+        -camSaasBaseUri $camSaasUri `
+        -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
+        -RootRGName $RGName `
+        -tempDir $tempDir 
+
 
     Generate-CamDeploymentInfoParameters `
         -spInfo $spInfo `
@@ -2781,6 +3003,8 @@ function Deploy-CAM() {
                 -tenantId $tenantId `
                 -testDeployment $testDeployment `
                 -tempDir $tempDir `
+                -verifyCAMSaaSCertificate $verifyCAMSaaSCertificate `
+                -camSaasUri $camSaasUri `
                 -enableExternalAccess $enableExternalAccess `
                 -enableRadiusMfa $radiusConfig.enableRadiusMfa `
                 -radiusServerHost $radiusConfig.radiusServerHost `
