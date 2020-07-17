@@ -52,7 +52,11 @@ yum -y update --exclude=WALinuxAgent
 # Install and setup the Sumo Collector
 mkdir /tmp/sumo
 wget "https://collectors.sumologic.com/rest/download/linux/64" -O /tmp/sumo/SumoCollector.sh && sudo chmod +x /tmp/sumo/SumoCollector.sh
-wget "$3/user.properties" -O /tmp/sumo/user.properties
+if [ -z "$5" ] ; then
+	wget "https://raw.githubusercontent.com/teradici/deploy/master/remote-workstations/new-agent-vm/user.properties" -O /tmp/sumo/user.properties
+else
+	wget "$5" -O /tmp/sumo/user.properties
+fi
 wget "$3/sumo_cm_vm.json" -O /tmp/sumo/sumo_cm_vm.json
 JSON_FILE=/tmp/sumo/sumo_cm_vm.json
 echo "Attempting to set sumo collector ID to: " "$2"

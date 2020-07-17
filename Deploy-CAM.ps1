@@ -2057,6 +2057,22 @@ function New-ConnectionServiceDeployment() {
                 },
                 "tag": {
                     "value": $tagString
+                },
+                "userStorageAccountUri": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvId"
+                        },
+                        "secretName": "userStorageAccountUri"
+                    }
+                },
+                "userStorageAccountSasToken": {
+                    "reference": {
+                        "keyVault": {
+                            "id": "$kvId"
+                        },
+                        "secretName": "userStorageAccountSasToken"
+                    }
                 }
             }
         }

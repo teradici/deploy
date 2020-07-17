@@ -72,6 +72,13 @@
           "description": "License Instance Id for the CAM deployment"
         }
       },
+      "sumoConfLocation": {
+        "type": "securestring",
+        "metadata": {
+          "description": "URL to fetch Sumo Logic User Properties file from"
+        },
+        "defaultValue": "https://raw.githubusercontent.com/teradici/deploy/master/remote-workstations/new-agent-vm/user.properties"
+      },
       "_artifactsLocation": {
           "type": "string",
           "metadata": {
@@ -110,7 +117,7 @@
       "scriptFileName":  "cm_setup_0.1.sh",
       "scriptFileURI":  "[concat(parameters('_artifactsLocation'), '/', variables('scriptFileName'), parameters('_artifactsLocationSasToken'))]",
       "sumoCollectorID": "[concat('CAM-', parameters('licenseInstanceId'), '-', subscription().subscriptionId, '-', resourceGroup().name, '-', parameters('vmssName'))]",
-      "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',variables('sumoCollectorID'),' ',parameters('_artifactsLocation'),' SecurityGatewayEnabled=',parameters('enableSecurityGateway'))]"
+      "commandToExecute": "[concat('./',variables('scriptFileName'),' ',parameters('brokerFQDN'),' ',variables('sumoCollectorID'),' ',parameters('_artifactsLocation'),' ', 'SecurityGatewayEnabled=', parameters('enableSecurityGateway'), ' \"', parameters('sumoConfLocation'),'\"')]"
     },
     "resources": [
     {
