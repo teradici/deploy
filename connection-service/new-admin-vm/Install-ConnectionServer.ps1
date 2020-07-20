@@ -197,13 +197,6 @@ Configuration InstallConnectionServer
             MatchSource = $false
         }
 
-        xRemoteFile Download_Sumo_Conf 
-        {
-                Uri = "$gitLocation/$sumoConf"
-                DestinationPath = "$LocalDLPath\$sumoConf"
-                MatchSource = $false
-        }
-
         xRemoteFile Download_OpenSSL
         {
                 Uri = "$sourceURI/$openSSL"
@@ -218,16 +211,78 @@ Configuration InstallConnectionServer
             DestinationPath = "C:\sumo"
         }
 
+        Script Download_Sumo_Conf
+        {
+            DependsOn  = @("[Script]Install_AUI")
+            GetScript  = { @{ Result = "Download_Sumo_Conf" } }
+
+            TestScript = {
+                return Test-Path "C:\sumo\$using:sumoConf" -PathType leaf
+            }
+
+            SetScript  = {
+                Write-Host "Downloading Sumo Credentials"
+                #login to Azure and get storage context so we can pull the right files out of the blob storage
+                $regInfo = $using:camDeploymentInfoDecoded.RegistrationInfo
+
+                $spName = $regInfo.CAM_USERNAME
+                $spPass = ConvertTo-SecureString $regInfo.CAM_PASSWORD -AsPlainText -Force
+                $tenantID = $regInfo.CAM_TENANTID
+
+                Write-Host "Logging in SP $spName with tenantID $tenantID"
+
+                $spCreds = New-Object -TypeName pscredential -ArgumentList  $spName, $spPass
+
+                Add-AzureRmAccount `
+                    -ServicePrincipal `
+                    -Credential $spCreds `
+                    -TenantId $tenantID `
+                    -ErrorAction Stop
+
+                    $deploymentId = $null
+
+                # Now get Keyvault Secrets
+                $kvName = $regInfo.CAM_KEY_VAULT_NAME
+                $saSecretName = $regInfo.CAM_USER_STORAGE_ACCOUNT_NAME
+                $sakeySecretName = $regInfo.CAM_USER_STORAGE_ACCOUNT_KEY
+
+                $container_name = "cloudaccessmanager"
+                $storageAccount = Get-AzureKeyVaultSecret -VaultName $kvName -Name $saSecretName
+                $storageAccountKey = Get-AzureKeyVaultSecret -VaultName $kvName -Name $sakeySecretName
+
+                $ctx = New-AzureStorageContext `
+                    -StorageAccountName $storageAccount.SecretValueText `
+                    -StorageAccountKey $storageAccountKey.SecretValueText
+
+                Write-Host "Downloading Sumo Credentials"
+
+                # download the files from the blob
+                $targetpath = "C:\sumo\sumo.conf"
+                $filename = Split-Path $targetpath -leaf
+                $sourcepath = "remote-workstation/sumo.conf"
+
+                Write-Host "Downloading $sourcepath from blob container $container_name.."
+                Get-AzureStorageBlobContent `
+                    -Destination $targetpath `
+                    -Container $container_name `
+                    -Blob $sourcepath `
+                    -Context $ctx
+
+                ((Get-Content -path $targetpath -Raw) -replace 'agent','admin') | Set-Content -Path $targetpath
+                Write-Host "Finished downloading Sumo Credentials."
+            }
+        }
+
         # Aim to install the collector first and start the log collection before any 
         # other applications are installed.
         Script Install_SumoCollector
         {
-            DependsOn  = @("[xRemoteFile]Download_Sumo_Conf","[File]Sumo_Directory")
+            DependsOn  = @("[Script]Download_Sumo_Conf","[File]Sumo_Directory")
             GetScript  = { @{ Result = "Install_SumoCollector" } }
 
             TestScript = { 
-                return Test-Path "C:\sumo\$using:sumoConf" -PathType leaf
-                }
+                return Test-Path "C:\Program Files\Sumo Logic Collector\collector" -PathType Leaf
+            }
 
             SetScript  = {
                 Write-Verbose "Install_SumoCollector"
@@ -237,9 +292,6 @@ Configuration InstallConnectionServer
 
                 $sourceArray = @()
                 $destArray = @()
-
-                $sourceArray += "$using:gitLocation/$using:sumoConf"
-                $destArray += "$dest\$using:sumoConf"
 
                 $sourceArray += "$using:gitLocation/sumo-admin-vm.json"
                 $destArray += "$dest\sumo-admin-vm.json"

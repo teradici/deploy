@@ -142,6 +142,20 @@
       },
       "defaultValue": 1000
     },
+    "userStorageAccountUri": {
+      "type": "securestring",
+      "metadata": {
+        "description": "URI for the user's storage account"
+      },
+      "defaultValue": ""
+    },
+    "userStorageAccountSasToken": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Access token for the user's storage account"
+      },
+      "defaultValue": ""
+    },
     "isBrokerCacheEnabled": {
       "type": "bool",
       "metadata": {
@@ -169,7 +183,7 @@
     "appGwCSPoolID": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/applicationGateways/', variables('appGwName'), '/backendAddressPools/', variables('appGwCSPoolName'))]",
     "sgNsgName": "[concat('sgNSG',parameters('CSUniqueSuffix'))]",
     "connectionServerName": "[concat('conn-srvr',parameters('CSUniqueSuffix'))]"
-},
+  },
   "resources": [
     {
       "type": "Microsoft.Resources/deployments",
@@ -424,6 +438,9 @@
           },
           "tag": { 
             "value": "[parameters('tag')]"
+          },
+          "sumoConfLocation": {
+            "value": "[if(empty(parameters('userStorageAccountUri')), concat(parameters('_baseArtifactsLocation'), '/remote-workstations/new-agent-vm/user.properties', parameters('_artifactsLocationSasToken')), concat(parameters('userStorageAccountUri'), 'remote-workstation/user.properties', parameters('userStorageAccountSasToken')) )]"
           }
         }
       }

@@ -389,6 +389,12 @@
           },
           "tag": { 
             "value": "[parameters('tag')]"
+          },
+          "userStorageAccountUri": {
+            "value": "[parameters('userStorageAccountUri')]"
+          },
+          "userStorageAccountSasToken": {
+            "value": "[parameters('userStorageAccountSasToken')]"
           }
         }
       }
