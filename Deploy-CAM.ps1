@@ -836,6 +836,8 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
                 username = $client
                 password = $key
                 tenantId = $tenant
+                ownerTenantId = $ownerTenant
+                ownerUpn = $ownerUpn
             }
 
             $baseHeaders = @{
