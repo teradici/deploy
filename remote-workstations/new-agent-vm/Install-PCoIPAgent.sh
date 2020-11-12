@@ -94,10 +94,10 @@ disable_nouveau()
 # need to reboot after install Linux Integration Services for Hyper-V
 install_lis()
 {
-    local LIS_FILE="lis-rpms-4.2.4-1.tar.gz"
+    local LIS_FILE="lis-rpms.x86_64.tar.gz"
     echo "-->Downloading Linux Integration Service for Hyper-V (Version: ${LIS_FILE})" | tee -a "$INST_LOG_FILE"
 
-    wget --retry-connrefused --tries=3 --waitretry=5  "https://download.microsoft.com/download/6/8/F/68FE11B8-FAA4-4F8D-8C7D-74DA7F2CFC8C/$LIS_FILE"
+    wget --retry-connrefused --tries=3 --waitretry=5  "${BINARY_LOCATION}/agent/$LIS_FILE"
     local exitCode=$?
 
     if [[ $exitCode -eq 0 ]]
