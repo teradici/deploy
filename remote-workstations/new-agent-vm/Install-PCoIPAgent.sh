@@ -94,10 +94,10 @@ disable_nouveau()
 # need to reboot after install Linux Integration Services for Hyper-V
 install_lis()
 {
-    local LIS_FILE="lis-rpms-4.2.4-1.tar.gz"
+    local LIS_FILE="lis-rpms.x86_64.tar.gz"
     echo "-->Downloading Linux Integration Service for Hyper-V (Version: ${LIS_FILE})" | tee -a "$INST_LOG_FILE"
 
-    wget --retry-connrefused --tries=3 --waitretry=5  "https://download.microsoft.com/download/6/8/F/68FE11B8-FAA4-4F8D-8C7D-74DA7F2CFC8C/$LIS_FILE"
+    wget --retry-connrefused --tries=3 --waitretry=5  "${BINARY_LOCATION}/agent/$LIS_FILE"
     local exitCode=$?
 
     if [[ $exitCode -eq 0 ]]
@@ -131,7 +131,7 @@ install_nvidia_driver()
         exitCode=1
         echo "Binary Location not specified" | tee -a "$INST_LOG_FILE"
     else
-        local FILE_NAME="NVIDIA-Linux-x86_64-390.57-grid.run"
+        local FILE_NAME="NVIDIA-Linux-x86_64-430.46-grid.run"
         echo "-->Downloading nVidia Driver ${FILE_NAME} from ${BINARY_LOCATION}" | tee -a "$INST_LOG_FILE"
 
         wget --retry-connrefused --tries=3 --waitretry=5  "${BINARY_LOCATION}/${FILE_NAME}"
@@ -376,37 +376,7 @@ install_gui()
 
 install_pcoip_agent()
 {
-    # Install the Teradici package key
-    echo "-->Install the Teradici package key" | tee -a "$INST_LOG_FILE"
-    sudo rpm --import https://downloads.teradici.com/rhel/teradici.pub.gpg
-
-    # Add the Teradici repository
-    echo "-->Add the Teradici repository" | tee -a "$INST_LOG_FILE"
-
-    agent_repo_url="https://downloads.teradici.com/rhel/pcoip.repo"
-    case "$AGENT_CHANNEL" in
-        "beta")
-            agent_repo_url="https://downloads.teradici.com/rhel/pcoip-beta.repo"
-            ;;
-        "dev")
-            agent_repo_url="https://downloads.teradici.com/rhel/pcoip-dev.repo"
-            ;;
-        *)
-            agent_repo_url="https://downloads.teradici.com/rhel/pcoip.repo"
-            ;;
-    esac
-
-    sudo wget --retry-connrefused --tries=3 --waitretry=5 -O /etc/yum.repos.d/pcoip.repo "$agent_repo_url"
-
-    local exitCode=$?
-    if [[ $exitCode -ne 0 ]]
-    then
-        echo "Failed to add teradici repository." | tee -a "$INST_LOG_FILE"
-        # let's define exit code 100 for this case
-        return 100
-    fi
-
-    # Install the EPEL repository
+     Install the EPEL repository
     #echo "-->Install the EPEL repository" | tee -a "$INST_LOG_FILE"
     sudo rpm -Uvh --quiet https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
@@ -415,7 +385,11 @@ install_pcoip_agent()
     for idx in {1..3}
     do
         echo "-->Install the PCoIP $AGENT_TYPE agent at ${dispName[idx -1]} time" | tee -a "$INST_LOG_FILE"
-        sudo yum -y install "pcoip-agent-$AGENT_TYPE"
+        # Install from Binary Blob
+        sudo yum install -y \
+            "$BINARY_LOCATION/agent/pcoip-agent-${AGENT_TYPE}.el7.x86_64.rpm" \
+            "$BINARY_LOCATION/agent/xorg-x11-drv-teravfb.el7.x86_64.rpm" \
+            "$BINARY_LOCATION/agent/usb-vhci.noarch.rpm"
         exitCode=$?
 
         if [[ $exitCode -eq 0 ]]
