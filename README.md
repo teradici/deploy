@@ -39,10 +39,11 @@ $container = New-AzureStorageContainer -Name <ContainerName> -Context $acct.Cont
     - Windows DSC script for provisioning a stand-alone Domain Controller for testing: https://teradeploy.blob.core.windows.net/binaries/Install-DC-and-CA.ps1.zip
     - Windows DSC script for provisioning Connection Server machine to run PCoIP Broker and Management Interface: https://teradeploy.blob.core.windows.net/binaries/Install-ConnectionServer.ps1.zip
     - Apache Tomcat binary used for running PCoIP Broker and Management Interface: https://teradeploy.blob.core.windows.net/binaries/apache-tomcat-8.5.57-windows-x64.zip
-    - NVIDIA Grid Driver for Windows: https://teradeploy.blob.core.windows.net/binaries/391.58_grid_win10_server2016_64bit_international.exe
-    - NVIDIA Grid Driver for Linux: https://teradeploy.blob.core.windows.net/binaries/NVIDIA-Linux-x86_64-390.57-grid.run
+    - NVIDIA Grid Driver for Windows: https://teradeploy.blob.core.windows.net/binaries/451.48_grid_win10_server2016_server2019_64bit_international.exe
+    - NVIDIA Grid Driver for Linux: https://teradeploy.blob.core.windows.net/binaries/NVIDIA-Linux-x86_64-430.46-grid.run
     - Java 8 JDK Installer: https://teradeploy.blob.core.windows.net/binaries/jdk-8u144-windows-x64.exe
     - OpenSSL for Windows binary used for downloading Domain Controller's LDAPS certificates: https://teradeploy.blob.core.windows.net/binaries/Win64OpenSSL_Light-1_0_2o.exe
+    - Various PCoIP Agent Windows and Linux binaries
 6. Copy the binaries using this CloudShell script:
 ```PowerShell
 mkdir $home/clouddrive/binaries
@@ -55,8 +56,8 @@ $binaries = @(
 "https://teradeploy.blob.core.windows.net/binaries/Install-DC-and-CA.ps1.zip",
 "https://teradeploy.blob.core.windows.net/binaries/Install-ConnectionServer.ps1.zip",
 "https://teradeploy.blob.core.windows.net/binaries/apache-tomcat-8.5.57-windows-x64.zip",
-"https://teradeploy.blob.core.windows.net/binaries/391.58_grid_win10_server2016_64bit_international.exe",
-"https://teradeploy.blob.core.windows.net/binaries/NVIDIA-Linux-x86_64-390.57-grid.run",
+"https://teradeploy.blob.core.windows.net/binaries/451.48_grid_win10_server2016_server2019_64bit_international.exe",
+"https://teradeploy.blob.core.windows.net/binaries/NVIDIA-Linux-x86_64-430.46-grid.run",
 "https://teradeploy.blob.core.windows.net/binaries/jdk-8u144-windows-x64.exe",
 "https://teradeploy.blob.core.windows.net/binaries/Win64OpenSSL_Light-1_0_2o.exe")
 ForEach ($binary in $binaries) {
@@ -69,6 +70,28 @@ ForEach ($binary in $binaries) {
         -Context $acct.Context `
         -Blob "$fileName" `
         -File "./$fileName" `
+        -Force
+}
+$agentBinaries = @(
+"https://teradeploy.blob.core.windows.net/binaries/agent/latest-graphics-agent.json",
+"https://teradeploy.blob.core.windows.net/binaries/agent/latest-standard-agent.json",
+"https://teradeploy.blob.core.windows.net/binaries/agent/lis-rpms.x86_64.tar.gz",
+"https://teradeploy.blob.core.windows.net/binaries/agent/usb-vhci.noarch.rpm",
+"https://teradeploy.blob.core.windows.net/binaries/agent/xorg-x11-drv-teravfb.el7.x86_64.rpm",
+"https://teradeploy.blob.core.windows.net/binaries/agent/pcoip-agent-graphics.el7.x86_64.rpm",
+"https://teradeploy.blob.core.windows.net/binaries/agent/pcoip-agent-graphics.exe",
+"https://teradeploy.blob.core.windows.net/binaries/agent/pcoip-agent-standard.el7.x86_64.rpm",
+"https://teradeploy.blob.core.windows.net/binaries/agent/pcoip-agent-standard.exe")
+ForEach ($binary in $agentBinaries) {
+    $fileName = ($binary -Split "/")[-1]
+    Invoke-WebRequest `
+        -Uri $binary `
+        -OutFile $fileName
+    Set-AzureStorageBlobContent `
+        -Container $container.Name `
+        -Context $acct.Context `
+        -Blob "$fileName" `
+        -File "./agent/$fileName" `
         -Force
 }
 ```
