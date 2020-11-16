@@ -46,7 +46,7 @@ $container = New-AzureStorageContainer -Name <ContainerName> -Context $acct.Cont
     - Various PCoIP Agent Windows and Linux binaries
 6. Copy the binaries using this CloudShell script:
 ```PowerShell
-mkdir $home/clouddrive/binaries
+mkdir -p $home/clouddrive/binaries/agent
 cd $home/clouddrive/binaries
 $binaries = @(
 "https://teradeploy.blob.core.windows.net/binaries/pcoip-broker.war",
@@ -86,11 +86,11 @@ ForEach ($binary in $agentBinaries) {
     $fileName = ($binary -Split "/")[-1]
     Invoke-WebRequest `
         -Uri $binary `
-        -OutFile $fileName
+        -OutFile "./agent/$fileName"
     Set-AzureStorageBlobContent `
         -Container $container.Name `
         -Context $acct.Context `
-        -Blob "$fileName" `
+        -Blob "agent/$fileName" `
         -File "./agent/$fileName" `
         -Force
 }
