@@ -4135,10 +4135,15 @@ function Update-CAMAzureKeyVault() {
             $certDataSecret = ConvertFrom-SecureString $secret.SecretValue -AsPlainText
         }
         [System.IO.File]::WriteAllBytes("$tempDir/cert.pfx", [System.Convert]::FromBase64String($certDataSecret)
-        $certPassword = ConvertFrom-SecureString (Get-AzureKeyVaultSecret `
+        $secret = Get-AzureKeyVaultSecret `
             -VaultName $VaultName `
             -Name "CAMCSCertificatePassword" `
-            -ErrorAction stop).SecretValue -AsPlainText
+            -ErrorAction stop
+        if($secret.SecretValueText) {
+            $certPassword = $secret.SecretValueText
+        } else {
+            $certPassword = ConvertFrom-SecureString $secret.SecretValue -AsPlainText
+        }
         $cert = openssl pkcs12 -in "$tempDir/cert.pfx" -passin pass:$certPassword -passout pass:$certPassword -info
         $certSubject = $cert | grep "subject"
         $subject = "subject=/CN=*.cloudapp.net,/CN=localhost,/O=Teradici Corporation,/OU=SoftPCoIP,/L=Burnaby,/ST=BC,/C=CA"
