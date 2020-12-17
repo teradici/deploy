@@ -4134,7 +4134,7 @@ function Update-CAMAzureKeyVault() {
         } else {
             $certDataSecret = ConvertFrom-SecureString $secret.SecretValue -AsPlainText
         }
-        [System.IO.File]::WriteAllBytes("$tempDir/cert.pfx", [System.Convert]::FromBase64String($certDataSecret)
+        [System.IO.File]::WriteAllBytes("$tempDir/cert.pfx", [System.Convert]::FromBase64String($certDataSecret))
         $secret = Get-AzureKeyVaultSecret `
             -VaultName $VaultName `
             -Name "CAMCSCertificatePassword" `
