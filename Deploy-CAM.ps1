@@ -1725,7 +1725,7 @@ function New-CAMDeploymentInfo() {
         Write-Host "Setting $key to value of secret $secretName"
 
         $secret = Get-KVSecret -kvName $kvName -secretName $secretName
-        $camDeploymenRegInfo.$key = $secret.SecretValueText
+        $camDeploymenRegInfo.$key = ConvertFrom-SecureString $secret.SecretValue -AsPlainText
     
     }
 
@@ -1897,7 +1897,7 @@ function New-ConnectionServiceDeployment() {
                     -VaultName $kvName `
                     -Name "AzureSPClientID" `
                     -ErrorAction stop
-                $client = $secret.SecretValueText
+                $client = ConvertFrom-SecureString $secret.SecretValue -AsPlainText
             }
             catch {
                 $err = $_
@@ -1914,7 +1914,7 @@ function New-ConnectionServiceDeployment() {
                             -VaultName $kvName `
                             -Name "AzureSPClientID" `
                             -ErrorAction stop
-                        $client = $secret.SecretValueText
+                        $client = ConvertFrom-SecureString $secret.SecretValue -AsPlainText
                     }
                     catch {
                         Write-Host "`nFailed to set access policy for vault $kvName for user $($adminAzureContext.Account.Id)"
@@ -1950,7 +1950,7 @@ function New-ConnectionServiceDeployment() {
             }
             else {
                 $secret = Get-KVSecret -kvName $kvName -secretName "AzureSPKey"
-                $key = $secret.SecretValueText
+                $key = ConvertFrom-SecureString $secret.SecretValue -AsPlainText
             }
         }
 
@@ -2001,7 +2001,7 @@ function New-ConnectionServiceDeployment() {
             }
             else {
                 # increment connectionServiceNumber
-                $connectionServiceNumber = ([int]$secret.SecretValueText) + 1
+                $connectionServiceNumber = ([int](ConvertFrom-SecureString $secret.SecretValue -AsPlainText)) + 1
             }
 
             $secretValue = (ConvertTo-SecureString $connectionServiceNumber -AsPlainText -Force)
@@ -2120,14 +2120,14 @@ function New-ConnectionServiceDeployment() {
 
         # Get the template URI
         $secret = Get-KVSecret -kvName $kvName -secretName "artifactsLocation"
-        $artifactsLocation = $secret.SecretValueText
+        $artifactsLocation = ConvertFrom-SecureString $secret.SecretValue -AsPlainText
         $CSDeploymentTemplateURI = $artifactsLocation + "/connection-service/azuredeploy.json"
 
         # Get the RegistrationCode
         $secret = Get-KVSecret -kvName $kvName -secretName "cloudAccessRegistrationCode"
 
         # Get license instance Id from registration code
-        $licenseInstanceId = $secret.SecretValueText.Split('@')[0]
+        $licenseInstanceId = (ConvertFrom-SecureString $secret.SecretValue -AsPlainText).Split('@')[0]
 
         #Convert tags to JSON string
         $tagString = $tag | ConvertTo-Json -Compress
@@ -3710,16 +3710,16 @@ function Set-RadiusSettings() {
     )
     # Check current MFA settings
     $isRadiusMfaEnabled = Get-KVSecret -kvName $VaultName -secretName "enableRadiusMfa"
-    $isRadiusMfaEnabled = ([bool]($isRadiusMfaEnabled.SecretValueText.ToLower() -eq "true"))
+    $isRadiusMfaEnabled = ([bool]((ConvertFrom-SecureString $secret.SecretValue -AsPlainText).ToLower() -eq "true"))
 
     $currentRadiusHost = Get-KVSecret -kvName $VaultName -secretName "radiusServerHost"
-    $currentRadiusHost = ([string]$currentRadiusHost.SecretValueText)
+    $currentRadiusHost = ([string](ConvertFrom-SecureString $secret.SecretValue -AsPlainText))
 
     $currentRadiusPort = Get-KVSecret -kvName $VaultName -secretName "radiusServerPort"
-    $currentRadiusPort = ([string]$currentRadiusPort.SecretValueText)
+    $currentRadiusPort = ([string](ConvertFrom-SecureString $secret.SecretValue -AsPlainText))
 
     $currentRadiusSecret = Get-KVSecret -kvName $VaultName -secretName "radiusSharedSecret"
-    $currentRadiusSecret = ([string]$currentRadiusSecret.SecretValueText)
+    $currentRadiusSecret = ([string](ConvertFrom-SecureString $secret.SecretValue -AsPlainText))
 
     # Prompt for RADIUS configuration if RADIUS has not been already explicitly been disabled
     if ($ignorePrompts -and ($enableRadiusMfa -eq $null)) {
@@ -4078,11 +4078,11 @@ function Update-CAMAzureKeyVault() {
         if (-not $tempDir) {
             $tempDir = $env:TEMP
         }
-        [System.IO.File]::WriteAllBytes("$tempDir/cert.pfx", [System.Convert]::FromBase64String($secret.SecretValueText))
-        $certPassword = (Get-AzureKeyVaultSecret `
+        [System.IO.File]::WriteAllBytes("$tempDir/cert.pfx", [System.Convert]::FromBase64String((ConvertFrom-SecureString $secret.SecretValue -AsPlainText)))
+        $certPassword = ConvertFrom-SecureString (Get-AzureKeyVaultSecret `
             -VaultName $VaultName `
             -Name "CAMCSCertificatePassword" `
-            -ErrorAction stop).SecretValueText
+            -ErrorAction stop).SecretValue -AsPlainText
         $cert = openssl pkcs12 -in "$tempDir/cert.pfx" -passin pass:$certPassword -passout pass:$certPassword -info
         $certSubject = $cert | grep "subject"
         $subject = "subject=/CN=*.cloudapp.net,/CN=localhost,/O=Teradici Corporation,/OU=SoftPCoIP,/L=Burnaby,/ST=BC,/C=CA"
@@ -4332,14 +4332,14 @@ if ($CAMRootKeyvault) {
                 -VaultName $CAMRootKeyvault.Name `
                 -Name "connectionServiceSubnet" `
                 -ErrorAction stop
-            $vnetConfig.vnetID = ($secret.SecretValueText.split('/'))[0..8] -join '/'
-            $vnetConfig.CSSubnetName = $secret.SecretValueText.split("/")[-1]
+            $vnetConfig.vnetID = ((ConvertFrom-SecureString $secret.SecretValue -AsPlainText).split('/'))[0..8] -join '/'
+            $vnetConfig.CSSubnetName = (ConvertFrom-SecureString $secret.SecretValue -AsPlainText).split("/")[-1]
 
             $secret = Get-AzureKeyVaultSecret `
                 -VaultName $CAMRootKeyvault.Name `
                 -Name "gatewaySubnet" `
                 -ErrorAction stop
-            $vnetConfig.GWSubnetName = $secret.SecretValueText.split("/")[-1]
+            $vnetConfig.GWSubnetName = (ConvertFrom-SecureString $secret.SecretValue -AsPlainText).split("/")[-1]
         }
     }
         
